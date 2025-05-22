@@ -1,18 +1,16 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Layout } from '@/components/layout/Layout';
-import { HomePage } from '@/pages/home';
-import { LoginPage } from '@/pages/auth/login';
-// import các page khác nếu có
+import { Routes, Route } from 'react-router-dom';
+import Login from './pages/auth/login';
+import Register from './pages/auth/register';
+import HomePage from './pages/home';
+import Layout from './components/layout/Layout';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout><HomePage /></Layout>} />
-        <Route path="/auth/login" element={<Layout><LoginPage /></Layout>} />
-        {/* Thêm các route khác nếu cần */}
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Layout><HomePage /></Layout>} />
+      <Route path="/login" element={<Layout><Login /></Layout>} />
+      <Route path="/register" element={<Layout><Register /></Layout>} />
+    </Routes>
   );
 }
 

@@ -1,7 +1,23 @@
 import api from './api';
 
-interface LoginResponse {
+const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY;
+const AUTH_REFRESH_TOKEN_KEY = import.meta.env.VITE_AUTH_REFRESH_TOKEN_KEY;
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}
+
+interface AuthResponse {
   token: string;
+  refreshToken: string;
   user: {
     id: string;
     email: string;
@@ -10,29 +26,46 @@ interface LoginResponse {
 }
 
 export const authService = {
-  // Gọi API đăng nhập
-  login: async (email: string, password: string): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/auth/login', {
-      email,
-      password,
-    });
-    return response.data;
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    try {
+      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      const { token, refreshToken, user } = response.data;
+      
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+      localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken);
+      
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
-  // Gọi API đăng ký
-  register: async (email: string, password: string, name: string): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/auth/register', {
-      email,
-      password,
-      name,
-    });
-    return response.data;
+  async register(data: RegisterData): Promise<AuthResponse> {
+    try {
+      const response = await api.post<AuthResponse>('/auth/register', data);
+      const { token, refreshToken, user } = response.data;
+      
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+      localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken);
+      
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
-  // Gọi API đăng xuất
-  logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
-    localStorage.removeItem('token');
+  logout(): void {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
+    window.location.href = '/login';
+  },
+
+  getToken(): string | null {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  },
+
+  isAuthenticated(): boolean {
+    return !!this.getToken();
   },
 
   // Lấy thông tin user hiện tại

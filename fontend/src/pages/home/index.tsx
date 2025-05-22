@@ -13,7 +13,7 @@ const blogs = [
   { title: "Dấu hiệu cảnh báo bệnh STIs", desc: "Nhận biết sớm các triệu chứng để điều trị kịp thời.", link: "#" },
 ];
 
-export function HomePage() {
+export default function HomePage() {
   return (
     <div className="bg-neutral-50">
       {/* Banner */}

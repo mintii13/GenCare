@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function Login() {
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,9 +18,19 @@ export default function Login() {
     console.log('Login attempt:', { email, password });
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-[350px] bg-white rounded-lg shadow-lg p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 w-full max-w-md relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-center">Welcome Back</h2>
           <p className="text-gray-600 text-center mt-2">Sign in to your account to continue</p>
@@ -51,7 +66,10 @@ export default function Login() {
           <p className="text-sm text-gray-600">
             Don't have an account?{' '}
             <button
-              onClick={() => navigate('/register')}
+              onClick={() => {
+                onClose();
+                navigate('/register');
+              }}
               className="text-blue-600 hover:underline"
             >
               Sign up
