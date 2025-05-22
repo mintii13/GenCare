@@ -30,7 +30,7 @@ export function HomePage() {
           </div>
           <div className="flex-1 flex justify-center">
             <img
-              src="images/homepage.jpg"
+              src="/images/homepage.jpg"
               alt="GenCare Banner"
               className="rounded-lg shadow-lg w-full max-w-xs md:max-w-md"
             />
