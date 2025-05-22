@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const services = [
   { title: "Xét nghiệm STIs", desc: "Kiểm tra các bệnh lây truyền qua đường tình dục nhanh chóng, chính xác.", icon: "🧬" },
@@ -24,9 +25,9 @@ export default function HomePage() {
             <p className="mb-6 text-lg md:text-xl">
               Địa chỉ tin cậy cho các dịch vụ xét nghiệm, tư vấn và chăm sóc sức khỏe toàn diện.
             </p>
-            <a href="#about" className="inline-block bg-accent-500 hover:bg-accent-600 text-white font-semibold px-6 py-3 rounded shadow transition">
+            <Link to="/about" className="inline-block bg-accent-500 hover:bg-accent-600 text-white font-semibold px-6 py-3 rounded shadow transition">
               Tìm hiểu thêm
-            </a>
+            </Link>
           </div>
           <div className="flex-1 flex justify-center">
             <img
@@ -46,6 +47,9 @@ export default function HomePage() {
             <p>
               GenCare là hệ thống cơ sở y tế hiện đại, cung cấp các dịch vụ xét nghiệm, tư vấn và chăm sóc sức khỏe toàn diện cho cộng đồng.
             </p>
+            <Link to="/about" className="mt-4 inline-block text-accent-600 hover:underline font-medium">
+              Xem thêm về chúng tôi &rarr;
+            </Link>
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-2 text-primary-600">Sứ mệnh</h3>
