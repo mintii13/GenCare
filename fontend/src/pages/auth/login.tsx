@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { authService } from '@/services/auth';
 
-export function LoginPage() {
+export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,54 +9,56 @@ export function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await authService.login(email, password);
-      localStorage.setItem('token', response.token);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid email or password');
-    }
+    // TODO: Implement login logic
+    console.log('Login attempt:', { email, password });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-[350px]">
-        <CardHeader>
-          <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Sign in to your account to continue</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full">
-              Sign In
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-500">
-            By signing in, you agree to our Terms of Service and Privacy Policy
+      <div className="w-[350px] bg-white rounded-lg shadow-lg p-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-center">Welcome Back</h2>
+          <p className="text-gray-600 text-center mt-2">Sign in to your account to continue</p>
+        </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Sign In
+          </button>
+        </form>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <button
+              onClick={() => navigate('/register')}
+              className="text-blue-600 hover:underline"
+            >
+              Sign up
+            </button>
           </p>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 } 
