@@ -1,18 +1,25 @@
-import { Routes, Route } from 'react-router-dom';
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import HomePage from "./pages/home";
+import TestPackagesPage from "./pages/test-packages";
+import STITestPage from "./pages/test-packages/sti";
 import Login from './pages/auth/login';
 import Register from './pages/auth/register';
-import HomePage from './pages/home';
 import AboutUs from './pages/about/AboutUs';
 import Layout from './components/layout/Layout';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Layout><HomePage /></Layout>} />
-      <Route path="/login" element={<Layout><Login /></Layout>} />
-      <Route path="/register" element={<Layout><Register /></Layout>} />
-      <Route path="/about" element={<Layout><AboutUs /></Layout>} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/test-packages" element={<TestPackagesPage />} />
+        <Route path="/test-packages/sti" element={<STITestPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/about" element={<AboutUs />} />
+      </Routes>
+    </Layout>
   );
 }
 
