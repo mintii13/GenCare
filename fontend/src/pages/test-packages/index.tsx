@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
@@ -88,12 +89,28 @@ const TestPackagesPage = () => {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" href="/booking">
-                  Đặt lịch ngay
+                <Button asChild className="w-full">
+                  <Link to="/booking">
+                    Đặt lịch ngay
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
           ))}
+        </div>
+
+        <div className="mt-12 bg-white rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-bold mb-4 text-center">Xét nghiệm STI</h2>
+          <p className="text-gray-600 mb-6 text-center">
+            Kiểm tra toàn diện các bệnh lây truyền qua đường tình dục với các gói xét nghiệm được thiết kế riêng
+          </p>
+          <div className="text-center">
+            <Button asChild>
+              <Link to="/test-packages/sti">
+                Xem chi tiết xét nghiệm STI
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="mt-12 text-center">
@@ -101,8 +118,10 @@ const TestPackagesPage = () => {
           <p className="text-gray-600 mb-6">
             Đội ngũ chuyên gia của chúng tôi luôn sẵn sàng hỗ trợ bạn
           </p>
-          <Button variant="outline" href="/contact">
-            Liên hệ tư vấn
+          <Button variant="outline" asChild>
+            <Link to="/contact">
+              Liên hệ tư vấn
+            </Link>
           </Button>
         </div>
       </div>
