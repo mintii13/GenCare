@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
+    user_id: string;
+    user_name: string;
     email: string;
     password: string;
     full_name: string;
@@ -17,6 +19,8 @@ export interface IUser extends Document {
 
 export class User {
     private static schema = new Schema<IUser>({
+        user_id: { type: String, required: true, unique: true },
+        user_name: { type: String, required: true, unique: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
         full_name: { type: String, required: true },
