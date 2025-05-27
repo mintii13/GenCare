@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-const Navigation = () => {
+interface NavigationProps {
+  onLoginClick?: () => void;
+}
+
+const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -30,12 +34,12 @@ const Navigation = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link 
-              to="/login" 
+            <button 
+              onClick={onLoginClick}
               className="text-gray-600 hover:text-primary-700"
             >
               Đăng nhập
-            </Link>
+            </button>
             <Link 
               to="/register" 
               className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition"
@@ -107,13 +111,15 @@ const Navigation = () => {
                 Liên hệ
               </Link>
               <div className="pt-4 border-t border-gray-200">
-                <Link 
-                  to="/login" 
+                <button 
                   className="block text-gray-600 hover:text-primary-700 mb-4"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    if (onLoginClick) onLoginClick();
+                  }}
                 >
                   Đăng nhập
-                </Link>
+                </button>
                 <Link 
                   to="/register" 
                   className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center"
