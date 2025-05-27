@@ -80,7 +80,7 @@ const Register = () => {
   };
 
   const handleGoogleSignIn = () => {
-    // TODO: Implement Google sign-in logic
+    window.location.href = "http://localhost:3000/auth/google";
     console.log('Google sign-in clicked');
   };
 
