@@ -1,0 +1,54 @@
+[
+  {
+    "email": "admin@gencare.com",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "full_name": "Quản trị viên hệ thống",
+    "phone": "0123456789",
+    "date_of_birth": "1985-01-15T00:00:00.000Z",
+    "gender": "male",
+    "registration_date": "2024-01-01T00:00:00.000Z",
+    "updated_date": "2024-01-01T00:00:00.000Z",
+    "status": true,
+    "email_verified": true,
+    "role": "admin"
+  },
+  {
+    "email": "customer@gencare.com",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "full_name": "Nguyễn Văn A",
+    "phone": "0987654321",
+    "date_of_birth": "1990-05-20T00:00:00.000Z",
+    "gender": "male",
+    "registration_date": "2024-01-02T00:00:00.000Z",
+    "updated_date": "2024-01-02T00:00:00.000Z",
+    "status": true,
+    "email_verified": true,
+    "role": "customer"
+  },
+  {
+    "email": "consultant@gencare.com",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "full_name": "Bác sĩ Trần Thị B",
+    "phone": "0123987654",
+    "date_of_birth": "1980-08-10T00:00:00.000Z",
+    "gender": "female",
+    "registration_date": "2024-01-03T00:00:00.000Z",
+    "updated_date": "2024-01-03T00:00:00.000Z",
+    "status": true,
+    "email_verified": true,
+    "role": "consultant"
+  },
+  {
+    "email": "staff@gencare.com",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "full_name": "Lê Văn C",
+    "phone": "0456789123",
+    "date_of_birth": "1992-12-25T00:00:00.000Z",
+    "gender": "male",
+    "registration_date": "2024-01-04T00:00:00.000Z",
+    "updated_date": "2024-01-04T00:00:00.000Z",
+    "status": true,
+    "email_verified": true,
+    "role": "staff"
+  }
+]

@@ -1,5 +1,6 @@
 import express from 'express'
 import passport from '../configs/passport'
+import { Request, Response } from 'express'
 
 const router = express.Router();
 //viết endpoint để điều hướng
@@ -21,14 +22,34 @@ router.get('/profile', (req, res) => {
   // res.send(`Welcome: ${(req.user as any).name.familyName}`);       //trích xuất thông tin trong một object
   // res.send(`Welcome: ${(req.user as any).emails[0].value}`)        //trích xuất từng thông tin một (emails, photos có nhiều nên lưu ở dạng Array)
   res.json(req.user);                                                 //trích xuất cả JSON
-  console.log(req.user as any);
+  console.log(req.user);
 })
 
-router.get('/logout', (req, res, next) => {
-  req.logOut((err) => {
-    if (err) return next(err);
+router.get('/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error logging out' });
+    }
+    res.redirect('/');
   });
-  res.redirect('/');
 })
 
 export default router;
+
+export const googleAuth = (req: Request, res: Response) => {
+  res.send('Google auth');
+};
+
+export const googleCallback = (req: Request, res: Response) => {
+  res.json(req.user);
+  console.log(req.user);
+};
+
+export const googleLogout = (req: Request, res: Response) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error logging out' });
+    }
+    res.redirect('/');
+  });
+};

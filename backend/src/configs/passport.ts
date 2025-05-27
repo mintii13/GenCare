@@ -1,29 +1,50 @@
 //nơi xử lý thông tin liên quan đến google
 import passport from 'passport';
-import express from 'express';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { User } from '../models/User';
 require('dotenv').config();
-const PORT = process.env.PORT || 3000;
 
-passport.use( 
-    new GoogleStrategy( {
-      clientID: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      callbackURL: `http://localhost:${PORT}/auth/google/callback`
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      callbackURL: '/auth/google/callback',
     },
-    (accessToken, refreshToken, profile, done) => {      //nếu không có gọi API của calendar thì ko cần accessToken và refreshToken
-    // (_, __, profile, done) => {                         nhưng vẫn phải nhập do GoogleStategy yêu cầu đủ parameters.
-      return done(null, profile);
-    })
-)
+    async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+      try {
+        // Kiểm tra xem user đã tồn tại chưa
+        let user = await User.findOne({ googleId: profile.id });
+
+        if (!user) {
+          // Nếu chưa tồn tại, tạo user mới
+          user = await User.create({
+            googleId: profile.id,
+            email: profile.emails[0].value,
+            name: profile.displayName,
+          });
+        }
+
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
+      }
+    }
+  )
+);
 
 //lưu dữ liệu người dùng bên trong phiên
-passport.serializeUser((user: Express.User, done) => {
-    done(null, user);
+passport.serializeUser((user: any, done: any) => {
+  done(null, user.id);
 });
 //lấy data của user khi cần thiết
-passport.deserializeUser((user: Express.User, done) => {
-    done(null, user)
+passport.deserializeUser(async (id: string, done: any) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
 });
 
 export default passport
