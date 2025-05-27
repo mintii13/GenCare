@@ -3,7 +3,7 @@ import { User, IUser } from '../models/User';
 export class UserRepository {
     public static async findByEmail(email: string): Promise<IUser | null> {
         try {
-            return await User.model.findOne({ email }).lean<IUser>();
+            return await User.findOne({ email }).lean<IUser>();
         } catch (error) {
             console.error('Error finding user by email:', error);
             throw error;
@@ -12,7 +12,7 @@ export class UserRepository {
 
     public static async updateLastLogin(userId: string): Promise<void> {
         try {
-            await User.model.updateOne(
+            await User.updateOne(
                 { _id: userId },
                 { last_login: new Date() }
             );
