@@ -14,21 +14,18 @@ const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+
+// CORS cấu hình cho phép frontend truy cập với credentials
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// // Routes
-// app.use('/api/auth', authController);
-
-// // Error handling middleware
-// app.use(errorHandler);
-
-// // Connect to database and start server
-// connectDatabase();
-
+// Session middleware
 app.use(
   session({
     secret: "secret",
@@ -37,14 +34,30 @@ app.use(
   })
 );
 
+// Initialize passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(googleController);
+// Routes
+app.use('/api/auth', authController);
+app.use('/auth', googleController);
 
-app.listen(PORT, () => {
-  console.log(`Run successfully through http://localhost:${PORT}`);
-})
+// Error handling middleware
+app.use(errorHandler);
 
+// Connect to database and start server
+const startServer = async () => {
+  try {
+    await connectDatabase();
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;

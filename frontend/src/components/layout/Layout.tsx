@@ -4,12 +4,13 @@ import Footer from './Footer';
 
 interface LayoutProps {
   children: ReactNode;
+  onLoginClick?: () => void;
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, onLoginClick }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation />
+      <Navigation onLoginClick={onLoginClick} />
       <main className="flex-grow">
         {children}
       </main>
