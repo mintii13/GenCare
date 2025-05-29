@@ -21,4 +21,21 @@ export class UserRepository {
             throw error;
         }
     }
+
+    public static async insertToDatabase(profile: any): Promise<Express.User>{
+        const email = profile.emails[0]?.value || null;
+        const full_name = profile.name.givenName  + " " + profile.name.familyName;
+        const registration_date = new Date();
+        const updated_date = new Date();
+        const status = true;
+        const email_verified = true;
+        const role = 'customer';
+        const googleId = profile.id;
+
+        let user = await User.findOne({googleId});
+        if (!user){
+            user = await User.create({email, full_name, registration_date, updated_date, status, email_verified, role, googleId})
+        }
+        return user;
+    }
 }

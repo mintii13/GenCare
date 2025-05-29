@@ -18,3 +18,10 @@ export const errorHandler = (
         ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });
 };
+
+export function isAuthenticated(req: Request, res: Response, next: Function) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: 'Unauthorized' });
+}

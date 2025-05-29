@@ -5,7 +5,6 @@ import { connectDatabase } from './configs/database';
 import authController from './controllers/authController';
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
-import googleController from './controllers/googleController';
 import passport from './configs/passport';
 require('dotenv').config();
 
@@ -38,9 +37,12 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Routes
+// // Routes
+// app.get("/", (req, res) => {
+//   res.send("<a href='/api/auth/google/verify'>Login with google</a>")        //nơi truyền frontend để input (FRONTEND), bỏ khi gắn vào frontend
+// })
+
 app.use('/api/auth', authController);
-app.use('/auth', googleController);
 
 // Error handling middleware
 app.use(errorHandler);
