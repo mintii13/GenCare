@@ -37,10 +37,10 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Routes
-app.get("/", (req, res) => {
-  res.send("<a href='/api/auth/google/verify'>Login with google</a>")        //nơi truyền frontend để input (FRONTEND), bỏ khi gắn vào frontend
-})
+// // Routes
+// app.get("/", (req, res) => {
+//   res.send("<a href='/api/auth/google/verify'>Login with google</a>")        //nơi truyền frontend để input (FRONTEND), bỏ khi gắn vào frontend
+// })
 
 app.use('/api/auth', authController);
 

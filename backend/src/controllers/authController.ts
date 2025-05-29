@@ -64,17 +64,17 @@ router.get('/google/callback', passport.authenticate('google', {failureRedirect:
     res.redirect('/api/auth/profile');
 })                                                                
 
-// router.post('/register', (req, res) => {
-//     if (!req.user){
-//         return res.status(401).json({error: 'User is null'});
-//     }
-//     console.log(res.status(200).json(req.user));
-//     return res.status(200).json(req.user);
-// })
+router.post('/register', (req, res) => {
+    if (!req.user){
+        return res.status(401).json({error: 'User is null'});
+    }
+    console.log(res.status(200).json(req.user));
+    return res.status(200).json(req.user);
+})
 
-router.get('/profile', (req, res) => {
-    res.send(`<h1>Logged in</h1><form action="/api/auth/register" method="post"><button type="submit">Get Profile</button></form>`);
-});                 //nếu cần xuất thông tin, ko thì thôi.
+// router.get('/profile', (req, res) => {
+//     res.send(`<h1>Logged in</h1><form action="/api/auth/register" method="post"><button type="submit">Get Profile</button></form>`);
+// });                 //nếu cần xuất thông tin, ko thì thôi.
 
 router.get('/google/logout', (req, res) => {
   req.logout((err) => {
@@ -84,9 +84,5 @@ router.get('/google/logout', (req, res) => {
     res.redirect('/');
   });
 })
-
-router.post('/register', isAuthenticated, (req, res) => {
-  res.status(200).json(req.user);
-});
 
 export default router;
