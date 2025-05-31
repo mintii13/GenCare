@@ -13,7 +13,7 @@ passport.use(
       callbackURL: '/api/auth/google/callback',
     },
     async (accessToken: string, refreshToken: string, profile: any, done: any) => {
-      const user = await UserRepository.insertToDatabase(profile);
+      const user = await UserRepository.insertGoogle(profile);
       return done(null, user);
     }
   )
