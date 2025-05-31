@@ -61,9 +61,9 @@ export class AuthService {
         }
     }
 
-    public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse & { hashedPassword?: string }> {
+    public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
-            const { email, password} = registerRequest;
+            const {email, password} = registerRequest;
 
           //check duplicate email
             const existedUser = await UserRepository.findByEmail(email);
@@ -76,16 +76,14 @@ export class AuthService {
             }
 
          //thêm 1 thằng check password có trùng khớp với verified_password
-            const hashedPassword = await bcrypt.hash(password, 10);
 
             return {
                 success: true,
                 message: 'Đăng ký thành công',
                 user: {
                     email: email,
-                    password: hashedPassword
+                    password: await bcrypt.hash(password, 10)
                 },
-                hashedPassword,
             };
 
         } catch (error) {
@@ -99,7 +97,6 @@ export class AuthService {
 
     public static async inputProfile(email: string, hashedPassword: string, profileRequest: ProfileRequest): Promise<ProfileResponse> {
         const { full_name, phone, date_of_birth, gender} = profileRequest;
-        const profile = {}
         const user = await UserRepository.insertMyApp({
             email: email,
             password: hashedPassword,
@@ -120,7 +117,7 @@ export class AuthService {
             success: true,
             message: 'Đăng ký hoàn tất',
             user: {
-                email: user.email,
+                email: email,
                 password: hashedPassword,
                 full_name: full_name.trim(),
                 phone: phone?.trim() || null,
@@ -129,8 +126,10 @@ export class AuthService {
                 registration_date: new Date(),
                 updated_date: new Date(),
                 last_login: null,
-                status: 'active',
-                email_verified: false
+                status: true,
+                email_verified: false,
+                role: 'customer',
+                googleId: null
             }
         };
     }

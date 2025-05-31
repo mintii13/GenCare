@@ -14,6 +14,8 @@ export interface ProfileRequest{
     last_login?: Date;
     status: boolean;
     email_verified: boolean;
+    role: 'customer' | 'consultant' | 'staff' | 'admin';
+    googleId?: string;
 }
 
 

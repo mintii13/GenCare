@@ -113,7 +113,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
         const result = await AuthService.register(registerRequest);
         if (result.success) {
             const {email} = registerRequest;
-            const password = result.hashedPassword!;
+            const password = result.user.password;
             req.session.tempUser = {email, password}
             // res.status(200).json(result);
             res.redirect('/api/auth/profileForm');

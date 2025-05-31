@@ -12,15 +12,17 @@ export interface ProfileResponse {
     message: string;
     user?: {
         email: string;
-        password: string;
+        password?: string;
         full_name: string;
-        phone?: string | null;
-        date_of_birth?: Date | null;
-        gender?: string | null;
+        phone?: string;
+        date_of_birth?: Date;
+        gender?: string;
         registration_date: Date;
         updated_date: Date;
-        last_login?: Date | null;
-        status: string;
+        last_login?: Date;
+        status: boolean;
         email_verified: boolean;
+        role: 'customer' | 'consultant' | 'staff' | 'admin';
+        googleId?: string;
     };
 }
