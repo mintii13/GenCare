@@ -1,4 +1,3 @@
-// src/models/Customer.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICustomer extends Document {
@@ -9,14 +8,14 @@ export interface ICustomer extends Document {
     last_updated: Date;
 }
 
-export class Customer {
-    private static schema = new Schema<ICustomer>({
-        customer_id: { type: String, required: true, unique: true },
-        user_id: { type: String, required: true, ref: 'User' },
-        medical_history: { type: String },
-        custom_avatar: { type: String },
-        last_updated: { type: Date, default: Date.now }
-    });
+const customerSchema = new Schema<ICustomer>({
+    customer_id: { type: String, required: true, unique: true },
+    user_id: { type: String, required: true, ref: 'User' },
+    medical_history: { type: String },
+    custom_avatar: { type: String },
+    last_updated: { type: Date, default: Date.now }
+}, {
+    timestamps: true
+});
 
-    public static model = mongoose.model<ICustomer>('Customer', Customer.schema);
-}
+export const Customer = mongoose.model<ICustomer>('Customer', customerSchema);

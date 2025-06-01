@@ -11,17 +11,17 @@ export interface IConsultant extends Document {
     total_consultations: number;
 }
 
-export class Consultant {
-    private static schema = new Schema<IConsultant>({
-        consultant_id: { type: String, required: true, unique: true },
-        user_id: { type: String, required: true, ref: 'User' },
-        specialization: { type: String, required: true },
-        qualifications: { type: String, required: true },
-        experience_years: { type: Number, required: true },
-        consultant_avatar: { type: String },
-        consultation_rating: { type: Number, min: 0, max: 5 },
-        total_consultations: { type: Number, default: 0 }
-    });
+const consultantSchema = new Schema<IConsultant>({
+    consultant_id: { type: String, required: true, unique: true },
+    user_id: { type: String, required: true, ref: 'User' },
+    specialization: { type: String, required: true },
+    qualifications: { type: String, required: true },
+    experience_years: { type: Number, required: true },
+    consultant_avatar: { type: String },
+    consultation_rating: { type: Number, min: 0, max: 5 },
+    total_consultations: { type: Number, default: 0 }
+}, {
+    timestamps: true
+});
 
-    public static model = mongoose.model<IConsultant>('Consultant', Consultant.schema);
-}
+export const Consultant = mongoose.model<IConsultant>('Consultant', consultantSchema);
