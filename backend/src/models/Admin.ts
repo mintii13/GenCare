@@ -1,3 +1,4 @@
+// src/models/Admin.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAdmin extends Document {
@@ -6,12 +7,12 @@ export interface IAdmin extends Document {
     system_permissions: string[];
 }
 
-export class Admin {
-    private static schema = new Schema<IAdmin>({
-        admin_id: { type: String, required: true, unique: true },
-        user_id: { type: String, required: true, ref: 'User' },
-        system_permissions: [{ type: String }]
-    });
+const adminSchema = new Schema<IAdmin>({
+    admin_id: { type: String, required: true, unique: true },
+    user_id: { type: String, required: true, ref: 'User' },
+    system_permissions: [{ type: String }]
+}, {
+    timestamps: true
+});
 
-    public static model = mongoose.model<IAdmin>('Admin', Admin.schema);
-}
+export const Admin = mongoose.model<IAdmin>('Admin', adminSchema);
