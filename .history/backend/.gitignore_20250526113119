@@ -1,0 +1,22 @@
+# Node.js
+/node_modules/
+/dist/
+/.history
+
+# TypeScript
+*.js
+*.map
+*.d.ts
+/dist/
+
+# Environment variables
+.env
+
+# IDE and editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Other build artifacts
+/build/
+/output/
