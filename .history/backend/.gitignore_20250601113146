@@ -1,7 +1,7 @@
 # Node.js
 /node_modules/
 /dist/
-.history
+/.history
 
 # TypeScript
 *.js
