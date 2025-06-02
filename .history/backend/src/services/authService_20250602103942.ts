@@ -66,7 +66,40 @@ export class AuthService {
                 message: 'Lỗi hệ thống'
             };
         }
+    }
 
+    public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
+        try {
+            const { email, password } = registerRequest;
+
+            //check duplicate email
+            const existedUser = await UserRepository.findByEmail(email);
+
+            if (existedUser) {
+                return {
+                    success: false,
+                    message: 'Email này đã tồn tại. Hãy đăng nhập'
+                };
+            }
+
+            //thêm 1 thằng check password có trùng khớp với verified_password
+
+            return {
+                success: true,
+                message: 'Đăng ký thành công',
+                user: {
+                    email: email,
+                    password: await bcrypt.hash(password, 10)
+                },
+            };
+
+        } catch (error) {
+            console.error('Register error:', error);
+            return {
+                success: false,
+                message: 'Lỗi hệ thống'
+            };
+        }
     }
 
 

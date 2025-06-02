@@ -57,7 +57,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
 // Protected route example - chỉ user đã login mới truy cập được
 router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const user = await UserRepository.findByEmail(req.User!.email);
+        const user = await UserRepository.findByEmail(req.user!.email);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -165,4 +165,5 @@ router.get('/registerForm', (req, res) => {
     `);
 });
 
+Ư
 export default router;
