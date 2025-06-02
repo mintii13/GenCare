@@ -2,7 +2,7 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { User } from '../models/User';
-import { UserRepository } from '../repositories/userRepository';
+import { AuthService } from '../services/authService';
 require('dotenv').config();
 
 passport.use(
@@ -13,7 +13,7 @@ passport.use(
       callbackURL: '/api/auth/google/callback',
     },
     async (accessToken: string, refreshToken: string, profile: any, done: any) => {
-      const user = await UserRepository.insertGoogle(profile);
+      const user = await AuthService.insertGoogle(profile);
       return done(null, user);
     }
   )

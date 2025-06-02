@@ -115,8 +115,8 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
             const {email} = registerRequest;
             const password = result.user.password;
             req.session.tempUser = {email, password}
-            // res.status(200).json(result);
-            res.redirect('/api/auth/profileForm');
+            res.status(200).json(result);
+            // res.redirect('/api/auth/profileForm');
         } else {
             res.status(401).json(result);
         }

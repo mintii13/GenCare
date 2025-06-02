@@ -43,9 +43,9 @@ app.use(passport.session());
 // })
 
 //myapp
-app.get('/', (req, res) => {
-    res.send("<a href='/api/auth/registerForm'>Sign up by system</a>")
-})
+// app.get('/', (req, res) => {
+//     res.send("<a href='/api/auth/registerForm'>Sign up by system</a>")
+// })
 
 app.use('/api/auth', authController);
 
