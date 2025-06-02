@@ -25,3 +25,86 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
 
     next();
 };
+
+//Register by gencare System
+const profileSchema = Joi.object({
+    full_name: Joi.string()
+        .min(2)
+        .max(100)
+        .pattern(/^[a-zA-ZÀ-ỹ\s]+$/)
+        .required()
+        .messages({
+            'string.min': 'Họ tên phải có ít nhất 2 ký tự',
+            'string.max': 'Họ tên không được quá 100 ký tự',
+            'string.pattern.base': 'Họ tên chỉ được chứa chữ cái và khoảng trắng',
+            'any.required': 'Họ tên là bắt buộc'
+        }),
+    phone: Joi.string()
+        .pattern(/^(\+84|0)[3-9]\d{8}$/)
+        .optional()
+        .messages({
+            'string.pattern.base': 'Số điện thoại không đúng định dạng (VD: 0987654321 hoặc +84987654321)',
+            'any.required': 'Số điện thoại là bắt buộc'
+        }),
+    date_of_birth: Joi.date()
+        .max('now')
+        .min('1900-01-01')
+        .iso()
+        .optional()
+        .messages({
+            'date.max': 'Ngày sinh không thể trong tương lai',
+            'date.min': 'Ngày sinh không hợp lệ',
+            'date.base': 'Ngày sinh phải có định dạng hợp lệ (YYYY-MM-DD)'
+        }),
+    gender: Joi.string()
+        .valid('male', 'female', 'other')
+        .optional()
+        .messages({
+            'any.only': 'Giới tính phải là male, female hoặc other'
+        })
+});
+
+export const validateProfile = (req: Request, res: Response, next: NextFunction): void => {
+    const { error } = profileSchema.validate(req.body);
+
+    if (error) {
+        res.status(400).json({
+            success: false,
+            message: 'Dữ liệu không hợp lệ',
+            details: error.details[0].message
+        });
+        return;
+    }
+    next();
+};
+
+
+const registerSchema = Joi.object({
+    email: Joi.string().email().required().messages({
+        'string.email': 'Email không hợp lệ',
+        'any.required': 'Email là bắt buộc'
+    }),
+    password: Joi.string().min(6).required().messages({
+        'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
+        'any.required': 'Mật khẩu là bắt buộc'
+    }),
+    confirm_password: Joi.any().valid(Joi.ref('password')).required().messages({
+        'any.only': 'Confirm password phải trùng với password',
+        'any.required': 'Xác nhận mật khẩu là bắt buộc'
+    })
+});
+
+export const validateRegister = (req: Request, res: Response, next: NextFunction): void => {
+    const { error } = registerSchema.validate(req.body);
+
+    if (error) {
+        res.status(400).json({
+            success: false,
+            message: 'Dữ liệu không hợp lệ',
+            details: error.details[0].message
+        });
+        return;
+    }
+    next();
+};
+
