@@ -3,9 +3,6 @@ import { LoginRequest } from '../dto/requests/LoginRequest';
 import { LoginResponse } from '../dto/responses/LoginResponse';
 import { UserRepository } from '../repositories/userRepository';
 import { JWTUtils } from '../utils/jwtUtils';
-import { RegisterRequest, ProfileRequest } from '../dto/requests/RegisterRequest';
-import { RegisterResponse, ProfileResponse } from '../dto/responses/RegisterResponse';
-import { User, IUser } from '../models/User';
 
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
@@ -69,27 +66,8 @@ export class AuthService {
                 message: 'Lỗi hệ thống'
             };
         }
-
     }
 
-
-    public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
-        const email = profile.emails[0]?.value || null;
-        const full_name = profile.name.givenName + " " + profile.name.familyName;
-        const registration_date = new Date();
-        const updated_date = new Date();
-        const status = true;
-        const email_verified = true;
-        const role = 'customer';
-        const googleId = profile.id;
-        
-        let user = await User.findOne({ googleId });
-        if (!user) {
-            user = await UserRepository.insertUser({ email, full_name, registration_date, updated_date, status, email_verified, role, googleId })
-        }
-        return user;
-    }
-    
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
             const { email, password } = registerRequest;
@@ -125,27 +103,57 @@ export class AuthService {
     }
 
     public static async inputProfile(email: string, hashedPassword: string, profileRequest: ProfileRequest): Promise<ProfileResponse> {
-        const { full_name, phone, date_of_birth, gender } = profileRequest;
-        const user = await UserRepository.insertUser({
-            email: email,
-            password: hashedPassword,
-            full_name: full_name.trim(),
-            phone: phone?.trim() || null,
-            date_of_birth: date_of_birth || null,
-            gender: gender || null,
-            registration_date: new Date(),
-            updated_date: new Date(),
-            last_login: null,
-            status: true,
-            email_verified: false,
-            role: 'customer',
-            googleId: null
-        });
+        try {
+            const { full_name, phone, date_of_birth, gender } = profileRequest;
+            const user = await UserRepository.insertMyApp({
+                email: email,
+                password: hashedPassword,
+                full_name: full_name.trim(),
+                phone: phone?.trim() || null,
+                date_of_birth: date_of_birth || null,
+                gender: gender || null,
+                registration_date: new Date(),
+                updated_date: new Date(),
+                last_login: null,
+                status: true,
+                email_verified: false,
+                role: 'customer',
+                googleId: null
+            });
 
-        return {
-            success: true,
-            message: 'Đăng ký hoàn tất',
-            user
-        };
+            // Generate JWT access token for newly registered user
+            const accessToken = JWTUtils.generateAccessToken({
+                userId: user._id.toString(),
+                email: user.email,
+                role: user.role
+            });
+
+            return {
+                success: true,
+                message: 'Đăng ký hoàn tất',
+                user: {
+                    email: email,
+                    password: hashedPassword,
+                    full_name: full_name.trim(),
+                    phone: phone?.trim() || null,
+                    date_of_birth: date_of_birth || null,
+                    gender: gender || null,
+                    registration_date: new Date(),
+                    updated_date: new Date(),
+                    last_login: null,
+                    status: true,
+                    email_verified: false,
+                    role: 'customer',
+                    googleId: null
+                },
+                accessToken: accessToken
+            };
+        } catch (error) {
+            console.error('Profile input error:', error);
+            return {
+                success: false,
+                message: 'Lỗi hệ thống'
+            };
+        }
     }
 }

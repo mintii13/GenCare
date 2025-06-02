@@ -1,14 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/authService';
 import { LoginRequest } from '../dto/requests/LoginRequest';
-
-import { validateLogin, validateProfile, validateRegister} from '../middlewares/validation';
+import { validateLogin } from '../middlewares/validation';
 import { UserRepository } from '../repositories/userRepository';
 import passport from '../configs/passport';
 import { User } from '../models/User';
-import { RegisterRequest, ProfileRequest } from '../dto/requests/RegisterRequest';
-import { RegisterResponse, ProfileResponse } from '../dto/responses/RegisterResponse';
-
+import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 
 const router = Router();
 
@@ -60,7 +57,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
 // Protected route example - chỉ user đã login mới truy cập được
 router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const user = await UserRepository.findByEmail(req.User!.email);
+        const user = await UserRepository.findByEmail(req.user!.email);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -127,12 +124,12 @@ router.get(
 //thực hiện bước đổi code lấy token như đã thiết lập trên google Strategy
 router.get('/google/callback', passport.authenticate('google', { failureRedirect: "/" }), (req, res) => {
     console.log('User after login:', req.user); // check xem user có không
-})                                                                
+})
 
 //gửi data lên frontend đăng ký lên frontend
 router.post('/google/register', (req, res) => {
-    if (!req.user){
-        return res.status(401).json({error: 'User is null'});
+    if (!req.user) {
+        return res.status(401).json({ error: 'User is null' });
     }
     console.log(res.status(200).json(req.user));
     return res.status(200).json(req.user);
@@ -147,16 +144,14 @@ router.get('/google/logout', (req, res) => {
     });
 })
 
-
 //register by my app
-
 declare module 'express-session' {
-  interface SessionData {
-    tempUser?: {
-      email: string;
-      password: string;
-    };
-  }
+    interface SessionData {
+        tempUser?: {
+            email: string;
+            password: string;
+        };
+    }
 }
 
 router.get('/registerForm', (req, res) => {
@@ -176,9 +171,9 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
         console.log('Request body:', req.body);
         const result = await AuthService.register(registerRequest);
         if (result.success) {
-            const {email} = registerRequest;
+            const { email } = registerRequest;
             const password = result.user.password;
-            req.session.tempUser = {email, password}
+            req.session.tempUser = { email, password }
             res.status(200).json(result);
             // res.redirect('/api/auth/profileForm');
         } else {
@@ -192,7 +187,6 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
         });
     }
 });
-
 
 router.get('/profileForm', (req, res) => {
     res.send(`
@@ -212,7 +206,7 @@ router.get('/profileForm', (req, res) => {
     `);
 });
 
-router.post('/updateProfile', validateProfile, async(req: Request, res: Response) => {
+router.post('/updateProfile', validateProfile, async (req: Request, res: Response) => {
     try {
         const profileRequest: ProfileRequest = req.body;
         const tempUser = req.session.tempUser;
@@ -239,8 +233,7 @@ router.post('/updateProfile', validateProfile, async(req: Request, res: Response
             success: false,
             message: 'Lỗi hệ thống'
         });
-        }
     }
-)
-export default router;
+})
 
+export default router;
