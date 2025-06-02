@@ -6,10 +6,13 @@ import authController from './controllers/authController';
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
+import {startRedisServer} from './configs/redis';
+import redisClient from './configs/redis';
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 
 // Security middleware
 app.use(helmet());
@@ -43,27 +46,44 @@ app.use(passport.session());
 // })
 
 //myapp
-// app.get('/', (req, res) => {
-//     res.send("<a href='/api/auth/registerForm'>Sign up by system</a>")
-// })
+app.get('/', (req, res) => {
+    res.send("<a href='/api/auth/registerForm'>Sign up by system</a>")
+})
 
 app.use('/api/auth', authController);
 
 // Error handling middleware
 app.use(errorHandler);
 
-// Connect to database and start server
+
 const startServer = async () => {
   try {
+    // 1. Bắt đầu mở redisServer
+    const redisProcess = await startRedisServer();
+
+    // 2. Kết nối Redis client
+    await redisClient.connect();
+    console.log('Connected to Redis!');
+
+    // 3. Kết nối database
     await connectDatabase();
+
+    // 4. Start Express server
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
+
+    // Nếu muốn, bạn có thể giữ redisProcess để quản lý lifecycle (tắt Redis khi app tắt)
+    process.on('exit', () => {
+      redisProcess.kill();
+    });
+
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
 };
+
 
 startServer();
 

@@ -22,12 +22,22 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
             details: error.details[0].message
         });
     }
-
     next();
 };
 
-//Register by gencare System
-const profileSchema = Joi.object({
+const registerSchema = Joi.object({
+    email: Joi.string().email().required().messages({
+        'string.email': 'Email không hợp lệ',
+        'any.required': 'Email là bắt buộc'
+    }),
+    password: Joi.string().min(6).required().messages({
+        'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
+        'any.required': 'Mật khẩu là bắt buộc'
+    }),
+    confirm_password: Joi.any().valid(Joi.ref('password')).required().messages({
+        'any.only': 'Confirm password phải trùng với password',
+        'any.required': 'Xác nhận mật khẩu là bắt buộc'
+    }),
     full_name: Joi.string()
         .min(2)
         .max(100)
@@ -44,7 +54,6 @@ const profileSchema = Joi.object({
         .optional()
         .messages({
             'string.pattern.base': 'Số điện thoại không đúng định dạng (VD: 0987654321 hoặc +84987654321)',
-            'any.required': 'Số điện thoại là bắt buộc'
         }),
     date_of_birth: Joi.date()
         .max('now')
@@ -62,36 +71,6 @@ const profileSchema = Joi.object({
         .messages({
             'any.only': 'Giới tính phải là male, female hoặc other'
         })
-});
-
-export const validateProfile = (req: Request, res: Response, next: NextFunction): void => {
-    const { error } = profileSchema.validate(req.body);
-
-    if (error) {
-        res.status(400).json({
-            success: false,
-            message: 'Dữ liệu không hợp lệ',
-            details: error.details[0].message
-        });
-        return;
-    }
-    next();
-};
-
-
-const registerSchema = Joi.object({
-    email: Joi.string().email().required().messages({
-        'string.email': 'Email không hợp lệ',
-        'any.required': 'Email là bắt buộc'
-    }),
-    password: Joi.string().min(6).required().messages({
-        'string.min': 'Mật khẩu phải có ít nhất 6 ký tự',
-        'any.required': 'Mật khẩu là bắt buộc'
-    }),
-    confirm_password: Joi.any().valid(Joi.ref('password')).required().messages({
-        'any.only': 'Confirm password phải trùng với password',
-        'any.required': 'Xác nhận mật khẩu là bắt buộc'
-    })
 });
 
 export const validateRegister = (req: Request, res: Response, next: NextFunction): void => {
