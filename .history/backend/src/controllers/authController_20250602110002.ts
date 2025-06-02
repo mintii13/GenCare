@@ -8,7 +8,7 @@ import passport from '../configs/passport';
 import { User } from '../models/User';
 import { RegisterRequest, ProfileRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse, ProfileResponse } from '../dto/responses/RegisterResponse';
-import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
+
 
 const router = Router();
 

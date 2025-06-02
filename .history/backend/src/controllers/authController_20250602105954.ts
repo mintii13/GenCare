@@ -8,7 +8,7 @@ import passport from '../configs/passport';
 import { User } from '../models/User';
 import { RegisterRequest, ProfileRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse, ProfileResponse } from '../dto/responses/RegisterResponse';
-import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
+
 
 const router = Router();
 
@@ -50,6 +50,40 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error('Login controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống'
+        });
+    }
+});
+
+// Protected route example - chỉ user đã login mới truy cập được
+router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const user = await UserRepository.findByEmail(req.User!.email);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User không tồn tại'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                id: user._id.toString(),
+                email: user.email,
+                full_name: user.full_name,
+                phone: user.phone,
+                date_of_birth: user.date_of_birth,
+                gender: user.gender,
+                role: user.role,
+                status: user.status,
+                email_verified: user.email_verified
+            }
+        });
+    } catch (error) {
+        console.error('Profile error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống'
