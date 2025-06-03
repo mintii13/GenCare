@@ -5,7 +5,7 @@ import { UserRepository } from '../repositories/userRepository';
 import { RegisterRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse } from '../dto/responses/RegisterResponse';
 import { JWTUtils } from '../utils/jwtUtils';
-import { User, IUser } from '../models/User';
+import User, { IUser } from '../models/User';
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
 import redisClient from '../configs/redis';
