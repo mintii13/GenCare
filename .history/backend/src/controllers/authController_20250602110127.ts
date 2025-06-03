@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/authService';
 import { LoginRequest } from '../dto/requests/LoginRequest';
-import { validateLogin, validateRegister} from '../middlewares/validation';
+
+import { validateLogin, validateProfile, validateRegister } from '../middlewares/validation';
 import { UserRepository } from '../repositories/userRepository';
 import passport from '../configs/passport';
-import redisClient from '../configs/redis';
 import { User } from '../models/User';
-import { RegisterRequest } from '../dto/requests/RegisterRequest';
-import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
+import { RegisterRequest, ProfileRequest } from '../dto/requests/RegisterRequest';
+import { RegisterResponse, ProfileResponse } from '../dto/responses/RegisterResponse';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 
 const router = Router();
@@ -77,7 +77,7 @@ router.get('/google/callback', passport.authenticate('google', { failureRedirect
     console.log('User after login:', req.user); // check xem user có không
 })
 
-//send data on frontend
+//gửi data lên frontend đăng ký lên frontend
 router.post('/google/register', (req, res) => {
     if (!req.user) {
         return res.status(401).json({ error: 'User is null' });
@@ -86,7 +86,37 @@ router.post('/google/register', (req, res) => {
     return res.status(200).json(req.user);
 })
 
+router.get('/google/logout', (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error logging out' });
+        }
+        res.redirect('/');
+    });
+})
+
+
 //register by my app
+
+declare module 'express-session' {
+    interface SessionData {
+        tempUser?: {
+            email: string;
+            password: string;
+        };
+    }
+}
+
+router.get('/registerForm', (req, res) => {
+    res.send(`
+        <form method="POST" action="/api/auth/register">
+            <input name="email" placeholder="Email" required />
+            <input name="password" type="password" placeholder="Password" required />
+            <input name="confirm_password" type="password" placeholder="Confirm password" required />
+            <button type="submit">Register</button>
+        </form>
+    `);
+});
 
 router.post('/register', validateRegister, async (req: Request, res: Response) => {
     try {
@@ -94,8 +124,11 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
         console.log('Request body:', req.body);
         const result = await AuthService.register(registerRequest);
         if (result.success) {
+            const { email } = registerRequest;
+            const password = result.user.password;
+            req.session.tempUser = { email, password }
             res.status(200).json(result);
-            // res.redirect(`/api/auth/otpForm?email=${registerRequest.email}`);
+            // res.redirect('/api/auth/profileForm');
         } else {
             res.status(401).json(result);
         }
@@ -108,58 +141,46 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
     }
 });
 
-router.get('/otpForm', async (req: Request, res: Response) => {
-    try {
-        const email = req.query.email as string;
-        if (!email) {
-            return res.status(400).send("Thiếu email.");
-        }
-        const otp = await AuthService.sendOTP(email);
-        await redisClient.setEx(`otp:${email}`, 300, otp);
-        return res.status(200).send("Send OTP thành công");
-    } catch (error) {
-        console.error('Controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi hệ thống'
-        });
-    }
+
+router.get('/profileForm', (req, res) => {
+    res.send(`
+        <h2>Nhập thông tin cá nhân</h2>
+        <form method="POST" action="/api/auth/updateProfile">
+            <input name="full_name" placeholder="Họ và tên" required /><br><br>
+            <input name="phone" placeholder="Số điện thoại" required /><br><br>
+            <input name="date_of_birth" type="date" placeholder="Ngày sinh" required /><br><br>
+            <select name="gender">
+                <option value="">-- Chọn giới tính --</option>
+                <option value="male">Nam</option>
+                <option value="female">Nữ</option>
+                <option value="other">Khác</option>
+            </select><br><br>
+            <button type="submit">Cập nhật</button>
+        </form>
+    `);
 });
 
-router.post('/verifyOTP', async (req: Request, res: Response) => {
+router.post('/updateProfile', validateProfile, async (req: Request, res: Response) => {
     try {
-        const {email, otp} = req.body;
-        console.log(email, otp);
-        const storedOtp = await redisClient.get(`otp:${email}`);
-        console.log(storedOtp, otp);
-        if (!storedOtp)
-            return res.status(400).json({
-                success: false,
-                message: 'OTP expired or not found.' 
-            }
-        );
-        if (otp !== storedOtp)
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid OTP' 
-            })
+        const profileRequest: ProfileRequest = req.body;
+        const tempUser = req.session.tempUser;
 
-        await redisClient.del(`otp:${email}`);
-        const user = (await redisClient.get(`user:${email}`));
-        await AuthService.insertByMyApp(user.toString());
-        await redisClient.del(`user:${email}`);
-        const password = (await redisClient.get(`pass:${email}`)).toString();
-        if (!password) 
-            return res.status(400).json({ success: false, message: "Không tìm thấy mật khẩu." });
-        const loginRequest: LoginRequest = {email, password};
-        const result = await AuthService.login(loginRequest);
-        console.log("Login thành công");
+        if (!tempUser) {
+            res.status(400).json({
+                success: false,
+                message: 'Vui lòng hoàn thành bước đăng ký email trước'
+            });
+            return;
+        }
+
+        const result = await AuthService.inputProfile(tempUser.email, tempUser.password, profileRequest);
+
         if (result.success) {
+            delete req.session.tempUser;
             res.status(200).json(result);
         } else {
-            res.status(401).json(result);
+            res.status(400).json(result);
         }
-        
     } catch (error) {
         console.error('Login controller error:', error);
         res.status(500).json({
@@ -167,5 +188,7 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
             message: 'Lỗi hệ thống'
         });
     }
-});
+}
+)
 export default router;
+

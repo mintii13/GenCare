@@ -2,13 +2,11 @@ import bcrypt from 'bcryptjs';
 import { LoginRequest } from '../dto/requests/LoginRequest';
 import { LoginResponse } from '../dto/responses/LoginResponse';
 import { UserRepository } from '../repositories/userRepository';
-import { RegisterRequest } from '../dto/requests/RegisterRequest';
-import { RegisterResponse } from '../dto/responses/RegisterResponse';
 import { JWTUtils } from '../utils/jwtUtils';
+import { RegisterRequest, ProfileRequest } from '../dto/requests/RegisterRequest';
+import { RegisterResponse, ProfileResponse } from '../dto/responses/RegisterResponse';
 import { User, IUser } from '../models/User';
-import nodemailer from 'nodemailer'
-import crypto from 'crypto'
-import redisClient from '../configs/redis';
+
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
         try {
@@ -93,40 +91,27 @@ export class AuthService {
 
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
-            const { email, password, full_name, phone, date_of_birth, gender} = registerRequest;
+            const { email, password } = registerRequest;
 
-            await redisClient.setEx(`pass:${email}`, 300, password);
             //check duplicate email
             const existedUser = await UserRepository.findByEmail(email);
-
-            const user = {
-                email: email,
-                password: await bcrypt.hash(password, 10),
-                full_name: full_name.trim(),
-                phone: phone?.trim() || null,
-                date_of_birth: date_of_birth || null,
-                gender: gender || null,
-                registration_date: new Date(),
-                updated_date: new Date(),
-                last_login: null,
-                status: true,
-                email_verified: true,
-                role: 'customer',
-                googleId: null
-            };
-            // console.log(user);
 
             if (existedUser) {
                 return {
                     success: false,
-                    message: 'Email này đã tồn tại. Hãy đăng nhập',
+                    message: 'Email này đã tồn tại. Hãy đăng nhập'
                 };
             }
-            await redisClient.setEx(`user:${email}`, 300, JSON.stringify(user));
+
+            //thêm 1 thằng check password có trùng khớp với verified_password
+
             return {
                 success: true,
                 message: 'Đăng ký thành công',
-                user_email: email
+                user: {
+                    email: email,
+                    password: await bcrypt.hash(password, 10)
+                },
             };
 
         } catch (error) {
@@ -138,39 +123,28 @@ export class AuthService {
         }
     }
 
-    public static async sendOTP(emailSendTo){
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth:{
-                user: process.env.EMAIL_FOR_VERIFY || '',
-                pass: process.env.EMAIL_APP_PASSWORD || '' 
-            }
-        })
+    public static async inputProfile(email: string, hashedPassword: string, profileRequest: ProfileRequest): Promise<ProfileResponse> {
+        const { full_name, phone, date_of_birth, gender } = profileRequest;
+        const user = await UserRepository.insertUser({
+            email: email,
+            password: hashedPassword,
+            full_name: full_name.trim(),
+            phone: phone?.trim() || null,
+            date_of_birth: date_of_birth || null,
+            gender: gender || null,
+            registration_date: new Date(),
+            updated_date: new Date(),
+            last_login: null,
+            status: true,
+            email_verified: false,
+            role: 'customer',
+            googleId: null
+        });
 
-        const otpGenerator = crypto.randomInt(100000, 999999).toString();
-
-        const mailContent = {
-            from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY || null}>`,
-            to: emailSendTo,
-            subject: "Mã xác thực OTP của bạn là: ",
-            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                            <h2>Mã OTP của bạn là: <strong style="color:#2a9d8f;">${otpGenerator}</strong></h2>
-                            <p>OTP sẽ hết hạn trong 5 phút.</p>
-                            <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME || 'GenCare'}</h4>
-                        </div>
-                    </body>`
-        }
-        if (!emailSendTo) {
-            console.error("Không có email người nhận!");
-        }
-        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
-        return otpGenerator;
-
-    }
-
-    public static async insertByMyApp(user: string): Promise<void>{
-        await UserRepository.insertUser(JSON.parse(user));
+        return {
+            success: true,
+            message: 'Đăng ký hoàn tất',
+            user
+        };
     }
 }
