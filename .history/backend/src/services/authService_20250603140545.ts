@@ -45,6 +45,7 @@ export class AuthService {
             // Generate JWT access token
             const accessToken = JWTUtils.generateAccessToken({
                 userId: user._id.toString(),
+                email: user.email,
                 role: user.role
             });
 
