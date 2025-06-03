@@ -99,7 +99,7 @@ export class AuthService {
                 updated_date: new Date(),
                 last_login: null,
                 status: true,
-                email_verified: false,
+                email_verified: true,
                 role: 'customer',
                 googleId: null
             };
@@ -109,7 +109,6 @@ export class AuthService {
                 return {
                     success: false,
                     message: 'Email này đã tồn tại. Hãy đăng nhập',
-                    user_email: email
                 };
             }
             await redisClient.setEx(`user:${email}`, 900, JSON.stringify(user));
@@ -153,7 +152,7 @@ export class AuthService {
                     </body>`
         }
         if (!emailSendTo) {
-            console.error("❌ Không có email người nhận!");
+            console.error("Không có email người nhận!");
         }
         await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
         return otpGenerator;

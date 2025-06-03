@@ -40,16 +40,6 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// google
-// app.get("/", (req, res) => {
-//   res.send("<a href='/api/auth/google/verify'>Login with google</a>")        //nơi truyền frontend để input (FRONTEND), bỏ khi gắn vào frontend
-// })
-
-//myapp
-app.get('/', (req, res) => {
-    res.send("<a href='/api/auth/registerForm'>Sign up by system</a>")
-})
-
 app.use('/api/auth', authController);
 
 // Error handling middleware
@@ -58,14 +48,14 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    // 1. Bắt đầu mở redisServer
+    // 1. On the redisServer
     const redisProcess = await startRedisServer();
 
-    // 2. Kết nối Redis client
+    // 2. Connect to RedisClient
     await redisClient.connect();
     console.log('Connected to Redis!');
 
-    // 3. Kết nối database
+    // 3. Connect Database
     await connectDatabase();
 
     // 4. Start Express server
@@ -73,7 +63,6 @@ const startServer = async () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
 
-    // Nếu muốn, bạn có thể giữ redisProcess để quản lý lifecycle (tắt Redis khi app tắt)
     process.on('exit', () => {
       redisProcess.kill();
     });
@@ -83,7 +72,6 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-
 
 startServer();
 
