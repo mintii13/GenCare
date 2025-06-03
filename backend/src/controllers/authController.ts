@@ -106,6 +106,7 @@ router.get('/otpForm', async (req: Request, res: Response) => {
         }
         const otp = await AuthService.sendOTP(email);
         await redisClient.setEx(`otp:${email}`, 300, otp);
+        return res.status(200).send("Send OTP thành công");
     } catch (error) {
         console.error('Controller error:', error);
         res.status(500).json({
@@ -118,15 +119,17 @@ router.get('/otpForm', async (req: Request, res: Response) => {
 router.post('/verifyOTP', async (req: Request, res: Response) => {
     try {
         const {email, otp} = req.body;
+        console.log(email, otp);
         const storedOtp = await redisClient.get(`otp:${email}`);
+        console.log(storedOtp, otp);
         if (!storedOtp)
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: 'OTP expired or not found.' 
             }
         );
         if (otp !== storedOtp)
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: 'Invalid OTP' 
             })
@@ -135,17 +138,18 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
         const user = (await redisClient.get(`user:${email}`));
         await AuthService.insertByMyApp(user.toString());
         await redisClient.del(`user:${email}`);
-        res.status(200).json({
-            success: true, 
-            message: 'Email verified successfully',
-            // user:{
-            //     id: user.,
-            //     email: user.email;
-            //     full_name: string;
-            //     role: string;
-            //     status: boolean;
-            // }
-        })
+        const password = (await redisClient.get(`pass:${email}`)).toString();
+        if (!password) 
+            return res.status(400).json({ success: false, message: "Không tìm thấy mật khẩu." });
+        const loginRequest: LoginRequest = {email, password};
+        const result = await AuthService.login(loginRequest);
+        console.log("Login thành công");
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(401).json(result);
+        }
+        
     } catch (error) {
         console.error('Login controller error:', error);
         res.status(500).json({

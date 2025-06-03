@@ -85,6 +85,7 @@ export class AuthService {
         try {
             const { email, password, full_name, phone, date_of_birth, gender} = registerRequest;
 
+            await redisClient.setEx(`pass:${email}`, 300, password);
             //check duplicate email
             const existedUser = await UserRepository.findByEmail(email);
 
@@ -111,7 +112,7 @@ export class AuthService {
                     message: 'Email này đã tồn tại. Hãy đăng nhập',
                 };
             }
-            await redisClient.setEx(`user:${email}`, 900, JSON.stringify(user));
+            await redisClient.setEx(`user:${email}`, 300, JSON.stringify(user));
             return {
                 success: true,
                 message: 'Đăng ký thành công',
