@@ -14,10 +14,10 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Dịch vụ</h4>
             <ul className="space-y-2">
-              <li><Link to="/services" className="text-primary-100 hover:text-white">Xét nghiệm STIs</Link></li>
-              <li><Link to="/services" className="text-primary-100 hover:text-white">Tư vấn sinh sản</Link></li>
-              <li><Link to="/services" className="text-primary-100 hover:text-white">Khám tổng quát</Link></li>
-              <li><Link to="/services" className="text-primary-100 hover:text-white">Theo dõi chu kì</Link></li>
+              <li><Link to="/services/stis" className="text-primary-100 hover:text-white">Xét nghiệm STIs</Link></li>
+              <li><Link to="/services/reproductive" className="text-primary-100 hover:text-white">Tư vấn sinh sản</Link></li>
+              <li><Link to="/services/checkup" className="text-primary-100 hover:text-white">Khám tổng quát</Link></li>
+              <li><Link to="/services/cycle" className="text-primary-100 hover:text-white">Theo dõi chu kì</Link></li>
             </ul>
           </div>
           <div>
@@ -27,6 +27,7 @@ export default function Footer() {
               <li><Link to="/blog" className="text-primary-100 hover:text-white">Blog</Link></li>
               <li><Link to="/contact" className="text-primary-100 hover:text-white">Liên hệ</Link></li>
               <li><Link to="/privacy" className="text-primary-100 hover:text-white">Chính sách bảo mật</Link></li>
+              <li><Link to="/terms" className="text-primary-100 hover:text-white">Điều khoản sử dụng</Link></li>
             </ul>
           </div>
           <div>
@@ -35,6 +36,19 @@ export default function Footer() {
               <li>Email: contact@gencare.com</li>
               <li>Hotline: 1900 1234</li>
               <li>Địa chỉ: 123 Đường ABC, Quận XYZ, TP.HCM</li>
+              <li className="mt-4">
+                <div className="flex space-x-4">
+                  <a href="#" className="hover:text-white">
+                    <i className="fab fa-facebook"></i>
+                  </a>
+                  <a href="#" className="hover:text-white">
+                    <i className="fab fa-twitter"></i>
+                  </a>
+                  <a href="#" className="hover:text-white">
+                    <i className="fab fa-instagram"></i>
+                  </a>
+                </div>
+              </li>
             </ul>
           </div>
         </div>

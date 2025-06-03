@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Register = () => {
   const [step, setStep] = useState(1);
@@ -31,6 +32,28 @@ const Register = () => {
   });
 
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otp, setOTP] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [otpError, setOTPError] = useState('');
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [emailCheckError, setEmailCheckError] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(60);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // Đếm ngược resend OTP
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showOTP && resendCountdown > 0) {
+      timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [showOTP, resendCountdown]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -38,11 +61,13 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
-    setErrors(prev => ({
-      ...prev,
-      [name]: ''
-    }));
+    // Chỉ reset lỗi khi trường hợp hợp lệ
+    if (name === 'email' && emailCheckError) {
+      if (/\S+@\S+\.\S+/.test(value)) {
+        setEmailCheckError('');
+      }
+    }
+    // Không reset errors cho các trường khác ở đây
   };
 
   const validateStep1 = () => {
@@ -143,14 +168,100 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateStep2()) {
-      // TODO: Implement registration logic
-      console.log('Form submitted:', formData);
+      try {
+        const res = await axios.post('http://localhost:3000/api/auth/register', {
+          email: formData.email,
+          password: formData.password,
+          confirm_password: formData.confirmPassword,
+          full_name: formData.fullName,
+          phone: formData.phone,
+          date_of_birth: formData.dateOfBirth,
+          gender: formData.gender
+        });
+        if (res.data.success) {
+          setShowOTP(true);
+          setRegisterEmail(formData.email);
+          setRegisterPassword(formData.password);
+        } else {
+          alert(res.data.message || 'Đăng ký thất bại');
+        }
+      } catch (error: any) {
+        alert(error.response?.data?.details || 'Đăng ký thất bại');
+      }
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOTPError('');
+    try {
+      const res = await axios.post('http://localhost:3000/api/auth/verifyOTP', {
+        email: registerEmail,
+        otp
+      });
+      if (res.data.success) {
+        // Tự động đăng nhập
+        const loginRes = await axios.post('http://localhost:3000/api/auth/login', {
+          email: registerEmail,
+          password: registerPassword
+        });
+        if (loginRes.data.success) {
+          login(loginRes.data.user);
+          navigate('/');
+        } else {
+          setRegisterSuccess(true); // fallback: chỉ báo thành công nếu login lỗi
+        }
+      } else {
+        setOTPError(res.data.message || 'Xác thực OTP thất bại');
+      }
+    } catch (error: any) {
+      setOTPError(error.response?.data?.details || 'Xác thực OTP thất bại');
     }
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+    window.location.href = "http://localhost:3000/api/auth/google/verify";
     console.log('Google sign-in clicked');
+  };
+
+  const handleCheckEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailCheckError('');
+    if (!formData.email.trim()) {
+      setEmailCheckError('Vui lòng nhập email');
+      return;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setEmailCheckError('Email không hợp lệ');
+      return;
+    }
+    try {
+      setIsCheckingEmail(true);
+      const response = await axios.post('http://localhost:3000/api/auth/check-email', {
+        email: formData.email
+      });
+      if (response.data.exists) {
+        setEmailCheckError('Email này đã được sử dụng');
+      } else {
+        setEmailChecked(true);
+      }
+    } catch (error) {
+      setEmailCheckError('Lỗi kiểm tra email');
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setResendLoading(true);
+    setOTPError('');
+    try {
+      await axios.get(`http://localhost:3000/api/auth/otpForm?email=${registerEmail}`);
+      setResendCountdown(60);
+    } catch (error) {
+      setOTPError('Gửi lại OTP thất bại.');
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   return (
@@ -163,103 +274,130 @@ const Register = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={step === 1 ? handleNextStep : handleSubmit} className="space-y-4">
-            {step === 1 ? (
-              <>
-                <div className="space-y-2">
-                  <Input
-                    type="email"
-                    name="email"
-                    placeholder="Email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    error={errors.email}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    type="password"
-                    name="password"
-                    placeholder="Mật khẩu"
-                    value={formData.password}
-                    onChange={handleChange}
-                    error={errors.password}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    type="password"
-                    name="confirmPassword"
-                    placeholder="Xác nhận mật khẩu"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    error={errors.confirmPassword}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isCheckingEmail}>
-                  {isCheckingEmail ? 'Đang kiểm tra...' : 'Tiếp tục'}
+          {showOTP ? (
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  name="otp"
+                  placeholder="Nhập mã OTP gửi về email"
+                  value={otp}
+                  onChange={e => setOTP(e.target.value)}
+                />
+                {otpError && <p className="text-red-500 text-sm">{otpError}</p>}
+              </div>
+              <Button type="submit" className="w-full">Xác thực OTP</Button>
+              <div className="text-center mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleResendOTP}
+                  disabled={resendCountdown > 0 || resendLoading}
+                >
+                  {resendCountdown > 0 ? `Gửi lại OTP sau ${resendCountdown}s` : resendLoading ? 'Đang gửi...' : 'Gửi lại OTP'}
                 </Button>
-              </>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    name="fullName"
-                    placeholder="Họ và tên"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    error={errors.fullName}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    type="tel"
-                    name="phone"
-                    placeholder="Số điện thoại"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    error={errors.phone}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    type="date"
-                    name="dateOfBirth"
-                    placeholder="Ngày sinh"
-                    value={formData.dateOfBirth}
-                    onChange={handleChange}
-                    error={errors.dateOfBirth}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Select
-                    name="gender"
-                    value={formData.gender}
-                    onValueChange={(value: string) => handleChange({ target: { name: 'gender', value } } as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn giới tính" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Nam</SelectItem>
-                      <SelectItem value="female">Nữ</SelectItem>
-                      <SelectItem value="other">Khác</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
-                </div>
-                <div className="flex space-x-4">
-                  <Button type="button" variant="outline" className="w-full" onClick={() => setStep(1)}>
-                    Quay lại
-                  </Button>
-                  <Button type="submit" className="w-full">
-                    Đăng ký
-                  </Button>
-                </div>
-              </>
-            )}
-          </form>
+              </div>
+            </form>
+          ) : registerSuccess ? (
+            <div className="text-green-600 text-center font-semibold py-8">
+              Đăng ký thành công! Bạn có thể <Link to="/login" className="text-primary underline">đăng nhập</Link> ngay.
+            </div>
+          ) : !emailChecked ? (
+            <form onSubmit={handleCheckEmail} className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={emailCheckError}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isCheckingEmail}>
+                {isCheckingEmail ? 'Đang kiểm tra...' : 'Tiếp tục'}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="Mật khẩu"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Xác nhận mật khẩu"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  error={errors.confirmPassword}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  name="fullName"
+                  placeholder="Họ và tên"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  error={errors.fullName}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  type="tel"
+                  name="phone"
+                  placeholder="Số điện thoại"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  error={errors.phone}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  type="date"
+                  name="dateOfBirth"
+                  placeholder="Ngày sinh"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  error={errors.dateOfBirth}
+                />
+              </div>
+              <div className="space-y-2">
+                <Select
+                  name="gender"
+                  value={formData.gender}
+                  onValueChange={(value: string) => handleChange({ target: { name: 'gender', value } } as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn giới tính" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Nam</SelectItem>
+                    <SelectItem value="female">Nữ</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
+              </div>
+              <div className="flex space-x-4">
+                <Button type="button" variant="outline" className="w-full" onClick={() => setEmailChecked(false)}>
+                  Quay lại
+                </Button>
+                <Button type="submit" className="w-full">
+                  Đăng ký
+                </Button>
+              </div>
+            </form>
+          )}
 
           {step === 1 && (
             <>

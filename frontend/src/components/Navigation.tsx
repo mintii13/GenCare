@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from '../contexts/AuthContext';
 
 interface NavigationProps {
   onLoginClick?: () => void;
@@ -7,6 +8,7 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <nav className="bg-white shadow-lg">
@@ -34,18 +36,28 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <button 
-              onClick={onLoginClick}
-              className="text-gray-600 hover:text-primary-700"
-            >
-              Đăng nhập
-            </button>
-            <Link 
-              to="/register" 
-              className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition"
-            >
-              Đăng ký
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <span className="text-gray-700 font-semibold">{user?.full_name || user?.email}</span>
+                <Link to="/user/profile" className="text-gray-600 hover:text-primary-700">Trang cá nhân</Link>
+                <button onClick={logout} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition">Đăng xuất</button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={onLoginClick}
+                  className="text-gray-600 hover:text-primary-700"
+                >
+                  Đăng nhập
+                </button>
+                <Link 
+                  to="/register" 
+                  className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition"
+                >
+                  Đăng ký
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -111,22 +123,37 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
                 Liên hệ
               </Link>
               <div className="pt-4 border-t border-gray-200">
-                <button 
-                  className="block text-gray-600 hover:text-primary-700 mb-4"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    if (onLoginClick) onLoginClick();
-                  }}
-                >
-                  Đăng nhập
-                </button>
-                <Link 
-                  to="/register" 
-                  className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Đăng ký
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <span className="block text-gray-700 font-semibold mb-2">{user?.full_name || user?.email}</span>
+                    <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2">Trang cá nhân</Link>
+                    <button 
+                      className="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition mb-2"
+                      onClick={() => { setIsMenuOpen(false); logout(); }}
+                    >
+                      Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      className="block text-gray-600 hover:text-primary-700 mb-4"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        if (onLoginClick) onLoginClick();
+                      }}
+                    >
+                      Đăng nhập
+                    </button>
+                    <Link 
+                      to="/register" 
+                      className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Đăng ký
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

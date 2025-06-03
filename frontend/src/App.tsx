@@ -7,6 +7,7 @@ import Register from './pages/auth/register';
 import AboutUs from './pages/about/AboutUs';
 import Layout from './components/layout/Layout';
 import LoginModal from "@/components/auth/LoginModal";
+import OAuthSuccess from "./pages/OAuthSuccess";
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
 const App = () => {
@@ -22,6 +23,7 @@ const App = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/user/profile" element={<UserProfilePage />} />
+          <Route path="/oauth-success" element={<OAuthSuccess />} />
         </Routes>
       </Suspense>
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />

@@ -76,7 +76,7 @@ export class AuthService {
 
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
         const email = profile.emails[0]?.value || null;
-        const full_name = profile.name.givenName + " " + profile.name.familyName;
+        const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
         const registration_date = new Date();
         const updated_date = new Date();
         const status = true;
@@ -84,10 +84,32 @@ export class AuthService {
         const role = 'customer';
         const googleId = profile.id;
 
-        let user = await User.findOne({ googleId });
-        if (!user) {
-            user = await UserRepository.insertUser({ email, full_name, registration_date, updated_date, status, email_verified, role, googleId })
+        // Kiểm tra user đã tồn tại theo email
+        let user = await User.findOne({ email });
+        if (user) {
+            // Nếu user đã có, cập nhật googleId nếu chưa có
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+            return user;
         }
+
+        // Nếu chưa có user, tạo mới
+        user = await UserRepository.insertUser({ 
+            email, 
+            full_name, 
+            registration_date, 
+            updated_date, 
+            status, 
+            email_verified, 
+            role, 
+            googleId,
+            phone: null,
+            date_of_birth: null,
+            last_login: null,
+            password: '',
+        });
         return user;
     }
 

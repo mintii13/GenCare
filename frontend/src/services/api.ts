@@ -30,32 +30,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
-    // Handle token refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        const refreshToken = localStorage.getItem(import.meta.env.VITE_AUTH_REFRESH_TOKEN_KEY);
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        // TODO: Implement refresh token logic
-        // const response = await api.post('/auth/refresh', { refreshToken });
-        // const { token } = response.data;
-        // localStorage.setItem(import.meta.env.VITE_AUTH_TOKEN_KEY, token);
-        // originalRequest.headers.Authorization = `Bearer ${token}`;
-        // return api(originalRequest);
-      } catch (error) {
-        // Handle refresh token failure
-        localStorage.removeItem(import.meta.env.VITE_AUTH_TOKEN_KEY);
-        localStorage.removeItem(import.meta.env.VITE_AUTH_REFRESH_TOKEN_KEY);
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
+    // Nếu muốn xử lý lỗi 401, chỉ cần logout hoặc chuyển hướng, không cần refresh token
+    if (error.response?.status === 401) {
+      localStorage.removeItem(import.meta.env.VITE_AUTH_TOKEN_KEY);
+      window.location.href = '/login';
+      return Promise.reject(error);
     }
-
     return Promise.reject(error);
   }
 );

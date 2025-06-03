@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,7 +34,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         { withCredentials: true }
       );
       if (res.data.success) {
-        localStorage.setItem('user', JSON.stringify(res.data.user));
+        login(res.data.user);
         if (onLoginSuccess) onLoginSuccess(res.data.user);
         onClose();
       } else {
@@ -102,6 +104,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
             </form>
+
+            {/* Nút Google OAuth */}
+            <button
+              className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg mt-4 flex items-center justify-center"
+              onClick={() => window.location.href = 'http://localhost:3000/api/auth/google/verify'}
+            >
+              <img src="/google-icon.svg" alt="Google" className="w-5 h-5 mr-2" />
+              Tiếp tục với Google
+            </button>
             
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">

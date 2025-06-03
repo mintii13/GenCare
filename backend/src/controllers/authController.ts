@@ -5,7 +5,7 @@ import { validateLogin, validateRegister} from '../middlewares/validation';
 import { UserRepository } from '../repositories/userRepository';
 import passport from '../configs/passport';
 import redisClient from '../configs/redis';
-import { User } from '../models/User';
+import { User, IUser } from '../models/User';
 import { RegisterRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
@@ -73,9 +73,19 @@ router.get(
 );
 
 //thực hiện bước đổi code lấy token như đã thiết lập trên google Strategy
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: "/" }), (req, res) => {
-    console.log('User after login:', req.user); // check xem user có không
-})
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { failureRedirect: "/" }),
+  async (req, res) => {
+    const user = req.user as IUser;
+    const { JWTUtils } = require('../utils/jwtUtils');
+    const token = JWTUtils.generateAccessToken({
+      userId: user._id.toString(),
+      role: user.role
+    });
+    res.redirect(`http://localhost:5173/oauth-success?token=${token}`);
+  }
+);
 
 //send data on frontend
 router.post('/google/register', (req, res) => {
@@ -168,4 +178,30 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
         });
     }
 });
+
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    // req.user được gán từ middleware authenticateToken
+    // userId có thể là req.user.userId hoặc req.user.id tùy JWT
+    const userId = (req.user as any).userId || (req.user as any).id;
+    if (!userId) return res.status(401).json({ success: false, message: "Không xác thực được user" });
+
+    const user = await User.findById(userId).lean();
+    if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy user" });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        // ... các trường khác nếu cần
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi hệ thống" });
+  }
+});
+
 export default router;

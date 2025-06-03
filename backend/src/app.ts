@@ -19,7 +19,7 @@ app.use(helmet());
 
 // CORS cấu hình cho phép frontend truy cập với credentials
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 
@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 // Session middleware
 app.use(
   session({
-    secret: "secret",
+    secret: process.env.SESSION_SECRET || 'secret',
     resave: false,
     saveUninitialized: true
   })

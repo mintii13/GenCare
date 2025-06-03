@@ -12,7 +12,7 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       callbackURL: '/api/auth/google/callback',
     },
-    async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+    async (accessToken: string, _unused: any, profile: any, done: any) => {
       const user = await AuthService.insertGoogle(profile);
       return done(null, user);
     }
