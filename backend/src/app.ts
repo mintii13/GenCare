@@ -6,10 +6,13 @@ import authController from './controllers/authController';
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
+import {startRedisServer} from './configs/redis';
+import redisClient from './configs/redis';
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 
 // Security middleware
 app.use(helmet());
@@ -37,28 +40,33 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// google
-// app.get("/", (req, res) => {
-//   res.send("<a href='/api/auth/google/verify'>Login with google</a>")        //nơi truyền frontend để input (FRONTEND), bỏ khi gắn vào frontend
-// })
-
-//myapp
-// app.get('/', (req, res) => {
-//     res.send("<a href='/api/auth/registerForm'>Sign up by system</a>")
-// })
-
 app.use('/api/auth', authController);
 
 // Error handling middleware
 app.use(errorHandler);
 
-// Connect to database and start server
+
 const startServer = async () => {
   try {
+    // 1. On the redisServer
+    const redisProcess = await startRedisServer();
+
+    // 2. Connect to RedisClient
+    await redisClient.connect();
+    console.log('Connected to Redis!');
+
+    // 3. Connect Database
     await connectDatabase();
+
+    // 4. Start Express server
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
+
+    process.on('exit', () => {
+      redisProcess.kill();
+    });
+
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

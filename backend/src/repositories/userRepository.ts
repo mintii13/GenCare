@@ -22,8 +22,7 @@ export class UserRepository {
         }
     }
 
-    public static async insertUser(user: Partial<IUser>)
-    {
+    public static async insertUser(user: Partial<IUser>){
         try {
             return await User.create(user);
         } catch (error) {
