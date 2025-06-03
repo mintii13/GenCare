@@ -1,7 +1,7 @@
 //nơi xử lý thông tin liên quan đến google
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { User } from '../models/User';
+import User from '../models/User';
 import { AuthService } from '../services/authService';
 require('dotenv').config();
 

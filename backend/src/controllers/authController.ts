@@ -5,7 +5,7 @@ import { validateLogin, validateRegister} from '../middlewares/validation';
 import { UserRepository } from '../repositories/userRepository';
 import passport from '../configs/passport';
 import redisClient from '../configs/redis';
-import { User, IUser } from '../models/User';
+import User, { IUser } from '../models/User'; 
 import { RegisterRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';

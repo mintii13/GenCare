@@ -8,6 +8,7 @@ import session from 'express-session';
 import passport from './configs/passport';
 import {startRedisServer} from './configs/redis';
 import redisClient from './configs/redis';
+import stiTestController from './controllers/stiTestController';
 require('dotenv').config();
 
 const app = express();
@@ -41,6 +42,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use('/api/auth', authController);
+app.use('/api/sti-test', stiTestController);
 
 // Error handling middleware
 app.use(errorHandler);
