@@ -3,7 +3,7 @@ import {ChildProcess, spawn} from 'child_process';
 
 export function startRedisServer(): Promise<ChildProcess> {
   return new Promise((resolve, reject) => {
-    const pathLine = 'D:/Ky5/SWP/Group3SWP';
+    const pathLine = process.env.REDIS_PATH_LINE || '';
     const redisProcess = spawn(pathLine + '/backend/src/bin/redis-server.exe');
 
     redisProcess.stdout.setEncoding('utf8');

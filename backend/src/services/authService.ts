@@ -73,6 +73,32 @@ export class AuthService {
 
     }
 
+    public static async loginGoogle(user: Partial<IUser>): Promise<LoginResponse> {
+        try {
+            // Update last login
+            // await UserRepository.updateLastLogin(user._id);
+            console.log(user);
+            return {
+                success: true,
+                message: 'Đăng nhập thành công',
+                user: {
+                    id: user._id.toString(),
+                    email: user.email,
+                    full_name: user.full_name,
+                    role: user.role,
+                    status: user.status
+                }
+            };
+
+        } catch (error) {
+            console.error('Login error:', error);
+            return {
+                success: false,
+                message: 'Lỗi hệ thống'
+            };
+        }
+
+    }
 
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
         const email = profile.emails[0]?.value || null;

@@ -9,7 +9,7 @@ import { User, IUser } from '../models/User';
 import { RegisterRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
-
+import { JWTUtils } from '../utils/jwtUtils';
 const router = Router();
 
 // Check email endpoint
@@ -78,22 +78,34 @@ router.get(
   passport.authenticate('google', { failureRedirect: "/" }),
   async (req, res) => {
     const user = req.user as IUser;
-    const { JWTUtils } = require('../utils/jwtUtils');
-    const token = JWTUtils.generateAccessToken({
-      userId: user._id.toString(),
-      role: user.role
+    const accessToken = JWTUtils.generateAccessToken({
+        userId: user._id.toString(),
+        role: user.role
     });
-    res.redirect(`http://localhost:5173/oauth-success?token=${token}`);
+    redisClient.setEx('accessTokenGoogle', 300, accessToken);
+    res.redirect(`http://localhost:5173/oauth-success?token=${accessToken}`);
   }
 );
 
 //send data on frontend
-router.post('/google/register', (req, res) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'User is null' });
+router.post('/google/register', async (req, res) => {
+    
+    try {
+        const user = req.user as IUser;
+        if (!user) {
+            return res.status(401).json({ error: 'User không tồn tại' });
+        }
+        const result = await AuthService.loginGoogle(user);
+        result.accessToken = (await redisClient.get('accessTokenGoogle')).toString();
+        console.log(res.json(result));
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Login controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống'
+        });
     }
-    console.log(res.status(200).json(req.user));
-    return res.status(200).json(req.user);
 })
 
 //register by my app
