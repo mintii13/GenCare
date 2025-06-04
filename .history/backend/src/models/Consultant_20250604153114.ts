@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IConsultant extends Document {
-    user_id: mongoose.Types.ObjectId;
+    consultant_id: string;
+    user_id: string;
     specialization: string;
     qualifications: string;
     experience_years: number;
@@ -10,7 +11,8 @@ export interface IConsultant extends Document {
 }
 
 const consultantSchema = new Schema<IConsultant>({
-    user_id: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
+    consultant_id: { type: String, required: true, unique: true },
+    user_id: { type: String, required: true, ref: 'User' },
     specialization: { type: String, required: true },
     qualifications: { type: String, required: true },
     experience_years: { type: Number, required: true },

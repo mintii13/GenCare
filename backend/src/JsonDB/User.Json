@@ -1,0 +1,116 @@
+[
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
+        },
+        "email": "consultant1@gencare.com",
+        "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "full_name": "BS. Nguyễn Thị Lan",
+        "phone": "0901234567",
+        "role": "consultant",
+        "avatar": "https://example.com/avatars/bs_lan.jpg",
+        "status": true,
+        "email_verified": true,
+        "registration_date": {
+            "$date": "2024-01-15T08:00:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2024-12-01T10:30:00.000Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9c0e"
+        },
+        "email": "consultant2@gencare.com",
+        "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "full_name": "ThS. Trần Văn Minh",
+        "phone": "0907654321",
+        "role": "consultant",
+        "avatar": "https://example.com/avatars/ths_minh.jpg",
+        "status": true,
+        "email_verified": true,
+        "registration_date": {
+            "$date": "2024-02-20T09:15:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2024-11-28T14:00:00.000Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+        },
+        "email": "customer1@gencare.com",
+        "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "full_name": "Nguyễn Thị Hoa",
+        "phone": "0912345678",
+        "role": "customer",
+        "avatar": "https://example.com/avatars/customer_25.jpg",
+        "status": true,
+        "email_verified": true,
+        "registration_date": {
+            "$date": "2024-06-10T14:30:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2024-12-02T15:00:00.000Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9c10"
+        },
+        "email": "customer2@gencare.com",
+        "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "full_name": "Lê Thị Mai",
+        "phone": "0918765432",
+        "role": "customer",
+        "avatar": "https://example.com/avatars/customer_26.jpg",
+        "status": true,
+        "email_verified": true,
+        "registration_date": {
+            "$date": "2024-07-05T10:20:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2024-12-02T16:00:00.000Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9c11"
+        },
+        "email": "admin1@gencare.com",
+        "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "full_name": "Nguyễn Văn Admin",
+        "phone": "0909999999",
+        "role": "admin",
+        "avatar": "https://example.com/avatars/admin_1.jpg",
+        "status": true,
+        "email_verified": true,
+        "registration_date": {
+            "$date": "2024-01-01T00:00:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2024-12-01T00:00:00.000Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9c12"
+        },
+        "email": "staff1@gencare.com",
+        "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "full_name": "Trần Thị Staff",
+        "phone": "0908888888",
+        "role": "staff",
+        "avatar": "https://example.com/avatars/staff_1.jpg",
+        "status": true,
+        "email_verified": true,
+        "registration_date": {
+            "$date": "2024-03-01T00:00:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2024-12-01T00:00:00.000Z"
+        }
+    }
+]

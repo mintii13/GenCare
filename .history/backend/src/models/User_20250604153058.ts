@@ -13,7 +13,7 @@ export interface IUser extends Document {
     status: boolean;
     email_verified: boolean;
     role: 'customer' | 'consultant' | 'staff' | 'admin';
-    avatar?: string;
+    avatar?: string; // Thêm field avatar
     googleId?: string;
 }
 
@@ -30,8 +30,10 @@ const userSchema = new Schema<IUser>({
     status: { type: Boolean, default: true },
     email_verified: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'consultant', 'staff', 'admin'], required: true },
-    avatar: { type: String },
+    avatar: { type: String }, // Thêm field avatar
     googleId: { type: String }
+}, {
+    timestamps: { createdAt: 'registration_date', updatedAt: 'updated_date' }
 });
 
 export const User = mongoose.model<IUser>('User', userSchema);
