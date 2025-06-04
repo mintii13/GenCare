@@ -52,4 +52,32 @@ export class BlogService {
             };
         }
     }
+
+    public static async getBlogById(blogId: string) {
+        try {
+            const blog = await BlogRepository.findByIdWithAuthor(blogId);
+            
+            if (!blog) {
+                return {
+                    success: false,
+                    message: 'Không tìm thấy blog'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'Lấy chi tiết blog thành công',
+                data: {
+                    blog
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Blog service error:', error);
+            return {
+                success: false,
+                message: 'Lỗi hệ thống khi lấy chi tiết blog'
+            };
+        }
+    }
 }

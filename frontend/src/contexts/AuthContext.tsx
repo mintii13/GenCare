@@ -52,10 +52,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    // Nếu cần gọi API logout thì gọi ở đây
+  const logout = async () => {
+    try {
+      // Gọi API logout nếu có token
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        await axios.post("http://localhost:3000/api/auth/logout", {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Vẫn tiếp tục logout nếu API lỗi
+    } finally {
+      // Xóa tất cả dữ liệu auth
+      setUser(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('accessToken');
+      
+      // Redirect về trang chủ
+      window.location.href = '/';
+    }
   };
 
   return (

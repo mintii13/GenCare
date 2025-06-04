@@ -71,7 +71,16 @@ export class AuthService {
 
     public static async loginGoogle(user: Partial<IUser>): Promise<LoginResponse> {
         try {
+            // Update last login
+            await UserRepository.updateLastLogin(user._id);
             console.log(user);
+            
+            // Generate JWT access token
+            const accessToken = JWTUtils.generateAccessToken({
+                userId: user._id.toString(),
+                role: user.role
+            });
+            
             return {
                 success: true,
                 message: 'Đăng nhập thành công',
@@ -82,7 +91,8 @@ export class AuthService {
                     role: user.role,
                     status: user.status,
                     avatar: user.avatar // Thêm avatar
-                }
+                },
+                accessToken: accessToken
             };
 
         } catch (error) {

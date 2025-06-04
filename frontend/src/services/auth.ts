@@ -46,9 +46,27 @@ export const authService = {
     }
   },
 
-  logout(): void {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    window.location.href = '/login';
+  async logout(): Promise<void> {
+    try {
+      // Gọi API logout trước khi clear token
+      const token = this.getToken();
+      if (token) {
+        await api.post('/auth/logout', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Vẫn tiếp tục logout nếu API lỗi
+    } finally {
+      // Xóa tất cả token
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      
+      // Redirect về trang chủ
+      window.location.href = '/';
+    }
   },
 
   getToken(): string | null {

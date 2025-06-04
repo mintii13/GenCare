@@ -6,7 +6,7 @@ import { User, Calendar, BookOpen, Star } from 'lucide-react';
 
 interface BlogCardProps {
   blog: Blog;
-  onClick: (blogId: number) => void;
+  onClick: (blogId: string) => void;
 }
 
 const BlogCard: React.FC<BlogCardProps> = ({ blog, onClick }) => {
@@ -30,17 +30,17 @@ const BlogCard: React.FC<BlogCardProps> = ({ blog, onClick }) => {
         {/* Header với thông tin tác giả */}
         <div className="flex items-center mb-4">
           <img
-            src={blog.author.avatar}
-            alt={blog.author.full_name}
+            src={blog.author?.avatar || '/default-avatar.png'}
+            alt={blog.author?.full_name || 'Không rõ tác giả'}
             className="w-12 h-12 rounded-full object-cover mr-4"
           />
           <div className="flex-1">
-            <h4 className="font-semibold text-gray-900">{blog.author.full_name}</h4>
+            <h4 className="font-semibold text-gray-900">{blog.author?.full_name || 'Không rõ tác giả'}</h4>
             <div className="flex items-center text-sm text-gray-600">
               <User className="w-4 h-4 mr-1" />
-              <span>{blog.author.specialization}</span>
+              <span>{blog.author?.specialization}</span>
               <Star className="w-4 h-4 ml-3 mr-1 text-yellow-500" />
-              <span>{blog.author.consultation_rating}/5</span>
+              <span>{blog.author?.consultation_rating}/5</span>
             </div>
           </div>
         </div>

@@ -5,7 +5,8 @@ import { blogService } from '../../services/blogService';
 import { useAuth } from '../../contexts/AuthContext';
 import BlogCard from '../../components/blog/BlogCard';
 import BlogFilters from '../../components/blog/BlogFilters';
-import { Plus, FileText, Loader } from 'lucide-react';
+import { Plus, FileText, Loader, Wifi } from 'lucide-react';
+import { runAllAPITests } from '../../utils/testAPI';
 
 const BlogListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const BlogListPage: React.FC = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [apiTesting, setApiTesting] = useState(false);
   const [filters, setFilters] = useState<BlogFiltersType>({
     sortBy: 'publish_date',
     sortOrder: 'desc'
@@ -34,8 +36,12 @@ const BlogListPage: React.FC = () => {
       console.log('📊 API Response:', response);
       
       if (response.success) {
-        console.log('✅ Blogs loaded successfully:', response.data.blogs.length, 'blogs');
-        setBlogs(response.data.blogs);
+        // Lọc blog_id hợp lệ (24 ký tự)
+        const validBlogs = response.data.blogs.filter(
+          (blog) => typeof blog.blog_id === 'string' && blog.blog_id.length === 24
+        );
+        console.log('✅ Blogs loaded successfully:', validBlogs.length, 'blogs');
+        setBlogs(validBlogs);
       } else {
         console.error('❌ API returned success: false');
         setError(response.message || 'Có lỗi xảy ra khi tải danh sách blog');
@@ -48,7 +54,21 @@ const BlogListPage: React.FC = () => {
     }
   };
 
-  const handleBlogClick = (blogId: number) => {
+  const handleTestAPI = async () => {
+    setApiTesting(true);
+    try {
+      console.clear(); // Clear console for clean test output
+      await runAllAPITests();
+      alert('API Test completed! Check console for details.');
+    } catch (error) {
+      console.error('API Test failed:', error);
+      alert('API Test failed! Check console for details.');
+    } finally {
+      setApiTesting(false);
+    }
+  };
+
+  const handleBlogClick = (blogId: string) => {
     navigate(`/blogs/${blogId}`);
   };
 
@@ -92,15 +112,27 @@ const BlogListPage: React.FC = () => {
             </p>
           </div>
           
-          {isConsultant && (
+          <div className="flex gap-3">
+            {/* API Test Button */}
             <button
-              onClick={handleCreateBlog}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              onClick={handleTestAPI}
+              disabled={apiTesting}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Viết bài mới
+              <Wifi className="w-4 h-4 mr-2" />
+              {apiTesting ? 'Testing...' : 'Test API'}
             </button>
-          )}
+            
+            {isConsultant && (
+              <button
+                onClick={handleCreateBlog}
+                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Viết bài mới
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}

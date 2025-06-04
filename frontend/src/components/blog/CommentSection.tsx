@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 interface CommentSectionProps {
-  blogId: number;
+  blogId: string;
   comments: Comment[];
   onCommentsUpdate: () => void;
 }
@@ -28,7 +28,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 }) => {
   const { user } = useAuth();
   const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,11 +43,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     });
   };
 
-  const handleSubmitComment = async (content: string, parentId?: number) => {
+  const handleSubmitComment = async (content: string, parentId?: string) => {
     if (!content.trim() || !canComment) return;
 
     setIsSubmitting(true);
     try {
+      console.log('CommentSection blogId:', blogId, typeof blogId);
       await blogService.createComment(blogId, content, isAnonymous, parentId);
       
       // Reset form
