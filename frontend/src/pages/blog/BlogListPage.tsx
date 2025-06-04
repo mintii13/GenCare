@@ -54,20 +54,6 @@ const BlogListPage: React.FC = () => {
     }
   };
 
-  const handleTestAPI = async () => {
-    setApiTesting(true);
-    try {
-      console.clear(); // Clear console for clean test output
-      await runAllAPITests();
-      alert('API Test completed! Check console for details.');
-    } catch (error) {
-      console.error('API Test failed:', error);
-      alert('API Test failed! Check console for details.');
-    } finally {
-      setApiTesting(false);
-    }
-  };
-
   const handleBlogClick = (blogId: string) => {
     navigate(`/blogs/${blogId}`);
   };
@@ -113,16 +99,6 @@ const BlogListPage: React.FC = () => {
           </div>
           
           <div className="flex gap-3">
-            {/* API Test Button */}
-            <button
-              onClick={handleTestAPI}
-              disabled={apiTesting}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Wifi className="w-4 h-4 mr-2" />
-              {apiTesting ? 'Testing...' : 'Test API'}
-            </button>
-            
             {isConsultant && (
               <button
                 onClick={handleCreateBlog}
