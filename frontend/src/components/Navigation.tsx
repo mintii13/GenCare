@@ -26,6 +26,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
             <Link to="/test-packages" className="text-gray-600 hover:text-primary-700">
               Gói xét nghiệm
             </Link>
+            <Link to="/blogs" className="text-gray-600 hover:text-primary-700">
+              Blog
+            </Link>
             <Link to="/about" className="text-gray-600 hover:text-primary-700">
               Về chúng tôi
             </Link>
@@ -107,6 +110,13 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Gói xét nghiệm
+              </Link>
+              <Link 
+                to="/blogs" 
+                className="text-gray-600 hover:text-primary-700"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Blog
               </Link>
               <Link 
                 to="/about" 

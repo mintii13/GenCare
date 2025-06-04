@@ -8,6 +8,9 @@ import AboutUs from './pages/about/AboutUs';
 import Layout from './components/layout/Layout';
 import LoginModal from "@/components/auth/LoginModal";
 import OAuthSuccess from "./pages/OAuthSuccess";
+// Blog imports
+import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
+
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
 const App = () => {
@@ -24,6 +27,12 @@ const App = () => {
           <Route path="/about" element={<AboutUs />} />
           <Route path="/user/profile" element={<UserProfilePage />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
+          
+          {/* Blog routes */}
+          <Route path="/blogs" element={<BlogListPage />} />
+          <Route path="/blogs/create" element={<BlogFormPage />} />
+          <Route path="/blogs/:blogId" element={<BlogDetailPage />} />
+          <Route path="/blogs/:blogId/edit" element={<BlogFormPage />} />
         </Routes>
       </Suspense>
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
