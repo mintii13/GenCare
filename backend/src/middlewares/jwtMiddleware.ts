@@ -63,19 +63,3 @@ export const authorizeRoles = (...roles: string[]) => {
     };
 };
 
-/**
- * Middleware tùy chọn - không bắt buộc có token
- */
-export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (token) {
-        const decoded = JWTUtils.verifyToken(token);
-        if (decoded) {
-            req.user = decoded;
-        }
-    }
-
-    next();
-};
