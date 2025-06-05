@@ -14,7 +14,7 @@ export class BlogCommentRepository {
 
             const commentsWithCustomer = await Promise.all(
                 comments.map(async (comment) => {
-                    // Nếu comment ẩn danh, không trả về customer info và customer_id
+                    // Nếu comment ẩn danh, không trả về customer info
                     if (comment.is_anonymous) {
                         return {
                             _id: comment._id,
