@@ -8,7 +8,6 @@ import session from 'express-session';
 import passport from './configs/passport';
 import { startRedisServer } from './configs/redis';
 import redisClient from './configs/redis';
-import path from 'path';
 require('dotenv').config();
 import blogController from './controllers/blogController';
 
