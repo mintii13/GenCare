@@ -30,8 +30,9 @@ const userSchema = new Schema<IUser>({
     status: { type: Boolean, default: true },
     email_verified: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'consultant', 'staff', 'admin'], required: true },
-    googleId: { type: String },
-    avatar: {type: String}
+    avatar: {type: String},
+    googleId: { type: String }
+    
 }, {
     timestamps: { createdAt: 'registration_date', updatedAt: 'updated_date' }
 });
