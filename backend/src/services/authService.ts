@@ -9,12 +9,12 @@ import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
 import redisClient from '../configs/redis';
+
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
         try {
             const { email, password } = loginRequest;
 
-            // Find user by email
             const user = await UserRepository.findByEmail(email);
 
             if (!user) {
@@ -24,7 +24,6 @@ export class AuthService {
                 };
             }
 
-            // Check if user is active
             if (!user.status) {
                 return {
                     success: false,
@@ -32,7 +31,6 @@ export class AuthService {
                 };
             }
 
-            // Verify password
             const isValidPassword = await bcrypt.compare(password, user.password);
             if (!isValidPassword) {
                 return {
@@ -41,10 +39,8 @@ export class AuthService {
                 };
             }
 
-            // Update last login
             await UserRepository.updateLastLogin(user._id);
 
-            // Generate JWT access token
             const accessToken = JWTUtils.generateAccessToken({
                 userId: user._id.toString(),
                 role: user.role
@@ -58,7 +54,8 @@ export class AuthService {
                     email: user.email,
                     full_name: user.full_name,
                     role: user.role,
-                    status: user.status
+                    status: user.status,
+                    avatar: user.avatar // Thêm avatar
                 },
                 accessToken: accessToken
             };
@@ -70,14 +67,20 @@ export class AuthService {
                 message: 'Lỗi hệ thống'
             };
         }
-
     }
 
     public static async loginGoogle(user: Partial<IUser>): Promise<LoginResponse> {
         try {
             // Update last login
-            // await UserRepository.updateLastLogin(user._id);
+            await UserRepository.updateLastLogin(user._id);
             console.log(user);
+            
+            // Generate JWT access token
+            const accessToken = JWTUtils.generateAccessToken({
+                userId: user._id.toString(),
+                role: user.role
+            });
+            
             return {
                 success: true,
                 message: 'Đăng nhập thành công',
@@ -86,8 +89,10 @@ export class AuthService {
                     email: user.email,
                     full_name: user.full_name,
                     role: user.role,
-                    status: user.status
-                }
+                    status: user.status,
+                    avatar: user.avatar // Thêm avatar
+                },
+                accessToken: accessToken
             };
 
         } catch (error) {
@@ -97,7 +102,6 @@ export class AuthService {
                 message: 'Lỗi hệ thống'
             };
         }
-
     }
 
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
@@ -109,42 +113,44 @@ export class AuthService {
         const email_verified = true;
         const role = 'customer';
         const googleId = profile.id;
+        const avatar = profile.photos?.[0]?.value || null; // Lấy avatar từ Google
 
-        // Kiểm tra user đã tồn tại theo email
         let user = await User.findOne({ email });
         if (user) {
-            // Nếu user đã có, cập nhật googleId nếu chưa có
             if (!user.googleId) {
                 user.googleId = googleId;
+                if (!user.avatar && avatar) {
+                    user.avatar = avatar; // Cập nhật avatar nếu chưa có
+                }
                 await user.save();
             }
             return user;
         }
 
-        // Nếu chưa có user, tạo mới
-        user = await UserRepository.insertUser({ 
-            email, 
-            full_name, 
-            registration_date, 
-            updated_date, 
-            status, 
-            email_verified, 
-            role, 
+        user = await UserRepository.insertUser({
+            email,
+            full_name,
+            registration_date,
+            updated_date,
+            status,
+            email_verified,
+            role,
             googleId,
             phone: null,
             date_of_birth: null,
             last_login: null,
             password: '',
+            avatar: avatar // Thêm avatar từ Google
         });
         return user;
     }
 
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
-            const { email, password, full_name, phone, date_of_birth, gender} = registerRequest;
+            const { email, password, full_name, phone, date_of_birth, gender } = registerRequest;
 
             await redisClient.setEx(`pass:${email}`, 300, password);
-            //check duplicate email
+
             const existedUser = await UserRepository.findByEmail(email);
 
             const user = {
@@ -160,9 +166,9 @@ export class AuthService {
                 status: true,
                 email_verified: true,
                 role: 'customer',
-                googleId: null
+                googleId: null,
+                avatar: null // Mặc định null, user có thể upload sau
             };
-            // console.log(user);
 
             if (existedUser) {
                 return {
@@ -186,12 +192,12 @@ export class AuthService {
         }
     }
 
-    public static async sendOTP(emailSendTo){
+    public static async sendOTP(emailSendTo) {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
-            auth:{
+            auth: {
                 user: process.env.EMAIL_FOR_VERIFY || '',
-                pass: process.env.EMAIL_APP_PASSWORD || '' 
+                pass: process.env.EMAIL_APP_PASSWORD || ''
             }
         })
 
@@ -218,7 +224,7 @@ export class AuthService {
 
     }
 
-    public static async insertByMyApp(user: string): Promise<void>{
+    public static async insertByMyApp(user: string): Promise<void> {
         await UserRepository.insertUser(JSON.parse(user));
     }
 }

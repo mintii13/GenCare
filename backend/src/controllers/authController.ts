@@ -96,7 +96,7 @@ router.post('/google/register', async (req, res) => {
             return res.status(401).json({ error: 'User không tồn tại' });
         }
         const result = await AuthService.loginGoogle(user);
-        result.accessToken = (await redisClient.get('accessTokenGoogle')).toString();
+        // Không cần lấy từ Redis nữa vì AuthService.loginGoogle đã generate token
         console.log(res.json(result));
         return res.status(200).json(result);
     } catch (error) {
