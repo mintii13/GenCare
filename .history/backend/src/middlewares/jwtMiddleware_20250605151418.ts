@@ -5,7 +5,7 @@ import { JWTUtils, JWTPayload } from '../utils/jwtUtils';
 declare global {
     namespace Express {
         interface Request {
-            User?: JWTPayload;
+            user?: JWTPayload;
         }
     }
 }

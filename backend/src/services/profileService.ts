@@ -59,7 +59,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         if (req.file) {
             const base64Image = req.file.buffer.toString('base64');
             const mimeType = req.file.mimetype;
-            updateData.avatar = `data:${mimeType};base64,${base64Image}`;
+            updateData.avatar = `data:${mimeType};base64,${base64Image}`;            
         }
         const updatedUser = await UserRepository.findByIdAndUpdate(userId, updateData)
 
@@ -70,7 +70,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             });
             return;
         }
-        const result: UpdateProfileResponse = {
+        const result: UpdateProfileResponse = {       
             success: true,
             message: 'Update profile successfully',
             avatarError,
