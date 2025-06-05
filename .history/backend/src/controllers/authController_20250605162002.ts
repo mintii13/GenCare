@@ -191,4 +191,29 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
     }
 });
 
+router.get('/profile', authenticateToken, async (req, res) => {
+    try {
+        // req.user được gán từ middleware authenticateToken
+        // userId có thể là req.user.userId hoặc req.user.id tùy JWT
+        const userId = (req.user as any).userId || (req.user as any).id;
+        if (!userId) return res.status(401).json({ success: false, message: "Unable to authenticate user" });
+
+        const user = await User.findById(userId).lean();
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                email: user.email,
+                full_name: user.full_name,
+                role: user.role,
+                // ... các trường khác nếu cần
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "System error" });
+    }
+});
+
 export default router;

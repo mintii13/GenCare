@@ -193,7 +193,7 @@ export class AuthService {
     }
 
     public static async sendOTP(emailSendTo) {
-        const transporter = nodemailer.createTransport({
+        const transporter = nodemailer.createTransporter({
             service: 'gmail',
             auth: {
                 user: process.env.EMAIL_FOR_VERIFY || '',

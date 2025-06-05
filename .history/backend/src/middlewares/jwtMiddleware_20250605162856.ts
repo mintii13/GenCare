@@ -63,7 +63,7 @@ export const authorizeRoles = (...roles: string[]) => {
         if (!roles.includes(user.role)) {
             res.status(403).json({
                 success: false,
-                message: 'No access permission'
+                message: 'Không có quyền truy cập'
             });
             return;
         }

@@ -35,7 +35,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     if (!decoded) {
         res.status(403).json({
             success: false,
-            message: 'Token is invalid or expired'
+            message: 'Token không hợp lệ hoặc đã hết hạn'
         });
         return;
     }
@@ -55,7 +55,7 @@ export const authorizeRoles = (...roles: string[]) => {
         if (!user) {
             res.status(401).json({
                 success: false,
-                message: 'Not verified'
+                message: 'Chưa được xác thực'
             });
             return;
         }
@@ -63,7 +63,7 @@ export const authorizeRoles = (...roles: string[]) => {
         if (!roles.includes(user.role)) {
             res.status(403).json({
                 success: false,
-                message: 'No access permission'
+                message: 'Không có quyền truy cập'
             });
             return;
         }
