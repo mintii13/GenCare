@@ -5,14 +5,9 @@ import { JWTUtils, JWTPayload } from '../utils/jwtUtils';
 declare global {
     namespace Express {
         interface Request {
-            User?: JWTPayload;
+            user?: JWTPayload;
         }
     }
-}
-
-// Cách khác để extend Request type
-interface AuthenticatedRequest extends Request {
-    user: JWTPayload;
 }
 
 /**
@@ -21,6 +16,9 @@ interface AuthenticatedRequest extends Request {
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    console.log('Auth header:', authHeader);
+    console.log('Token:', token);
 
     if (!token) {
         res.status(401).json({
@@ -31,6 +29,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     }
 
     const decoded = JWTUtils.verifyToken(token);
+    console.log('Decoded token:', decoded);
 
     if (!decoded) {
         res.status(403).json({
@@ -40,8 +39,8 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return;
     }
 
-    // Đảm bảo req.user được gán đúng cách
-    (req as any).user = decoded;
+    req.user = decoded;
+    console.log('req.user set to:', req.user);
     next();
 };
 
@@ -50,9 +49,10 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
  */
 export const authorizeRoles = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
-        const user = (req as any).user;
+        console.log('authorizeRoles - req.user:', req.user);
+        console.log('authorizeRoles - required roles:', roles);
 
-        if (!user) {
+        if (!req.user) {
             res.status(401).json({
                 success: false,
                 message: 'Chưa được xác thực'
@@ -60,7 +60,9 @@ export const authorizeRoles = (...roles: string[]) => {
             return;
         }
 
-        if (!roles.includes(user.role)) {
+        console.log('authorizeRoles - user role:', req.user.role);
+
+        if (!roles.includes(req.user.role)) {
             res.status(403).json({
                 success: false,
                 message: 'Không có quyền truy cập'
