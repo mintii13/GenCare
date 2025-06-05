@@ -13,8 +13,8 @@ export interface IUser extends Document {
     status: boolean;
     email_verified: boolean;
     role: 'customer' | 'consultant' | 'staff' | 'admin';
-    googleId?: string;
     avatar?: string;
+    googleId?: string;
 }
 
 const userSchema = new Schema<IUser>({
