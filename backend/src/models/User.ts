@@ -14,6 +14,7 @@ export interface IUser extends Document {
     email_verified: boolean;
     role: 'customer' | 'consultant' | 'staff' | 'admin';
     googleId?: string;
+    avatar?: string;
 }
 
 const userSchema = new Schema<IUser>({
@@ -29,7 +30,8 @@ const userSchema = new Schema<IUser>({
     status: { type: Boolean, default: true },
     email_verified: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'consultant', 'staff', 'admin'], required: true },
-    googleId: { type: String }
+    googleId: { type: String },
+    avatar: {type: String}
 }, {
     timestamps: { createdAt: 'registration_date', updatedAt: 'updated_date' }
 });

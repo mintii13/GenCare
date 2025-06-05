@@ -3,11 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { connectDatabase } from './configs/database';
 import authController from './controllers/authController';
+import profileController from './controllers/profileController'
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
 import {startRedisServer} from './configs/redis';
 import redisClient from './configs/redis';
+
 require('dotenv').config();
 
 const app = express();
@@ -41,6 +43,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use('/api/auth', authController);
+app.use('/api/profile', profileController);
 
 // Error handling middleware
 app.use(errorHandler);
