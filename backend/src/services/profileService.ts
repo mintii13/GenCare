@@ -55,13 +55,15 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             //xóa ảnh cũ sau khi update
             const existingUser = await User.findById(userId);
             if (existingUser?.avatar) {
-                const oldAvatarPath = path.resolve(existingUser.avatar);
+                const oldFileName = path.basename(existingUser.avatar); // chỉ lấy tên file
+                const oldAvatarPath = path.join(__dirname, '../../uploads', oldFileName);
                 if (fs.existsSync(oldAvatarPath)) {
-                    fs.unlinkSync(oldAvatarPath);
+                fs.unlinkSync(oldAvatarPath);
                 }
             }
             //update ảnh mới
-            updateData.avatar = req.file.path.replace(/\\/g, '/'); // Đường dẫn ảnh
+            const filepath = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            updateData.avatar = filepath; // Đường dẫn ảnh
         }
         const updatedUser = await User.findByIdAndUpdate(
             userId,
@@ -76,7 +78,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             });
             return;
         }
-
+        console.log(path.join(__dirname, 'uploads'));
         res.json({
             success: true,
             message: 'Cập nhật profile thành công',
