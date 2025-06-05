@@ -83,6 +83,7 @@ router.get(
         role: user.role
     });
     redisClient.setEx('accessTokenGoogle', 300, accessToken);
+    console.log("Token: ", accessToken);                        //để đọc accessToken test Postman
     res.redirect(`http://localhost:5173/oauth-success?token=${accessToken}`);
   }
 );
@@ -91,25 +92,56 @@ router.get(
 router.post('/google/register', async (req, res) => {
     
     try {
-        const user = req.user as IUser;
+        const accessToken = await redisClient.get('accessTokenGoogle');
+        
+        if (!accessToken) {
+            return res.status(401).json({ error: 'Session đã hết hạn' });
+        }
+
+        const decoded = JWTUtils.decodeToken(accessToken as string);
+        const user = await User.findById(decoded.userId);
+
         if (!user) {
             return res.status(401).json({ error: 'User không tồn tại' });
         }
         const result = await AuthService.loginGoogle(user);
-        // Không cần lấy từ Redis nữa vì AuthService.loginGoogle đã generate token
-        console.log(res.json(result));
         return res.status(200).json(result);
     } catch (error) {
         console.error('Login controller error:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi hệ thống'
+            message: 'System error'
         });
     }
 })
 
-//register by my app
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    // req.user được gán từ middleware authenticateToken
+    // userId có thể là req.user.userId hoặc req.user.id tùy JWT
+    const userId = (req.user as any).userId || (req.user as any).id;
+    if (!userId) return res.status(401).json({ success: false, message: "Cannot verify user" });
 
+    const user = await User.findById(userId).lean();
+    if (!user) return res.status(404).json({ success: false, message: "Cannot find user" });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi hệ thống" });
+  }
+});
+
+//register by my app
 router.post('/register', validateRegister, async (req: Request, res: Response) => {
     try {
         const registerRequest: RegisterRequest = req.body;
@@ -189,31 +221,6 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
             message: 'Lỗi hệ thống'
         });
     }
-});
-
-router.get('/profile', authenticateToken, async (req, res) => {
-  try {
-    // req.user được gán từ middleware authenticateToken
-    // userId có thể là req.user.userId hoặc req.user.id tùy JWT
-    const userId = (req.user as any).userId || (req.user as any).id;
-    if (!userId) return res.status(401).json({ success: false, message: "Không xác thực được user" });
-
-    const user = await User.findById(userId).lean();
-    if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy user" });
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role,
-        // ... các trường khác nếu cần
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Lỗi hệ thống" });
-  }
 });
 
 export default router;
