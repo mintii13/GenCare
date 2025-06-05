@@ -9,7 +9,9 @@ import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
 import redisClient from '../configs/redis';
-
+import { ChangePasswordRequest } from '../dto/requests/ChangePasswordRequest';
+import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
+import { ObjectId } from 'mongoose';
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
         try {
@@ -74,13 +76,13 @@ export class AuthService {
             // Update last login
             await UserRepository.updateLastLogin(user._id);
             console.log(user);
-            
+
             // Generate JWT access token
             const accessToken = JWTUtils.generateAccessToken({
                 userId: user._id.toString(),
                 role: user.role
             });
-            
+
             return {
                 success: true,
                 message: 'Đăng nhập thành công',
@@ -227,4 +229,118 @@ export class AuthService {
     public static async insertByMyApp(user: string): Promise<void> {
         await UserRepository.insertUser(JSON.parse(user));
     }
+
+    public static async verifyOldPassword(id: ObjectId, oldPassword: string): Promise<boolean> {
+        try {
+            const user = await UserRepository.findById(id);
+            if (!user) {
+                throw new Error('User not found');
+            }
+            return await bcrypt.compare(oldPassword, user.password);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Hash new password
+     */
+    public static async hashPassword(password: string): Promise<string> {
+        try {
+            const salt = await bcrypt.genSalt(10);
+            return await bcrypt.hash(password, salt);
+        } catch (error) {
+            throw new Error('Error hashing password');
+        }
+    }
+
+    public static async updatePassword(_id: ObjectId, hashedPassword: string): Promise<void> {
+        try {
+            const result = await User.findOneAndUpdate(
+                { _id },
+                { password: hashedPassword },
+                { new: true }
+            );
+
+            if (!result) {
+                throw new Error('User not found');
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async changePassword(
+        id: ObjectId,
+        oldPassword: string,
+        newPassword: string,
+        confirmPassword: string
+    ): Promise<string> {
+        try {
+            // 1. Verify old password
+            const isOldPasswordValid = await this.verifyOldPassword(id, oldPassword);
+            if (!isOldPasswordValid) {
+                throw new Error('Current password is incorrect');
+            }
+            if (newPassword !== confirmPassword) {
+                throw new Error('new_password is different from confirm_password');
+            }
+            // 2. Hash new password
+            newPassword = await this.hashPassword(newPassword);
+
+            // 3. Update password in database
+            await this.updatePassword(id, newPassword);
+
+            return 'Password changed successfully';
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async changePasswordForUsers(
+        id: ObjectId,
+        oldPassword: string,
+        newPassword: string,
+        confirmPassword: string
+    ): Promise<ChangePasswordResponse> {
+        try {
+            if (!id) {
+                return {
+                    success: false,
+                    message: 'Unauthorized',
+                };
+            }
+
+            const user = await UserRepository.findById(id);
+            
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+
+            await this.changePassword(id, oldPassword, newPassword, confirmPassword);
+
+            const accessToken = JWTUtils.generateAccessToken({
+                userId: user._id.toString(),
+                role: user.role
+            });
+
+            return {
+                success: true,
+                message: 'Change password successfully',
+                email: user.email,
+                accessToken
+            }
+
+        } catch (error) {
+            return {
+                    success: false,
+                    message: 'System error',
+            };
+        }
+    }
+
 }
+

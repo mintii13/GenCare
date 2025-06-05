@@ -10,6 +10,9 @@ import { RegisterRequest } from '../dto/requests/RegisterRequest';
 import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { JWTUtils } from '../utils/jwtUtils';
+import { ChangePasswordRequest } from '../dto/requests/ChangePasswordRequest';
+import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
+import { validateChangePassword } from '../middlewares/validateChangePassword';
 const router = Router();
 
 // Check email endpoint
@@ -183,9 +186,7 @@ router.get('/otpForm', async (req: Request, res: Response) => {
 router.post('/verifyOTP', async (req: Request, res: Response) => {
     try {
         const {email, otp} = req.body;
-        console.log(email, otp);
         const storedOtp = await redisClient.get(`otp:${email}`);
-        console.log(storedOtp, otp);
         if (!storedOtp)
             return res.status(400).json({
                 success: false,
@@ -207,7 +208,7 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: "Không tìm thấy mật khẩu." });
         const loginRequest: LoginRequest = {email, password};
         const result = await AuthService.login(loginRequest);
-        console.log("Login thành công");
+        console.log("Login successfully");
         if (result.success) {
             res.status(200).json(result);
         } else {
@@ -218,9 +219,40 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
         console.error('Login controller error:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi hệ thống'
+            message: 'System error'
         });
     }
 });
 
+router.put('/changePassword', authenticateToken, validateChangePassword, async (req: Request, res: Response): Promise<ChangePasswordResponse> => {
+        try {
+            const changePasswordRequest: ChangePasswordRequest = req.body;
+            const userId = (req as any).user.userId;
+            const {old_password, new_password, confirm_password} = changePasswordRequest;
+
+            // Change password
+            const result = await AuthService.changePasswordForUsers(
+                userId,
+                old_password,
+                new_password,
+                confirm_password
+            );
+
+            if (!result.success){
+                res.status(400).json(result);
+            }
+            else res.status(200).json(result);
+            return;
+
+        } catch (error) {
+            console.error('Change password error:', error);
+            
+            if (error instanceof Error) {
+                res.status(400).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        }
+    });
+    
 export default router;
