@@ -3,6 +3,40 @@ import { Request, Response} from 'express';
 import { UserRepository } from '../repositories/userRepository';
 import { UpdateProfileResponse } from '../dto/responses/ProfileResponse';
 
+export const getProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req.user as any)?.userId;
+        
+        const user = await UserRepository.findById(userId);
+        if (!user) {
+            res.status(404).json({
+                success: false,
+                message: 'Cannot find user info'
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            message: 'Get user profile successfully',
+            data: {
+                avatar: user.avatar,
+                email: user.email,
+                full_name: user.full_name,
+                phone: user.phone,
+                date_of_birth: user.date_of_birth,
+                gender: user.gender
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error when getting profile',
+        });
+        throw error;
+    }
+}
+
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req.user as any)?.userId;
