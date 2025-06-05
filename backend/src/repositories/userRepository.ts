@@ -10,6 +10,19 @@ export class UserRepository {
         }
     }
 
+    public static async findByIdAndUpdate(userId: string, updateData: Partial<IUser>): Promise<IUser | null> {
+        try {
+            return await User.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+        } catch (error) {
+            console.error('Error finding user by email:', error);
+            throw error;
+        }
+    }
+
     public static async updateLastLogin(userId: string): Promise<void> {
         try {
             await User.updateOne(
