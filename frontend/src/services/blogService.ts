@@ -9,7 +9,7 @@ import {
 } from '../data/mockBlogData';
 
 // Flag để bật/tắt mock data
-const USE_MOCK_DATA = true; // Luôn dùng mock data để demo
+const USE_MOCK_DATA = false; // Chuyển sang sử dụng API thật
 
 export const blogService = {
   // Lấy danh sách blog với filter
@@ -43,7 +43,7 @@ export const blogService = {
       
       if (filters?.authorId) {
         filteredBlogs = filteredBlogs.filter(blog => 
-          blog.author_id === filters.authorId
+          blog.author_id === parseInt(filters.authorId!)
         );
       }
       
@@ -101,12 +101,12 @@ export const blogService = {
   },
 
   // Lấy chi tiết blog theo ID
-  getBlogById: async (blogId: number): Promise<BlogsResponse> => {
+  getBlogById: async (blogId: string): Promise<BlogsResponse> => {
     if (USE_MOCK_DATA) {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      const blog = getMockBlogById(blogId);
+      const blog = getMockBlogById(parseInt(blogId));
       if (blog) {
         return {
           success: true,
@@ -124,10 +124,17 @@ export const blogService = {
 
     try {
       const response = await api.get(`/blogs/${blogId}`);
+      // Backend trả về { data: { blog } }, cần chuyển thành { data: { blogs: [blog] } }
+      if (response.data.success && response.data.data.blog) {
+        return {
+          ...response.data,
+          data: { blogs: [response.data.data.blog] }
+        };
+      }
       return response.data;
     } catch (error) {
       console.error('API Error, falling back to mock data:', error);
-      const blog = getMockBlogById(blogId);
+      const blog = getMockBlogById(parseInt(blogId));
       return {
         success: !!blog,
         message: blog ? "Lấy chi tiết blog thành công" : "Không tìm thấy blog",
@@ -137,12 +144,12 @@ export const blogService = {
   },
 
   // Lấy danh sách comment của blog
-  getBlogComments: async (blogId: number): Promise<CommentsResponse> => {
+  getBlogComments: async (blogId: string): Promise<CommentsResponse> => {
     if (USE_MOCK_DATA) {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      const comments = getMockCommentsByBlogId(blogId);
+      const comments = getMockCommentsByBlogId(parseInt(blogId));
       return {
         success: true,
         message: "Lấy danh sách comment thành công",
@@ -156,7 +163,7 @@ export const blogService = {
       return response.data;
     } catch (error) {
       console.error('API Error, falling back to mock data:', error);
-      const comments = getMockCommentsByBlogId(blogId);
+      const comments = getMockCommentsByBlogId(parseInt(blogId));
       return {
         success: true,
         message: "Lấy danh sách comment thành công (mock)",
@@ -167,23 +174,23 @@ export const blogService = {
   },
 
   // Đăng comment mới (chỉ customer)
-  createComment: async (blogId: number, content: string, isAnonymous: boolean = false, parentCommentId?: number) => {
+  createComment: async (blogId: string, content: string, isAnonymous: boolean = false, parentCommentId?: string) => {
     if (USE_MOCK_DATA) {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Simulate successful comment creation
       const newComment = {
-        comment_id: Date.now(), // Simple ID generation
-        blog_id: blogId,
-        customer_id: isAnonymous ? null : 999, // Mock customer ID
+        comment_id: Date.now().toString(), // Convert to string
+        blog_id: parseInt(blogId), // Convert back to number for mock data
+        customer_id: isAnonymous ? null : "999", // Mock customer ID as string
         content,
         comment_date: new Date().toISOString(),
         parent_comment_id: parentCommentId || null,
         status: "approved" as const,
         is_anonymous: isAnonymous,
         customer: isAnonymous ? null : {
-          user_id: 999,
+          user_id: "999", // String ID
           full_name: "Người dùng test",
           email: "test@example.com",
           phone: "0123456789",
@@ -196,15 +203,16 @@ export const blogService = {
       };
       
       // Add to mock data (in real app, this would be handled by state management)
-      if (!mockCommentsData[blogId]) {
-        mockCommentsData[blogId] = {
+      const mockBlogId = parseInt(blogId);
+      if (!mockCommentsData[mockBlogId]) {
+        mockCommentsData[mockBlogId] = {
           success: true,
           message: "Lấy danh sách comment thành công",
           data: { comments: [] },
           timestamp: new Date().toISOString()
         };
       }
-      mockCommentsData[blogId].data.comments.push(newComment);
+      mockCommentsData[mockBlogId].data.comments.push(newComment as any);
       
       return {
         success: true,
@@ -242,7 +250,7 @@ export const blogService = {
         updated_date: new Date().toISOString(),
         status: "published" as const,
         author: {
-          user_id: 999,
+          user_id: "999", // String ID
           full_name: "BS. Test User",
           email: "test@example.com",
           phone: "0123456789",
@@ -257,12 +265,12 @@ export const blogService = {
       };
       
       // Add to mock data
-      mockBlogsData.data.blogs.unshift(newBlog);
+      mockBlogsData.data.blogs.unshift(newBlog as any);
       
       return {
         success: true,
         message: "Tạo blog thành công",
-        data: { blog_id: newBlogId, blog: newBlog }
+        data: { blog_id: newBlogId.toString(), blog: newBlog }
       };
     }
 
@@ -279,12 +287,12 @@ export const blogService = {
   },
 
   // Cập nhật blog (chỉ consultant và chỉ blog của mình)
-  updateBlog: async (blogId: number, title: string, content: string) => {
+  updateBlog: async (blogId: string, title: string, content: string) => {
     if (USE_MOCK_DATA) {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 600));
       
-      const blogIndex = mockBlogsData.data.blogs.findIndex(blog => blog.blog_id === blogId);
+      const blogIndex = mockBlogsData.data.blogs.findIndex(blog => blog.blog_id === parseInt(blogId));
       if (blogIndex !== -1) {
         mockBlogsData.data.blogs[blogIndex] = {
           ...mockBlogsData.data.blogs[blogIndex],
@@ -316,12 +324,12 @@ export const blogService = {
   },
 
   // Xóa blog (chỉ consultant và chỉ blog của mình)
-  deleteBlog: async (blogId: number) => {
+  deleteBlog: async (blogId: string) => {
     if (USE_MOCK_DATA) {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      const blogIndex = mockBlogsData.data.blogs.findIndex(blog => blog.blog_id === blogId);
+      const blogIndex = mockBlogsData.data.blogs.findIndex(blog => blog.blog_id === parseInt(blogId));
       if (blogIndex !== -1) {
         mockBlogsData.data.blogs.splice(blogIndex, 1);
         return {

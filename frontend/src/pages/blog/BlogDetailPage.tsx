@@ -42,7 +42,7 @@ const BlogDetailPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await blogService.getBlogById(parseInt(blogId));
+      const response = await blogService.getBlogById(blogId);
       if (response.success && response.data.blogs.length > 0) {
         setBlog(response.data.blogs[0]);
       } else {
@@ -60,7 +60,7 @@ const BlogDetailPage: React.FC = () => {
     if (!blogId) return;
 
     try {
-      const response = await blogService.getBlogComments(parseInt(blogId));
+      const response = await blogService.getBlogComments(blogId);
       if (response.success) {
         setComments(response.data.comments);
       }

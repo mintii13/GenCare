@@ -11,6 +11,7 @@ import {
   Loader,
   FileText
 } from 'lucide-react';
+import LexicalPlaygroundEditor from '../../components/common/LexicalPlaygroundEditor';
 
 const BlogFormPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -18,7 +19,17 @@ const BlogFormPage: React.FC = () => {
   const { user } = useAuth();
   
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const defaultLexicalState = '{"root":{"children":[{"type":"paragraph","children":[],"direction":null,"format":"","indent":0,"version":1}],"direction":"ltr","format":"","indent":0,"type":"root","version":1}}';
+  function isValidLexicalState(str: string): boolean {
+    if (!str || typeof str !== 'string') return false;
+    try {
+      const obj = JSON.parse(str);
+      return !!(obj && obj.root && Array.isArray(obj.root.children));
+    } catch {
+      return false;
+    }
+  }
+  const [content, setContent] = useState(defaultLexicalState);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +57,7 @@ const BlogFormPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await blogService.getBlogById(parseInt(blogId));
+      const response = await blogService.getBlogById(blogId);
       if (response.success && response.data.blogs.length > 0) {
         const blog = response.data.blogs[0];
         
@@ -58,7 +69,9 @@ const BlogFormPage: React.FC = () => {
 
         setOriginalBlog(blog);
         setTitle(blog.title);
-        setContent(blog.content);
+        const safeContent = isValidLexicalState(blog.content) ? blog.content : defaultLexicalState;
+        console.log('Set content from blog:', safeContent);
+        setContent(safeContent);
       } else {
         setError('Không tìm thấy bài viết');
       }
@@ -235,21 +248,8 @@ const BlogFormPage: React.FC = () => {
 
             {/* Content */}
             <div className="mb-6">
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                Nội dung bài viết *
-              </label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Viết nội dung bài viết của bạn..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                rows={20}
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                {content.length} ký tự. Sử dụng Enter để xuống dòng.
-              </p>
+              <label className="block font-medium text-gray-700 mb-2">Nội dung bài viết</label>
+              <LexicalPlaygroundEditor />
             </div>
 
             {/* Writing tips */}

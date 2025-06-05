@@ -1,5 +1,5 @@
 export interface Author {
-  user_id: number;
+  user_id: string;
   full_name: string;
   email: string;
   phone: string;
@@ -13,7 +13,7 @@ export interface Author {
 }
 
 export interface Customer {
-  user_id: number;
+  user_id: string;
   full_name: string;
   email: string;
   phone: string;
@@ -25,8 +25,8 @@ export interface Customer {
 }
 
 export interface Blog {
-  blog_id: number;
-  author_id: number;
+  blog_id: string;
+  author_id: string;
   title: string;
   content: string;
   publish_date: string;
@@ -36,12 +36,12 @@ export interface Blog {
 }
 
 export interface Comment {
-  comment_id: number;
-  blog_id: number;
-  customer_id: number | null;
+  comment_id: string;
+  blog_id: string;
+  customer_id: string | null;
   content: string;
   comment_date: string;
-  parent_comment_id: number | null;
+  parent_comment_id: string | null;
   status: 'approved' | 'pending' | 'rejected';
   is_anonymous: boolean;
   customer: Customer | null;
@@ -66,7 +66,7 @@ export interface CommentsResponse {
 
 export interface BlogFilters {
   searchQuery?: string;
-  authorId?: number;
+  authorId?: string;
   specialization?: string;
   sortBy?: 'publish_date' | 'updated_date' | 'title';
   sortOrder?: 'asc' | 'desc';

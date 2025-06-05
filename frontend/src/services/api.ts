@@ -40,8 +40,13 @@ api.interceptors.response.use(
   async (error) => {
     // Nếu muốn xử lý lỗi 401, chỉ cần logout hoặc chuyển hướng, không cần refresh token
     if (error.response?.status === 401) {
+      // Xóa tất cả auth data
       localStorage.removeItem(AUTH_TOKEN_KEY);
-      window.location.href = '/login';
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      
+      // Redirect về trang chủ thay vì login
+      window.location.href = '/';
       return Promise.reject(error);
     }
     return Promise.reject(error);
