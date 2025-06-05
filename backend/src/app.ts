@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { connectDatabase } from './configs/database';
 import authController from './controllers/authController';
-import profileController from './controllers/profileController'
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
@@ -45,8 +44,6 @@ app.use(passport.session());
 
 app.use('/api/auth', authController);
 app.use('/api/blogs', blogController);
-app.use('/uploads', express.static('uploads'));
-app.use('/api/profile', profileController);
 
 
 // Error handling middleware
