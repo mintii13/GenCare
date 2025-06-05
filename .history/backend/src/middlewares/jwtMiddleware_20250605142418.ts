@@ -10,11 +10,6 @@ declare global {
     }
 }
 
-// Cách khác để extend Request type
-interface AuthenticatedRequest extends Request {
-    user: JWTPayload;
-}
-
 /**
  * Middleware xác thực JWT token
  */
@@ -25,7 +20,11 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     if (!token) {
         res.status(401).json({
             success: false,
-            message: 'Access token là bắt buộc'
+            message: 'Access token là bắt buộc',
+            debug: {
+                authHeader: authHeader,
+                hasToken: !!token
+            }
         });
         return;
     }
@@ -35,13 +34,16 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     if (!decoded) {
         res.status(403).json({
             success: false,
-            message: 'Token không hợp lệ hoặc đã hết hạn'
+            message: 'Token không hợp lệ hoặc đã hết hạn',
+            debug: {
+                token: token?.substring(0, 20) + '...', // Chỉ hiển thị một phần token
+                decoded: decoded
+            }
         });
         return;
     }
 
-    // Đảm bảo req.user được gán đúng cách
-    (req as any).user = decoded;
+    req.user = decoded;
     next();
 };
 
@@ -50,20 +52,27 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
  */
 export const authorizeRoles = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
-        const user = (req as any).user;
-
-        if (!user) {
+        if (!req.user) {
             res.status(401).json({
                 success: false,
-                message: 'Chưa được xác thực'
+                message: 'Chưa được xác thực',
+                debug: {
+                    userExists: !!req.user,
+                    requiredRoles: roles
+                }
             });
             return;
         }
 
-        if (!roles.includes(user.role)) {
+        if (!roles.includes(req.User.role)) {
             res.status(403).json({
                 success: false,
-                message: 'Không có quyền truy cập'
+                message: 'Không có quyền truy cập',
+                debug: {
+                    userRole: req.User.role,
+                    requiredRoles: roles,
+                    hasPermission: roles.includes(req.User.role)
+                }
             });
             return;
         }
