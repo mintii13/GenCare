@@ -3,7 +3,6 @@ import { BlogCommentRepository } from '../repositories/blogCommentRepository';
 import { Blog } from '../models/Blog';
 import { BlogComment } from '../models/BlogComment';
 import { User } from '../models/User';
-import { Customer } from '../models/Customer';
 
 export class BlogService {
     public static async getAllBlogs() {
@@ -53,7 +52,7 @@ export class BlogService {
                 author_id: blogData.author_id,
                 title: blogData.title.trim(),
                 content: blogData.content.trim(),
-                status: 'draft',
+                status: 'draft', // Mặc định là draft
                 publish_date: new Date(),
                 updated_date: new Date()
             });
@@ -89,6 +88,7 @@ export class BlogService {
         content: string;
     }) {
         try {
+            // Tìm blog
             const blog = await Blog.findById(blogId);
             if (!blog) {
                 return {
@@ -97,6 +97,7 @@ export class BlogService {
                 };
             }
 
+            // Kiểm tra quyền chỉnh sửa (chỉ tác giả mới được edit)
             if (blog.author_id.toString() !== updateData.author_id) {
                 return {
                     success: false,
@@ -104,6 +105,7 @@ export class BlogService {
                 };
             }
 
+            // Cập nhật blog
             const updatedBlog = await Blog.findByIdAndUpdate(
                 blogId,
                 {
@@ -141,6 +143,7 @@ export class BlogService {
 
     public static async getBlogComments(blogId: string) {
         try {
+            // Kiểm tra blog có tồn tại
             const blog = await BlogRepository.findById(blogId);
             if (!blog) {
                 return {
@@ -176,6 +179,7 @@ export class BlogService {
         parent_comment_id?: string;
     }) {
         try {
+            // Kiểm tra blog có tồn tại
             const blog = await BlogRepository.findById(commentData.blog_id);
             if (!blog) {
                 return {
@@ -184,6 +188,7 @@ export class BlogService {
                 };
             }
 
+            // Kiểm tra parent comment nếu có
             if (commentData.parent_comment_id) {
                 const parentComment = await BlogComment.findById(commentData.parent_comment_id);
                 if (!parentComment || parentComment.blog_id.toString() !== commentData.blog_id) {
@@ -194,6 +199,7 @@ export class BlogService {
                 }
             }
 
+            // Nếu không anonymous, kiểm tra user có tồn tại
             if (!commentData.is_anonymous && commentData.customer_id) {
                 const user = await User.findById(commentData.customer_id);
                 if (!user) {
@@ -211,9 +217,10 @@ export class BlogService {
                 is_anonymous: commentData.is_anonymous || false,
                 parent_comment_id: commentData.parent_comment_id || undefined,
                 comment_date: new Date(),
-                status: 'approved'
+                status: 'approved' // Mặc định approved, có thể thay đổi logic này
             });
 
+            // Format response theo yêu cầu mới
             const responseComment: any = {
                 comment_id: newComment._id,
                 blog_id: newComment.blog_id,
@@ -224,29 +231,26 @@ export class BlogService {
                 is_anonymous: newComment.is_anonymous
             };
 
+            // Nếu không ẩn danh, thêm thông tin customer
             if (!newComment.is_anonymous && newComment.customer_id) {
                 const user = await User.findById(newComment.customer_id).lean();
-                if (user) {
-                    const customerInfo = await Customer.findOne({
-                        user_id: newComment.customer_id
-                    }).lean();
+                const customerInfo = await Customer.findOne({
+                    user_id: newComment.customer_id
+                }).lean();
 
-                    responseComment.customer = {
-                        customer_id: user._id,
-                        full_name: user.full_name,
-                        email: user.email,
-                        phone: user.phone,
-                        role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
-                    };
-                } else {
-                    responseComment.customer = null;
-                }
+                responseComment.customer = {
+                    customer_id: user._id,
+                    full_name: user.full_name,
+                    email: user.email,
+                    phone: user.phone,
+                    role: user.role,
+                    avatar: user.avatar,
+                    ...(customerInfo && {
+                        medical_history: customerInfo.medical_history,
+                        custom_avatar: customerInfo.custom_avatar,
+                        last_updated: customerInfo.last_updated
+                    })
+                };
             } else {
                 responseComment.customer = null;
             }
@@ -275,6 +279,7 @@ export class BlogService {
         is_anonymous?: boolean;
     }) {
         try {
+            // Tìm comment
             const comment = await BlogComment.findById(commentId);
             if (!comment) {
                 return {
@@ -283,6 +288,7 @@ export class BlogService {
                 };
             }
 
+            // Kiểm tra comment có thuộc blog này không
             if (comment.blog_id.toString() !== updateData.blog_id) {
                 return {
                     success: false,
@@ -290,6 +296,8 @@ export class BlogService {
                 };
             }
 
+            // Kiểm tra quyền chỉnh sửa
+            // Nếu comment không ẩn danh, phải là tác giả
             if (!comment.is_anonymous) {
                 if (!comment.customer_id || comment.customer_id.toString() !== updateData.customer_id) {
                     return {
@@ -298,21 +306,25 @@ export class BlogService {
                     };
                 }
             } else {
+                // Nếu comment ẩn danh, không cho phép edit
                 return {
                     success: false,
                     message: 'Cannot edit anonymous comment'
                 };
             }
 
+            // Cập nhật comment
             const updatedComment = await BlogComment.findByIdAndUpdate(
                 commentId,
                 {
                     content: updateData.content.trim(),
                     is_anonymous: updateData.is_anonymous || false,
+                    // Không cập nhật comment_date để giữ nguyên thời gian tạo
                 },
                 { new: true }
             );
 
+            // Format response theo yêu cầu mới
             const responseComment: any = {
                 comment_id: updatedComment._id,
                 blog_id: updatedComment.blog_id,
@@ -323,29 +335,26 @@ export class BlogService {
                 is_anonymous: updatedComment.is_anonymous
             };
 
+            // Nếu không ẩn danh, thêm thông tin customer
             if (!updatedComment.is_anonymous && updatedComment.customer_id) {
                 const user = await User.findById(updatedComment.customer_id).lean();
-                if (user) {
-                    const customerInfo = await Customer.findOne({
-                        user_id: updatedComment.customer_id
-                    }).lean();
+                const customerInfo = await Customer.findOne({
+                    user_id: updatedComment.customer_id
+                }).lean();
 
-                    responseComment.customer = {
-                        customer_id: user._id,
-                        full_name: user.full_name,
-                        email: user.email,
-                        phone: user.phone,
-                        role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
-                    };
-                } else {
-                    responseComment.customer = null;
-                }
+                responseComment.customer = {
+                    customer_id: user._id,
+                    full_name: user.full_name,
+                    email: user.email,
+                    phone: user.phone,
+                    role: user.role,
+                    avatar: user.avatar,
+                    ...(customerInfo && {
+                        medical_history: customerInfo.medical_history,
+                        custom_avatar: customerInfo.custom_avatar,
+                        last_updated: customerInfo.last_updated
+                    })
+                };
             } else {
                 responseComment.customer = null;
             }
@@ -363,34 +372,6 @@ export class BlogService {
             return {
                 success: false,
                 message: 'Internal server error when updating comment'
-            };
-        }
-    }
-
-    public static async getBlogById(blogId: string) {
-        try {
-            const blog = await BlogRepository.findByIdWithAuthor(blogId);
-
-            if (!blog) {
-                return {
-                    success: false,
-                    message: 'Blog not found'
-                };
-            }
-
-            return {
-                success: true,
-                message: 'Get blog successfully',
-                data: {
-                    blog
-                },
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Blog service error:', error);
-            return {
-                success: false,
-                message: 'Internal server error when getting blog'
             };
         }
     }

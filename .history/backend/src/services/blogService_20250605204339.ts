@@ -3,7 +3,6 @@ import { BlogCommentRepository } from '../repositories/blogCommentRepository';
 import { Blog } from '../models/Blog';
 import { BlogComment } from '../models/BlogComment';
 import { User } from '../models/User';
-import { Customer } from '../models/Customer';
 
 export class BlogService {
     public static async getAllBlogs() {
@@ -12,7 +11,7 @@ export class BlogService {
 
             return {
                 success: true,
-                message: 'Get blogs successfully',
+                message: 'Lấy danh sách blog thành công',
                 data: {
                     blogs
                 },
@@ -22,7 +21,7 @@ export class BlogService {
             console.error('Blog service error:', error);
             return {
                 success: false,
-                message: 'Internal server error when getting blogs'
+                message: 'Lỗi hệ thống khi lấy danh sách blog'
             };
         }
     }
@@ -38,14 +37,14 @@ export class BlogService {
             if (!user) {
                 return {
                     success: false,
-                    message: 'User not found'
+                    message: 'Không tìm thấy người dùng'
                 };
             }
 
             if (user.role !== 'consultant') {
                 return {
                     success: false,
-                    message: 'Only consultants can create blogs'
+                    message: 'Chỉ tư vấn viên mới được tạo blog'
                 };
             }
 
@@ -53,14 +52,14 @@ export class BlogService {
                 author_id: blogData.author_id,
                 title: blogData.title.trim(),
                 content: blogData.content.trim(),
-                status: 'draft',
+                status: 'draft', // Mặc định là draft
                 publish_date: new Date(),
                 updated_date: new Date()
             });
 
             return {
                 success: true,
-                message: 'Blog created successfully',
+                message: 'Tạo blog thành công',
                 data: {
                     blog: {
                         blog_id: newBlog._id,
@@ -78,7 +77,112 @@ export class BlogService {
             console.error('Create blog service error:', error);
             return {
                 success: false,
-                message: 'Internal server error when creating blog'
+                message: 'Lỗi hệ thống khi tạo blog'
+            };
+        }
+    }
+
+    public static async getBlogComments(blogId: string) {
+        try {
+            // Kiểm tra blog có tồn tại
+            const blog = await BlogRepository.findById(blogId);
+            if (!blog) {
+                return {
+                    success: false,
+                    message: 'Không tìm thấy blog'
+                };
+            }
+
+            const comments = await BlogCommentRepository.findByBlogIdWithCustomer(blogId);
+
+            return {
+                success: true,
+                message: 'Lấy danh sách comment thành công',
+                data: {
+                    comments
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Blog comment service error:', error);
+            return {
+                success: false,
+                message: 'Lỗi hệ thống khi lấy danh sách comment'
+            };
+        }
+    }
+
+    public static async createBlogComment(commentData: {
+        blog_id: string;
+        customer_id?: string;
+        content: string;
+        is_anonymous?: boolean;
+        parent_comment_id?: string;
+    }) {
+        try {
+            // Kiểm tra blog có tồn tại
+            const blog = await BlogRepository.findById(commentData.blog_id);
+            if (!blog) {
+                return {
+                    success: false,
+                    message: 'Không tìm thấy blog'
+                };
+            }
+
+            // Kiểm tra parent comment nếu có
+            if (commentData.parent_comment_id) {
+                const parentComment = await BlogComment.findById(commentData.parent_comment_id);
+                if (!parentComment || parentComment.blog_id.toString() !== commentData.blog_id) {
+                    return {
+                        success: false,
+                        message: 'Parent comment không hợp lệ hoặc không thuộc blog này'
+                    };
+                }
+            }
+
+            // Nếu không anonymous, kiểm tra user có tồn tại
+            if (!commentData.is_anonymous && commentData.customer_id) {
+                const user = await User.findById(commentData.customer_id);
+                if (!user) {
+                    return {
+                        success: false,
+                        message: 'Không tìm thấy người dùng'
+                    };
+                }
+            }
+
+            const newComment = await BlogComment.create({
+                blog_id: commentData.blog_id,
+                customer_id: commentData.is_anonymous ? undefined : commentData.customer_id,
+                content: commentData.content.trim(),
+                is_anonymous: commentData.is_anonymous || false,
+                parent_comment_id: commentData.parent_comment_id || undefined,
+                comment_date: new Date(),
+                status: 'approved' // Mặc định approved, có thể thay đổi logic này
+            });
+
+            return {
+                success: true,
+                message: 'Tạo comment thành công',
+                data: {
+                    comment: {
+                        comment_id: newComment._id,
+                        blog_id: newComment.blog_id,
+                        customer_id: newComment.customer_id,
+                        content: newComment.content,
+                        comment_date: newComment.comment_date,
+                        parent_comment_id: newComment.parent_comment_id,
+                        status: newComment.status,
+                        is_anonymous: newComment.is_anonymous
+                    }
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Create blog comment service error:', error);
+            return {
+                success: false,
+                message: 'Lỗi hệ thống khi tạo comment'
             };
         }
     }
@@ -89,21 +193,24 @@ export class BlogService {
         content: string;
     }) {
         try {
+            // Tìm blog
             const blog = await Blog.findById(blogId);
             if (!blog) {
                 return {
                     success: false,
-                    message: 'Blog not found'
+                    message: 'Không tìm thấy blog'
                 };
             }
 
+            // Kiểm tra quyền chỉnh sửa (chỉ tác giả mới được edit)
             if (blog.author_id.toString() !== updateData.author_id) {
                 return {
                     success: false,
-                    message: 'You do not have permission to edit this blog'
+                    message: 'Bạn không có quyền chỉnh sửa blog này'
                 };
             }
 
+            // Cập nhật blog
             const updatedBlog = await Blog.findByIdAndUpdate(
                 blogId,
                 {
@@ -116,7 +223,7 @@ export class BlogService {
 
             return {
                 success: true,
-                message: 'Blog updated successfully',
+                message: 'Cập nhật blog thành công',
                 data: {
                     blog: {
                         blog_id: updatedBlog._id,
@@ -134,136 +241,7 @@ export class BlogService {
             console.error('Update blog service error:', error);
             return {
                 success: false,
-                message: 'Internal server error when updating blog'
-            };
-        }
-    }
-
-    public static async getBlogComments(blogId: string) {
-        try {
-            const blog = await BlogRepository.findById(blogId);
-            if (!blog) {
-                return {
-                    success: false,
-                    message: 'Blog not found'
-                };
-            }
-
-            const comments = await BlogCommentRepository.findByBlogIdWithCustomer(blogId);
-
-            return {
-                success: true,
-                message: 'Get comments successfully',
-                data: {
-                    comments
-                },
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Blog comment service error:', error);
-            return {
-                success: false,
-                message: 'Internal server error when getting comments'
-            };
-        }
-    }
-
-    public static async createBlogComment(commentData: {
-        blog_id: string;
-        customer_id?: string;
-        content: string;
-        is_anonymous?: boolean;
-        parent_comment_id?: string;
-    }) {
-        try {
-            const blog = await BlogRepository.findById(commentData.blog_id);
-            if (!blog) {
-                return {
-                    success: false,
-                    message: 'Blog not found'
-                };
-            }
-
-            if (commentData.parent_comment_id) {
-                const parentComment = await BlogComment.findById(commentData.parent_comment_id);
-                if (!parentComment || parentComment.blog_id.toString() !== commentData.blog_id) {
-                    return {
-                        success: false,
-                        message: 'Invalid parent comment or parent comment does not belong to this blog'
-                    };
-                }
-            }
-
-            if (!commentData.is_anonymous && commentData.customer_id) {
-                const user = await User.findById(commentData.customer_id);
-                if (!user) {
-                    return {
-                        success: false,
-                        message: 'User not found'
-                    };
-                }
-            }
-
-            const newComment = await BlogComment.create({
-                blog_id: commentData.blog_id,
-                customer_id: commentData.is_anonymous ? undefined : commentData.customer_id,
-                content: commentData.content.trim(),
-                is_anonymous: commentData.is_anonymous || false,
-                parent_comment_id: commentData.parent_comment_id || undefined,
-                comment_date: new Date(),
-                status: 'approved'
-            });
-
-            const responseComment: any = {
-                comment_id: newComment._id,
-                blog_id: newComment.blog_id,
-                content: newComment.content,
-                comment_date: newComment.comment_date,
-                parent_comment_id: newComment.parent_comment_id,
-                status: newComment.status,
-                is_anonymous: newComment.is_anonymous
-            };
-
-            if (!newComment.is_anonymous && newComment.customer_id) {
-                const user = await User.findById(newComment.customer_id).lean();
-                if (user) {
-                    const customerInfo = await Customer.findOne({
-                        user_id: newComment.customer_id
-                    }).lean();
-
-                    responseComment.customer = {
-                        customer_id: user._id,
-                        full_name: user.full_name,
-                        email: user.email,
-                        phone: user.phone,
-                        role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
-                    };
-                } else {
-                    responseComment.customer = null;
-                }
-            } else {
-                responseComment.customer = null;
-            }
-
-            return {
-                success: true,
-                message: 'Comment created successfully',
-                data: {
-                    comment: responseComment
-                },
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Create blog comment service error:', error);
-            return {
-                success: false,
-                message: 'Internal server error when creating comment'
+                message: 'Lỗi hệ thống khi cập nhật blog'
             };
         }
     }
@@ -275,86 +253,65 @@ export class BlogService {
         is_anonymous?: boolean;
     }) {
         try {
+            // Tìm comment
             const comment = await BlogComment.findById(commentId);
             if (!comment) {
                 return {
                     success: false,
-                    message: 'Comment not found'
+                    message: 'Không tìm thấy comment'
                 };
             }
 
+            // Kiểm tra comment có thuộc blog này không
             if (comment.blog_id.toString() !== updateData.blog_id) {
                 return {
                     success: false,
-                    message: 'Comment does not belong to this blog'
+                    message: 'Comment không thuộc blog này'
                 };
             }
 
+            // Kiểm tra quyền chỉnh sửa
+            // Nếu comment không ẩn danh, phải là tác giả
             if (!comment.is_anonymous) {
                 if (!comment.customer_id || comment.customer_id.toString() !== updateData.customer_id) {
                     return {
                         success: false,
-                        message: 'You do not have permission to edit this comment'
+                        message: 'Bạn không có quyền chỉnh sửa comment này'
                     };
                 }
             } else {
+                // Nếu comment ẩn danh, không cho phép edit (hoặc có thể thay đổi logic này)
                 return {
                     success: false,
-                    message: 'Cannot edit anonymous comment'
+                    message: 'Không thể chỉnh sửa comment ẩn danh'
                 };
             }
 
+            // Cập nhật comment
             const updatedComment = await BlogComment.findByIdAndUpdate(
                 commentId,
                 {
                     content: updateData.content.trim(),
                     is_anonymous: updateData.is_anonymous || false,
+                    // Không cập nhật comment_date để giữ nguyên thời gian tạo
                 },
                 { new: true }
             );
 
-            const responseComment: any = {
-                comment_id: updatedComment._id,
-                blog_id: updatedComment.blog_id,
-                content: updatedComment.content,
-                comment_date: updatedComment.comment_date,
-                parent_comment_id: updatedComment.parent_comment_id,
-                status: updatedComment.status,
-                is_anonymous: updatedComment.is_anonymous
-            };
-
-            if (!updatedComment.is_anonymous && updatedComment.customer_id) {
-                const user = await User.findById(updatedComment.customer_id).lean();
-                if (user) {
-                    const customerInfo = await Customer.findOne({
-                        user_id: updatedComment.customer_id
-                    }).lean();
-
-                    responseComment.customer = {
-                        customer_id: user._id,
-                        full_name: user.full_name,
-                        email: user.email,
-                        phone: user.phone,
-                        role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
-                    };
-                } else {
-                    responseComment.customer = null;
-                }
-            } else {
-                responseComment.customer = null;
-            }
-
             return {
                 success: true,
-                message: 'Comment updated successfully',
+                message: 'Cập nhật comment thành công',
                 data: {
-                    comment: responseComment
+                    comment: {
+                        comment_id: updatedComment._id,
+                        blog_id: updatedComment.blog_id,
+                        customer_id: updatedComment.customer_id,
+                        content: updatedComment.content,
+                        comment_date: updatedComment.comment_date,
+                        parent_comment_id: updatedComment.parent_comment_id,
+                        status: updatedComment.status,
+                        is_anonymous: updatedComment.is_anonymous
+                    }
                 },
                 timestamp: new Date().toISOString()
             };
@@ -362,7 +319,7 @@ export class BlogService {
             console.error('Update blog comment service error:', error);
             return {
                 success: false,
-                message: 'Internal server error when updating comment'
+                message: 'Lỗi hệ thống khi cập nhật comment'
             };
         }
     }
@@ -374,13 +331,13 @@ export class BlogService {
             if (!blog) {
                 return {
                     success: false,
-                    message: 'Blog not found'
+                    message: 'Không tìm thấy blog'
                 };
             }
 
             return {
                 success: true,
-                message: 'Get blog successfully',
+                message: 'Lấy chi tiết blog thành công',
                 data: {
                     blog
                 },
@@ -390,7 +347,7 @@ export class BlogService {
             console.error('Blog service error:', error);
             return {
                 success: false,
-                message: 'Internal server error when getting blog'
+                message: 'Lỗi hệ thống khi lấy chi tiết blog'
             };
         }
     }
