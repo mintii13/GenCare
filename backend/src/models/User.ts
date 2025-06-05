@@ -33,8 +33,6 @@ const userSchema = new Schema<IUser>({
     avatar: {type: String},
     googleId: { type: String }
     
-}, {
-    timestamps: { createdAt: 'registration_date', updatedAt: 'updated_date' }
 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

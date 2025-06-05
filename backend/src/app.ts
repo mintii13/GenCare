@@ -43,6 +43,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use('/api/auth', authController);
+app.use('/api/blogs', blogController);
 app.use('/api/profile', profileController);
 
 // Error handling middleware
