@@ -23,4 +23,4 @@ const blogCommentSchema = new Schema<IBlogComment>({
     is_anonymous: { type: Boolean, default: false }
 });
 
-export const BlogComment = mongoose.model<IBlogComment>('BlogComment', blogCommentSchema, 'blogcomments');
+export const BlogComment = mongoose.model<IBlogComment>('BlogComment', blogCommentSchema);

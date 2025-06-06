@@ -1,7 +1,4 @@
-import { BlogComment, IBlogComment } from '../models/BlogComment';
-import { User } from '../models/User';
-import { Customer } from '../models/Customer';
-
+// Thêm debug vào blogCommentRepository.ts
 export class BlogCommentRepository {
     public static async findByBlogIdWithCustomer(blogId: string): Promise<any[]> {
         try {

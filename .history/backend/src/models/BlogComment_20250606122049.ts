@@ -18,9 +18,9 @@ const blogCommentSchema = new Schema<IBlogComment>({
     parent_comment_id: { type: Schema.Types.ObjectId, ref: 'BlogComment' },
     status: {
         type: Boolean,
-        default: true // true = active, false = soft deleted
+        default: true
     },
     is_anonymous: { type: Boolean, default: false }
 });
 
-export const BlogComment = mongoose.model<IBlogComment>('BlogComment', blogCommentSchema, 'blogcomments');
+export const BlogComment = mongoose.model<IBlogComment>('BlogComment', blogCommentSchema);
