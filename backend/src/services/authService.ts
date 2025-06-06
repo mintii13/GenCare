@@ -268,6 +268,9 @@ export class AuthService {
         await UserRepository.insertUser(JSON.parse(user));
     }
 
+    /**
+     * Kiểm tra xem old_password có giống trong db không
+     */
     public static async verifyOldPassword(id: ObjectId, oldPassword: string): Promise<boolean> {
         try {
             const user = await UserRepository.findById(id);
@@ -312,16 +315,12 @@ export class AuthService {
         id: ObjectId,
         oldPassword: string,
         newPassword: string,
-        confirmPassword: string
     ): Promise<string> {
         try {
             // 1. Verify old password
             const isOldPasswordValid = await this.verifyOldPassword(id, oldPassword);
             if (!isOldPasswordValid) {
                 throw new Error('Current password is incorrect');
-            }
-            if (newPassword !== confirmPassword) {
-                throw new Error('new_password is different from confirm_password');
             }
             // 2. Hash new password
             newPassword = await this.hashPassword(newPassword);
@@ -339,7 +338,6 @@ export class AuthService {
         id: ObjectId,
         oldPassword: string,
         newPassword: string,
-        confirmPassword: string
     ): Promise<ChangePasswordResponse> {
         try {
             if (!id) {
@@ -358,18 +356,13 @@ export class AuthService {
                 };
             }
 
-            await this.changePassword(id, oldPassword, newPassword, confirmPassword);
-
-            const accessToken = JWTUtils.generateAccessToken({
-                userId: user._id.toString(),
-                role: user.role
-            });
+            //change password
+            await this.changePassword(id, oldPassword, newPassword);
 
             return {
                 success: true,
                 message: 'Change password successfully',
-                email: user.email,
-                accessToken
+                email: user.email
             }
 
         } catch (error) {

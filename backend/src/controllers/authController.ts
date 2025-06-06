@@ -228,14 +228,14 @@ router.put('/changePassword', authenticateToken, validateChangePassword, async (
         try {
             const changePasswordRequest: ChangePasswordRequest = req.body;
             const userId = (req as any).user.userId;
-            const {old_password, new_password, confirm_password} = changePasswordRequest;
+            //chỉ nhận vào old_password và new_password
+            const {old_password, new_password} = changePasswordRequest;
 
             // Change password
             const result = await AuthService.changePasswordForUsers(
                 userId,
                 old_password,
                 new_password,
-                confirm_password
             );
 
             if (!result.success){
