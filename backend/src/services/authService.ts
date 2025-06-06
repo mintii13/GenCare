@@ -9,9 +9,9 @@ import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
 import redisClient from '../configs/redis';
-import { ChangePasswordRequest } from '../dto/requests/ChangePasswordRequest';
 import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
 import { ObjectId } from 'mongoose';
+import { RandomUtils } from '../utils/randomUtils';
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
         try {
@@ -106,6 +106,42 @@ export class AuthService {
         }
     }
 
+    public static async sendPassword(emailSendTo: string, password: string) {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_FOR_VERIFY || '',
+                pass: process.env.EMAIL_APP_PASSWORD || ''
+            }
+        })
+
+        const mailContent = {
+            from: `"Mật khẩu đăng nhập GenCare" <${process.env.EMAIL_FOR_VERIFY || null}>`,
+            to: emailSendTo,
+            subject: `Mật khẩu hiện tại của email ${emailSendTo} là:`,
+            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                            <h2>Mật khẩu của bạn là: <strong style="color:#2a9d8f;">${password}</strong></h2>
+                            <p>Mật khẩu này sẽ được sử dụng để đăng nhập trong hệ thống GenCare của chúng tôi</p>
+                            <p>Đường dẫn đến trang web là: http://localhost:5173</p>
+                            <p>Trân trọng,</p>
+                            <h4>${process.env.APP_NAME || 'GenCare'}</h4>
+                        </div>
+                    </body>`
+        }
+        if (!emailSendTo) {
+            return {
+                success: false,
+                message: "Mail does not exist"
+            }
+        }
+        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
+        return {
+            success: true,
+            message: "Send mail successfully"
+        }
+    }
+
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
         const email = profile.emails[0]?.value || null;
         const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
@@ -128,9 +164,12 @@ export class AuthService {
             }
             return user;
         }
-
+        const password = RandomUtils.generateRandomPassword();
+        this.sendPassword(email, password);
+        console.log(password);
         user = await UserRepository.insertUser({
             email,
+            password: await bcrypt.hash(password, 10),
             full_name,
             registration_date,
             updated_date,
@@ -141,7 +180,6 @@ export class AuthService {
             phone: null,
             date_of_birth: null,
             last_login: null,
-            password: '',
             avatar: avatar // Thêm avatar từ Google
         });
         return user;
@@ -203,7 +241,7 @@ export class AuthService {
             }
         })
 
-        const otpGenerator = crypto.randomInt(100000, 999999).toString();
+        const otpGenerator = RandomUtils.generateRandomOTP(100000, 999999);     //6-number OTP
 
         const mailContent = {
             from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY || null}>`,
