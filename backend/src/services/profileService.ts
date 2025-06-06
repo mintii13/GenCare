@@ -91,3 +91,28 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         });
     }
 };
+
+export const deleteProfile = async (req: Request, res: Response): Promise<void> => {
+    try{
+        const userId = (req.user as any)?.userId;
+        if (!userId) {
+            res.status(401).json({ success: false, message: 'Unauthorized' });
+            return;
+        }
+        //delete profile by change status of user
+        const user = await UserRepository.findByIdAndUpdate(userId, {status: false});
+        if (!user) {
+            res.status(404).json({ success: false, message: 'User not found' });
+            return;
+        }
+        res.status(200).json({ 
+            success: true, 
+            message: 'User profile has been deactivated.' 
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error while deleting profile.' 
+        });
+    }
+}
