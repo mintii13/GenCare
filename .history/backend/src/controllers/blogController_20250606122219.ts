@@ -167,7 +167,7 @@ router.put('/:blogId', authenticateToken, validateCreateBlog, async (req: Reques
     }
 });
 
-// DELETE /api/blogs/:blogId - Xóa blog (author hoặc staff hoặc admin)
+// DELETE /api/blogs/:blogId - Xóa blog (author hoặc staff)
 router.delete('/:blogId', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { blogId } = req.params;
