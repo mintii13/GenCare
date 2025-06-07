@@ -7,13 +7,9 @@ import { ProfileResponse } from '../dto/responses/ProfileResponse';
 const router = Router();
 
 //update profile API
-router.put('/updateUserProfile', authenticateToken, upload.single('avatar'), async (req: Request, res: Response): Promise<ProfileResponse> => {
+router.put('/updateUserProfile', authenticateToken, upload.single('avatar'), async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req.user as any)?.userId;
-        if (!userId) {
-            res.status(401).json({ success: false, message: 'Unauthorized' });
-            return;
-        }
         const profileRequest: ProfileRequest  = req.body;
 
         let avatarError: string;

@@ -58,4 +58,34 @@ export class ProfileService{
             };
         }
     }
+
+    public static async getProfile(userId: ObjectId): Promise<ProfileResponse> {
+        try {
+            const user = await UserRepository.findById(userId);
+            if (!user) {
+                return{
+                    success: false,
+                    message: 'Cannot find user info'
+                };
+            }
+
+            return{
+                success: true,
+                message: 'Get user profile successfully',
+                user: {
+                    avatar: user.avatar,
+                    email: user.email,
+                    full_name: user.full_name,
+                    phone: user.phone,
+                    date_of_birth: user.date_of_birth,
+                    gender: user.gender
+                }
+            };
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error when getting profile',
+            };
+        }
+    }
 }
