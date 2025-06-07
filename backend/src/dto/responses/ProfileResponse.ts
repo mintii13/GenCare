@@ -1,7 +1,6 @@
-export interface UpdateProfileResponse{
+export interface ProfileResponse{
     success: boolean;
     message: string;
-    avatarError?: string;
     user?: {
         avatar: string
         email: string;

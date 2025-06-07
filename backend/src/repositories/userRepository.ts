@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongoose';
 import { User, IUser } from '../models/User';
 
 export class UserRepository {
@@ -10,7 +11,7 @@ export class UserRepository {
         }
     }
 
-    public static async findByIdAndUpdate(userId: string, updateData: Partial<IUser>): Promise<IUser | null> {
+    public static async findByIdAndUpdate(userId: ObjectId, updateData: Partial<IUser>): Promise<IUser | null> {
         try {
             return await User.findByIdAndUpdate(
             userId,
