@@ -88,4 +88,33 @@ export class ProfileService{
             };
         }
     }
+
+    public static async deleteProfile(userId: ObjectId): Promise<ProfileResponse>{
+    try{
+        if (!userId) {
+            return{ 
+                success: false, 
+                message: 'Unauthorized' 
+            };
+        }
+        //delete profile by change status of user
+        const user = await UserRepository.findByIdAndUpdate(userId, {status: false});
+        
+        if (!user) {
+           return{ 
+                success: false, 
+                message: 'User not found' 
+            };
+        }
+        return{ 
+            success: true, 
+            message: 'User profile has been deactivated.' 
+        };
+    } catch (error) {
+        return{ 
+            success: false, 
+            message: 'Server error while deleting profile.' 
+        };
+    }
+}
 }

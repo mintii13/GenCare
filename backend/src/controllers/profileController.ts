@@ -47,4 +47,21 @@ router.put('/updateUserProfile', authenticateToken, upload.single('avatar'), asy
         });
     }
 });
+
+// delete profile API
+router.put('/deleteUserProfile', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try{
+        const userId = (req.user as any)?.userId;
+        const result = await ProfileService.deleteProfile(userId);        
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(401).json(result);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error while deleting profile.' 
+        });
+    }
+});
 export default router;
