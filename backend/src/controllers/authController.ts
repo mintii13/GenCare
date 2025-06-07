@@ -7,9 +7,11 @@ import passport from '../configs/passport';
 import redisClient from '../configs/redis';
 import { User, IUser } from '../models/User';
 import { RegisterRequest } from '../dto/requests/RegisterRequest';
-import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { JWTUtils } from '../utils/jwtUtils';
+import { ChangePasswordRequest } from '../dto/requests/ChangePasswordRequest';
+import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
+import { validateChangePassword } from '../middlewares/validateChangePassword';
 const router = Router();
 
 // Check email endpoint
@@ -87,29 +89,33 @@ router.get(
   }
 );
 
-//send data on frontend
-router.post('/google/register', async (req, res) => {
-    
-    try {
-        const user = req.user as IUser;
-        if (!user) {
-            return res.status(401).json({ error: 'User không tồn tại' });
-        }
-        const result = await AuthService.loginGoogle(user);
-        // Không cần lấy từ Redis nữa vì AuthService.loginGoogle đã generate token
-        console.log(res.json(result));
-        return res.status(200).json(result);
-    } catch (error) {
-        console.error('Login controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi hệ thống'
-        });
-    }
-})
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    // req.user được gán từ middleware authenticateToken
+    // userId có thể là req.user.userId hoặc req.user.id tùy JWT
+    const userId = (req.user as any).userId || (req.user as any).id;
+    if (!userId) return res.status(401).json({ success: false, message: "Cannot verify user" });
+
+    const user = await User.findById(userId).lean();
+    if (!user) return res.status(404).json({ success: false, message: "Cannot find user" });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi hệ thống" });
+  }
+});
 
 //register by my app
-
 router.post('/register', validateRegister, async (req: Request, res: Response) => {
     try {
         const registerRequest: RegisterRequest = req.body;
@@ -151,9 +157,7 @@ router.get('/otpForm', async (req: Request, res: Response) => {
 router.post('/verifyOTP', async (req: Request, res: Response) => {
     try {
         const {email, otp} = req.body;
-        console.log(email, otp);
         const storedOtp = await redisClient.get(`otp:${email}`);
-        console.log(storedOtp, otp);
         if (!storedOtp)
             return res.status(400).json({
                 success: false,
@@ -191,29 +195,34 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
     }
 });
 
-router.get('/profile', authenticateToken, async (req, res) => {
-  try {
-    // req.user được gán từ middleware authenticateToken
-    // userId có thể là req.user.userId hoặc req.user.id tùy JWT
-    const userId = (req.user as any).userId || (req.user as any).id;
-    if (!userId) return res.status(401).json({ success: false, message: "Không xác thực được user" });
+router.put('/changePassword', authenticateToken, validateChangePassword, async (req: Request, res: Response): Promise<void> => {
+    try {
+        const changePasswordRequest: ChangePasswordRequest = req.body;
+        const userId = (req.user as any).userId;
+        //chỉ nhận vào old_password và new_password
+        const {old_password, new_password} = changePasswordRequest;
 
-    const user = await User.findById(userId).lean();
-    if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy user" });
+        // Change password
+        const result = await AuthService.changePasswordForUsers(
+            userId,
+            old_password,
+            new_password,
+        );
 
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role,
-        // ... các trường khác nếu cần
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Lỗi hệ thống" });
-  }
+        if (!result.success){
+            res.status(400).json(result);
+        }
+        else res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Change password error:', error);
+        
+        if (error instanceof Error) {
+            res.status(400).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
 });
 
 export default router;

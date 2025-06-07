@@ -4,7 +4,7 @@ import { User, IUser } from '../models/User';
 export class UserRepository {
     public static async findById(userId: ObjectId): Promise<IUser | null> {
             try {
-                return await User.findById(userId).select('-password');
+                return await User.findById(userId);
             } catch (error) {
                 console.error('Error finding user by email:', error);
                 throw error;
