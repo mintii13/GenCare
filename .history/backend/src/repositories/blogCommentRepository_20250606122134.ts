@@ -5,43 +5,12 @@ import { Customer } from '../models/Customer';
 export class BlogCommentRepository {
     public static async findByBlogIdWithCustomer(blogId: string): Promise<any[]> {
         try {
-            console.log('=== DEBUG BLOG COMMENTS ===');
-            console.log('Looking for comments with blog_id:', blogId);
-
-            // Debug: Kiểm tra tất cả comments trong database
-            const allComments = await BlogComment.find({}).lean();
-            console.log('Total comments in database:', allComments.length);
-            console.log('All comments:', allComments.map(c => ({
-                id: c._id,
-                blog_id: c.blog_id,
-                status: c.status,
-                content: c.content.substring(0, 50) + '...'
-            })));
-
-            // Debug: Kiểm tra comments theo blog_id (không filter status)
-            const commentsForBlog = await BlogComment.find({ blog_id: blogId }).lean();
-            console.log('Comments for this blog (all status):', commentsForBlog.length);
-            console.log('Comments for blog:', commentsForBlog.map(c => ({
-                id: c._id,
-                status: c.status,
-                content: c.content.substring(0, 50) + '...'
-            })));
-
-            // Debug: Kiểm tra comments với status = true
-            const activeCommentsForBlog = await BlogComment.find({
-                blog_id: blogId,
-                status: true
-            }).lean();
-            console.log('Active comments for this blog:', activeCommentsForBlog.length);
-
             const comments = await BlogComment.find({
                 blog_id: blogId,
-                status: true
+                status: true // Chỉ lấy comment không bị xóa
             })
                 .sort({ comment_date: 1 })
                 .lean();
-
-            console.log('Final comments after sort:', comments.length);
 
             const commentsWithCustomer = await Promise.all(
                 comments.map(async (comment) => {
@@ -80,7 +49,6 @@ export class BlogCommentRepository {
                     // Tìm user (customer)
                     const user = await User.findById(comment.customer_id).lean();
                     if (!user) {
-                        console.log('User not found for customer_id:', comment.customer_id);
                         return {
                             _id: comment._id,
                             blog_id: comment.blog_id,
@@ -130,9 +98,6 @@ export class BlogCommentRepository {
                 })
             );
 
-            console.log('Final result with customer info:', commentsWithCustomer.length);
-            console.log('=== END DEBUG ===');
-
             return commentsWithCustomer;
         } catch (error) {
             console.error('Error finding comments with customer:', error);
@@ -142,7 +107,7 @@ export class BlogCommentRepository {
 
     public static async findByIdIncludingDeleted(commentId: string): Promise<IBlogComment | null> {
         try {
-            return await BlogComment.findById(commentId).lean();
+            return await BlogComment.findById(commentId).lean(); // Lấy cả comment đã bị xóa (cho delete operation)
         } catch (error) {
             console.error('Error finding comment by id including deleted:', error);
             throw error;

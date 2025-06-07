@@ -14,5 +14,8 @@ export const upload = multer({
     fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 }
 });
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> df35d0ad9188b78b96c85266947ac34c368fec72

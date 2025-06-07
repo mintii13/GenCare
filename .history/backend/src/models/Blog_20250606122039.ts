@@ -17,8 +17,8 @@ const blogSchema = new Schema<IBlog>({
     updated_date: { type: Date, default: Date.now },
     status: {
         type: Boolean,
-        default: true // true = published, false = soft deleted
+        default: true
     }
 });
 
-export const Blog = mongoose.model<IBlog>('Blog', blogSchema, 'blogs');
+export const Blog = mongoose.model<IBlog>('Blog', blogSchema);

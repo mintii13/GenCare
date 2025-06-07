@@ -10,6 +10,11 @@ declare global {
     }
 }
 
+// Cách khác để extend Request type
+interface AuthenticatedRequest extends Request {
+    user: JWTPayload;
+}
+
 /**
  * Middleware xác thực JWT token
  */
@@ -26,6 +31,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     }
 
     const decoded = JWTUtils.verifyToken(token);
+
     if (!decoded) {
         res.status(403).json({
             success: false,
@@ -34,7 +40,8 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return;
     }
 
-    req.user = decoded;
+    // Đảm bảo req.user được gán đúng cách
+    (req as any).user = decoded;
     next();
 };
 
@@ -43,7 +50,9 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
  */
 export const authorizeRoles = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
-        if (!req.user) {
+        const user = (req as any).user;
+
+        if (!user) {
             res.status(401).json({
                 success: false,
                 message: 'Chưa được xác thực'
@@ -51,7 +60,7 @@ export const authorizeRoles = (...roles: string[]) => {
             return;
         }
 
-        if (!roles.includes(req.User.role)) {
+        if (!roles.includes(user.role)) {
             res.status(403).json({
                 success: false,
                 message: 'Không có quyền truy cập'
@@ -62,4 +71,3 @@ export const authorizeRoles = (...roles: string[]) => {
         next();
     };
 };
-
