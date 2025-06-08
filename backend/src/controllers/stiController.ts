@@ -13,7 +13,10 @@ const router = Router();
 router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req.user as any).userId;
-        const stiTest = new StiTest(req.body);
+        const stiTest = new StiTest({
+            ...req.body,
+            createdBy: userId
+        });
         const result = await StiService.createStiTest(stiTest, userId);
         if (result.success){
             res.status(200).json(result);
