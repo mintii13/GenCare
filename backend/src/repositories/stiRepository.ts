@@ -1,0 +1,20 @@
+import { StiTest, IStiTest } from '../models/StiTest';
+
+export class StiRepository{
+    public static async insertStiTest(stiTest: IStiTest): Promise<IStiTest | null>{
+        try {
+            return await StiTest.create(stiTest);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    public static async findByStiTestCode(sti_test_code: string): Promise<IStiTest | null> {
+            try {
+                return await StiTest.findOne({ sti_test_code }).lean<IStiTest>();
+            } catch (error) {
+                console.error('Error finding user by email:', error);
+                throw error;
+            }
+    }
+}

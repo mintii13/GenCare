@@ -42,7 +42,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     try {
         const loginRequest: LoginRequest = req.body;
         const result = await AuthService.login(loginRequest);
-
+        console.log(result);
         if (result.success) {
             res.status(200).json(result);
         } else {
