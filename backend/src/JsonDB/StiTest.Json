@@ -7,8 +7,7 @@
     "duration": "2 days",
     "isActive": true,
     "category": "viral",
-    "sti_test_type": "blood",
-    "createdBy": "675e1a2b3c4d5e6f7a8b9c11"
+    "sti_test_type": "blood"
   },
   {
     "sti_test_name": "Chlamydia Urine Test",
@@ -18,8 +17,7 @@
     "duration": "1 day",
     "isActive": true,
     "category": "bacterial",
-    "sti_test_type": "urine",
-    "createdBy": "675e1a2b3c4d5e6f7a8b9c12"
+    "sti_test_type": "urine"
   },
   {
     "sti_test_name": "Trichomoniasis Swab Test",
@@ -29,7 +27,6 @@
     "duration": "2 days",
     "isActive": false,
     "category": "parasitic",
-    "sti_test_type": "swab",
-    "createdBy": "675e1a2b3c4d5e6f7a8b9c12"
+    "sti_test_type": "swab"
   }
 ]

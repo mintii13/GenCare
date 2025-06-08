@@ -3,16 +3,26 @@ import { AllStiTestResponse, StiTestResponse } from "../dto/responses/StiRespons
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
 import { UserRepository } from "../repositories/userRepository";
-import { IUser } from "../models/User";
 
 export class StiService{
-    public static async createStiTest(stiTest: IStiTest, createdBy: string): Promise<StiTestResponse>{
+    public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
         try {
             const duplicate = await StiRepository.findByStiTestCode(stiTest.sti_test_code);
             if (duplicate){
-                return{
-                    success: false,
-                    message: 'Sti test code is duplicated'
+                if (duplicate.isActive){
+                    return{
+                        success: false,
+                        message: 'Sti test code is duplicated'
+                    }
+                }
+                else{
+                    //update isActive thành true
+                    const result = await StiRepository.updateIsActive(duplicate._id);
+                    return{
+                        success: true,
+                        message: 'Insert StiTest to database successfully',
+                        stitest: result
+                    }
                 }
             }
             const result: Partial<IStiTest> = await StiRepository.insertStiTest(stiTest);
@@ -117,6 +127,31 @@ export class StiService{
                 message: 'Update STI Test successfully',
                 stitest: sti_test
             }
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: 'Server error'
+            };
+        }
+    }   
+
+    public static async deleteStiTest(sti_test_id: string, userId: string): Promise<StiTestResponse> {
+        try {
+            const updated = await StiRepository.findByIdAndUpdate(sti_test_id, userId);
+            if (!updated) {
+                return {
+                    success: false,
+                    message: 'StiTest not found or you are not authorized to update it'
+                };
+            }
+
+            return{
+                success: true,
+                message: 'StiTest deactivated successfully',
+                stitest: updated
+            };
+
         } catch (error) {
             console.error(error);
             return {
