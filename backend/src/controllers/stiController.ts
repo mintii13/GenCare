@@ -17,7 +17,7 @@ router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles
             ...req.body,
             createdBy: userId
         });
-        const result = await StiService.createStiTest(stiTest, userId);
+        const result = await StiService.createStiTest(stiTest);
         if (result.success){
             res.status(200).json(result);
         }
@@ -98,6 +98,26 @@ router.put('/updateStiTest/:id', authenticateToken, authorizeRoles('staff', 'adm
         else if (result.message === 'Not authorized to update this test'){
             res.status(403).json(result);
         }
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        })
+    }
+});
+
+//update sti-test API
+router.put('/deleteStiTest/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const sti_test_id = req.params.id;
+        const userId = (req.user as any).userId;
+        const result = await StiService.deleteStiTest(sti_test_id, userId);
+        if (!result.success) {
+            res.status(404).json(result);
+        }
+        else res.status(200).json(result);
         
     } catch (error) {
         console.log(error);
