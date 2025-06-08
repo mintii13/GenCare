@@ -2,6 +2,8 @@ import { ObjectId } from "mongoose";
 import { AllStiTestResponse, StiTestResponse } from "../dto/responses/StiResponse";
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
+import { UserRepository } from "../repositories/userRepository";
+import { IUser } from "../models/User";
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest, createdBy: string): Promise<StiTestResponse>{
@@ -23,7 +25,6 @@ export class StiService{
             return {
                 success: true,
                 message: 'Insert StiTest to database successfully',
-                createdBy,
                 stitest: result
             }
         } catch (error) {
@@ -73,6 +74,49 @@ export class StiService{
                 message: 'STI Test fetched successfully',
                 stitest: stiTest
             };
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: 'Server error'
+            };
+        }
+    }
+
+    public static async updateStiTest(sti_test_id: string, updateData: Partial<IStiTest>, user: any): Promise<StiTestResponse> {
+        try {
+            const sti_test = await StiRepository.findByIdAndUpdateStiTest(sti_test_id, updateData);
+            if (!sti_test) {
+                return{
+                    success: false, 
+                    message: 'STI Test not found'
+                }
+            }
+            // Only created Staff and Admin can update
+            if (user.role === 'staff') {
+                // Staff chỉ được update test do chính họ tạo
+                if (sti_test.createdBy?.toString() !== user.userId) {
+                    return {
+                        success: false,
+                        message: 'Not authorized to update this test'
+                    };
+                }
+            } else if (user.role === 'admin') {
+                // Nếu test do admin khác tạo thì cấm
+                const creatorRole = await UserRepository.getUserRoleById(sti_test.createdBy?.toString());
+                if (creatorRole === 'admin' && sti_test.createdBy?.toString() !== user._id) {
+                    return {
+                        success: false,
+                        message: 'Not authorized to update this test'
+                    };
+                }
+                // Nếu test do staff tạo thì admin được quyền update (không cần check gì thêm)
+            }
+            return{
+                success: true,
+                message: 'Update STI Test successfully',
+                stitest: sti_test
+            }
         } catch (error) {
             console.error(error);
             return {
