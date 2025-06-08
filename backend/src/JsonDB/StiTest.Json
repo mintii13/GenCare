@@ -1,35 +1,90 @@
 [
   {
     "sti_test_id": "60c72b2f9b1d8c0f9c8e1234",
-    "sti_test_name": "HIV Blood Test",
+    "sti_test_name": "Xét nghiệm HIV",
     "sti_test_code": "STI-VIR-BLD-HIV",
-    "description": "A test to detect HIV infection through blood analysis.",
+    "description": "Xét nghiệm phát hiện virus HIV trong máu. Kết quả chính xác sau 3 tháng phơi nhiễm.",
     "price": 500000,
-    "duration": "2 days",
+    "duration": "2 ngày",
     "isActive": true,
     "category": "viral",
     "sti_test_type": "blood"
   },
   {
     "sti_test_id": "60c72b3a9b1d8c0f9c8e5678",
-    "sti_test_name": "Chlamydia Urine Test",
+    "sti_test_name": "Xét nghiệm Chlamydia",
     "sti_test_code": "STI-BAC-URN-CHL",
-    "description": "Detects Chlamydia bacteria in urine samples.",
+    "description": "Phát hiện vi khuẩn Chlamydia trachomatis trong mẫu nước tiểu. Xét nghiệm không đau và cho kết quả nhanh.",
     "price": 350000,
-    "duration": "1 day",
+    "duration": "1 ngày",
     "isActive": true,
     "category": "bacterial",
     "sti_test_type": "urine"
   },
   {
     "sti_test_id": "60c72b4f9b1d8c0f9c8e9012",
-    "sti_test_name": "Trichomoniasis Swab Test",
+    "sti_test_name": "Xét nghiệm Trichomoniasis",
     "sti_test_code": "STI-PAR-SWB-TRI",
-    "description": "Identifies Trichomonas vaginalis parasite using swab samples.",
+    "description": "Xác định ký sinh trùng Trichomonas vaginalis bằng mẫu phết. Xét nghiệm chuyên biệt cho bệnh lây truyền qua đường tình dục.",
     "price": 400000,
-    "duration": "2 days",
-    "isActive": false,
+    "duration": "2 ngày",
+    "isActive": true,
     "category": "parasitic",
+    "sti_test_type": "swab"
+  },
+  {
+    "sti_test_id": "60c72b5a9b1d8c0f9c8e3456",
+    "sti_test_name": "Xét nghiệm Viêm gan B",
+    "sti_test_code": "STI-VIR-BLD-HBV",
+    "description": "Phát hiện virus viêm gan B (HBV) trong máu. Bao gồm cả kháng nguyên và kháng thể.",
+    "price": 450000,
+    "duration": "2 ngày",
+    "isActive": true,
+    "category": "viral",
+    "sti_test_type": "blood"
+  },
+  {
+    "sti_test_id": "60c72b6b9b1d8c0f9c8e7890",
+    "sti_test_name": "Xét nghiệm Viêm gan C",
+    "sti_test_code": "STI-VIR-BLD-HCV",
+    "description": "Phát hiện virus viêm gan C (HCV) trong máu. Xét nghiệm chính xác sau 6 tuần phơi nhiễm.",
+    "price": 450000,
+    "duration": "2 ngày",
+    "isActive": true,
+    "category": "viral",
+    "sti_test_type": "blood"
+  },
+  {
+    "sti_test_id": "60c72b7c9b1d8c0f9c8e2345",
+    "sti_test_name": "Xét nghiệm Giang mai",
+    "sti_test_code": "STI-BAC-BLD-SYP",
+    "description": "Phát hiện xoắn khuẩn Treponema pallidum gây bệnh giang mai. Xét nghiệm máu chính xác và nhanh chóng.",
+    "price": 400000,
+    "duration": "1 ngày",
+    "isActive": true,
+    "category": "bacterial",
+    "sti_test_type": "blood"
+  },
+  {
+    "sti_test_id": "60c72b8d9b1d8c0f9c8e6789",
+    "sti_test_name": "Xét nghiệm Lậu",
+    "sti_test_code": "STI-BAC-URN-GON",
+    "description": "Phát hiện vi khuẩn Neisseria gonorrhoeae trong mẫu nước tiểu. Xét nghiệm không đau và cho kết quả nhanh.",
+    "price": 350000,
+    "duration": "1 ngày",
+    "isActive": true,
+    "category": "bacterial",
+    "sti_test_type": "urine"
+  },
+  {
+    "sti_test_id": "60c72b9e9b1d8c0f9c8e0123",
+    "sti_test_name": "Xét nghiệm HPV",
+    "sti_test_code": "STI-VIR-SWB-HPV",
+    "description": "Phát hiện virus HPV (Human Papillomavirus) bằng mẫu phết. Xét nghiệm quan trọng trong phòng ngừa ung thư cổ tử cung.",
+    "price": 600000,
+    "duration": "3 ngày",
+    "isActive": true,
+    "category": "viral",
     "sti_test_type": "swab"
   }
 ]
