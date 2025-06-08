@@ -82,7 +82,7 @@ export class StiService{
             };
         }
     }
-
+  
     public static async updateStiTest(sti_test_id: string, updateData: Partial<IStiTest>, user: any): Promise<StiTestResponse> {
         try {
             const sti_test = await StiRepository.findByIdAndUpdateStiTest(sti_test_id, updateData);

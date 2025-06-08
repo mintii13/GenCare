@@ -16,8 +16,11 @@ import {
   Loader,
   AlertCircle,
   Edit,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import QuillEditor from '../../components/common/QuillEditor';
 
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -28,6 +31,10 @@ const BlogDetailPage: React.FC = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (blogId) {
@@ -44,7 +51,11 @@ const BlogDetailPage: React.FC = () => {
     try {
       const response = await blogService.getBlogById(blogId);
       if (response.success && response.data.blogs.length > 0) {
-        setBlog(response.data.blogs[0]);
+        const blogData = response.data.blogs[0];
+        
+        setBlog(blogData);
+        setEditTitle(blogData.title);
+        setEditContent(blogData.content);
       } else {
         setError('Không tìm thấy bài viết');
       }
@@ -92,21 +103,67 @@ const BlogDetailPage: React.FC = () => {
 
   const handleEdit = () => {
     if (blog) {
-      navigate(`/blogs/${blog.blog_id}/edit`);
+      setIsEditing(true);
+      setEditTitle(blog.title);
+      setEditContent(blog.content);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!blog) return;
+    try {
+      const updated = await blogService.updateBlog(blog.blog_id, editTitle, editContent);
+      if (updated.success) {
+        setBlog({ ...blog, title: editTitle, content: editContent });
+        setIsEditing(false);
+      } else {
+        alert(updated.message || 'Cập nhật thất bại');
+      }
+    } catch (error) {
+      alert('Có lỗi khi cập nhật blog');
     }
   };
 
   const handleDelete = async () => {
     if (!blog) return;
-
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      try {
-        await blogService.deleteBlog(blog.blog_id);
+    try {
+      const response = await blogService.deleteBlog(blog.blog_id);
+      if (response.success) {
+        toast.success('Xóa bài viết thành công!', {
+          duration: 3000,
+          icon: '✅',
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        });
         navigate('/blogs');
-      } catch (error) {
-        console.error('Error deleting blog:', error);
-        alert('Có lỗi xảy ra khi xóa bài viết');
+      } else {
+        toast.error(response.message || 'Có lỗi xảy ra khi xóa bài viết', {
+          duration: 4000,
+          icon: '❌',
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        });
       }
+    } catch (error) {
+      console.error('Error deleting blog:', error);
+      toast.error('Có lỗi xảy ra khi xóa bài viết', {
+        duration: 4000,
+        icon: '❌',
+        style: {
+          background: '#363636',
+          color: '#fff',
+        },
+      });
+    } finally {
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -164,15 +221,15 @@ const BlogDetailPage: React.FC = () => {
           <div className="px-8 py-6 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                blog.status === 'published' 
+                blog.status === true
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {blog.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+                {blog.status === true ? 'Đã xuất bản' : 'Bản nháp'}
               </span>
 
               {/* Actions for author */}
-              {isAuthor && (
+              {isAuthor && !isEditing && (
                 <div className="flex gap-2">
                   <button
                     onClick={handleEdit}
@@ -182,7 +239,7 @@ const BlogDetailPage: React.FC = () => {
                     Sửa
                   </button>
                   <button
-                    onClick={handleDelete}
+                    onClick={() => setShowDeleteConfirm(true)}
                     className="flex items-center px-3 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
@@ -190,11 +247,50 @@ const BlogDetailPage: React.FC = () => {
                   </button>
                 </div>
               )}
+              {isAuthor && isEditing && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveEdit}
+                    className="flex items-center px-3 py-1 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
+                  >
+                    Lưu
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="flex items-center px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              )}
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
-              {blog.title}
-            </h1>
+            {isEditing ? (
+              <>
+                <input
+                  className="w-full mb-4 px-3 py-2 border rounded-lg text-xl font-bold"
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                />
+                <QuillEditor
+                  value={editContent}
+                  onChange={setEditContent}
+                  readOnly={false}
+                />
+              </>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+                  {blog.title}
+                </h1>
+                <div className="prose max-w-none mb-4">
+                  <div
+                    className="text-gray-800 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: blog.content }}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Author info */}
             <div className="flex items-center mb-4">
@@ -234,18 +330,6 @@ const BlogDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="px-8 py-6">
-            <div className="prose prose-lg max-w-none">
-              <div 
-                className="text-gray-800 leading-relaxed"
-                style={{ whiteSpace: 'pre-wrap' }}
-              >
-                {blog.content}
-              </div>
-            </div>
-          </div>
-
           {/* Author bio */}
           <div className="px-8 py-6 bg-gray-50 border-t border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-3">Về tác giả</h4>
@@ -277,6 +361,40 @@ const BlogDetailPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Bạn có chắc chắn muốn xóa bài viết "{blog?.title}"? Hành động này không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

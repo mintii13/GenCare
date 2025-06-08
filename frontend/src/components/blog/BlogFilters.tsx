@@ -7,40 +7,16 @@ interface BlogFiltersProps {
   filters: BlogFiltersType;
   onFiltersChange: (filters: BlogFiltersType) => void;
   onClearFilters: () => void;
+  specializations: string[];
 }
 
 const BlogFilters: React.FC<BlogFiltersProps> = ({
   filters,
   onFiltersChange,
-  onClearFilters
+  onClearFilters,
+  specializations
 }) => {
-  const [specializations, setSpecializations] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-  useEffect(() => {
-    // Lấy danh sách chuyên khoa từ API
-    fetchSpecializations();
-  }, []);
-
-  const fetchSpecializations = async () => {
-    try {
-      const response = await blogService.getSpecializations();
-      if (response.success) {
-        setSpecializations(response.data.specializations || []);
-      }
-    } catch (error) {
-      console.error('Error fetching specializations:', error);
-      // Fallback data nếu API chưa có
-      setSpecializations([
-        'Sản phụ khoa',
-        'Y học dự phòng',
-        'Nhi khoa',
-        'Tim mạch',
-        'Thần kinh',
-        'Da liễu'
-      ]);
-    }
-  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({

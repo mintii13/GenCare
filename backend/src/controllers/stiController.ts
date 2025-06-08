@@ -30,6 +30,7 @@ router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles
 
 //get all sti-test API
 router.get('/getAllStiTest', async (req: Request, res: Response): Promise<void> => {
+
     try {
         const result = await StiService.getAllStiTest();
         if (result.success){
@@ -103,6 +104,4 @@ router.put('/updateStiTest/:id', authenticateToken, authorizeRoles('staff', 'adm
         })
     }
 });
-
-
 export default router;

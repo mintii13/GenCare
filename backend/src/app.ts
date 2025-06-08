@@ -13,7 +13,7 @@ import blogController from './controllers/blogController';
 
 import stiController from './controllers/stiController';
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 
 // Security middleware
@@ -21,7 +21,7 @@ app.use(helmet());
 
 // CORS cấu hình cho phép frontend truy cập với credentials
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL,
   credentials: true
 }));
 
@@ -32,9 +32,14 @@ app.use(express.urlencoded({ extended: true }));
 // Session middleware
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'secret',
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
   })
 );
 

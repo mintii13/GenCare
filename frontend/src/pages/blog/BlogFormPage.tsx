@@ -11,7 +11,8 @@ import {
   Loader,
   FileText
 } from 'lucide-react';
-import LexicalPlaygroundEditor from '../../components/common/LexicalPlaygroundEditor';
+import QuillEditor from '../../components/common/QuillEditor';
+import toast from 'react-hot-toast';
 
 const BlogFormPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -19,17 +20,7 @@ const BlogFormPage: React.FC = () => {
   const { user } = useAuth();
   
   const [title, setTitle] = useState('');
-  const defaultLexicalState = '{"root":{"children":[{"type":"paragraph","children":[],"direction":null,"format":"","indent":0,"version":1}],"direction":"ltr","format":"","indent":0,"type":"root","version":1}}';
-  function isValidLexicalState(str: string): boolean {
-    if (!str || typeof str !== 'string') return false;
-    try {
-      const obj = JSON.parse(str);
-      return !!(obj && obj.root && Array.isArray(obj.root.children));
-    } catch {
-      return false;
-    }
-  }
-  const [content, setContent] = useState(defaultLexicalState);
+  const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,9 +60,15 @@ const BlogFormPage: React.FC = () => {
 
         setOriginalBlog(blog);
         setTitle(blog.title);
-        const safeContent = isValidLexicalState(blog.content) ? blog.content : defaultLexicalState;
-        console.log('Set content from blog:', safeContent);
-        setContent(safeContent);
+        
+        // Kiểm tra và xử lý nội dung
+        if (blog.content) {
+          console.log('Setting valid content:', blog.content);
+          setContent(blog.content);
+        } else {
+          console.warn('Invalid content, using default state');
+          setContent('');
+        }
       } else {
         setError('Không tìm thấy bài viết');
       }
@@ -85,9 +82,8 @@ const BlogFormPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!title.trim() || !content.trim()) {
-      setError('Vui lòng điền đầy đủ tiêu đề và nội dung');
+    if (!title.trim()) {
+      setError('Vui lòng nhập tiêu đề');
       return;
     }
 
@@ -95,22 +91,57 @@ const BlogFormPage: React.FC = () => {
     setError(null);
 
     try {
-      if (isEdit && originalBlog) {
-        await blogService.updateBlog(originalBlog.blog_id, title.trim(), content.trim());
-        navigate(`/blogs/${originalBlog.blog_id}`);
-      } else {
-        const response = await blogService.createBlog(title.trim(), content.trim());
+      let response;
+      if (isEdit) {
+        response = await blogService.updateBlog(blogId!, title, content);
         if (response.success) {
-          // Giả sử API trả về blog_id của bài viết vừa tạo
-          const newBlogId = response.data?.blog_id || 'new';
-          navigate(`/blogs/${newBlogId}`);
-        } else {
-          setError(response.message || 'Có lỗi xảy ra khi lưu bài viết');
+          toast.success('Cập nhật bài viết thành công!', {
+            duration: 3000,
+            icon: '✅',
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+          });
+          navigate(`/blogs/${blogId}`);
         }
+      } else {
+        response = await blogService.createBlog(title, content);
+        if (response.success) {
+          toast.success('Tạo bài viết thành công!', {
+            duration: 3000,
+            icon: '✅',
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+          });
+          navigate(`/blogs/${response.data.blog.blog_id}`);
+        }
+      }
+
+      if (!response.success) {
+        toast.error(response.message || 'Có lỗi xảy ra', {
+          duration: 4000,
+          icon: '❌',
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        });
+        setError(response.message || 'Có lỗi xảy ra');
       }
     } catch (error) {
       console.error('Error saving blog:', error);
-      setError('Không thể lưu bài viết. Vui lòng thử lại sau.');
+      toast.error('Có lỗi xảy ra khi lưu bài viết', {
+        duration: 4000,
+        icon: '❌',
+        style: {
+          background: '#363636',
+          color: '#fff',
+        },
+      });
+      setError('Có lỗi xảy ra khi lưu bài viết');
     } finally {
       setSaving(false);
     }
@@ -249,7 +280,11 @@ const BlogFormPage: React.FC = () => {
             {/* Content */}
             <div className="mb-6">
               <label className="block font-medium text-gray-700 mb-2">Nội dung bài viết</label>
-              <LexicalPlaygroundEditor />
+              <QuillEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Nhập nội dung bài viết..."
+              />
             </div>
 
             {/* Writing tips */}

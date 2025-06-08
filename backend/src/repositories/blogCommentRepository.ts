@@ -50,6 +50,7 @@ export class BlogCommentRepository {
                         return {
                             _id: comment._id,
                             blog_id: comment.blog_id,
+                            user_id: comment.customer_id,
                             content: comment.content,
                             comment_date: comment.comment_date,
                             parent_comment_id: comment.parent_comment_id,
@@ -66,6 +67,7 @@ export class BlogCommentRepository {
                         return {
                             _id: comment._id,
                             blog_id: comment.blog_id,
+                            user_id: comment.customer_id,
                             content: comment.content,
                             comment_date: comment.comment_date,
                             parent_comment_id: comment.parent_comment_id,
@@ -84,6 +86,7 @@ export class BlogCommentRepository {
                         return {
                             _id: comment._id,
                             blog_id: comment.blog_id,
+                            user_id: comment.customer_id,
                             content: comment.content,
                             comment_date: comment.comment_date,
                             parent_comment_id: comment.parent_comment_id,
@@ -118,6 +121,7 @@ export class BlogCommentRepository {
                     return {
                         _id: comment._id,
                         blog_id: comment.blog_id,
+                        user_id: comment.customer_id,
                         content: comment.content,
                         comment_date: comment.comment_date,
                         parent_comment_id: comment.parent_comment_id,
