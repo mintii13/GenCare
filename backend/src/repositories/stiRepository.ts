@@ -17,4 +17,20 @@ export class StiRepository{
                 throw error;
             }
     }
+
+    public static async getAllStiTest(){
+        try {
+            return await StiTest.find();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    public static async getStiTestById(id: string): Promise<IStiTest | null> {
+        try {
+            return await StiTest.findOne({ sti_test_id: id });
+        } catch (error) {
+            console.error(error);
+        }
+    }
 }

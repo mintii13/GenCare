@@ -7,3 +7,9 @@ export interface StiTestResponse{
     createdBy?: string,
     stitest?: Partial<IStiTest>
 };
+
+export interface AllStiTestResponse{
+    success: boolean;
+    message: string;
+    stitest?: Partial<IStiTest[]>
+};

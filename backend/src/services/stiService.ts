@@ -1,5 +1,5 @@
 import { ObjectId } from "mongoose";
-import { StiTestResponse } from "../dto/responses/StiResponse";
+import { AllStiTestResponse, StiTestResponse } from "../dto/responses/StiResponse";
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
 
@@ -32,6 +32,53 @@ export class StiService{
                 success: false,
                 message: 'Server error'
             }
+        }
+    }
+
+    public static async getAllStiTest(): Promise<AllStiTestResponse>{
+        try {
+            const allOfTest = await StiRepository.getAllStiTest();
+            if (!allOfTest){
+                return{
+                    success: false,
+                    message: 'Fail in getting Sti Test'
+                }
+            }
+            return{
+                success: true,
+                message: 'Fetched STI tests successfully',
+                stitest: allOfTest
+            }
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async getStiTestById(id: string): Promise<StiTestResponse> {
+        try {
+            const stiTest = await StiRepository.getStiTestById(id);
+            if (!stiTest) {
+                return {
+                    success: false,
+                    message: 'STI Test not found'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'STI Test fetched successfully',
+                stitest: stiTest
+            };
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: 'Server error'
+            };
         }
     }
 }

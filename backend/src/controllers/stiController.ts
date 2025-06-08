@@ -27,4 +27,39 @@ router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles
     }
 });
 
+//get all sti-test API
+router.get('/getAllStiTest', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const result = await StiService.getAllStiTest();
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(400).json(result);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        })
+    }
+});
+
+//get sti-test API
+router.get('/getStiTest/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const sti_test_id = req.params.id;
+        const result = await StiService.getStiTestById(sti_test_id);
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(400).json(result);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        })
+    }
+});
+
 export default router;
