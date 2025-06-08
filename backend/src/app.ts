@@ -11,6 +11,7 @@ import redisClient from './configs/redis';
 require('dotenv').config();
 import blogController from './controllers/blogController';
 
+import stiController from './controllers/stiController';
 const app = express();
 const PORT = process.env.PORT;
 
@@ -49,6 +50,7 @@ app.use(passport.session());
 app.use('/api/auth', authController);
 app.use('/api/blogs', blogController);
 
+app.use('/api/sti', stiController);
 
 // Error handling middleware
 app.use(errorHandler);

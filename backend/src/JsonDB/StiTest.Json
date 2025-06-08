@@ -1,0 +1,35 @@
+[
+  {
+    "sti_test_id": "60c72b2f9b1d8c0f9c8e1234",
+    "sti_test_name": "HIV Blood Test",
+    "sti_test_code": "STI-VIR-BLD-HIV",
+    "description": "A test to detect HIV infection through blood analysis.",
+    "price": 500000,
+    "duration": "2 days",
+    "isActive": true,
+    "category": "viral",
+    "sti_test_type": "blood"
+  },
+  {
+    "sti_test_id": "60c72b3a9b1d8c0f9c8e5678",
+    "sti_test_name": "Chlamydia Urine Test",
+    "sti_test_code": "STI-BAC-URN-CHL",
+    "description": "Detects Chlamydia bacteria in urine samples.",
+    "price": 350000,
+    "duration": "1 day",
+    "isActive": true,
+    "category": "bacterial",
+    "sti_test_type": "urine"
+  },
+  {
+    "sti_test_id": "60c72b4f9b1d8c0f9c8e9012",
+    "sti_test_name": "Trichomoniasis Swab Test",
+    "sti_test_code": "STI-PAR-SWB-TRI",
+    "description": "Identifies Trichomonas vaginalis parasite using swab samples.",
+    "price": 400000,
+    "duration": "2 days",
+    "isActive": false,
+    "category": "parasitic",
+    "sti_test_type": "swab"
+  }
+]
