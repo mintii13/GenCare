@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff 
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface CommentSectionProps {
   blogId: string;
@@ -32,9 +33,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const [replyContent, setReplyContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
-  const isCustomer = user?.role === 'customer';
-  const canComment = isCustomer;
+  const canComment = !!user;
 
   const formatDate = (dateString: string) => {
     return formatDistanceToNow(new Date(dateString), { 
@@ -63,6 +66,49 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     } catch (error) {
       console.error('Error posting comment:', error);
       // Có thể thêm toast notification ở đây
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.comment_id);
+    setEditContent(comment.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async (commentId: string) => {
+    if (!editContent.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const comment = comments.find(c => c.comment_id === commentId);
+      await blogService.updateComment(blogId, commentId, editContent, comment?.is_anonymous);
+      setEditingCommentId(null);
+      setEditContent('');
+      setIsEditing(false);
+      onCommentsUpdate();
+    } catch (error) {
+      // Có thể thêm toast ở đây
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
+    setIsSubmitting(true);
+    try {
+      await blogService.deleteComment(blogId, commentId);
+      toast.success('Xóa bình luận thành công!');
+      onCommentsUpdate();
+    } catch (error) {
+      toast.error('Xóa bình luận thất bại!');
     } finally {
       setIsSubmitting(false);
     }
@@ -105,7 +151,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   <span className="font-medium text-gray-900">{comment.customer.full_name}</span>
                   <div className="flex items-center text-sm text-gray-500">
                     <UserCheck className="w-3 h-3 mr-1" />
-                    <span>Khách hàng</span>
+                    <span>
+                      {comment.customer.role === 'consultant' && 'Chuyên gia'}
+                      {comment.customer.role === 'staff' && 'Nhân viên'}
+                      {comment.customer.role === 'admin' && 'Quản trị viên'}
+                      {comment.customer.role === 'customer' && 'Khách hàng'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -123,14 +174,34 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             </span>
           </div>
 
-          {/* Nội dung comment */}
-          <p className="text-gray-800 mb-3 leading-relaxed">
-            {comment.content}
-          </p>
+          {/* Nội dung comment hoặc form sửa */}
+          {editingCommentId === comment.comment_id ? (
+            <div className="mb-3">
+              <textarea
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                className="w-full p-2 border rounded mb-2"
+                rows={3}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSaveEdit(comment.comment_id)}
+                  disabled={isSubmitting || !editContent.trim()}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                >Lưu</button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 border rounded hover:bg-gray-50"
+                >Hủy</button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-800 mb-3 leading-relaxed">{comment.content}</p>
+          )}
 
           {/* Actions */}
-          {canComment && (
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
+            {canComment && (
               <button
                 onClick={() => setReplyingTo(comment.comment_id)}
                 className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors"
@@ -138,8 +209,29 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                 <Reply className="w-4 h-4 mr-1" />
                 Trả lời
               </button>
-            </div>
-          )}
+            )}
+            {/* Nút sửa: bất kỳ user nào là chủ comment */}
+            {user && (
+              user.id === comment.user_id ||
+              user.id === comment.customer?.user_id
+            ) && (
+              <button
+                onClick={() => handleEditComment(comment)}
+                className="flex items-center text-sm text-yellow-600 hover:text-yellow-800 transition-colors"
+              >
+                Sửa
+              </button>
+            )}
+            {/* Nút xóa: staff hoặc consultant */}
+            {user && (user.role === 'staff' || user.role === 'consultant') && (
+              <button
+                onClick={() => handleDeleteComment(comment.comment_id)}
+                className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
+              >
+                Xóa
+              </button>
+            )}
+          </div>
 
           {/* Reply form */}
           {replyingTo === comment.comment_id && canComment && (

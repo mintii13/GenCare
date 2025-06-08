@@ -10,6 +10,7 @@ import LoginModal from "@/components/auth/LoginModal";
 import OAuthSuccess from "./pages/OAuthSuccess";
 // Blog imports
 import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
+import { Toaster } from 'react-hot-toast';
 
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
@@ -18,6 +19,33 @@ const App = () => {
 
   return (
     <Layout onLoginClick={() => setShowLogin(true)}>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000, // Hiển thị trong 3 giây
+          style: {
+            background: '#363636',
+            color: '#fff',
+            padding: '16px',
+            borderRadius: '8px',
+            fontSize: '14px',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#4ade80',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Suspense fallback={<div>Đang tải...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
