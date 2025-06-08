@@ -10,7 +10,7 @@ const api = axios.create({
   timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
-  },
+  }
 });
 
 // Debug log để kiểm tra cấu hình
@@ -37,17 +37,12 @@ api.interceptors.request.use(
 // Add response interceptor
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    // Nếu muốn xử lý lỗi 401, chỉ cần logout hoặc chuyển hướng, không cần refresh token
+  (error) => {
     if (error.response?.status === 401) {
-      // Xóa tất cả auth data
+      // Token hết hạn, xóa token và chuyển về trang login
       localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
-      
-      // Redirect về trang chủ thay vì login
-      window.location.href = '/';
-      return Promise.reject(error);
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

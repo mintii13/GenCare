@@ -30,11 +30,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
     try {
       const res = await axios.post(
         import.meta.env.VITE_API_URL + '/auth/login',
-        form,
-        { withCredentials: true }
+        form
       );
       if (res.data.success) {
-        login(res.data.user);
+        login(res.data.user, res.data.accessToken);
         if (onLoginSuccess) onLoginSuccess(res.data.user);
         onClose();
       } else {
