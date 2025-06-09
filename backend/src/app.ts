@@ -6,7 +6,6 @@ import authController from './controllers/authController';
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
-import { startRedisServer } from './configs/redis';
 import redisClient from './configs/redis';
 require('dotenv').config();
 import blogController from './controllers/blogController';
@@ -58,23 +57,16 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    // 1. On the redisServer
-    const redisProcess = await startRedisServer();
-
-    // 2. Connect to RedisClient
+    // 1. Connect to RedisClient
     await redisClient.connect();
     console.log('Connected to Redis!');
 
-    // 3. Connect Database
+    // 2. Connect Database
     await connectDatabase();
 
-    // 4. Start Express server
+    // 3. Start Express server
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
-    });
-
-    process.on('exit', () => {
-      redisProcess.kill();
     });
 
   } catch (error) {
