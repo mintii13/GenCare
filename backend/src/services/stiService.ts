@@ -102,26 +102,7 @@ export class StiService{
                     message: 'STI Test not found'
                 }
             }
-            // Only created Staff and Admin can update
-            if (user.role === 'staff') {
-                // Staff chỉ được update test do chính họ tạo
-                if (sti_test.createdBy?.toString() !== user.userId) {
-                    return {
-                        success: false,
-                        message: 'Not authorized to update this test'
-                    };
-                }
-            } else if (user.role === 'admin') {
-                // Nếu test do admin khác tạo thì cấm
-                const creatorRole = await UserRepository.getUserRoleById(sti_test.createdBy?.toString());
-                if (creatorRole === 'admin' && sti_test.createdBy?.toString() !== user._id) {
-                    return {
-                        success: false,
-                        message: 'Not authorized to update this test'
-                    };
-                }
-                // Nếu test do staff tạo thì admin được quyền update (không cần check gì thêm)
-            }
+            // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
             return{
                 success: true,
                 message: 'Update STI Test successfully',

@@ -49,7 +49,7 @@ const App = () => {
       <Suspense fallback={<div>Đang tải...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/test-packages" element={<TestPackagesPage />} />
+          <Route path="/test-packages/*" element={<TestPackagesPage />} />
           <Route path="/test-packages/sti" element={<STITestPage />} />
           <Route path="/register" element={<Register />} />
           <Route path="/about" element={<AboutUs />} />

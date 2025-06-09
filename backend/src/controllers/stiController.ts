@@ -12,18 +12,20 @@ const router = Router();
 //create sti-test API
 router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
+        console.log('POST /createStiTest - req.body:', req.body);
         const userId = (req.user as any).userId;
         const stiTest = new StiTest({
             ...req.body,
             createdBy: userId
         });
         const result = await StiService.createStiTest(stiTest);
+        console.log('POST /createStiTest - result:', result);
         if (result.success){
             res.status(200).json(result);
         }
         else res.status(400).json(result);
     } catch (error) {
-        console.log(error);
+        console.log('POST /createStiTest - error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
@@ -53,11 +55,18 @@ router.get('/getAllStiTest', async (req: Request, res: Response): Promise<void> 
 router.get('/getStiTest/:id', async (req: Request, res: Response): Promise<void> => {
     try {
         const sti_test_id = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(sti_test_id)) {
+            res.status(400).json({ success: false, message: 'Invalid test ID' });
+            return;
+        }
         const result = await StiService.getStiTestById(sti_test_id);
         if (result.success){
             res.status(200).json(result);
         }
-        else res.status(400).json(result);
+        else if (result.message === 'STI Test not found'){
+            res.status(404).json(result);
+        }
+        else res.status(500).json(result);
     } catch (error) {
         console.log(error);
         res.status(500).json({
