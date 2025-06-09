@@ -23,7 +23,7 @@ const StiTestForm: React.FC = () => {
     try {
       const response = await api.get<StiTestResponse>(`/sti/getStiTest/${id}`);
       if (response.data.success) {
-        form.setFieldsValue(response.data.data as StiTest);
+        form.setFieldsValue(response.data.stitest as StiTest);
       }
     } catch (error) {
       console.error('Error fetching test details:', error);
@@ -33,10 +33,23 @@ const StiTestForm: React.FC = () => {
 
   const onFinish = async (values: StiTest) => {
     setLoading(true);
+    // Đảm bảo sti_test_type là enum tiếng Anh
+    const fixedValues = {
+      ...values,
+      sti_test_name: values.sti_test_name?.trim(),
+      sti_test_code: values.sti_test_code?.trim(),
+      description: values.description?.trim(),
+      duration: values.duration?.trim(),
+      category: values.category?.trim(),
+      sti_test_type:
+        values.sti_test_type === 'Xét nghiệm máu' ? 'blood' :
+        values.sti_test_type === 'Xét nghiệm nước tiểu' ? 'urine' :
+        values.sti_test_type === 'Xét nghiệm phết' ? 'swab' : values.sti_test_type?.trim()
+    };
     try {
       const response = id
-        ? await api.put<StiTestResponse>(`/sti/updateStiTest/${id}`, values)
-        : await api.post<StiTestResponse>('/sti/createStiTest', values);
+        ? await api.put<StiTestResponse>(`/sti/updateStiTest/${id}`, fixedValues)
+        : await api.post<StiTestResponse>('/sti/createStiTest', fixedValues);
 
       if (response.data.success) {
         message.success(id ? 'Cập nhật thành công' : 'Thêm mới thành công');
@@ -46,7 +59,12 @@ const StiTestForm: React.FC = () => {
       }
     } catch (error) {
       console.error('Error saving test:', error);
-      message.error('Có lỗi xảy ra khi lưu thông tin');
+      const err = error as any;
+      if (err.response && err.response.data && err.response.data.message) {
+        message.error(err.response.data.message);
+      } else {
+        message.error('Có lỗi xảy ra khi lưu thông tin');
+      }
     } finally {
       setLoading(false);
     }

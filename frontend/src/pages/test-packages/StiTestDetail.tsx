@@ -4,12 +4,14 @@ import { Card, Descriptions, Button, Space, Tag, message, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import api from '../../services/api';
 import { StiTest, StiTestResponse } from '../../types/sti';
+import { useAuth } from '../../contexts/AuthContext';
 
 const StiTestDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [test, setTest] = useState<StiTest | null>(null);
   const [loading, setLoading] = useState(true);
+  const user = useAuth()?.user;
 
   useEffect(() => {
     fetchTestDetails();
@@ -19,7 +21,7 @@ const StiTestDetail: React.FC = () => {
     try {
       const response = await api.get<StiTestResponse>(`/sti/getStiTest/${id}`);
       if (response.data.success) {
-        setTest(response.data.data as StiTest);
+        setTest(response.data.stitest as StiTest);
       }
     } catch (error) {
       console.error('Error fetching test details:', error);
@@ -78,24 +80,26 @@ const StiTestDetail: React.FC = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
       <Card
-        title={test.sti_test_name}
+          title={test.sti_test_name}
         extra={
-          <Space>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/test-packages/edit/${id}`)}
-            >
-              Chỉnh sửa
-            </Button>
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={handleDelete}
-            >
-              Xóa
-            </Button>
-          </Space>
+          (user?.role === 'consultant' || user?.role === 'staff') && (
+            <Space>
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => navigate(`/test-packages/edit/${id}`)}
+              >
+                Chỉnh sửa
+              </Button>
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleDelete}
+              >
+                Xóa
+              </Button>
+            </Space>
+          )
         }
       >
         <Descriptions bordered column={1}>

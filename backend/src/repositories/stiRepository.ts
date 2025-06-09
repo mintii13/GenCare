@@ -1,11 +1,31 @@
+import mongoose from 'mongoose';
 import { StiTest, IStiTest } from '../models/StiTest';
+import { ObjectId } from 'mongoose';
 
 export class StiRepository{
+    public static async findById(id: string): Promise<IStiTest | null>{
+        try {
+            return await StiTest.findById(id);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    public static async findByIdAndUpdateStiTest(id: string, updateData: Partial<IStiTest>): Promise<IStiTest | null>{
+        try {
+            const objectId = new mongoose.Types.ObjectId(id);
+            return await StiTest.findByIdAndUpdate(objectId, updateData, { new: true, runValidators: true });        
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     public static async insertStiTest(stiTest: IStiTest): Promise<IStiTest | null>{
         try {
             return await StiTest.create(stiTest);
         } catch (error) {
             console.error(error);
+            throw error;
         }
     }
 
@@ -18,6 +38,16 @@ export class StiRepository{
             }
     }
 
+    public static async updateIsActive(id: string){
+        try {
+            const objectId = new mongoose.Types.ObjectId(id)
+            return await StiTest.findByIdAndUpdate(objectId, {isActive: true}, { new: true, runValidators: true });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+
     public static async getAllStiTest(){
         try {
             return await StiTest.find();
@@ -28,7 +58,21 @@ export class StiRepository{
 
     public static async getStiTestById(id: string): Promise<IStiTest | null> {
         try {
-            return await StiTest.findOne({ sti_test_id: id });
+            return await StiTest.findById(id);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    public static async findByIdAndUpdate(sti_test_id: string, userId: string): Promise<IStiTest | null> {
+        try {
+            const objectStiId = new mongoose.Types.ObjectId(sti_test_id);
+            const objectUserId = new mongoose.Types.ObjectId(userId);
+            return await StiTest.findOneAndUpdate(
+                { _id: objectStiId, createdBy: objectUserId },
+                { isActive: false },
+                { new: true }
+            );
         } catch (error) {
             console.error(error);
         }

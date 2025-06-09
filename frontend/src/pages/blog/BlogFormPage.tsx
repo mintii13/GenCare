@@ -82,8 +82,28 @@ const BlogFormPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate title
     if (!title.trim()) {
       setError('Vui lòng nhập tiêu đề');
+      return;
+    }
+    if (title.length < 5) {
+      setError('Tiêu đề phải có ít nhất 5 ký tự');
+      return;
+    }
+    if (title.length > 200) {
+      setError('Tiêu đề không được quá 200 ký tự');
+      return;
+    }
+
+    // Validate content
+    if (!content.trim()) {
+      setError('Vui lòng nhập nội dung');
+      return;
+    }
+    if (content.length < 10) {
+      setError('Nội dung phải có ít nhất 10 ký tự');
       return;
     }
 

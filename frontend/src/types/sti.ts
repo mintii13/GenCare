@@ -1,5 +1,5 @@
 export interface StiTest {
-  sti_test_id: string;
+  _id: string;
   sti_test_name: string;
   sti_test_code: string;
   description: string;
@@ -13,5 +13,5 @@ export interface StiTest {
 export interface StiTestResponse {
   success: boolean;
   message?: string;
-  data: StiTest | StiTest[];
+  stitest: StiTest | StiTest[];
 } 
