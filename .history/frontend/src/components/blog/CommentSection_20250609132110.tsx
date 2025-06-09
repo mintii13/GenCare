@@ -140,24 +140,22 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   </div>
                 </div>
               </div>
-            ) : comment.user ? (
+            ) : comment.customer ? (
               <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full overflow-hidden">
-                  <img
-                    src={comment.user.avatar || '/default-avatar.png'}
-                    alt={comment.user.full_name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <img
+                  src={comment.customer.custom_avatar || comment.customer.avatar}
+                  alt={comment.customer.full_name}
+                  className="w-8 h-8 rounded-full object-cover mr-3"
+                />
                 <div>
-                  <span className="font-medium text-gray-900">{comment.user.full_name}</span>
+                  <span className="font-medium text-gray-900">{comment.customer.full_name}</span>
                   <div className="flex items-center text-sm text-gray-500">
                     <UserCheck className="w-3 h-3 mr-1" />
                     <span>
-                      {comment.user.role === 'consultant' && 'Chuyên gia'}
-                      {comment.user.role === 'staff' && 'Nhân viên'}
-                      {comment.user.role === 'admin' && 'Quản trị viên'}
-                      {comment.user.role === 'customer' && 'Khách hàng'}
+                      {comment.customer.role === 'consultant' && 'Chuyên gia'}
+                      {comment.customer.role === 'staff' && 'Nhân viên'}
+                      {comment.customer.role === 'admin' && 'Quản trị viên'}
+                      {comment.customer.role === 'customer' && 'Khách hàng'}
                     </span>
                   </div>
                 </div>
@@ -224,21 +222,15 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   Sửa
                 </button>
               )}
-            {/* Nút xóa: staff, consultant, admin hoặc tác giả comment */}
-            {user && (
-              user.role === 'staff' ||
-              user.role === 'consultant' ||
-              user.role === 'admin' ||
-              user.id === comment.user_id ||
-              user.id === comment.user?.user_id
-            ) && (
-                <button
-                  onClick={() => handleDeleteComment(comment.comment_id)}
-                  className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
-                >
-                  Xóa
-                </button>
-              )}
+            {/* Nút xóa: staff hoặc consultant */}
+            {user && (user.role === 'staff' || user.role === 'consultant') && (
+              <button
+                onClick={() => handleDeleteComment(comment.comment_id)}
+                className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
+              >
+                Xóa
+              </button>
+            )}
           </div>
 
           {/* Reply form */}

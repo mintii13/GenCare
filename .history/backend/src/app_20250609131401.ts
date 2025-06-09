@@ -49,7 +49,7 @@ app.use(passport.session());
 
 app.use('/api/auth', authController);
 app.use('/api/blogs', blogController);
-app.use('/api/consultant', consultantScheduleController);
+app.use('/api/consultant-schedules', consultantScheduleController);
 app.use('/api/sti', stiController);
 
 // Error handling middleware

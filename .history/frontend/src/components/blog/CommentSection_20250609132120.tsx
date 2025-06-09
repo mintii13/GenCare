@@ -224,21 +224,15 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   Sửa
                 </button>
               )}
-            {/* Nút xóa: staff, consultant, admin hoặc tác giả comment */}
-            {user && (
-              user.role === 'staff' ||
-              user.role === 'consultant' ||
-              user.role === 'admin' ||
-              user.id === comment.user_id ||
-              user.id === comment.user?.user_id
-            ) && (
-                <button
-                  onClick={() => handleDeleteComment(comment.comment_id)}
-                  className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
-                >
-                  Xóa
-                </button>
-              )}
+            {/* Nút xóa: staff hoặc consultant */}
+            {user && (user.role === 'staff' || user.role === 'consultant') && (
+              <button
+                onClick={() => handleDeleteComment(comment.comment_id)}
+                className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
+              >
+                Xóa
+              </button>
+            )}
           </div>
 
           {/* Reply form */}

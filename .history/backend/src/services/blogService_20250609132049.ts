@@ -439,9 +439,9 @@ export class BlogService {
             const blog = await BlogRepository.findByIdIncludingDeleted(comment.blog_id.toString());
             const isBlogAuthor = blog && blog.author_id.toString() === requestUserId;
 
-            const isStaffOrAdmin = requestUserRole === 'staff' || requestUserRole === 'admin';
+            const isStaff = requestUserRole === 'staff' || requestUserRole === 'admin';
 
-            if (!isCommentAuthor && !isBlogAuthor && !isStaffOrAdmin) {
+            if (!isCommentAuthor && !isBlogAuthor && !isStaff) {
                 return {
                     success: false,
                     message: 'You do not have permission to delete this comment'
