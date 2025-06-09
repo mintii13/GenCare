@@ -1,0 +1,2 @@
+# Đảm bảo file shell script luôn dùng LF (Unix line endings)
+*.sh text eol=lf
