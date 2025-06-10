@@ -203,11 +203,12 @@ router.delete('/:blogId', authenticateToken, async (req: Request, res: Response)
     }
 });
 
-// PUT /api/blogs/:blogId/comments/:commentId - Chỉnh sửa comment (chỉ tác giả)
+// PUT /api/blogs/:blogId/comments/:commentId - Chỉnh sửa comment (chỉ user là chủ comment)
 router.put('/:blogId/comments/:commentId', authenticateToken, validateCreateBlogComment, async (req: Request, res: Response) => {
     try {
         const { blogId, commentId } = req.params;
         const userId = (req as any).user.userId;
+        const userRole = (req as any).user.role;
         const { content, is_anonymous = false } = req.body;
 
         // Kiểm tra ObjectId hợp lệ
@@ -222,6 +223,15 @@ router.put('/:blogId/comments/:commentId', authenticateToken, validateCreateBlog
             return res.status(400).json({
                 success: false,
                 message: 'Comment ID không hợp lệ'
+            });
+        }
+
+        // Chỉ cho phép chủ comment (không phân biệt role) được sửa bình luận của mình
+        const comment = await BlogService.getCommentById(commentId);
+        if (!comment || !comment.customer_id || comment.customer_id.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn chỉ có thể sửa bình luận của chính mình'
             });
         }
 
@@ -251,7 +261,7 @@ router.put('/:blogId/comments/:commentId', authenticateToken, validateCreateBlog
     }
 });
 
-// DELETE /api/blogs/:blogId/comments/:commentId - Xóa comment (author comment, author blog, hoặc staff)
+// DELETE /api/blogs/:blogId/comments/:commentId - Staff và consultant được xóa mọi comment
 router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { blogId, commentId } = req.params;
@@ -270,6 +280,14 @@ router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Req
             return res.status(400).json({
                 success: false,
                 message: 'Comment ID không hợp lệ'
+            });
+        }
+
+        // Chỉ cho phép staff và consultant xóa mọi comment
+        if (!['staff', 'consultant'].includes(userRole)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Chỉ staff hoặc consultant được xóa bình luận'
             });
         }
 
@@ -294,8 +312,8 @@ router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Req
     }
 });
 
-// GET /api/blogs/:blogId - Lấy chi tiết blog theo ID
-router.get('/:blogId', async (req: Request, res: Response) => {
+// GET /api/blogs/:blogId - Lấy chi tiết blog theo ID (cần đăng nhập)
+router.get('/:blogId', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { blogId } = req.params;
 

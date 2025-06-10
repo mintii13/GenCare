@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from "axios";
+import { toast } from 'react-hot-toast';
+
+const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken';
 
 interface User {
   id: string;
@@ -11,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (user: User, token: string) => void;
   logout: () => void;
 }
 
@@ -33,44 +36,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('storage', syncUser);
   }, []);
 
-  // Kiểm tra token và lấy user info khi app load hoặc sau khi login Google
+  // Kiểm tra token và lấy user info khi app load
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
-      axios.get("http://localhost:3000/api/auth/profile", {
+      axios.get(`${import.meta.env.VITE_API_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(res => {
-        if (res.data.success) setUser(res.data.user);
+        if (res.data.success) {
+          setUser(res.data.user);
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+        }
       })
-      .catch(() => setUser(null));
+      .catch(() => {
+        // Token không hợp lệ, xóa token và user
+        setUser(null);
+        localStorage.removeItem('user');
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+      });
     }
   }, []);
 
-  const login = (userData: User) => {
+  const login = (userData: User, token: string) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
   };
 
   const logout = async () => {
     try {
-      // Gọi API logout nếu có token
-      const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
-        await axios.post("http://localhost:3000/api/auth/logout", {}, {
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
     } catch (error) {
-      console.error('Logout API error:', error);
-      // Vẫn tiếp tục logout nếu API lỗi
+      console.error('Logout error:', error);
     } finally {
-      // Xóa tất cả dữ liệu auth
       setUser(null);
       localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      
-      // Redirect về trang chủ
+      localStorage.removeItem(AUTH_TOKEN_KEY);
       window.location.href = '/';
     }
   };

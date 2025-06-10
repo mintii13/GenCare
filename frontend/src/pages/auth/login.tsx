@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,13 +20,9 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/login', form, {
-        withCredentials: true, // nếu backend dùng session/cookie
-      });
+      const res = await axios.post('http://localhost:3000/api/auth/login', form);
       if (res.data.success) {
-        // Lưu thông tin user hoặc token nếu cần
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        // Chuyển hướng sang trang chính
+        login(res.data.user, res.data.accessToken);
         navigate('/');
       } else {
         setError(res.data.message || 'Đăng nhập thất bại');

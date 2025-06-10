@@ -73,6 +73,11 @@ const BlogListPage: React.FC = () => {
     navigate('/blogs/create');
   };
 
+  // Tổng hợp danh sách chuyên khoa duy nhất từ blogs
+  const specializations = Array.from(
+    new Set(blogs.map(blog => blog.author?.specialization).filter(Boolean))
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -116,6 +121,7 @@ const BlogListPage: React.FC = () => {
           filters={filters}
           onFiltersChange={handleFiltersChange}
           onClearFilters={handleClearFilters}
+          specializations={specializations}
         />
 
         {/* Error message */}

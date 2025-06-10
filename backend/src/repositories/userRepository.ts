@@ -1,16 +1,17 @@
 import { ObjectId } from 'mongoose';
 import { User, IUser } from '../models/User';
+import mongoose from 'mongoose'
 
 export class UserRepository {
-    public static async findById(userId: ObjectId): Promise<IUser | null> {
-            try {
-                return await User.findById(userId).select('-password');
-            } catch (error) {
-                console.error('Error finding user by email:', error);
-                throw error;
-            }
+    public static async findById(userId: string): Promise<IUser | null> {
+        try {
+            return await User.findById(userId);
+        } catch (error) {
+            console.error('Error finding user by email:', error);
+            throw error;
         }
-        
+    }
+
     public static async findByEmail(email: string): Promise<IUser | null> {
         try {
             return await User.findOne({ email }).lean<IUser>();
@@ -18,6 +19,11 @@ export class UserRepository {
             console.error('Error finding user by email:', error);
             throw error;
         }
+    }
+    
+    public static async getUserRoleById(userId: string): Promise<string | null> {
+        const user = await User.findById(new mongoose.Types.ObjectId(userId));
+        return user ? user.role : null;
     }
 
     public static async findByIdAndUpdate(userId: ObjectId, updateData: Partial<IUser>): Promise<IUser | null> {
