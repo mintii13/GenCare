@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongoose';
 import { User, IUser } from '../models/User';
 import mongoose from 'mongoose'
 
@@ -23,6 +24,19 @@ export class UserRepository {
     public static async getUserRoleById(userId: string): Promise<string | null> {
         const user = await User.findById(new mongoose.Types.ObjectId(userId));
         return user ? user.role : null;
+    }
+
+    public static async findByIdAndUpdate(userId: ObjectId, updateData: Partial<IUser>): Promise<IUser | null> {
+        try {
+            return await User.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+        } catch (error) {
+            console.error('Error finding user by email:', error);
+            throw error;
+        }
     }
 
     public static async updateLastLogin(userId: string): Promise<void> {

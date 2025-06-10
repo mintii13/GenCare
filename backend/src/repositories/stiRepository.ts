@@ -58,7 +58,7 @@ export class StiRepository{
 
     public static async getStiTestById(id: string): Promise<IStiTest | null> {
         try {
-            return await StiTest.findOne({ sti_test_id: id });
+            return await StiTest.findById(id);
         } catch (error) {
             console.error(error);
         }

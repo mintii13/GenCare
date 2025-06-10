@@ -36,6 +36,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [localComments, setLocalComments] = useState<Comment[]>(comments);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalComments(comments);
+  }, [comments]);
 
   const canComment = !!user;
 
@@ -51,21 +58,24 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
     setIsSubmitting(true);
     try {
-      console.log('CommentSection blogId:', blogId, typeof blogId);
-      await blogService.createComment(blogId, content, isAnonymous, parentId);
-      
-      // Reset form
-      if (parentId) {
-        setReplyContent('');
-        setReplyingTo(null);
+      const response = await blogService.createComment(blogId, content, isAnonymous, parentId);
+      if (response.success) {
+        // Reset form
+        if (parentId) {
+          setReplyContent('');
+          setReplyingTo(null);
+        } else {
+          setNewComment('');
+        }
+        
+        // Fetch lại comments
+        await onCommentsUpdate();
       } else {
-        setNewComment('');
+        toast.error(response.message || 'Không thể đăng bình luận');
       }
-      
-      onCommentsUpdate();
     } catch (error) {
       console.error('Error posting comment:', error);
-      // Có thể thêm toast notification ở đây
+      toast.error('Không thể đăng bình luận');
     } finally {
       setIsSubmitting(false);
     }
@@ -87,30 +97,52 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     if (!editContent.trim()) return;
     setIsSubmitting(true);
     try {
-      const comment = comments.find(c => c.comment_id === commentId);
-      await blogService.updateComment(blogId, commentId, editContent, comment?.is_anonymous);
-      setEditingCommentId(null);
-      setEditContent('');
-      setIsEditing(false);
-      onCommentsUpdate();
+      const comment = localComments.find(c => c.comment_id === commentId);
+      const response = await blogService.updateComment(blogId, commentId, editContent, comment?.is_anonymous);
+      if (response.success) {
+        setEditingCommentId(null);
+        setEditContent('');
+        setIsEditing(false);
+        await onCommentsUpdate();
+      } else {
+        toast.error(response.message || 'Không thể cập nhật bình luận');
+      }
     } catch (error) {
-      // Có thể thêm toast ở đây
+      console.error('Error updating comment:', error);
+      toast.error('Không thể cập nhật bình luận');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
     setIsSubmitting(true);
     try {
-      await blogService.deleteComment(blogId, commentId);
-      toast.success('Xóa bình luận thành công!');
-      onCommentsUpdate();
+      const response = await blogService.deleteComment(blogId, commentId);
+      if (response.success) {
+        toast.success('Xóa bình luận thành công!');
+        await onCommentsUpdate();
+      } else {
+        toast.error(response.message || 'Xóa bình luận thất bại!');
+      }
     } catch (error) {
+      console.error('Error deleting comment:', error);
       toast.error('Xóa bình luận thất bại!');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAskDelete = (commentId: string) => {
+    setCommentToDelete(commentId);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (commentToDelete) {
+      await handleDeleteComment(commentToDelete);
+      setShowDeleteModal(false);
+      setCommentToDelete(null);
     }
   };
 
@@ -225,7 +257,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             {/* Nút xóa: staff hoặc consultant */}
             {user && (user.role === 'staff' || user.role === 'consultant') && (
               <button
-                onClick={() => handleDeleteComment(comment.comment_id)}
+                onClick={() => handleAskDelete(comment.comment_id)}
                 className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
               >
                 Xóa
@@ -276,7 +308,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         </div>
 
         {/* Render replies */}
-        {comments
+        {localComments
           .filter(reply => reply.parent_comment_id === comment.comment_id)
           .map(reply => renderComment(reply, level + 1))
         }
@@ -285,14 +317,14 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   // Lấy comments gốc (không phải reply)
-  const rootComments = comments.filter(comment => !comment.parent_comment_id);
+  const rootComments = localComments.filter(comment => !comment.parent_comment_id);
 
   return (
     <div className="mt-8">
       <div className="flex items-center mb-6">
         <MessageCircle className="w-6 h-6 mr-2 text-blue-600" />
         <h3 className="text-xl font-bold text-gray-900">
-          Bình luận ({comments.length})
+          Bình luận ({localComments.length})
         </h3>
       </div>
 
@@ -353,6 +385,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           </div>
         )}
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Xác nhận xóa bình luận</h3>
+            <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">Hủy</button>
+              <button onClick={handleConfirmDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
