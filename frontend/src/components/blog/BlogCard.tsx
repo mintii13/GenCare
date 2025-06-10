@@ -51,9 +51,8 @@ const BlogCard: React.FC<BlogCardProps> = ({ blog, onClick }) => {
         </h3>
 
         {/* Nội dung tóm tắt */}
-        <p className="text-gray-700 mb-4 line-clamp-3">
-          {truncateContent(blog.content)}
-        </p>
+        <p className="text-gray-700 mb-4 line-clamp-3" 
+           dangerouslySetInnerHTML={{ __html: truncateContent(blog.content) }} />
 
         {/* Footer với ngày đăng và trạng thái */}
         <div className="flex items-center justify-between">
@@ -71,11 +70,11 @@ const BlogCard: React.FC<BlogCardProps> = ({ blog, onClick }) => {
         {/* Badge trạng thái */}
         <div className="mt-3">
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            blog.status === 'published' 
+            blog.status === true 
               ? 'bg-green-100 text-green-800' 
               : 'bg-yellow-100 text-yellow-800'
           }`}>
-            {blog.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+            {blog.status === true ? 'Đã xuất bản' : 'Bản nháp'}
           </span>
         </div>
       </div>
