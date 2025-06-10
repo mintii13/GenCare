@@ -17,7 +17,7 @@ export interface Customer {
   full_name: string;
   email: string;
   phone: string;
-  role: 'customer';
+  role: 'customer' | 'consultant' | 'staff' | 'admin';
   avatar: string;
   medical_history: string;
   custom_avatar: string | null;
@@ -31,18 +31,18 @@ export interface Blog {
   content: string;
   publish_date: string;
   updated_date: string;
-  status: 'published' | 'draft';
+  status: boolean;
   author: Author;
 }
 
 export interface Comment {
   comment_id: string;
   blog_id: string;
-  customer_id: string | null;
+  user_id: string ;
   content: string;
   comment_date: string;
   parent_comment_id: string | null;
-  status: 'approved' | 'pending' | 'rejected';
+  status: boolean;
   is_anonymous: boolean;
   customer: Customer | null;
 }

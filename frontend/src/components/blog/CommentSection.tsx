@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff 
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface CommentSectionProps {
   blogId: string;
@@ -32,9 +33,18 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const [replyContent, setReplyContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [localComments, setLocalComments] = useState<Comment[]>(comments);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
-  const isCustomer = user?.role === 'customer';
-  const canComment = isCustomer;
+  useEffect(() => {
+    setLocalComments(comments);
+  }, [comments]);
+
+  const canComment = !!user;
 
   const formatDate = (dateString: string) => {
     return formatDistanceToNow(new Date(dateString), { 
@@ -48,23 +58,91 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
     setIsSubmitting(true);
     try {
-      console.log('CommentSection blogId:', blogId, typeof blogId);
-      await blogService.createComment(blogId, content, isAnonymous, parentId);
-      
-      // Reset form
-      if (parentId) {
-        setReplyContent('');
-        setReplyingTo(null);
+      const response = await blogService.createComment(blogId, content, isAnonymous, parentId);
+      if (response.success) {
+        // Reset form
+        if (parentId) {
+          setReplyContent('');
+          setReplyingTo(null);
+        } else {
+          setNewComment('');
+        }
+        
+        // Fetch lại comments
+        await onCommentsUpdate();
       } else {
-        setNewComment('');
+        toast.error(response.message || 'Không thể đăng bình luận');
       }
-      
-      onCommentsUpdate();
     } catch (error) {
       console.error('Error posting comment:', error);
-      // Có thể thêm toast notification ở đây
+      toast.error('Không thể đăng bình luận');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.comment_id);
+    setEditContent(comment.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async (commentId: string) => {
+    if (!editContent.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const comment = localComments.find(c => c.comment_id === commentId);
+      const response = await blogService.updateComment(blogId, commentId, editContent, comment?.is_anonymous);
+      if (response.success) {
+        setEditingCommentId(null);
+        setEditContent('');
+        setIsEditing(false);
+        await onCommentsUpdate();
+      } else {
+        toast.error(response.message || 'Không thể cập nhật bình luận');
+      }
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      toast.error('Không thể cập nhật bình luận');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setIsSubmitting(true);
+    try {
+      const response = await blogService.deleteComment(blogId, commentId);
+      if (response.success) {
+        toast.success('Xóa bình luận thành công!');
+        await onCommentsUpdate();
+      } else {
+        toast.error(response.message || 'Xóa bình luận thất bại!');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Xóa bình luận thất bại!');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAskDelete = (commentId: string) => {
+    setCommentToDelete(commentId);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (commentToDelete) {
+      await handleDeleteComment(commentToDelete);
+      setShowDeleteModal(false);
+      setCommentToDelete(null);
     }
   };
 
@@ -105,7 +183,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   <span className="font-medium text-gray-900">{comment.customer.full_name}</span>
                   <div className="flex items-center text-sm text-gray-500">
                     <UserCheck className="w-3 h-3 mr-1" />
-                    <span>Khách hàng</span>
+                    <span>
+                      {comment.customer.role === 'consultant' && 'Chuyên gia'}
+                      {comment.customer.role === 'staff' && 'Nhân viên'}
+                      {comment.customer.role === 'admin' && 'Quản trị viên'}
+                      {comment.customer.role === 'customer' && 'Khách hàng'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -123,14 +206,34 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             </span>
           </div>
 
-          {/* Nội dung comment */}
-          <p className="text-gray-800 mb-3 leading-relaxed">
-            {comment.content}
-          </p>
+          {/* Nội dung comment hoặc form sửa */}
+          {editingCommentId === comment.comment_id ? (
+            <div className="mb-3">
+              <textarea
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                className="w-full p-2 border rounded mb-2"
+                rows={3}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSaveEdit(comment.comment_id)}
+                  disabled={isSubmitting || !editContent.trim()}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                >Lưu</button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 border rounded hover:bg-gray-50"
+                >Hủy</button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-800 mb-3 leading-relaxed">{comment.content}</p>
+          )}
 
           {/* Actions */}
-          {canComment && (
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
+            {canComment && (
               <button
                 onClick={() => setReplyingTo(comment.comment_id)}
                 className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors"
@@ -138,8 +241,29 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                 <Reply className="w-4 h-4 mr-1" />
                 Trả lời
               </button>
-            </div>
-          )}
+            )}
+            {/* Nút sửa: bất kỳ user nào là chủ comment */}
+            {user && (
+              user.id === comment.user_id ||
+              user.id === comment.customer?.user_id
+            ) && (
+              <button
+                onClick={() => handleEditComment(comment)}
+                className="flex items-center text-sm text-yellow-600 hover:text-yellow-800 transition-colors"
+              >
+                Sửa
+              </button>
+            )}
+            {/* Nút xóa: staff hoặc consultant */}
+            {user && (user.role === 'staff' || user.role === 'consultant') && (
+              <button
+                onClick={() => handleAskDelete(comment.comment_id)}
+                className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
+              >
+                Xóa
+              </button>
+            )}
+          </div>
 
           {/* Reply form */}
           {replyingTo === comment.comment_id && canComment && (
@@ -184,7 +308,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         </div>
 
         {/* Render replies */}
-        {comments
+        {localComments
           .filter(reply => reply.parent_comment_id === comment.comment_id)
           .map(reply => renderComment(reply, level + 1))
         }
@@ -193,14 +317,14 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   // Lấy comments gốc (không phải reply)
-  const rootComments = comments.filter(comment => !comment.parent_comment_id);
+  const rootComments = localComments.filter(comment => !comment.parent_comment_id);
 
   return (
     <div className="mt-8">
       <div className="flex items-center mb-6">
         <MessageCircle className="w-6 h-6 mr-2 text-blue-600" />
         <h3 className="text-xl font-bold text-gray-900">
-          Bình luận ({comments.length})
+          Bình luận ({localComments.length})
         </h3>
       </div>
 
@@ -261,6 +385,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           </div>
         )}
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Xác nhận xóa bình luận</h3>
+            <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">Hủy</button>
+              <button onClick={handleConfirmDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
