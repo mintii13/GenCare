@@ -21,7 +21,7 @@ passport.use(
 
 //lưu dữ liệu người dùng bên trong phiên
 passport.serializeUser((user: any, done: any) => {
-  done(null, user.id);
+  done(null, user._id);
 });
 //lấy data của user khi cần thiết
 passport.deserializeUser(async (id: string, done: any) => {

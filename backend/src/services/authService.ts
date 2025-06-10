@@ -7,8 +7,10 @@ import { RegisterResponse } from '../dto/responses/RegisterResponse';
 import { JWTUtils } from '../utils/jwtUtils';
 import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
-import crypto from 'crypto'
 import redisClient from '../configs/redis';
+import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
+import { ObjectId } from 'mongoose';
+import { RandomUtils } from '../utils/randomUtils';
 
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
@@ -104,6 +106,42 @@ export class AuthService {
         }
     }
 
+    public static async sendPassword(emailSendTo: string, password: string) {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_FOR_VERIFY || '',
+                pass: process.env.EMAIL_APP_PASSWORD || ''
+            }
+        })
+
+        const mailContent = {
+            from: `"Mật khẩu đăng nhập GenCare" <${process.env.EMAIL_FOR_VERIFY || null}>`,
+            to: emailSendTo,
+            subject: `Mật khẩu hiện tại của email ${emailSendTo} là:`,
+            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                            <h2>Mật khẩu của bạn là: <strong style="color:#2a9d8f;">${password}</strong></h2>
+                            <p>Mật khẩu này sẽ được sử dụng để đăng nhập trong hệ thống GenCare của chúng tôi</p>
+                            <p>Đường dẫn đến trang web là: http://localhost:5173</p>
+                            <p>Trân trọng,</p>
+                            <h4>${process.env.APP_NAME || 'GenCare'}</h4>
+                        </div>
+                    </body>`
+        }
+        if (!emailSendTo) {
+            return {
+                success: false,
+                message: "Mail does not exist"
+            }
+        }
+        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
+        return {
+            success: true,
+            message: "Send mail successfully"
+        }
+    }
+
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
         const email = profile.emails[0]?.value || null;
         const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
@@ -115,7 +153,7 @@ export class AuthService {
         const googleId = profile.id;
         const avatar = profile.photos?.[0]?.value || null; // Lấy avatar từ Google
 
-        let user = await User.findOne({ email });
+        let user = await UserRepository.findByEmail(email);
         if (user) {
             if (!user.googleId) {
                 user.googleId = googleId;
@@ -126,9 +164,12 @@ export class AuthService {
             }
             return user;
         }
-
+        const password = RandomUtils.generateRandomPassword();
+        this.sendPassword(email, password);
+        
         user = await UserRepository.insertUser({
             email,
+            password: await bcrypt.hash(password, 10),
             full_name,
             registration_date,
             updated_date,
@@ -139,7 +180,6 @@ export class AuthService {
             phone: null,
             date_of_birth: null,
             last_login: null,
-            password: '',
             avatar: avatar // Thêm avatar từ Google
         });
         return user;
@@ -192,7 +232,7 @@ export class AuthService {
         }
     }
 
-    public static async sendOTP(emailSendTo) {
+    public static async sendOTP(emailSendTo: string) {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
@@ -201,7 +241,7 @@ export class AuthService {
             }
         })
 
-        const otpGenerator = crypto.randomInt(100000, 999999).toString();
+        const otpGenerator = RandomUtils.generateRandomOTP(100000,999999);
 
         const mailContent = {
             from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY || null}>`,
@@ -227,4 +267,99 @@ export class AuthService {
     public static async insertByMyApp(user: string): Promise<void> {
         await UserRepository.insertUser(JSON.parse(user));
     }
+
+    /**
+     * Kiểm tra xem old_password có giống trong db không
+     */
+    public static async verifyOldPassword(userId: ObjectId, oldPassword: string): Promise<boolean> {
+        try {
+            const user = await UserRepository.findById(userId);
+            if (!user) {
+                throw new Error('User not found');
+            }
+            return await bcrypt.compare(oldPassword, user.password);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Hash new password
+     */
+    public static async hashPassword(password: string): Promise<string> {
+        try {
+            const salt = await bcrypt.genSalt(10);
+            return await bcrypt.hash(password, salt);
+        } catch (error) {
+            throw new Error('Error hashing password');
+        }
+    }
+
+    public static async updatePassword(_id: ObjectId, hashedPassword: string): Promise<void> {
+        try {
+            const result = await User.findOneAndUpdate(
+                { _id },
+                { password: hashedPassword },
+                { new: true }
+            );
+
+            if (!result) {
+                throw new Error('User not found');
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async changePasswordForUsers(
+        userId: ObjectId,
+        oldPassword: string,
+        newPassword: string,
+    ): Promise<ChangePasswordResponse> {
+        try {
+            if (!userId) {
+                return {
+                    success: false,
+                    message: 'Unauthorized',
+                };
+            }
+
+            const user = await UserRepository.findById(userId);
+            
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+
+            // 1. Verify old password
+            const isOldPasswordValid = await this.verifyOldPassword(userId, oldPassword);
+            if (!isOldPasswordValid) {
+                return {
+                    success: false,
+                    message: 'Old password is incorrect',
+                };
+            }
+            // 2. Hash new password
+            newPassword = await this.hashPassword(newPassword);
+
+            // 3. Update password in database
+            await this.updatePassword(userId, newPassword);
+
+            return {
+                success: true,
+                message: 'Change password successfully',
+                email: user.email
+            }
+
+        } catch (error) {
+            console.error('changePasswordForUsers error:', error);
+            return {
+                    success: false,
+                    message: 'System error',
+            };
+        }
+    }
+
 }
