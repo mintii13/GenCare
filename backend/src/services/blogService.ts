@@ -516,4 +516,13 @@ export class BlogService {
             };
         }
     }
+
+    public static async getCommentById(commentId: string) {
+        try {
+            return await BlogComment.findById(commentId).lean();
+        } catch (error) {
+            console.error('Error finding comment by id:', error);
+            return null;
+        }
+    }
 }

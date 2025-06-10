@@ -1,37 +1,4 @@
-import {createClient} from 'redis';
-import {ChildProcess, spawn} from 'child_process';
-
-export function startRedisServer(): Promise<ChildProcess> {
-  return new Promise((resolve, reject) => {
-    const pathLine = process.env.REDIS_PATH_LINE || '';
-    const redisPath = pathLine + '/backend/src/bin/redis-server.exe';
-    
-    console.log('Starting Redis server at:', redisPath);
-    const redisProcess = spawn(redisPath);
-
-    redisProcess.stdout.setEncoding('utf8');
-    redisProcess.stderr.setEncoding('utf8');
-
-    redisProcess.stdout.on('data', (data) => {
-      console.log(`Redis stdout: ${data}`);
-      if (data.includes('Ready to accept connections')) {
-        resolve(redisProcess);
-      }
-    });
-
-    redisProcess.stderr.on('data', (data) => {
-      console.error(`Redis stderr: ${data}`);
-    });
-
-    redisProcess.on('error', (err) => {
-      reject(err);
-    });
-
-    redisProcess.on('close', (code) => {
-      console.log(`Redis server exited with code ${code}`);
-    });
-  });
-}
+import { createClient } from 'redis';
 
 const redisClient = createClient({
   socket: {
@@ -40,4 +7,5 @@ const redisClient = createClient({
   }
 });
 
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
 export default redisClient;

@@ -5,7 +5,7 @@ import { Consultant } from '../models/Consultant';
 export class BlogRepository {
     public static async findAllWithAuthor(): Promise<any[]> {
         try {
-            const blogs = await Blog.find({ status: true }) // Chỉ lấy blog không bị xóa
+            const blogs = await Blog.find({ status: true }) // Chỉ lấy blog đã publish
                 .sort({ publish_date: -1 })
                 .lean();
 
@@ -57,7 +57,7 @@ export class BlogRepository {
 
     public static async findByIdWithAuthor(blogId: string): Promise<any | null> {
         try {
-            const blog = await Blog.findOne({ _id: blogId, status: true }).lean(); // Chỉ lấy blog không bị xóa
+            const blog = await Blog.findOne({ _id: blogId, status: true }).lean(); // Chỉ lấy blog đã publish
             if (!blog) return null;
 
             // Tìm user (author)
@@ -102,7 +102,7 @@ export class BlogRepository {
 
     public static async findById(blogId: string): Promise<IBlog | null> {
         try {
-            return await Blog.findOne({ _id: blogId, status: true }).lean(); // Chỉ lấy blog không bị xóa
+            return await Blog.findOne({ _id: blogId, status: true }).lean(); // Chỉ lấy blog đã publish
         } catch (error) {
             console.error('Error finding blog by id:', error);
             throw error;
