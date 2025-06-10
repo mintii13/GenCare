@@ -273,7 +273,7 @@ export class AuthService {
      */
     public static async verifyOldPassword(userId: ObjectId, oldPassword: string): Promise<boolean> {
         try {
-            const user = await UserRepository.findById(userId);
+            const user = await UserRepository.findById(userId.toString());
             if (!user) {
                 throw new Error('User not found');
             }
@@ -324,7 +324,7 @@ export class AuthService {
                 };
             }
 
-            const user = await UserRepository.findById(userId);
+            const user = await UserRepository.findById(userId.toString());
             
             if (!user) {
                 return {
