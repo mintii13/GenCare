@@ -61,7 +61,7 @@ export class ProfileService{
 
     public static async getProfile(userId: ObjectId): Promise<ProfileResponse> {
         try {
-            const user = await UserRepository.findById(userId);
+            const user = await UserRepository.findById(userId.toString());
             if (!user) {
                 return{
                     success: false,
