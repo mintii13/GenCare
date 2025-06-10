@@ -1,0 +1,22 @@
+[
+    {
+    "sti_package_name": "Gói xét nghiệm cơ bản các bệnh lây qua đường tình dục",
+    "sti_package_code": "STI-BASIC",
+    "price": 450000,
+    "description": "Gói xét nghiệm cơ bản bao gồm kiểm tra một số bệnh phổ biến như Chlamydia, Lậu và Giang mai.",
+    "duration": "2025-07-03T00:00:00.000Z",
+    "preparation_instructions": "Nhịn ăn ít nhất 2 giờ trước khi lấy mẫu máu. Uống đủ nước để dễ lấy mẫu nước tiểu.",
+    "target_group": "Người trưởng thành có nhu cầu kiểm tra định kỳ.",
+    "is_active": true
+    },
+    {
+    "sti_package_name": "Gói kiểm tra toàn diện các bệnh lây qua đường tình dục",
+    "sti_package_code": "STI-PREMIUM",
+    "price": 990000,
+    "description": "Gói kiểm tra bao gồm các xét nghiệm bệnh lây qua đường tình dục do virus gây ra như HIV, HPV, HSV.",
+    "duration": "2025-07-01T00:00:00.000Z",
+    "preparation_instructions": "Không cần chuẩn bị đặc biệt. Tránh đi tiểu trong vòng 1 giờ trước khi lấy mẫu.",
+    "target_group": "Người lớn từ 18-45 tuổi, có quan hệ tình dục.",
+    "is_active": true
+    }
+]

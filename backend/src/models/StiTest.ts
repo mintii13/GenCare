@@ -8,7 +8,7 @@ export interface IStiTest extends Document {
     duration?: string;
     isActive: boolean;
     category: 'bacterial' | 'viral' | 'parasitic';
-    sti_test_type: 'blood' | 'urine' | 'swab';
+    sti_test_type: 'máu' | 'nước tiểu' | 'dịch ngoáy';
     createdBy: mongoose.Types.ObjectId;
 }
 
@@ -27,7 +27,7 @@ const stiTestSchema = new Schema<IStiTest>({
     duration: {type: String, required: false },
     isActive: { type: Boolean, default: true },
     category: { type: String, enum: ['bacterial', 'viral', 'parasitic'], required: true },
-    sti_test_type: {type: String, enum: ['blood', 'urine', 'swab'], required: true},
+    sti_test_type: {type: String, enum: ['máu', 'nước tiểu', 'dịch ngoáy'], required: true},
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
 });
 
