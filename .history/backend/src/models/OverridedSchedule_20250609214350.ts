@@ -1,18 +1,24 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IConsultantSchedule extends Document {
+export interface IOverridedSchedule extends Document {
+    schedule_id: mongoose.Types.ObjectId;
     consultant_id: mongoose.Types.ObjectId;
     date: Date;
-    start_time: string; // Format: "HH:mm" (e.g., "09:00")
-    end_time: string; // Format: "HH:mm" (e.g., "17:00")
-    break_start?: string; // Format: "HH:mm" (e.g., "12:00")
-    break_end?: string; // Format: "HH:mm" (e.g., "13:00")
+    start_time?: string;
+    end_time?: string;
+    break_start?: string;
+    break_end?: string;
     is_available: boolean;
     created_date: Date;
     updated_date: Date;
 }
 
-const consultantScheduleSchema = new Schema<IConsultantSchedule>({
+const overridedScheduleSchema = new Schema<IOverridedSchedule>({
+    schedule_id: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'WeeklySchedule'
+    },
     consultant_id: {
         type: Schema.Types.ObjectId,
         required: true,
@@ -24,9 +30,9 @@ const consultantScheduleSchema = new Schema<IConsultantSchedule>({
     },
     start_time: {
         type: String,
-        required: true,
         validate: {
             validator: function (v: string) {
+                if (!v) return true;
                 return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
             },
             message: 'Start time must be in HH:mm format'
@@ -34,9 +40,9 @@ const consultantScheduleSchema = new Schema<IConsultantSchedule>({
     },
     end_time: {
         type: String,
-        required: true,
         validate: {
             validator: function (v: string) {
+                if (!v) return true;
                 return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
             },
             message: 'End time must be in HH:mm format'
@@ -46,7 +52,7 @@ const consultantScheduleSchema = new Schema<IConsultantSchedule>({
         type: String,
         validate: {
             validator: function (v: string) {
-                if (!v) return true; // Optional field
+                if (!v) return true;
                 return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
             },
             message: 'Break start time must be in HH:mm format'
@@ -56,7 +62,7 @@ const consultantScheduleSchema = new Schema<IConsultantSchedule>({
         type: String,
         validate: {
             validator: function (v: string) {
-                if (!v) return true; // Optional field
+                if (!v) return true;
                 return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
             },
             message: 'Break end time must be in HH:mm format'
@@ -76,29 +82,26 @@ const consultantScheduleSchema = new Schema<IConsultantSchedule>({
     }
 });
 
-// Compound index để đảm bảo một consultant không có 2 schedule trùng ngày
-consultantScheduleSchema.index({ consultant_id: 1, date: 1 }, { unique: true });
+// Validate time constraints
+overridedScheduleSchema.pre('save', function (next) {
+    if (this.start_time && this.end_time) {
+        const startTime = this.start_time.split(':').map(Number);
+        const endTime = this.end_time.split(':').map(Number);
 
-// Middleware để cập nhật updated_date
-consultantScheduleSchema.pre('save', function (next) {
-    this.updated_date = new Date();
-    next();
-});
+        const startMinutes = startTime[0] * 60 + startTime[1];
+        const endMinutes = endTime[0] * 60 + endTime[1];
 
-// Validate start_time < end_time
-consultantScheduleSchema.pre('save', function (next) {
-    const startTime = this.start_time.split(':').map(Number);
-    const endTime = this.end_time.split(':').map(Number);
+        if (startMinutes >= endMinutes) {
+            next(new Error('Start time must be before end time'));
+            return;
+        }
+    }
 
-    const startMinutes = startTime[0] * 60 + startTime[1];
-    const endMinutes = endTime[0] * 60 + endTime[1];
-
-    if (startMinutes >= endMinutes) {
-        next(new Error('Start time must be before end time'));
+    if ((this.break_start && !this.break_end) || (!this.break_start && this.break_end)) {
+        next(new Error('Both break start and end time are required if break is specified'));
         return;
     }
 
-    // Validate break time if provided
     if (this.break_start && this.break_end) {
         const breakStartTime = this.break_start.split(':').map(Number);
         const breakEndTime = this.break_end.split(':').map(Number);
@@ -111,13 +114,24 @@ consultantScheduleSchema.pre('save', function (next) {
             return;
         }
 
-        if (breakStartMinutes < startMinutes || breakEndMinutes > endMinutes) {
-            next(new Error('Break time must be within working hours'));
-            return;
+        if (this.start_time && this.end_time) {
+            const startTime = this.start_time.split(':').map(Number);
+            const endTime = this.end_time.split(':').map(Number);
+
+            const startMinutes = startTime[0] * 60 + startTime[1];
+            const endMinutes = endTime[0] * 60 + endTime[1];
+
+            if (breakStartMinutes < startMinutes || breakEndMinutes > endMinutes) {
+                next(new Error('Break time must be within working hours'));
+                return;
+            }
         }
     }
 
     next();
 });
 
-export const ConsultantSchedule = mongoose.model<IConsultantSchedule>('ConsultantSchedule', consultantScheduleSchema, 'consultantschedules');
+// Compound index để đảm bảo một consultant không có 2 override trùng ngày
+overridedScheduleSchema.index({ consultant_id: 1, date: 1 }, { unique: true });
+
+export const OverridedSchedule = mongoose.model<IOverridedSchedule>('OverridedSchedule', overridedScheduleSchema); 
