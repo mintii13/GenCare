@@ -1,0 +1,116 @@
+import Joi from 'joi';
+import { Request, Response, NextFunction } from 'express';
+
+const createOverridedScheduleSchema = Joi.object({
+    consultant_id: Joi.string()
+        .pattern(/^[0-9a-fA-F]{24}$/)
+        .optional() // Will be resolved in controller
+        .messages({
+            'string.pattern.base': 'Consultant ID must be a valid ObjectId'
+        }),
+    override_date: Joi.date()
+        .required()
+        .messages({
+            'date.base': 'Override date must be a valid date',
+            'any.required': 'Override date is required'
+        }),
+    override_type: Joi.string()
+        .valid('unavailable', 'custom_hours', 'extended_break')
+        .required()
+        .messages({
+            'any.only': 'Override type must be unavailable, custom_hours, or extended_break',
+            'any.required': 'Override type is required'
+        }),
+    custom_start_time: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .when('override_type', {
+            is: 'custom_hours',
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
+        .messages({
+            'string.pattern.base': 'Custom start time must be in HH:mm format (24-hour)',
+            'any.required': 'Custom start time is required for custom_hours override'
+        }),
+    custom_end_time: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .when('override_type', {
+            is: 'custom_hours',
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
+        .messages({
+            'string.pattern.base': 'Custom end time must be in HH:mm format (24-hour)',
+            'any.required': 'Custom end time is required for custom_hours override'
+        }),
+    custom_break_start: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .allow(null, '')
+        .messages({
+            'string.pattern.base': 'Custom break start time must be in HH:mm format (24-hour)'
+        }),
+    custom_break_end: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .allow(null, '')
+        .messages({
+            'string.pattern.base': 'Custom break end time must be in HH:mm format (24-hour)'
+        }),
+    reason: Joi.string()
+        .required()
+        .messages({
+            'string.base': 'Reason must be a string',
+            'any.required': 'Reason is required'
+        }),
+    created_by: Joi.object({
+        user_id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/),
+        role: Joi.string().valid('consultant', 'staff', 'admin'),
+        name: Joi.string()
+    }).optional() // Will be added in controller
+});
+
+const updateOverridedScheduleSchema = Joi.object({
+    override_date: Joi.date()
+        .optional()
+        .messages({
+            'date.base': 'Override date must be a valid date'
+        }),
+    override_type: Joi.string()
+        .valid('unavailable', 'custom_hours', 'extended_break')
+        .optional()
+        .messages({
+            'any.only': 'Override type must be unavailable, custom_hours, or extended_break'
+        }),
+    custom_start_time: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .messages({
+            'string.pattern.base': 'Custom start time must be in HH:mm format (24-hour)'
+        }),
+    custom_end_time: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .messages({
+            'string.pattern.base': 'Custom end time must be in HH:mm format (24-hour)'
+        }),
+    custom_break_start: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .allow(null, '')
+        .messages({
+            'string.pattern.base': 'Custom break start time must be in HH:mm format (24-hour)'
+        }),
+    custom_break_end: Joi.string()
+        .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .allow(null, '')
+        .messages({
+            'string.pattern.base': 'Custom break end time must be in HH:mm format (24-hour)'
+        }),
+    reason: Joi.string()
+        .optional()
+        .messages({
+            'string.base': 'Reason must be a string'
+        })
+});

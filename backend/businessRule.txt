@@ -1,0 +1,8 @@
+Conflict Prevention: Không cho phép đặt trùng giờ
+Lead Time: Phải đặt trước ít nhất 2 giờ
+Cancellation Policy: Hủy trước 24h không mất phí
+Auto-confirm: Tự động xác nhận sau 1 giờ nếu consultant không respond
+Reminder System: Gửi reminder tự động
+Rating System: Chỉ cho đánh giá sau khi completed
+Payment Integration: Thanh toán trước hoặc sau tư vấn
+Time Zone: Xử lý múi giờ cho online consultation

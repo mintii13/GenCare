@@ -1,28 +1,26 @@
-[
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9d01"
-        },
-        "user_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
-        },
-        "specialization": "Sản phụ khoa",
-        "qualifications": "Bác sĩ chuyên khoa I Sản phụ khoa",
-        "experience_years": 8,
-        "consultation_rating": 4.8,
-        "total_consultations": 256
-    },
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9d02"
-        },
-        "user_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9c0e"
-        },
-        "specialization": "Y học dự phòng",
-        "qualifications": "Thạc sĩ Y học dự phòng",
-        "experience_years": 5,
-        "consultation_rating": 4.6,
-        "total_consultations": 189
-    }
-]
+[{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+  },
+  "user_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
+  },
+  "specialization": "Sản phụ khoa",
+  "qualifications": "Bác sĩ chuyên khoa I Sản phụ khoa",
+  "experience_years": 8,
+  "consultation_rating": 4.8,
+  "total_consultations": 256
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d02"
+  },
+  "user_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0e"
+  },
+  "specialization": "Y học dự phòng",
+  "qualifications": "Thạc sĩ Y học dự phòng",
+  "experience_years": 5,
+  "consultation_rating": 4.6,
+  "total_consultations": 189
+}]
