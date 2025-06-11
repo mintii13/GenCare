@@ -22,8 +22,12 @@ const StiTestList: React.FC = () => {
       const response = await api.get('/sti/getAllStiTest');
       console.log('API response:', response.data);
       if (response.data.success && Array.isArray(response.data.stitest)) {
-        setTests(response.data.stitest);
-        console.log('Set tests:', response.data.stitest);
+        const mapped = response.data.stitest.map((item: any) => ({
+          ...item,
+          isActive: item.is_active
+        }));
+        setTests(mapped);
+        console.log('Set tests:', mapped);
       } else {
         setTests([]);
         console.log('Set tests: []');
@@ -96,7 +100,6 @@ const StiTestList: React.FC = () => {
                     <Text type="secondary">Mã: {test.sti_test_code}</Text>
                     <Text>{test.description}</Text>
                     <Text strong>Giá: {formatPrice(test.price)}</Text>
-                    <Text>Thời gian: {test.duration}</Text>
                     <Space>
                       <Tag color={getCategoryColor(test.category)}>
                         {test.category}

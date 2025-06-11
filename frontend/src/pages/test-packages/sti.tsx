@@ -28,7 +28,7 @@ const STITestPage = () => {
       <Title level={2}>Danh sách xét nghiệm STI</Title>
       <Row gutter={[16, 16]}>
         {tests.map((test: any) => (
-          <Col xs={24} sm={12} md={8} lg={6} key={test.sti_test_id}>
+          <Col xs={24} sm={12} md={8} lg={6} key={test._id}>
             <Card
               hoverable
               title={test.sti_test_name}
@@ -42,7 +42,6 @@ const STITestPage = () => {
                 <Text type="secondary">Mã: {test.sti_test_code}</Text>
                 <Text>{test.description}</Text>
                 <Text strong>Giá: {test.price.toLocaleString('vi-VN')} VND</Text>
-                <Text>Thời gian: {test.duration}</Text>
                 <Tag>{test.sti_test_type}</Tag>
               </Space>
             </Card>
