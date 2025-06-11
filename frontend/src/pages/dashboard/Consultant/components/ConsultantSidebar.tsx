@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import ConsultantSchedule from '../ConsultantSchedule';
 
 interface ConsultantSidebarProps {
   isOpen: boolean;
@@ -22,7 +23,8 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
     {
       title: 'Quản lý Lịch làm việc',
       items: [
-        { name: 'Lịch làm việc hàng tuần', path: '/consultant/weekly-schedule', icon: '🗓️' },
+        { name: 'Lịch tuần (Calendar View)', path: '/consultant/calendar-view', icon: '📅' },
+        { name: 'Quản lý lịch (Form)', path: '/consultant/weekly-schedule', icon: '🗓️' },
         { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: '⏰' },
         { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: '🚫' },
       ],

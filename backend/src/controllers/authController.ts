@@ -91,13 +91,22 @@ router.get(
 
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    // req.user được gán từ middleware authenticateToken
-    // userId có thể là req.user.userId hoặc req.user.id tùy JWT
-    const userId = (req.user as any).userId || (req.user as any).id;
-    if (!userId) return res.status(401).json({ success: false, message: "Cannot verify user" });
+    // req.jwtUser được gán từ middleware authenticateToken
+    const userId = req.jwtUser?.userId;
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Cannot verify user" 
+      });
+    }
 
     const user = await User.findById(userId).lean();
-    if (!user) return res.status(404).json({ success: false, message: "Cannot find user" });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Cannot find user" 
+      });
+    }
 
     res.json({
       success: true,
@@ -111,7 +120,11 @@ router.get('/profile', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Lỗi hệ thống" });
+    console.error('Profile endpoint error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Lỗi hệ thống" 
+    });
   }
 });
 
