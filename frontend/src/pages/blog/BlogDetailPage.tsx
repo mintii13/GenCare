@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Blog, Comment } from '../../types/blog';
 import { blogService } from '../../services/blogService';
@@ -36,14 +36,7 @@ const BlogDetailPage: React.FC = () => {
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  useEffect(() => {
-    if (blogId) {
-      fetchBlogDetail();
-      fetchComments();
-    }
-  }, [blogId]);
-
-  const fetchBlogDetail = async () => {
+  const fetchBlogDetail = useCallback(async () => {
     if (!blogId) return;
 
     setLoading(true);
@@ -52,7 +45,6 @@ const BlogDetailPage: React.FC = () => {
       const response = await blogService.getBlogById(blogId);
       if (response.success && response.data.blogs.length > 0) {
         const blogData = response.data.blogs[0];
-        
         setBlog(blogData);
         setEditTitle(blogData.title);
         setEditContent(blogData.content);
@@ -65,9 +57,9 @@ const BlogDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [blogId]);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     if (!blogId) return;
 
     try {
@@ -77,8 +69,20 @@ const BlogDetailPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
+      toast.error('Không thể tải bình luận');
     }
-  };
+  }, [blogId]);
+
+  useEffect(() => {
+    if (blogId) {
+      fetchBlogDetail();
+      fetchComments();
+    }
+  }, [blogId, fetchBlogDetail, fetchComments]);
+
+  const handleCommentsUpdate = useCallback(async () => {
+    await fetchComments();
+  }, [fetchComments]);
 
   const formatDate = (dateString: string) => {
     return formatDistanceToNow(new Date(dateString), { 
@@ -355,15 +359,15 @@ const BlogDetailPage: React.FC = () => {
         {/* Comments Section */}
         <div className="mt-8">
           <CommentSection
-            blogId={blog.blog_id}
+            blogId={blog?.blog_id || ''}
             comments={comments}
-            onCommentsUpdate={fetchComments}
+            onCommentsUpdate={handleCommentsUpdate}
           />
         </div>
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
+      {showDeleteConfirm && blog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
@@ -376,7 +380,7 @@ const BlogDetailPage: React.FC = () => {
               </button>
             </div>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc chắn muốn xóa bài viết "{blog?.title}"? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa bài viết "{blog.title}"? Hành động này không thể hoàn tác.
             </p>
             <div className="flex justify-end gap-3">
               <button
