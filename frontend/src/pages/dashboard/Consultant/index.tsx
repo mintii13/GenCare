@@ -21,7 +21,7 @@ const ConsultantDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex">
-        {/* Nút icon con mắt ẩn/hiện sidebar */}
+        {/* Nút icon con mắt ẩn/hiện sidebar *
         <button
           onClick={() => setIsSidebarOpen((prev) => !prev)}
           className="absolute top-20 left-2 z-50 bg-white rounded-full shadow p-2 border border-gray-200 hover:bg-gray-100 transition md:block"
