@@ -1,0 +1,175 @@
+[{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7001"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+  },
+  "appointment_date": {
+    "$date": "2025-06-16T00:00:00.000Z"
+  },
+  "start_time": "09:00",
+  "end_time": "10:00",
+  "status": "confirmed",
+  "customer_notes": "Tư vấn về chu kỳ kinh nguyệt không đều",
+  "consultant_notes": "Đã tư vấn về chu kỳ kinh nguyệt. Khách hàng cần theo dõi thêm 2 tháng nữa.",
+  "created_date": {
+    "$date": "2025-06-10T15:30:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T08:00:00.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7002"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c10"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+  },
+  "appointment_date": {
+    "$date": "2025-06-16T00:00:00.000Z"
+  },
+  "start_time": "10:00",
+  "end_time": "11:00",
+  "status": "pending",
+  "customer_notes": "Muốn tư vấn về kế hoạch hóa gia đình",
+  "consultant_notes": null,
+  "created_date": {
+    "$date": "2025-06-11T09:00:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T09:00:00.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7003"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d02"
+  },
+  "appointment_date": {
+    "$date": "2025-06-17T00:00:00.000Z"
+  },
+  "start_time": "14:00",
+  "end_time": "15:00",
+  "status": "completed",
+  "customer_notes": "Tư vấn về phòng tránh STIs",
+  "consultant_notes": "Đã cung cấp thông tin chi tiết về các biện pháp phòng tránh STIs. Khách hàng hiểu rõ và sẽ áp dụng.",
+  "created_date": {
+    "$date": "2025-06-10T16:00:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T10:30:00.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7004"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c10"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d02"
+  },
+  "appointment_date": {
+    "$date": "2025-06-18T00:00:00.000Z"
+  },
+  "start_time": "15:00",
+  "end_time": "16:00",
+  "status": "cancelled",
+  "customer_notes": "Tư vấn về sức khỏe sinh sản tổng quát",
+  "consultant_notes": "Khách hàng hủy lịch vì có việc đột xuất",
+  "created_date": {
+    "$date": "2025-06-11T11:00:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T14:00:00.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7005"
+  },
+  "customer_id": {
+    "$oid": "6846a7f7103fa089556cea82"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+  },
+  "appointment_date": {
+    "$date": "2025-06-19T00:00:00.000Z"
+  },
+  "start_time": "11:00",
+  "end_time": "12:00",
+  "status": "pending",
+  "customer_notes": "Lần đầu tư vấn, muốn hiểu về sức khỏe sinh sản nam giới",
+  "consultant_notes": null,
+  "created_date": {
+    "$date": "2025-06-11T12:00:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T12:00:00.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7006"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+  },
+  "appointment_date": {
+    "$date": "2025-06-20T00:00:00.000Z"
+  },
+  "start_time": "08:00",
+  "end_time": "09:00",
+  "status": "confirmed",
+  "customer_notes": "Tái khám online sau 1 tháng theo dõi chu kỳ",
+  "consultant_notes": null,
+  "created_date": {
+    "$date": "2025-06-11T13:00:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T13:30:00.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b7007"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c10"
+  },
+  "consultant_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9d02"
+  },
+  "appointment_date": {
+    "$date": "2025-06-23T00:00:00.000Z"
+  },
+  "start_time": "10:00",
+  "end_time": "11:00",
+  "status": "pending",
+  "customer_notes": "Muốn tư vấn về test HIV và các STIs khác",
+  "consultant_notes": null,
+  "created_date": {
+    "$date": "2025-06-11T14:00:00.000Z"
+  },
+  "updated_date": {
+    "$date": "2025-06-11T14:00:00.000Z"
+  }
+}]
