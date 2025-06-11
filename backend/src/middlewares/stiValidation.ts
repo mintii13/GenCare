@@ -23,7 +23,7 @@ const stiTestSchema = Joi.object({
     'number.base': 'Price must be numerical',
     'number.min': 'Price cannot be negative'
   }),
-  isActive: Joi.boolean().optional(),
+  is_active: Joi.boolean().optional(),
   category: Joi.string()
     .valid('bacterial', 'viral', 'parasitic')
     .required()

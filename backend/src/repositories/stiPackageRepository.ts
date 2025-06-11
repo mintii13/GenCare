@@ -30,9 +30,9 @@ export class StiPackageRepository{
         }
     }
 
-    public static async getAllStiTPackage(){
+    public static async getAllStiTPackage(): Promise<IStiPackage[] | null>{
         try {
-            return await StiPackage.find();
+            return await StiPackage.find().lean<IStiPackage[]>();
         } catch (error) {
             console.error(error);
         }

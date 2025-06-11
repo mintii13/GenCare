@@ -88,7 +88,7 @@ router.put('/updateStiTest/:id', validateStiTest, authenticateToken, authorizeRo
             sti_test_code: req.body.sti_test_code,
             description: req.body.description,
             price: req.body.price,
-            is_active: req.body.isActive,
+            is_active: req.body.is_active,
             category: req.body.category,
             sti_test_type: req.body.sti_test_type,
             createdBy: user.userId

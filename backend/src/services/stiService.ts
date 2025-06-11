@@ -16,7 +16,7 @@ export class StiService{
                     }
                 }
                 else{
-                    //update isActive thành true
+                    //update is_active thành true
                     const result = await StiRepository.updateIsActive(duplicate._id);
                     return{
                         success: true,
@@ -55,10 +55,11 @@ export class StiService{
                     message: 'Fail in getting Sti Test'
                 }
             }
+            const activeTests = allOfTest.filter(test => test.is_active);
             return{
                 success: true,
-                message: 'Fetched STI tests successfully',
-                stitest: allOfTest
+                message: 'Get STI tests successfully',
+                stitest: activeTests
             }
         } catch (error) {
             console.error(error);
@@ -72,7 +73,7 @@ export class StiService{
     public static async getStiTestById(id: string): Promise<StiTestResponse> {
         try {
             const stiTest = await StiRepository.getStiTestById(id);
-            if (!stiTest) {
+            if (!stiTest && !stiTest.is_active === false) {
                 return {
                     success: false,
                     message: 'STI Test not found'
@@ -106,7 +107,7 @@ export class StiService{
             if (!sti_test) {
                 return{
                     success: false, 
-                    message: 'STI Test not found'
+                    message: 'StiTest not found or you are not authorized to update it'
                 }
             }
             // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
@@ -130,13 +131,13 @@ export class StiService{
             if (!updated) {
                 return {
                     success: false,
-                    message: 'StiTest not found or you are not authorized to update it'
+                    message: 'StiTest not found or you are not authorized to delete it'
                 };
             }
 
             return{
                 success: true,
-                message: 'StiTest deactivated successfully',
+                message: 'StiTest is deleted successfully',
                 stitest: updated
             };
 
@@ -200,10 +201,12 @@ export class StiService{
                     message: 'Fail in getting StiPackage'
                 }
             }
+            const activeTests = allOfTest.filter(test => test.is_active);
+
             return{
                 success: true,
                 message: 'Get STI packages successfully',
-                stipackage: allOfTest
+                stipackage: activeTests
             }
         } catch (error) {
             console.error(error);
