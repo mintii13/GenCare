@@ -9,11 +9,13 @@ import passport from './configs/passport';
 import redisClient from './configs/redis';
 require('dotenv').config();
 import blogController from './controllers/blogController';
+import weeklyScheduleController from './controllers/weeklyScheduleController';
+import appointmentController from './controllers/appointmentController';
 import profileController from './controllers/profileController';
 import stiController from './controllers/stiController';
+
 const app = express();
 const PORT = process.env.PORT;
-
 
 // Security middleware
 app.use(helmet());
@@ -37,8 +39,8 @@ app.use((req, res, next) => {
 });
 
 // Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Session middleware
 app.use(
@@ -58,14 +60,16 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Routes
 app.use('/api/auth', authController);
 app.use('/api/blogs', blogController);
+app.use('/api/weekly-schedule', weeklyScheduleController);
+app.use('/api/appointments', appointmentController);
 app.use('/api/profile', profileController);
 app.use('/api/sti', stiController);
 
 // Error handling middleware
 app.use(errorHandler);
-
 
 const startServer = async () => {
   try {

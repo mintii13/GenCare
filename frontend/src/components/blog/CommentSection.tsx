@@ -4,15 +4,15 @@ import { useAuth } from '../../contexts/AuthContext';
 import { blogService } from '../../services/blogService';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { 
-  MessageCircle, 
-  Reply, 
-  Send, 
-  User, 
-  UserCheck, 
+import {
+  MessageCircle,
+  Reply,
+  Send,
+  User,
+  UserCheck,
   AlertCircle,
   Eye,
-  EyeOff 
+  EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -47,9 +47,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const canComment = !!user;
 
   const formatDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), { 
-      addSuffix: true, 
-      locale: vi 
+    return formatDistanceToNow(new Date(dateString), {
+      addSuffix: true,
+      locale: vi
     });
   };
 
@@ -151,8 +151,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     const marginLeft = level * 40;
 
     return (
-      <div 
-        key={comment.comment_id} 
+      <div
+        key={comment.comment_id}
         className={`${isReply ? 'border-l-2 border-gray-200 pl-4' : ''}`}
         style={{ marginLeft: `${marginLeft}px` }}
       >
@@ -172,22 +172,24 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   </div>
                 </div>
               </div>
-            ) : comment.customer ? (
+            ) : comment.user ? (
               <div className="flex items-center">
-                <img
-                  src={comment.customer.custom_avatar || comment.customer.avatar}
-                  alt={comment.customer.full_name}
-                  className="w-8 h-8 rounded-full object-cover mr-3"
-                />
+                <div className="w-8 h-8 rounded-full overflow-hidden">
+                  <img
+                    src={comment.user.avatar || '/default-avatar.png'}
+                    alt={comment.user.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <div>
-                  <span className="font-medium text-gray-900">{comment.customer.full_name}</span>
+                  <span className="font-medium text-gray-900">{comment.user.full_name}</span>
                   <div className="flex items-center text-sm text-gray-500">
                     <UserCheck className="w-3 h-3 mr-1" />
                     <span>
-                      {comment.customer.role === 'consultant' && 'Chuyên gia'}
-                      {comment.customer.role === 'staff' && 'Nhân viên'}
-                      {comment.customer.role === 'admin' && 'Quản trị viên'}
-                      {comment.customer.role === 'customer' && 'Khách hàng'}
+                      {comment.user.role === 'consultant' && 'Chuyên gia'}
+                      {comment.user.role === 'staff' && 'Nhân viên'}
+                      {comment.user.role === 'admin' && 'Quản trị viên'}
+                      {comment.user.role === 'customer' && 'Khách hàng'}
                     </span>
                   </div>
                 </div>
@@ -200,7 +202,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                 <span className="font-medium text-gray-600">Người dùng đã xóa</span>
               </div>
             )}
-            
+
             <span className="ml-auto text-sm text-gray-500">
               {formatDate(comment.comment_date)}
             </span>
@@ -245,7 +247,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             {/* Nút sửa: bất kỳ user nào là chủ comment */}
             {user && (
               user.id === comment.user_id ||
-              user.id === comment.customer?.user_id
+              user.id === comment.user?.user_id
             ) && (
               <button
                 onClick={() => handleEditComment(comment)}

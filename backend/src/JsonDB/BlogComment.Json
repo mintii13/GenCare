@@ -1,90 +1,178 @@
-[
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9001"
-        },
-        "blog_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9f01"
-        },
-        "customer_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
-        },
-        "content": "Bài viết rất hữu ích! Tôi đã hiểu rõ hơn về chu kỳ kinh nguyệt của mình. Cảm ơn bác sĩ đã chia sẻ những thông tin quý báu này.",
-        "comment_date": {
-            "$date": "2024-12-02T15:30:00.000Z"
-        },
-        "parent_comment_id": null,
-        "status": true,
-        "is_anonymous": false
-    },
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9002"
-        },
-        "blog_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9f01"
-        },
-        "customer_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9c10"
-        },
-        "content": "Mình cũng đồng ý với chị ở trên. Thông tin trong bài rất dễ hiểu và thực tế.",
-        "comment_date": {
-            "$date": "2024-12-02T16:45:00.000Z"
-        },
-        "parent_comment_id": null,
-        "status": true,
-        "is_anonymous": false
-    },
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9003"
-        },
-        "blog_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9f01"
-        },
-        "customer_id": null,
-        "content": "Tôi muốn hỏi thêm về việc chu kỳ kinh nguyệt không đều thì có cần lo lắng không ạ?",
-        "comment_date": {
-            "$date": "2024-12-03T09:20:00.000Z"
-        },
-        "parent_comment_id": null,
-        "status": true,
-        "is_anonymous": true
-    },
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9004"
-        },
-        "blog_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9f01"
-        },
-        "customer_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
-        },
-        "content": "Cảm ơn bác sĩ! Bài viết giúp tôi nhận ra tầm quan trọng của việc theo dõi sức khỏe sinh sản.",
-        "comment_date": {
-            "$date": "2024-12-04T11:15:00.000Z"
-        },
-        "parent_comment_id": null,
-        "status": true,
-        "is_anonymous": false
-    },
-    {
-        "_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9005"
-        },
-        "blog_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9f02"
-        },
-        "customer_id": {
-            "$oid": "675e1a2b3c4d5e6f7a8b9c10"
-        },
-        "content": "Thông tin về phòng tránh STIs rất cần thiết. Mong có thêm nhiều bài viết như thế này.",
-        "comment_date": {
-            "$date": "2024-11-29T10:20:00.000Z"
-        },
-        "parent_comment_id": null,
-        "status": true,
-        "is_anonymous": false
-    }
-]
+[{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9001"
+  },
+  "blog_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9f01"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "content": "Bài viết rất hữu ích! Tôi đã hiểu rõ hơn về chu kỳ kinh nguyệt của mình. Cảm ơn bác sĩ đã chia sẻ những thông tin quý báu này.",
+  "comment_date": {
+    "$date": "2024-12-02T15:30:00.000Z"
+  },
+  "parent_comment_id": null,
+  "status": true,
+  "is_anonymous": false
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9002"
+  },
+  "blog_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9f01"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c10"
+  },
+  "content": "Mình cũng đồng ý với chị ở trên. Thông tin trong bài rất dễ hiểu và thực tế.",
+  "comment_date": {
+    "$date": "2024-12-02T16:45:00.000Z"
+  },
+  "parent_comment_id": null,
+  "status": true,
+  "is_anonymous": false
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9003"
+  },
+  "blog_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9f01"
+  },
+  "customer_id": null,
+  "content": "Tôi muốn hỏi thêm về việc chu kỳ kinh nguyệt không đều thì có cần lo lắng không ạ?",
+  "comment_date": {
+    "$date": "2024-12-03T09:20:00.000Z"
+  },
+  "parent_comment_id": null,
+  "status": true,
+  "is_anonymous": true
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9004"
+  },
+  "blog_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9f01"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "content": "Cảm ơn bác sĩ! Bài viết giúp tôi nhận ra tầm quan trọng của việc theo dõi sức khỏe sinh sản.",
+  "comment_date": {
+    "$date": "2024-12-04T11:15:00.000Z"
+  },
+  "parent_comment_id": null,
+  "status": true,
+  "is_anonymous": false
+},
+{
+  "_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9005"
+  },
+  "blog_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9f02"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c10"
+  },
+  "content": "Thông tin về phòng tránh STIs rất cần thiết. Mong có thêm nhiều bài viết như thế này.",
+  "comment_date": {
+    "$date": "2024-11-29T10:20:00.000Z"
+  },
+  "parent_comment_id": null,
+  "status": true,
+  "is_anonymous": false
+},
+{
+  "_id": {
+    "$oid": "68428539385efa527f3cce20"
+  },
+  "blog_id": {
+    "$oid": "6842848c2e9af183ba2cc43a"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
+  },
+  "content": "Đây là comment của tôi cho bài viết này. Rất hữu ích!demo new status",
+  "comment_date": {
+    "$date": "2025-06-06T06:05:45.009Z"
+  },
+  "status": false,
+  "is_anonymous": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6842856b385efa527f3cce28"
+  },
+  "blog_id": {
+    "$oid": "6842848c2e9af183ba2cc43a"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "content": "Đây là comment của tôi cho bài viết này. Rất hữu ích!demo new status2",
+  "comment_date": {
+    "$date": "2025-06-06T06:06:35.755Z"
+  },
+  "status": false,
+  "is_anonymous": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "684286b8385efa527f3cce30"
+  },
+  "blog_id": {
+    "$oid": "6842848c2e9af183ba2cc43a"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c12"
+  },
+  "content": "Đây là comment của tôi cho bài viết này. Rất hữu ích!demo new status3",
+  "comment_date": {
+    "$date": "2025-06-06T06:12:08.868Z"
+  },
+  "status": false,
+  "is_anonymous": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68428813385efa527f3cce3b"
+  },
+  "blog_id": {
+    "$oid": "6842848c2e9af183ba2cc43a"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c12"
+  },
+  "content": "comment1_@",
+  "comment_date": {
+    "$date": "2025-06-06T06:17:55.950Z"
+  },
+  "status": true,
+  "is_anonymous": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68467eb281b1495026b0097f"
+  },
+  "blog_id": {
+    "$oid": "6842848c2e9af183ba2cc43a"
+  },
+  "customer_id": {
+    "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+  },
+  "content": "comment1",
+  "comment_date": {
+    "$date": "2025-06-09T06:26:58.532Z"
+  },
+  "status": false,
+  "is_anonymous": false,
+  "__v": 0
+}]
