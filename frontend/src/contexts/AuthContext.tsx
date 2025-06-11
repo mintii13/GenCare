@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
-        await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {}, {
+        await axios.post(`${import.meta.env.VITE_API_URL}/auth/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }

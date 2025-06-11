@@ -13,6 +13,16 @@ import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
 import { Toaster } from 'react-hot-toast';
 import ConsultantDashboard from './pages/dashboard/Consultant';
 import ConsultantBlogList from './pages/dashboard/Consultant/components/ConsultantBlogList';
+import ConsultantSchedule from './pages/dashboard/Consultant/ConsultantSchedule';
+import WeeklyScheduleManager from './pages/dashboard/Consultant/WeeklyScheduleManager';
+import WeeklyCalendarView from './pages/dashboard/Consultant/WeeklyCalendarView';
+import AppointmentManagement from './pages/dashboard/Consultant/AppointmentManagement';
+import CustomerDashboard from './pages/dashboard/Customer';
+import MyAppointments from './pages/dashboard/Customer/MyAppointments';
+import ConsultantList from './pages/dashboard/Customer/ConsultantList';
+import BookAppointment from './pages/consultation/BookAppointment';
+import ApiTest from './components/common/ApiTest';
+
 
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
@@ -51,6 +61,7 @@ const App = () => {
       <Suspense fallback={<div>Đang tải...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/api-test" element={<ApiTest />} />
           <Route path="/test-packages/*" element={<TestPackagesPage />} />
           <Route path="/test-packages/sti" element={<STITestPage />} />
           <Route path="/register" element={<Register />} />
@@ -66,12 +77,13 @@ const App = () => {
 
           {/* Consultant Dashboard routes */}
           <Route path="/consultant/*" element={<ConsultantDashboard />}>
-            <Route path="schedule" element={<div>Lịch tư vấn</div>} />
+            <Route path="schedule" element={<AppointmentManagement />} />
             <Route path="clients" element={<div>Khách hàng</div>} />
             <Route path="online" element={<div>Tư vấn trực tuyến</div>} />
             <Route path="records" element={<div>Hồ sơ tư vấn</div>} />
             <Route path="qa" element={<div>Q&A / Câu hỏi</div>} />
-            <Route path="weekly-schedule" element={<div>Lịch làm việc hàng tuần</div>} />
+            <Route path="calendar-view" element={<WeeklyCalendarView />} />
+            <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
             <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
             <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
             <Route path="blogs" element={<ConsultantBlogList />} />
@@ -81,6 +93,16 @@ const App = () => {
             <Route path="feedback" element={<div>Đánh giá & Phản hồi</div>} />
             <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
           </Route>
+
+          {/* Customer Dashboard routes */}
+          <Route path="/dashboard/customer" element={<CustomerDashboard />} />
+          <Route path="/dashboard/customer/appointments" element={<MyAppointments />} />
+          <Route path="/dashboard/customer/book-appointment" element={<BookAppointment />} />
+          <Route path="/dashboard/customer/consultants" element={<ConsultantList />} />
+          <Route path="/dashboard/customer/history" element={<div>Lịch sử tư vấn</div>} />
+
+          {/* Consultation routes */}
+          <Route path="/consultation/book" element={<BookAppointment />} />
         </Routes>
       </Suspense>
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
