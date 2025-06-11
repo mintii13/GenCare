@@ -88,8 +88,7 @@ router.put('/updateStiTest/:id', validateStiTest, authenticateToken, authorizeRo
             sti_test_code: req.body.sti_test_code,
             description: req.body.description,
             price: req.body.price,
-            duration: req.body.duration,
-            isActive: req.body.isActive,
+            is_active: req.body.isActive,
             category: req.body.category,
             sti_test_type: req.body.sti_test_type,
             createdBy: user.userId
@@ -193,10 +192,7 @@ router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, autho
             sti_package_code: req.body.sti_package_code,
             price: req.body.price,
             description: req.body.description,
-            duration: req.body.duration,
             is_active: req.body.is_active,
-            preparation_instructions: req.body.preparation_instructions,
-            target_group: req.body.target_group,
             createdBy: user.userId
         };        
         const result = await StiService.updateStiPackage(sti_package_id, updateData);

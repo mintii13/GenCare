@@ -1,22 +1,30 @@
 [
     {
-    "sti_package_name": "Gói xét nghiệm cơ bản các bệnh lây qua đường tình dục",
-    "sti_package_code": "STI-BASIC",
-    "price": 450000,
-    "description": "Gói xét nghiệm cơ bản bao gồm kiểm tra một số bệnh phổ biến như Chlamydia, Lậu và Giang mai.",
-    "duration": "2025-07-03T00:00:00.000Z",
-    "preparation_instructions": "Nhịn ăn ít nhất 2 giờ trước khi lấy mẫu máu. Uống đủ nước để dễ lấy mẫu nước tiểu.",
-    "target_group": "Người trưởng thành có nhu cầu kiểm tra định kỳ.",
-    "is_active": true
+    "sti_package_name": "Gói xét nghiệm STIs CƠ BẢN 1",
+    "sti_package_code": "STI-BASIC-01",
+    "price": 1776000,
+    "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia",
+    "isActive": true
     },
     {
-    "sti_package_name": "Gói kiểm tra toàn diện các bệnh lây qua đường tình dục",
-    "sti_package_code": "STI-PREMIUM",
-    "price": 990000,
-    "description": "Gói kiểm tra bao gồm các xét nghiệm bệnh lây qua đường tình dục do virus gây ra như HIV, HPV, HSV.",
-    "duration": "2025-07-01T00:00:00.000Z",
-    "preparation_instructions": "Không cần chuẩn bị đặc biệt. Tránh đi tiểu trong vòng 1 giờ trước khi lấy mẫu.",
-    "target_group": "Người lớn từ 18-45 tuổi, có quan hệ tình dục.",
-    "is_active": true
+    "sti_package_name": "Gói xét nghiệm STIs CƠ BẢN 2",
+    "sti_package_code": "STI-BASIC-02",
+    "price": 2676000,
+    "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia, Viêm gan siêu vi B và Viêm gan siêu vi C",
+    "isActive": true
+    },
+    {
+    "sti_package_name": "Gói xét nghiệm STIs NÂNG CAO NỮ",
+    "sti_package_code": "STI-ADVANCE-FEMALE",
+    "price": 130000,
+    "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia, Viêm gan siêu vi B, Viêm gan siêu vi C, phết Trichomonas và xét nghiệm cổ tử cung HPV",
+    "isActive": true
+    },
+    {
+    "sti_package_name": "Gói xét nghiệm STIs NÂNG CAO NAM",
+    "sti_package_code": "STI-ADVANCE-MALE",
+    "price": 130000,
+    "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia, Viêm gan siêu vi B, Viêm gan siêu vi C, phết Trichomonas và xét nghiệm mụn rộp HSV",
+    "isActive": true
     }
 ]

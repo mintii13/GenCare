@@ -1,4 +1,3 @@
-import { ObjectId } from "mongoose";
 import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse } from '../dto/responses/StiResponse';
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
@@ -10,7 +9,7 @@ export class StiService{
         try {
             const duplicate = await StiRepository.findByStiTestCode(stiTest.sti_test_code);
             if (duplicate){
-                if (duplicate.isActive){
+                if (duplicate.is_active){
                     return{
                         success: false,
                         message: 'Sti test code is duplicated'

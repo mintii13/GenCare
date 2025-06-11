@@ -23,7 +23,6 @@ const stiTestSchema = Joi.object({
     'number.base': 'Price must be numerical',
     'number.min': 'Price cannot be negative'
   }),
-  duration: Joi.string().optional(),
   isActive: Joi.boolean().optional(),
   category: Joi.string()
     .valid('bacterial', 'viral', 'parasitic')
@@ -72,20 +71,6 @@ export const stiPackageSchema = Joi.object({
     'any.required': 'Description is required',
     'string.empty': 'Description cannot be empty'
   }),
-
-  duration: Joi.date().greater('now').required().messages({
-    'any.required': 'Duration is required',
-    'date.base': 'Duration must be a valid date',
-    'date.greater': 'Duration must be a future date'
-  }),
-
-  preparation_instructions: Joi.string().trim().optional(),
-
-  target_group: Joi.string().trim().required().messages({
-    'any.required': 'Target group is required',
-    'string.empty': 'Target group cannot be empty'
-  }),
-
   is_active: Joi.boolean().optional()
 });
 
