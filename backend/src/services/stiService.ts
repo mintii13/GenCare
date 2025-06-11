@@ -96,7 +96,8 @@ export class StiService{
   
     public static async updateStiTest(sti_test_id: string, updateData: Partial<IStiTest>): Promise<StiTestResponse> {
         try {
-            const exists = await StiRepository.findByStiTestCode(updateData.sti_test_code);
+            // Tìm bản ghi khác có cùng mã nhưng không phải bản ghi đang update
+            const exists = await StiTest.findOne({ sti_test_code: updateData.sti_test_code, _id: { $ne: sti_test_id } });
             if (exists) {
                 return {
                     success: false,
