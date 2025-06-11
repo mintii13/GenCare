@@ -434,18 +434,28 @@ router.get(
         }
     }
 );
-// Copy schedule from one week to another
+// Copy schedule from one week to another - DEBUG VERSION
 router.post(
     '/copy/:scheduleId',
     authenticateToken,
     authorizeRoles('consultant', 'staff', 'admin'),
     async (req, res) => {
         try {
+            console.log('=== COPY SCHEDULE CONTROLLER DEBUG START ===');
+
             const user = req.jwtUser as JWTPayload;
             const scheduleId = req.params.scheduleId;
             const { target_week_start_date } = req.body;
 
+            console.log('Request details:');
+            console.log('- User:', user);
+            console.log('- Schedule ID:', scheduleId);
+            console.log('- Request body:', req.body);
+            console.log('- target_week_start_date:', target_week_start_date);
+
+            // Validate required fields
             if (!target_week_start_date) {
+                console.log('ERROR: Missing target_week_start_date');
                 return res.status(400).json({
                     success: false,
                     message: 'target_week_start_date is required'
@@ -454,6 +464,7 @@ router.post(
 
             // Validate scheduleId format
             if (!mongoose.Types.ObjectId.isValid(scheduleId)) {
+                console.log('ERROR: Invalid scheduleId format');
                 return res.status(400).json({
                     success: false,
                     message: 'Invalid schedule ID format'
@@ -461,9 +472,20 @@ router.post(
             }
 
             // Parse and validate target date
-            const targetWeekStartDate = new Date(target_week_start_date);
+            let targetWeekStartDate: Date;
+            try {
+                targetWeekStartDate = new Date(target_week_start_date);
+                console.log('Parsed target date:', targetWeekStartDate);
 
-            if (isNaN(targetWeekStartDate.getTime())) {
+                if (isNaN(targetWeekStartDate.getTime())) {
+                    console.log('ERROR: Invalid date format');
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Invalid date format for target_week_start_date'
+                    });
+                }
+            } catch (error) {
+                console.log('ERROR: Date parsing failed:', error);
                 return res.status(400).json({
                     success: false,
                     message: 'Invalid date format for target_week_start_date'
@@ -471,7 +493,11 @@ router.post(
             }
 
             // Ensure it's a Monday
-            if (targetWeekStartDate.getUTCDay() !== 1) {
+            const dayOfWeek = targetWeekStartDate.getUTCDay();
+            console.log('Target date day of week:', dayOfWeek);
+
+            if (dayOfWeek !== 1) {
+                console.log('ERROR: Target date is not a Monday');
                 return res.status(400).json({
                     success: false,
                     message: 'target_week_start_date must be a Monday'
@@ -480,8 +506,13 @@ router.post(
 
             // Verify ownership for consultant role
             if (user.role === 'consultant') {
+                console.log('Verifying consultant ownership...');
+
                 const consultant = await Consultant.findOne({ user_id: user.userId });
+                console.log('Consultant found:', !!consultant);
+
                 if (!consultant) {
+                    console.log('ERROR: Consultant profile not found');
                     return res.status(400).json({
                         success: false,
                         message: 'Consultant profile not found'
@@ -490,7 +521,22 @@ router.post(
 
                 // Check if the source schedule belongs to this consultant
                 const existingSchedule = await WeeklyScheduleService.getScheduleById(scheduleId);
-                if (!existingSchedule.success || existingSchedule.data?.schedule.consultant_id.toString() !== consultant._id.toString()) {
+                console.log('Existing schedule check result:', existingSchedule.success);
+
+                if (!existingSchedule.success) {
+                    console.log('ERROR: Source schedule not found');
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Source schedule not found'
+                    });
+                }
+
+                const scheduleConsultantId = existingSchedule.data?.schedule.consultant_id;
+                console.log('Schedule consultant ID:', scheduleConsultantId);
+                console.log('Current consultant ID:', consultant._id.toString());
+
+                if (scheduleConsultantId?.toString() !== consultant._id.toString()) {
+                    console.log('ERROR: Permission denied - not owner');
                     return res.status(403).json({
                         success: false,
                         message: 'You can only copy your own schedule'
@@ -499,30 +545,49 @@ router.post(
             }
 
             // Get user info for created_by
+            console.log('Getting user info for created_by...');
             const { User } = require('../models/User');
             const userInfo = await User.findById(user.userId).select('full_name');
+            console.log('User info found:', !!userInfo);
 
             const createdBy = {
                 user_id: user.userId,
                 role: user.role,
                 name: userInfo?.full_name || 'Unknown'
             };
+            console.log('Created by object:', createdBy);
 
+            // Call service method
+            console.log('Calling WeeklyScheduleService.copySchedule...');
             const result = await WeeklyScheduleService.copySchedule(
                 scheduleId,
                 targetWeekStartDate,
                 createdBy
             );
 
+            console.log('Service result:', result.success);
+            console.log('Service message:', result.message);
+
             if (result.success) {
+                console.log('SUCCESS: Schedule copied successfully');
                 res.status(201).json(result);
             } else {
+                console.log('ERROR: Service returned failure');
                 res.status(400).json(result);
             }
+
+            console.log('=== COPY SCHEDULE CONTROLLER DEBUG END ===');
+
         } catch (error: any) {
+            console.error('=== COPY SCHEDULE CONTROLLER ERROR ===');
+            console.error('Error details:', error);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            console.error('=== END CONTROLLER ERROR ===');
+
             res.status(400).json({
                 success: false,
-                message: error.message
+                message: `Controller error: ${error.message}`
             });
         }
     }

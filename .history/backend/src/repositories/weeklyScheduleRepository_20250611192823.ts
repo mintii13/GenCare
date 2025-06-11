@@ -35,8 +35,15 @@ export class WeeklyScheduleRepository {
 
             if (startDate || endDate) {
                 const dateQuery: any = {};
-                if (startDate) dateQuery.$gte = startDate;
-                if (endDate) dateQuery.$lte = endDate;
+
+                if (startDate) {
+                    dateQuery.$gte = startDate;
+                }
+
+                if (endDate) {
+                    dateQuery.$lte = endDate;
+                }
+
                 query.week_start_date = dateQuery;
             }
 
@@ -66,8 +73,15 @@ export class WeeklyScheduleRepository {
 
             if (startDate || endDate) {
                 const dateQuery: any = {};
-                if (startDate) dateQuery.$gte = startDate;
-                if (endDate) dateQuery.$lte = endDate;
+
+                if (startDate) {
+                    dateQuery.$gte = startDate;
+                }
+
+                if (endDate) {
+                    dateQuery.$lte = endDate;
+                }
+
                 query.week_start_date = dateQuery;
             }
 
@@ -184,54 +198,14 @@ export class WeeklyScheduleRepository {
     }
 
     /**
-     * Tìm schedule cho một ngày cụ thể
-     */
-    public static async findByConsultantAndDate(
-        consultantId: string,
-        date: Date
-    ): Promise<IWeeklySchedule | null> {
-        try {
-            const weekStart = this.getWeekStartDate(date);
-
-            // Main query với exact week start
-            let schedule = await WeeklySchedule.findOne({
-                consultant_id: consultantId,
-                week_start_date: weekStart
-            }).lean();
-
-            // Fallback: Tìm theo range nếu không tìm thấy exact match
-            if (!schedule) {
-                const targetDate = new Date(date.getTime());
-                targetDate.setUTCHours(0, 0, 0, 0);
-
-                schedule = await WeeklySchedule.findOne({
-                    consultant_id: consultantId,
-                    week_start_date: { $lte: targetDate },
-                    week_end_date: { $gte: targetDate }
-                }).lean();
-            }
-
-            return schedule;
-        } catch (error) {
-            console.error('Error finding schedule by consultant and date:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Helper: Tính ngày bắt đầu tuần (thứ 2)
      */
     public static getWeekStartDate(date: Date): Date {
-        const d = new Date(date.getTime());
-        const day = d.getUTCDay();
-
-        // Tính số ngày cần trừ để về thứ 2
-        const daysToSubtract = day === 0 ? 6 : day - 1;
-
-        // Trừ về thứ 2
-        d.setUTCDate(d.getUTCDate() - daysToSubtract);
-        d.setUTCHours(0, 0, 0, 0);
-
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+        d.setDate(diff);
+        d.setHours(0, 0, 0, 0);
         return d;
     }
 
@@ -244,5 +218,78 @@ export class WeeklyScheduleRepository {
         weekEnd.setDate(weekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
         return weekEnd;
+    }
+
+    /**
+     * Tìm schedule cho một ngày cụ thể
+     */
+    // Trong weeklyScheduleRepository.ts - findByConsultantAndDate method
+    // Thêm debug logs
+
+    public static async findByConsultantAndDate(
+        consultantId: string,
+        date: Date
+    ): Promise<IWeeklySchedule | null> {
+        try {
+            console.log('=== DEBUG REPOSITORY ===');
+            console.log('Input consultantId:', consultantId);
+            console.log('Input date:', date);
+
+            const weekStart = this.getWeekStartDate(date);
+            console.log('Calculated week start:', weekStart);
+            console.log('Week start ISO:', weekStart.toISOString());
+
+            // Debug: Check if consultant exists in any schedule
+            const anySchedule = await WeeklySchedule.findOne({
+                consultant_id: consultantId
+            }).lean();
+            console.log('Any schedule for consultant:', anySchedule);
+
+            // Main query
+            const schedule = await WeeklySchedule.findOne({
+                consultant_id: consultantId,
+                week_start_date: weekStart
+            }).lean();
+
+            console.log('Found schedule:', schedule);
+
+            // If not found, check with date range
+            if (!schedule) {
+                console.log('No exact match, checking with date range...');
+
+                const scheduleRange = await WeeklySchedule.findOne({
+                    consultant_id: consultantId,
+                    week_start_date: { $lte: weekStart },
+                    week_end_date: { $gte: weekStart }
+                }).lean();
+
+                console.log('Schedule with range query:', scheduleRange);
+            }
+
+            return schedule;
+        } catch (error) {
+            console.error('Error finding schedule by consultant and date:', error);
+            throw error;
+        }
+    }
+
+    // Debug helper function
+    public static getWeekStartDate(date: Date): Date {
+        console.log('=== DEBUG WEEK CALCULATION ===');
+        console.log('Input date:', date);
+        console.log('Input date day:', date.getDay()); // 0 = Sunday, 1 = Monday
+
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+
+        console.log('Day of week:', day);
+        console.log('Date diff calculation:', diff);
+
+        d.setDate(diff);
+        d.setHours(0, 0, 0, 0);
+
+        console.log('Calculated week start:', d);
+        return d;
     }
 }

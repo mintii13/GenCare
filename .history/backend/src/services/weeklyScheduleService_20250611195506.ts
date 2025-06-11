@@ -3,7 +3,7 @@ import { AppointmentRepository } from '../repositories/appointmentRepository';
 import { Consultant } from '../models/Consultant';
 import { IWeeklySchedule } from '../models/WeeklySchedule';
 import { ScheduleResponse, SchedulesResponse, AvailabilityResponse, WeeklyAvailabilityResponse, TimeSlot, DaySlots } from '../dto/responses/consultantScheduleResponse';
-import mongoose from 'mongoose';
+
 export class WeeklyScheduleService {
     /**
      * Tạo weekly schedule cho một tuần cụ thể
@@ -312,7 +312,7 @@ export class WeeklyScheduleService {
             // Tính week end date
             const weekEndDate = WeeklyScheduleRepository.getWeekEndDate(weekStartDate);
 
-            // Lấy tất cả appointments trong tuần với populated customer data
+            // Lấy tất cả appointments trong tuần (exclude cancelled)
             const weekAppointments = await AppointmentRepository.findByConsultantId(
                 consultantId,
                 undefined, // any status
@@ -388,21 +388,13 @@ export class WeeklyScheduleService {
                     },
                     available_slots: availableSlots,
                     total_slots: availableSlots.length,
-                    booked_appointments: dayAppointments.map(apt => {
-                        // Safe access to customer name
-                        let customerName = 'Unknown';
-                        if (apt.customer_id && typeof apt.customer_id === 'object' && 'full_name' in apt.customer_id) {
-                            customerName = (apt.customer_id as any).full_name;
-                        }
-
-                        return {
-                            appointment_id: apt._id.toString(),
-                            start_time: apt.start_time,
-                            end_time: apt.end_time,
-                            status: apt.status,
-                            customer_name: customerName
-                        };
-                    })
+                    booked_appointments: dayAppointments.map(apt => ({
+                        appointment_id: apt._id.toString(),
+                        start_time: apt.start_time,
+                        end_time: apt.end_time,
+                        status: apt.status,
+                        customer_name: apt.customer_id?.full_name || 'Unknown'
+                    }))
                 };
             }
 
@@ -510,23 +502,14 @@ export class WeeklyScheduleService {
     }
 
     /**
- * Copy schedule từ tuần này sang tuần khác
- */
+     * Copy schedule từ tuần này sang tuần khác
+     */
     public static async copySchedule(
         sourceScheduleId: string,
         targetWeekStartDate: Date,
         createdBy: { user_id: string, role: string, name: string }
     ): Promise<ScheduleResponse> {
         try {
-            // Validate sourceScheduleId
-            if (!mongoose.Types.ObjectId.isValid(sourceScheduleId)) {
-                return {
-                    success: false,
-                    message: 'Invalid source schedule ID format'
-                };
-            }
-
-            // Find source schedule
             const sourceSchedule = await WeeklyScheduleRepository.findById(sourceScheduleId);
             if (!sourceSchedule) {
                 return {
@@ -535,21 +518,10 @@ export class WeeklyScheduleService {
                 };
             }
 
-            // Validate target week start date (must be Monday)
-            const targetDate = new Date(targetWeekStartDate);
-            const dayOfWeek = targetDate.getUTCDay();
-
-            if (dayOfWeek !== 1) {
-                return {
-                    success: false,
-                    message: 'Target week start date must be a Monday'
-                };
-            }
-
-            // Check if target week already has schedule
+            // Kiểm tra tuần target đã có schedule chưa
             const existingSchedule = await WeeklyScheduleRepository.existsByConsultantAndWeek(
                 sourceSchedule.consultant_id.toString(),
-                targetDate
+                targetWeekStartDate
             );
 
             if (existingSchedule) {
@@ -559,22 +531,15 @@ export class WeeklyScheduleService {
                 };
             }
 
-            // Calculate target week end date
-            const targetWeekEndDate = WeeklyScheduleRepository.getWeekEndDate(targetDate);
+            const targetWeekEndDate = WeeklyScheduleRepository.getWeekEndDate(targetWeekStartDate);
 
-            // Create new schedule
             const newSchedule = await WeeklyScheduleRepository.create({
                 consultant_id: sourceSchedule.consultant_id,
-                week_start_date: targetDate,
+                week_start_date: targetWeekStartDate,
                 week_end_date: targetWeekEndDate,
                 working_days: sourceSchedule.working_days,
                 default_slot_duration: sourceSchedule.default_slot_duration,
                 notes: `Copied from week ${sourceSchedule.week_start_date.toISOString().split('T')[0]}`,
-                created_by: {
-                    user_id: new mongoose.Types.ObjectId(createdBy.user_id),
-                    role: createdBy.role,
-                    name: createdBy.name
-                },
                 created_date: new Date(),
                 updated_date: new Date()
             });
@@ -587,7 +552,7 @@ export class WeeklyScheduleService {
                 },
                 timestamp: new Date().toISOString()
             };
-        } catch (error: any) {
+        } catch (error) {
             console.error('Copy schedule service error:', error);
             return {
                 success: false,

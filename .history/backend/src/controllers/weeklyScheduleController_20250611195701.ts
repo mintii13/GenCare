@@ -5,7 +5,6 @@ import { validateCreateWeeklySchedule, validateUpdateWeeklySchedule } from '../m
 import { JWTPayload } from '../utils/jwtUtils';
 import { Consultant } from '../models/Consultant';
 import { WeeklyScheduleRepository } from '../repositories/weeklyScheduleRepository';
-import mongoose from 'mongoose';
 
 const router = Router();
 
@@ -434,6 +433,7 @@ router.get(
         }
     }
 );
+
 // Copy schedule from one week to another
 router.post(
     '/copy/:scheduleId',
@@ -452,26 +452,10 @@ router.post(
                 });
             }
 
-            // Validate scheduleId format
-            if (!mongoose.Types.ObjectId.isValid(scheduleId)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid schedule ID format'
-                });
-            }
-
-            // Parse and validate target date
             const targetWeekStartDate = new Date(target_week_start_date);
 
-            if (isNaN(targetWeekStartDate.getTime())) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid date format for target_week_start_date'
-                });
-            }
-
             // Ensure it's a Monday
-            if (targetWeekStartDate.getUTCDay() !== 1) {
+            if (targetWeekStartDate.getDay() !== 1) {
                 return res.status(400).json({
                     success: false,
                     message: 'target_week_start_date must be a Monday'
@@ -527,4 +511,5 @@ router.post(
         }
     }
 );
+
 export default router;

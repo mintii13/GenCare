@@ -3,7 +3,7 @@ import { AppointmentRepository } from '../repositories/appointmentRepository';
 import { Consultant } from '../models/Consultant';
 import { IWeeklySchedule } from '../models/WeeklySchedule';
 import { ScheduleResponse, SchedulesResponse, AvailabilityResponse, WeeklyAvailabilityResponse, TimeSlot, DaySlots } from '../dto/responses/consultantScheduleResponse';
-import mongoose from 'mongoose';
+
 export class WeeklyScheduleService {
     /**
      * Tạo weekly schedule cho một tuần cụ thể
@@ -510,60 +510,85 @@ export class WeeklyScheduleService {
     }
 
     /**
- * Copy schedule từ tuần này sang tuần khác
- */
+     * Copy schedule từ tuần này sang tuần khác
+     */
     public static async copySchedule(
         sourceScheduleId: string,
         targetWeekStartDate: Date,
         createdBy: { user_id: string, role: string, name: string }
     ): Promise<ScheduleResponse> {
         try {
+            console.log('=== COPY SCHEDULE DEBUG START ===');
+            console.log('Input parameters:');
+            console.log('- sourceScheduleId:', sourceScheduleId);
+            console.log('- targetWeekStartDate:', targetWeekStartDate);
+            console.log('- createdBy:', createdBy);
+
             // Validate sourceScheduleId
             if (!mongoose.Types.ObjectId.isValid(sourceScheduleId)) {
+                console.log('ERROR: Invalid sourceScheduleId format');
                 return {
                     success: false,
                     message: 'Invalid source schedule ID format'
                 };
             }
 
-            // Find source schedule
+            // Step 1: Find source schedule
+            console.log('Step 1: Finding source schedule...');
             const sourceSchedule = await WeeklyScheduleRepository.findById(sourceScheduleId);
+            console.log('Source schedule found:', !!sourceSchedule);
+
             if (!sourceSchedule) {
+                console.log('ERROR: Source schedule not found');
                 return {
                     success: false,
                     message: 'Source schedule not found'
                 };
             }
 
-            // Validate target week start date (must be Monday)
+            console.log('Source schedule details:');
+            console.log('- consultant_id:', sourceSchedule.consultant_id);
+            console.log('- week_start_date:', sourceSchedule.week_start_date);
+            console.log('- working_days keys:', Object.keys(sourceSchedule.working_days || {}));
+
+            // Step 2: Validate target week start date
+            console.log('Step 2: Validating target week start date...');
             const targetDate = new Date(targetWeekStartDate);
             const dayOfWeek = targetDate.getUTCDay();
+            console.log('Target date day of week:', dayOfWeek, '(0=Sunday, 1=Monday)');
 
             if (dayOfWeek !== 1) {
+                console.log('ERROR: Target date is not a Monday');
                 return {
                     success: false,
                     message: 'Target week start date must be a Monday'
                 };
             }
 
-            // Check if target week already has schedule
+            // Step 3: Check if target week already has schedule
+            console.log('Step 3: Checking for existing schedule in target week...');
             const existingSchedule = await WeeklyScheduleRepository.existsByConsultantAndWeek(
                 sourceSchedule.consultant_id.toString(),
                 targetDate
             );
+            console.log('Existing schedule found:', existingSchedule);
 
             if (existingSchedule) {
+                console.log('ERROR: Schedule already exists for target week');
                 return {
                     success: false,
                     message: 'Schedule already exists for target week'
                 };
             }
 
-            // Calculate target week end date
+            // Step 4: Calculate target week end date
+            console.log('Step 4: Calculating target week end date...');
             const targetWeekEndDate = WeeklyScheduleRepository.getWeekEndDate(targetDate);
+            console.log('Target week end date:', targetWeekEndDate);
 
-            // Create new schedule
-            const newSchedule = await WeeklyScheduleRepository.create({
+            // Step 5: Prepare new schedule data
+            console.log('Step 5: Preparing new schedule data...');
+            const newScheduleData: Partial<IWeeklySchedule> = {
                 consultant_id: sourceSchedule.consultant_id,
                 week_start_date: targetDate,
                 week_end_date: targetWeekEndDate,
@@ -577,7 +602,21 @@ export class WeeklyScheduleService {
                 },
                 created_date: new Date(),
                 updated_date: new Date()
-            });
+            };
+
+            console.log('New schedule data prepared:');
+            console.log('- consultant_id:', newScheduleData.consultant_id);
+            console.log('- week_start_date:', newScheduleData.week_start_date);
+            console.log('- week_end_date:', newScheduleData.week_end_date);
+            console.log('- created_by:', newScheduleData.created_by);
+
+            // Step 6: Create new schedule
+            console.log('Step 6: Creating new schedule...');
+            const newSchedule = await WeeklyScheduleRepository.create(newScheduleData);
+            console.log('New schedule created successfully:', !!newSchedule);
+            console.log('New schedule ID:', newSchedule?._id);
+
+            console.log('=== COPY SCHEDULE DEBUG END ===');
 
             return {
                 success: true,
@@ -587,11 +626,17 @@ export class WeeklyScheduleService {
                 },
                 timestamp: new Date().toISOString()
             };
+
         } catch (error: any) {
-            console.error('Copy schedule service error:', error);
+            console.error('=== COPY SCHEDULE ERROR ===');
+            console.error('Error details:', error);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            console.error('=== END ERROR ===');
+
             return {
                 success: false,
-                message: 'Internal server error when copying schedule'
+                message: `Internal server error when copying schedule: ${error.message}`
             };
         }
     }

@@ -2,8 +2,8 @@ import { WeeklyScheduleRepository } from '../repositories/weeklyScheduleReposito
 import { AppointmentRepository } from '../repositories/appointmentRepository';
 import { Consultant } from '../models/Consultant';
 import { IWeeklySchedule } from '../models/WeeklySchedule';
-import { ScheduleResponse, SchedulesResponse, AvailabilityResponse, WeeklyAvailabilityResponse, TimeSlot, DaySlots } from '../dto/responses/consultantScheduleResponse';
-import mongoose from 'mongoose';
+import { ScheduleResponse, SchedulesResponse, AvailabilityResponse, TimeSlot } from '../dto/responses/consultantScheduleResponse';
+
 export class WeeklyScheduleService {
     /**
      * Tạo weekly schedule cho một tuần cụ thể
@@ -289,151 +289,7 @@ export class WeeklyScheduleService {
     }
 
     /**
-     * NEW: Lấy available slots cho cả tuần
-     */
-    public static async getWeeklyAvailableSlots(
-        consultantId: string,
-        weekStartDate: Date
-    ): Promise<WeeklyAvailabilityResponse> {
-        try {
-            // Tìm schedule cho tuần đó
-            const schedule = await WeeklyScheduleRepository.findByConsultantAndWeek(
-                consultantId,
-                weekStartDate
-            );
-
-            if (!schedule) {
-                return {
-                    success: false,
-                    message: 'No schedule found for this week'
-                };
-            }
-
-            // Tính week end date
-            const weekEndDate = WeeklyScheduleRepository.getWeekEndDate(weekStartDate);
-
-            // Lấy tất cả appointments trong tuần với populated customer data
-            const weekAppointments = await AppointmentRepository.findByConsultantId(
-                consultantId,
-                undefined, // any status
-                weekStartDate,
-                weekEndDate
-            );
-
-            // Filter out cancelled appointments
-            const activeAppointments = weekAppointments.filter(apt => apt.status !== 'cancelled');
-
-            // Xử lý từng ngày trong tuần
-            const days: any = {};
-            const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-            let totalWorkingDays = 0;
-            let totalAvailableSlots = 0;
-            let totalBookedSlots = 0;
-
-            for (let i = 0; i < 7; i++) {
-                const dayName = dayNames[i];
-                const currentDate = new Date(weekStartDate);
-                currentDate.setDate(weekStartDate.getDate() + i);
-
-                const workingDay = schedule.working_days[dayName as keyof typeof schedule.working_days];
-
-                if (!workingDay || !workingDay.is_available) {
-                    // Ngày không làm việc
-                    days[dayName] = {
-                        date: currentDate.toISOString().split('T')[0],
-                        day_of_week: dayName,
-                        is_working_day: false,
-                        available_slots: [],
-                        total_slots: 0,
-                        booked_appointments: []
-                    };
-                    continue;
-                }
-
-                totalWorkingDays++;
-
-                // Generate slots cho ngày này
-                const allSlots = this.generateTimeSlots(
-                    workingDay.start_time,
-                    workingDay.end_time,
-                    workingDay.break_start,
-                    workingDay.break_end,
-                    schedule.default_slot_duration
-                );
-
-                // Lấy appointments cho ngày này
-                const dayAppointments = activeAppointments.filter(apt => {
-                    const aptDate = new Date(apt.appointment_date);
-                    return aptDate.toDateString() === currentDate.toDateString();
-                });
-
-                // Filter available slots
-                const availableSlots = allSlots.filter(slot => {
-                    return !this.isSlotBooked(slot, dayAppointments);
-                });
-
-                totalAvailableSlots += availableSlots.length;
-                totalBookedSlots += (allSlots.length - availableSlots.length);
-
-                days[dayName] = {
-                    date: currentDate.toISOString().split('T')[0],
-                    day_of_week: dayName,
-                    is_working_day: true,
-                    working_hours: {
-                        start_time: workingDay.start_time,
-                        end_time: workingDay.end_time,
-                        break_start: workingDay.break_start,
-                        break_end: workingDay.break_end
-                    },
-                    available_slots: availableSlots,
-                    total_slots: availableSlots.length,
-                    booked_appointments: dayAppointments.map(apt => {
-                        // Safe access to customer name
-                        let customerName = 'Unknown';
-                        if (apt.customer_id && typeof apt.customer_id === 'object' && 'full_name' in apt.customer_id) {
-                            customerName = (apt.customer_id as any).full_name;
-                        }
-
-                        return {
-                            appointment_id: apt._id.toString(),
-                            start_time: apt.start_time,
-                            end_time: apt.end_time,
-                            status: apt.status,
-                            customer_name: customerName
-                        };
-                    })
-                };
-            }
-
-            return {
-                success: true,
-                message: 'Weekly available slots retrieved successfully',
-                data: {
-                    week_start_date: weekStartDate.toISOString().split('T')[0],
-                    week_end_date: weekEndDate.toISOString().split('T')[0],
-                    consultant_id: consultantId,
-                    schedule_id: schedule._id.toString(),
-                    days,
-                    summary: {
-                        total_working_days: totalWorkingDays,
-                        total_available_slots: totalAvailableSlots,
-                        total_booked_slots: totalBookedSlots
-                    }
-                },
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Get weekly available slots service error:', error);
-            return {
-                success: false,
-                message: 'Internal server error when retrieving weekly slots'
-            };
-        }
-    }
-
-    /**
-     * UPDATED: Lấy available slots cho một ngày cụ thể (keep for backward compatibility)
+     * Lấy available time slots cho một ngày cụ thể
      */
     public static async getAvailableSlots(
         consultantId: string,
@@ -510,23 +366,14 @@ export class WeeklyScheduleService {
     }
 
     /**
- * Copy schedule từ tuần này sang tuần khác
- */
+     * Copy schedule từ tuần này sang tuần khác
+     */
     public static async copySchedule(
         sourceScheduleId: string,
         targetWeekStartDate: Date,
         createdBy: { user_id: string, role: string, name: string }
     ): Promise<ScheduleResponse> {
         try {
-            // Validate sourceScheduleId
-            if (!mongoose.Types.ObjectId.isValid(sourceScheduleId)) {
-                return {
-                    success: false,
-                    message: 'Invalid source schedule ID format'
-                };
-            }
-
-            // Find source schedule
             const sourceSchedule = await WeeklyScheduleRepository.findById(sourceScheduleId);
             if (!sourceSchedule) {
                 return {
@@ -535,21 +382,10 @@ export class WeeklyScheduleService {
                 };
             }
 
-            // Validate target week start date (must be Monday)
-            const targetDate = new Date(targetWeekStartDate);
-            const dayOfWeek = targetDate.getUTCDay();
-
-            if (dayOfWeek !== 1) {
-                return {
-                    success: false,
-                    message: 'Target week start date must be a Monday'
-                };
-            }
-
-            // Check if target week already has schedule
+            // Kiểm tra tuần target đã có schedule chưa
             const existingSchedule = await WeeklyScheduleRepository.existsByConsultantAndWeek(
                 sourceSchedule.consultant_id.toString(),
-                targetDate
+                targetWeekStartDate
             );
 
             if (existingSchedule) {
@@ -559,22 +395,15 @@ export class WeeklyScheduleService {
                 };
             }
 
-            // Calculate target week end date
-            const targetWeekEndDate = WeeklyScheduleRepository.getWeekEndDate(targetDate);
+            const targetWeekEndDate = WeeklyScheduleRepository.getWeekEndDate(targetWeekStartDate);
 
-            // Create new schedule
             const newSchedule = await WeeklyScheduleRepository.create({
                 consultant_id: sourceSchedule.consultant_id,
-                week_start_date: targetDate,
+                week_start_date: targetWeekStartDate,
                 week_end_date: targetWeekEndDate,
                 working_days: sourceSchedule.working_days,
                 default_slot_duration: sourceSchedule.default_slot_duration,
                 notes: `Copied from week ${sourceSchedule.week_start_date.toISOString().split('T')[0]}`,
-                created_by: {
-                    user_id: new mongoose.Types.ObjectId(createdBy.user_id),
-                    role: createdBy.role,
-                    name: createdBy.name
-                },
                 created_date: new Date(),
                 updated_date: new Date()
             });
@@ -587,7 +416,7 @@ export class WeeklyScheduleService {
                 },
                 timestamp: new Date().toISOString()
             };
-        } catch (error: any) {
+        } catch (error) {
             console.error('Copy schedule service error:', error);
             return {
                 success: false,
