@@ -1,8 +1,37 @@
+AUTH SERVICE
+Email Uniqueness: Mỗi email chỉ 1 account
+Password Strength: Tối thiểu 6 ký tự
+Email Verification: xác nhận OTP qua gmail
+Password Change: New ≠ Old password
+JWT TokenExpire: sau 1 ngày
+
+
+BLOG SERVICE
+Author Permission: Chỉ consultant tạo blog
+Edit Permission: Chỉ author edit blog của mình
+Delete Permission: Author hoặc Staff/Admin (soft delete)
+Comment Ownership: Chỉ edit comment của mình
+Hierachy Comment Limited: Chỉ cho phép comment sâu 3 level
+Anonymous Comments: Hỗ trợ comment ẩn danh
+
+
+WEEKLY SCHEDULE SERVICE
+Week Uniqueness: 1 consultant chỉ 1 schedule/tuần
+Monday Start: Week phải bắt đầu từ thứ 2
+Working Hours Logic: Start < End time
+Break Time Logic: Break trong working hours
+Staff Admin Access: Xem/edit tất cả schedules
+Appointment Conflict: Không xóa schedule có appointments
+
+
+APPOINTMENT SERVICE
+Consultant Ownership: Chỉ xem schedule của mình
 Conflict Prevention: Không cho phép đặt trùng giờ
+Break Time Validation: Không đặt trong giờ nghỉ
+One Pending Rule: Customer chỉ được có 1 pending appointment tại 1 thời điểm
 Lead Time: Phải đặt trước ít nhất 2 giờ
-Cancellation Policy: Hủy trước 24h không mất phí
-Auto-confirm: Tự động xác nhận sau 1 giờ nếu consultant không respond
+Cancellation: Phải hủy lịch trước ít nhất 4 giờ
 Reminder System: Gửi reminder tự động
 Rating System: Chỉ cho đánh giá sau khi completed
-Payment Integration: Thanh toán trước hoặc sau tư vấn
 Time Zone: Xử lý múi giờ cho online consultation
+

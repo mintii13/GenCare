@@ -66,6 +66,17 @@ const bookAppointmentSchema = Joi.object({
         });
     }
 
+    // BUSINESS RULE: Phải đặt trước ít nhất 2 tiếng
+    const now = new Date();
+    const appointmentDateTime = new Date(`${value.appointment_date.toISOString().split('T')[0]} ${value.start_time}:00`);
+    const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (diffHours < 2) {
+        return helpers.error('any.invalid', {
+            message: 'Appointment must be booked at least 2 hours in advance'
+        });
+    }
+
     return value;
 });
 
@@ -137,6 +148,22 @@ const updateAppointmentSchema = Joi.object({
             return helpers.error('any.invalid', {
                 message: 'Appointment duration cannot exceed 4 hours'
             });
+        }
+
+        // BUSINESS RULE: Nếu update thời gian, vẫn phải đặt trước ít nhất 2 tiếng
+        if (value.appointment_date || value.start_time) {
+            const now = new Date();
+            // Nếu có appointment_date mới thì dùng, không thì cần check trong service
+            if (value.appointment_date) {
+                const appointmentDateTime = new Date(`${value.appointment_date.toISOString().split('T')[0]} ${value.start_time}`);
+                const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+                if (diffHours < 2) {
+                    return helpers.error('any.invalid', {
+                        message: 'Updated appointment time must be at least 2 hours from now'
+                    });
+                }
+            }
         }
     }
 
