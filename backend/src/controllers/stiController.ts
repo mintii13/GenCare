@@ -5,6 +5,9 @@ import { IStiTest, StiTest } from '../models/StiTest';
 import { StiService } from '../services/stiService';
 import { validateStiTest, validateStiPackage } from '../middlewares/stiValidation';
 import {IStiPackage, StiPackage } from '../models/StiPackage';
+import {StiOrder, IStiOrder } from '../models/StiOrder';
+import { JWTPayload } from '../utils/jwtUtils';
+import { ObjectId } from 'mongoose';
 
 const router = Router();
 
@@ -140,10 +143,9 @@ router.post('/createStiPackage', validateStiPackage, authenticateToken, authoriz
     try {
         console.log('POST /createStiPackage - req.body:', req.body);
         const userId = (req.user as any).userId;
-        console.log(userId);
         const stiPackage = new StiPackage({
             ...req.body,
-            createdBy: new mongoose.Types.ObjectId(userId)
+            createdBy: userId
         });
         const result = await StiService.createStiPackage(stiPackage);
         console.log('POST /createStiPackage - result:', result);
@@ -219,7 +221,6 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
     try {
         const sti_package_id = req.params.id;
         const userId = (req.user as any).userId;
-        console.log(userId);
         const result = await StiService.deleteStiPackage(sti_package_id, userId);
         if (!result.success) {
             res.status(404).json(result);
@@ -234,5 +235,72 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
         })
     }
 });
+
+//create orders                                         (post)
+router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response) => {
+    try {
+        const customer_id = (req.jwtUser as JWTPayload).userId;
+        const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
+
+        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, order_date, notes);
+        if (result.success){
+            return res.status(201).json(result);
+        }
+        else if (result.message === 'Order already exists or failed to insert'){
+            return res.status(400).json(result);
+        }
+        return res.status(409).json(result);                    //lỗi nghiệp vụ
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false, 
+            message: 'Internal server error' 
+        });
+    }
+});
+//get orders by customer id                                           (get)
+router.get('/getAllStiOrders/:id', authenticateToken, authorizeRoles('customer', 'staff', 'manager', 'admin'), async (req: Request, res: Response) => {
+    try {
+        const customer_id = req.params.id;
+        const result = await StiService.getOrdersByCustomer(customer_id);
+        if (result.success){
+            return res.status(200).json(result);
+        }
+        else if (result.message === 'Customer_id is invalid'){
+            return res.status(400).json(result);
+        }
+        return res.status(404).json(result);
+    } catch (error) {
+        console.error('Error getting orders by customer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error' 
+        });
+    }
+});
+
+//get order by id                                       (get)
+router.get('/getStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'manager', 'admin'), async (req: Request, res: Response) => {
+    try {
+        const order_id = req.params.id;
+        const result = await StiService.getOrderById(order_id);
+        if (result.success){
+            return res.status(200).json(result);
+        }
+        return res.status(404).json(result);
+    } catch (error) {
+        console.error('Error getting orders by customer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error' 
+        });
+    }
+});
+//update orders                                         (put)
+
+//thêm 1 test mới vào 1 order-detail                    (post)
+
+//get order-details?order_id=                           (get)
+
 
 export default router;

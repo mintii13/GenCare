@@ -1,8 +1,12 @@
-import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse } from '../dto/responses/StiResponse';
+import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse, StiOrderResponse, AllStiOrderResponse, StiPackageTestResponse } from '../dto/responses/StiResponse';
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
 import { IStiPackage } from "../models/StiPackage";
 import { StiPackageRepository } from "../repositories/stiPackageRepository";
+import { IStiOrder, StiOrder } from '../models/StiOrder';
+import { StiOrderRepository } from '../repositories/stiOrderRepository';
+import { StiPackageTestRepository } from '../repositories/stiPackageTestRepository';
+import mongoose from 'mongoose';
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
@@ -272,4 +276,172 @@ export class StiService{
             };
         }
     }
+
+    private static async handleStiPackage(sti_package_id: string) {
+        const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
+        if (!stiPackage) {
+            return {
+            success: false,
+            message: 'StiPackage is not found'
+            };
+        }
+
+        const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id);
+        console.log(stiPackageTests);
+        const sti_test_ids = stiPackageTests.map(item => item.sti_test_id);
+        return {
+            success: true,
+            sti_package_item: {
+                sti_package_id: new mongoose.Types.ObjectId(sti_package_id),
+                sti_test_ids: sti_test_ids.map(id => new mongoose.Types.ObjectId(id))
+            },
+            amount: stiPackage.price
+        };
+    }
+
+    private static async handleStiTest(sti_test_ids: string[]) {
+        const objectIds = sti_test_ids.map(id => new mongoose.Types.ObjectId(id));
+        const stiTests = await StiTest.find({ _id: { $in: objectIds }, is_active: true });
+
+        if (stiTests.length === 0) {
+            return {
+                success: false,
+                message: 'No valid sti_test_ids found'
+            };
+        }
+
+        const sti_test_items = stiTests.map(test => ({
+            sti_test_id: test._id
+        }));
+
+        const total = stiTests.reduce((sum, test) => sum + test.price, 0);
+
+        return {
+            success: true,
+            sti_test_items,
+            amount: total
+        };
+    }
+
+
+    public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_ids: string[], order_date: Date, notes: string): Promise<StiOrderResponse>{
+        try {
+            let sti_package_item = null;
+            let sti_test_items = [];
+            let total_amount = 0;
+            let noPackage: boolean = false;
+            let noTest: boolean = false;
+
+            // Xử lý package
+            if (sti_package_id) {
+                const result = await this.handleStiPackage(sti_package_id);
+                if (!result.success) 
+                    noPackage = true;
+                else{
+                    sti_package_item = result.sti_package_item;
+                    total_amount += result.amount;
+                }
+                
+            }
+
+            // Xử lý test lẻ
+            if (sti_test_ids && sti_test_ids.length > 0) {
+                const result = await this.handleStiTest(sti_test_ids);
+                if (!result.success) 
+                    noTest = true;
+                else{
+                    sti_test_items = result.sti_test_items;
+                    total_amount += result.amount;
+                }
+            }
+
+            if (noPackage && noTest){
+                return {
+                    success: false,
+                    message: 'No valid STI tests or package provided'
+                };
+            }
+            const sti_order = new StiOrder({
+                customer_id,
+                sti_package_item,
+                sti_test_items: sti_test_items.length > 0 ? sti_test_items : undefined,
+                order_date,
+                total_amount,
+                notes
+            });
+            const result = await StiOrderRepository.insertStiOrder(sti_order);
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'Order already exists or failed to insert'
+                };
+            }
+            return {
+                success: true,
+                message: 'StiOrder is inserted successfully',
+                stiorder: result
+            };
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async getOrdersByCustomer(customer_id: string): Promise<AllStiOrderResponse>{
+        try {
+            if (!customer_id) {
+                return {
+                    success: false,
+                    message: 'Customer_id is invalid',
+                };
+            }
+            const result = await StiOrderRepository.getOrdersByCustomer(customer_id);
+            if (!result || result.length === 0){
+                return{
+                    success: false,
+                    message: `Cannot find any orders of this customer ${customer_id}`
+                }
+            }
+            return {
+                success: true,
+                message: 'Get StiOrder successfully',
+                stiorder: result
+            }
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async getOrderById(order_id: string) {
+        try {
+            const order = await StiOrderRepository.findOrderById(order_id);
+
+            if (!order) {
+                return {
+                success: false,
+                message: 'Order not found'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'Order found',
+                order
+            };
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: 'Server error'
+            };
+        }
+    }
+
 }

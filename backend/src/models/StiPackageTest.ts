@@ -12,4 +12,4 @@ const stiPackageTestSchema = new Schema<IStiPackageTest>({
     is_active: { type: Boolean, default: true }
 });
 
-export const StiPackageTest = mongoose.model<IStiPackageTest>('StiPackageTest', stiPackageTestSchema, 'stipackagetests');
+export const StiPackageTest = mongoose.model<IStiPackageTest>('StiPackageTest', stiPackageTestSchema);

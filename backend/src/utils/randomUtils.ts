@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import { StiOrder } from '../models/StiOrder';
+import { StiOrderRepository } from '../repositories/stiOrderRepository';
 export class RandomUtils{
     public static generateRandomPassword = (): string => {
         const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
