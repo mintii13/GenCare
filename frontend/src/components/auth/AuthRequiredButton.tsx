@@ -1,0 +1,75 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../ui/ToastProvider";
+import LoginModal from "./LoginModal";
+
+interface AuthRequiredButtonProps {
+  children: React.ReactNode;
+  redirectTo: string;
+  className?: string;
+  onClick?: () => void;
+  message?: string;
+  successMessage?: string;
+}
+
+const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
+  children,
+  redirectTo,
+  className = "",
+  onClick,
+  message = "Vui lòng đăng nhập để sử dụng dịch vụ này!",
+  successMessage,
+}) => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { error, success } = useToast();        
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const handleClick = () => {
+    if (isAuthenticated) {
+      // Nếu đã đăng nhập, thực hiện action hoặc chuyển hướng
+      if (onClick) {
+        onClick();
+      } else {
+        navigate(redirectTo);
+      }
+    } else {
+      // Hiển thị thông báo và modal đăng nhập
+      error(message, 3000);
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleLoginSuccess = (user: any) => {
+    const defaultSuccessMessage = `Chào mừng ${user.full_name || user.email}!`;
+    success(successMessage || defaultSuccessMessage, 2000);
+    setShowLoginModal(false);
+    
+    // Chuyển hướng sau khi đăng nhập thành công
+    setTimeout(() => {
+      if (onClick) {
+        onClick();
+      } else {
+        navigate(redirectTo);
+      }
+    }, 500);
+  };
+
+  return (
+    <>
+      <button onClick={handleClick} className={className}>
+        {children}
+      </button>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    </>
+  );
+};
+
+export default AuthRequiredButton; 

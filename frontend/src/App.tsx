@@ -10,7 +10,7 @@ import LoginModal from "@/components/auth/LoginModal";
 import OAuthSuccess from "./pages/OAuthSuccess";
 // Blog imports
 import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
-import { Toaster } from 'react-hot-toast';
+import { ToastProvider } from './components/ui/ToastProvider';
 import ConsultantDashboard from './pages/dashboard/Consultant';
 import ConsultantBlogList from './pages/dashboard/Consultant/components/ConsultantBlogList';
 import ConsultantSchedule from './pages/dashboard/Consultant/ConsultantSchedule';
@@ -30,34 +30,8 @@ const App = () => {
   const [showLogin, setShowLogin] = useState(false);
 
   return (
-    <Layout onLoginClick={() => setShowLogin(true)}>
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 3000, // Hiển thị trong 3 giây
-          style: {
-            background: '#363636',
-            color: '#fff',
-            padding: '16px',
-            borderRadius: '8px',
-            fontSize: '14px',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#4ade80',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
+    <ToastProvider defaultPosition="top-center">
+      <Layout onLoginClick={() => setShowLogin(true)}>
       <Suspense fallback={<div>Đang tải...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -107,6 +81,7 @@ const App = () => {
       </Suspense>
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </Layout>
+    </ToastProvider>
   );
 };
 
