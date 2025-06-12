@@ -23,10 +23,10 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
     {
       title: 'Quản lý Lịch làm việc',
       items: [
-        { name: 'Lịch tuần (Calendar View)', path: '/consultant/calendar-view', icon: '' },
-        { name: 'Quản lý lịch (Form)', path: '/consultant/weekly-schedule', icon: '' },
-        { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: '' },
-        { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: '' },
+        { name: 'Lịch tuần (Calendar View)', path: '/consultant/calendar-view', icon: '📅' },
+        { name: 'Quản lý lịch (Form)', path: '/consultant/weekly-schedule', icon: '🗓️' },
+        { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: '⏰' },
+        { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: '🚫' },
       ],
     },
     {
