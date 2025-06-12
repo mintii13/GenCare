@@ -89,7 +89,7 @@ router.get(
   }
 );
 
-router.get('/profile', authenticateToken, async (req, res) => {
+router.get('/getUserProfile', authenticateToken, async (req, res) => {
   try {
     // req.jwtUser được gán từ middleware authenticateToken
     const userId = req.jwtUser?.userId;
@@ -100,7 +100,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId).lean();
+    const user = await User.findById(userId).lean<IUser>();
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -114,6 +114,9 @@ router.get('/profile', authenticateToken, async (req, res) => {
         id: user._id,
         email: user.email,
         full_name: user.full_name,
+        phone: user.phone,
+        date_of_birth: user.date_of_birth,
+        gender: user.gender,
         role: user.role,
         status: user.status,
         avatar: user.avatar
