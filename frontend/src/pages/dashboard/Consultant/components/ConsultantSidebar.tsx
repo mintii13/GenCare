@@ -13,36 +13,36 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
     {
       title: 'Quản lý Tư vấn',
       items: [
-        { name: 'Lịch tư vấn của tôi', path: '/consultant/schedule', icon: '📅' },
-        { name: 'Khách hàng của tôi', path: '/consultant/clients', icon: '👥' },
-        { name: 'Tư vấn trực tuyến', path: '/consultant/online', icon: '💬' },
-        { name: 'Hồ sơ tư vấn', path: '/consultant/records', icon: '📋' },
-        { name: 'Q&A / Câu hỏi', path: '/consultant/qa', icon: '❓' },
+        { name: 'Lịch tư vấn của tôi', path: '/consultant/schedule', icon: '' },
+        { name: 'Khách hàng của tôi', path: '/consultant/clients', icon: '' },
+        { name: 'Tư vấn trực tuyến', path: '/consultant/online', icon: '' },
+        { name: 'Hồ sơ tư vấn', path: '/consultant/records', icon: '' },
+        { name: 'Q&A / Câu hỏi', path: '/consultant/qa', icon: '' },
       ],
     },
     {
       title: 'Quản lý Lịch làm việc',
       items: [
-        { name: 'Lịch tuần (Calendar View)', path: '/consultant/calendar-view', icon: '📅' },
-        { name: 'Quản lý lịch (Form)', path: '/consultant/weekly-schedule', icon: '🗓️' },
-        { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: '⏰' },
-        { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: '🚫' },
+        { name: 'Lịch tuần (Calendar View)', path: '/consultant/calendar-view', icon: '' },
+        { name: 'Quản lý lịch (Form)', path: '/consultant/weekly-schedule', icon: '' },
+        { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: '' },
+        { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: '' },
       ],
     },
     {
       title: 'Nội dung & Kiến thức',
       items: [
-        { name: 'Quản lý Blog', path: '/consultant/blogs', icon: '📝' },
-        { name: 'Tài liệu chuyên môn', path: '/consultant/documents', icon: '📚' },
-        { name: 'Đào tạo & Cập nhật', path: '/consultant/training', icon: '🎓' },
+        { name: 'Quản lý Blog', path: '/consultant/blogs', icon: '' },
+        { name: 'Tài liệu chuyên môn', path: '/consultant/documents', icon: '' },
+        { name: 'Đào tạo & Cập nhật', path: '/consultant/training', icon: '' },
       ],
     },
     {
       title: 'Báo cáo & Thống kê',
       items: [
-        { name: 'Thống kê tư vấn', path: '/consultant/consultation-stats', icon: '📊' },
-        { name: 'Đánh giá & Phản hồi', path: '/consultant/feedback', icon: '⭐' },
-        { name: 'Báo cáo doanh thu', path: '/consultant/revenue', icon: '💰' },
+        { name: 'Thống kê tư vấn', path: '/consultant/consultation-stats', icon: '' },
+        { name: 'Đánh giá & Phản hồi', path: '/consultant/feedback', icon: '' },
+        { name: 'Báo cáo doanh thu', path: '/consultant/revenue', icon: '' },
       ],
     },
   ];
