@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IStiOrder extends Document {
   customer_id: mongoose.Types.ObjectId;
+  consultant_id?: mongoose.Types.ObjectId;
   staff_id?: mongoose.Types.ObjectId;
   sti_package_item?: {
     sti_package_id: mongoose.Types.ObjectId;
@@ -11,6 +12,7 @@ export interface IStiOrder extends Document {
   sti_test_items?: {
     sti_test_id: mongoose.Types.ObjectId;
   }[];
+  sti_schedule_id: mongoose.Types.ObjectId;
   order_date: Date;
   order_status: 'Pending' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
   total_amount: number;
@@ -23,6 +25,7 @@ export interface IStiOrder extends Document {
 const stiOrderSchema: Schema = new Schema<IStiOrder>(
   {
     customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+    consultant_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: false },
     staff_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: false },
     sti_package_item: {
       sti_package_id: {

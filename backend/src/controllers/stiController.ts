@@ -241,15 +241,15 @@ router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), as
     try {
         const customer_id = (req.jwtUser as JWTPayload).userId;
         const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
-
-        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, order_date, notes);
+        const orderDateHandling = await StiService.normalizeAndHandleOrderSchedule(order_date);
+        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, orderDateHandling.normalizedDate, orderDateHandling.order_schedule._id, notes);
         if (result.success){
             return res.status(201).json(result);
         }
-        else if (result.message === 'Order already exists or failed to insert'){
-            return res.status(400).json(result);
+        else if (result.message === 'No valid STI tests or package provided'){
+            return res.status(409).json(result);
         }
-        return res.status(409).json(result);                    //lỗi nghiệp vụ
+        return res.status(400).json(result);                    //lỗi nghiệp vụ
     } catch (error) {
         console.error(error);
         return res.status(500).json({
@@ -296,11 +296,8 @@ router.get('/getStiOrder/:id', authenticateToken, authorizeRoles('customer', 'st
         });
     }
 });
+
 //update orders                                         (put)
-
-//thêm 1 test mới vào 1 order-detail                    (post)
-
-//get order-details?order_id=                           (get)
 
 
 export default router;
