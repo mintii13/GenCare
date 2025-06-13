@@ -12,7 +12,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  const timeoutRef = useRef<number>();
+  const timeoutRef = useRef<NodeJS.Timeout>();
   const location = useLocation();
 
   const handleMouseEnter = () => {
@@ -78,7 +78,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/period-tracking" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
                   </Link>
-                  <Link to="/dashboard/customer" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                  <Link to="/consultation/book" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Đặt lịch tư vấn
                   </Link>
                   <Link to="/test-packages" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
@@ -106,11 +106,16 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                 Dashboard
               </Link>
             )}
+            {isAuthenticated && user?.role === 'staff' && (
+              <Link to="/staff/overview" className="text-gray-600 hover:text-primary-700">
+                Dashboard
+              </Link>
+            )}
           </div>
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {isAuthenticated ? (
+              {isAuthenticated ? (
               <>
                 <span className="text-gray-700 font-semibold">{user?.full_name || user?.email}</span>
                 <Link to="/user/profile" className="text-gray-600 hover:text-primary-700">Trang cá nhân</Link>
@@ -193,13 +198,6 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Theo dõi kinh nguyệt
-                    </Link>
-                    <Link 
-                      to="/consultation" 
-                      className="block text-gray-600 hover:text-primary-700"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Đặt lịch tư vấn
                     </Link>
                     <Link 
                       to="/test-packages" 

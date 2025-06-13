@@ -20,12 +20,14 @@ interface CommentSectionProps {
   blogId: string;
   comments: Comment[];
   onCommentsUpdate: () => void;
+      onLoginRequired: () => void;
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({
   blogId,
   comments,
-  onCommentsUpdate
+  onCommentsUpdate,
+  onLoginRequired
 }) => {
   const { user } = useAuth();
   const { success, error: showError } = useToast();
@@ -55,7 +57,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   const handleSubmitComment = async (content: string, parentId?: string) => {
-    if (!content.trim() || !canComment) return;
+    if (!content.trim()) return;
+    
+    if (!canComment) {
+      onLoginRequired();
+      return;
+    }
 
     setIsSubmitting(true);
     try {

@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastProvider';
 import QuillEditor from '../../components/common/QuillEditor';
-
+import LoginModal from '../../components/auth/LoginModal';
+    
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ const BlogDetailPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
+  const [showLoginModal, setShowLoginModal] = useState(false);  
   const fetchBlogDetail = useCallback(async () => {
     if (!blogId) return;
 
@@ -342,6 +343,7 @@ const BlogDetailPage: React.FC = () => {
             blogId={blog?.blog_id || ''}
             comments={comments}
             onCommentsUpdate={handleCommentsUpdate}
+            onLoginRequired={() => setShowLoginModal(true)}
           />
         </div>
       </div>

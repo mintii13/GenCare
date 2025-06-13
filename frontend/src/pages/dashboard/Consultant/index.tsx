@@ -15,7 +15,7 @@ const ConsultantDashboard: React.FC = () => {
 
   // Nếu đang ở route gốc /consultant, chuyển hướng đến trang schedule
   if (location.pathname === '/consultant') {
-    return <Navigate to="/consultant/schedule" replace />;
+    return <Navigate to="/consultant/weekly-schedule" replace />;
   }
 
   return (

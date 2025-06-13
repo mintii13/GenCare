@@ -48,7 +48,7 @@ const Register = () => {
 
   // Đếm ngược resend OTP
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (showOTP && resendCountdown > 0) {
       timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
     }
@@ -206,7 +206,7 @@ const Register = () => {
           password: registerPassword
         });
         if (loginRes.data.success) {
-          login(loginRes.data.user);
+          login(loginRes.data.accessToken, loginRes.data.user);
           navigate('/');
         } else {
           setRegisterSuccess(true); // fallback: chỉ báo thành công nếu login lỗi
