@@ -39,7 +39,6 @@ const StiTestForm: React.FC = () => {
       sti_test_name: values.sti_test_name?.trim(),
       sti_test_code: values.sti_test_code?.trim(),
       description: values.description?.trim(),
-      duration: values.duration?.trim(),
       category: values.category?.trim(),
       sti_test_type:
         values.sti_test_type === 'Xét nghiệm máu' ? 'blood' :
@@ -116,14 +115,6 @@ const StiTestForm: React.FC = () => {
         </Form.Item>
 
         <Form.Item
-          name="duration"
-          label="Thời gian"
-          rules={[{ required: true, message: 'Vui lòng nhập thời gian' }]}
-        >
-          <Input />
-        </Form.Item>
-
-        <Form.Item
           name="category"
           label="Loại"
           rules={[{ required: true, message: 'Vui lòng chọn loại' }]}
@@ -141,14 +132,17 @@ const StiTestForm: React.FC = () => {
           rules={[{ required: true, message: 'Vui lòng chọn phương pháp' }]}
         >
           <Select>
-            <Option value="blood">Xét nghiệm máu</Option>
-            <Option value="urine">Xét nghiệm nước tiểu</Option>
-            <Option value="swab">Xét nghiệm phết</Option>
+            <Option value="máu">Máu</Option>
+            <Option value="nước tiểu">Nước tiểu</Option>
+            <Option value="dịch ngoáy">Dịch ngoáy</Option>
+            <Option value="dịch tiết">Dịch tiết</Option>
+            <Option value="dịch ngoáy">Dịch ngoáy</Option>
+            <Option value="dịch tiết">Dịch tiết</Option>
           </Select>
         </Form.Item>
 
         <Form.Item
-          name="isActive"
+          name="is_active"
           label="Trạng thái"
           valuePropName="checked"
         >

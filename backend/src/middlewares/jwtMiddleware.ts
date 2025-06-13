@@ -37,6 +37,8 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
     // Đảm bảo req.jwtUser được gán đúng cách
     req.jwtUser = decoded;
+    // Compatibility: cũng set req.user cho các code cũ
+    (req as any).user = decoded;
     next();
 };
 

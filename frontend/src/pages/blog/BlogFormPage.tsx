@@ -12,12 +12,13 @@ import {
   FileText
 } from 'lucide-react';
 import QuillEditor from '../../components/common/QuillEditor';
-import toast from 'react-hot-toast';
+import { useToast } from '../../components/ui/ToastProvider';
 
 const BlogFormPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { success, error: showError } = useToast();
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -115,52 +116,24 @@ const BlogFormPage: React.FC = () => {
       if (isEdit) {
         response = await blogService.updateBlog(blogId!, title, content);
         if (response.success) {
-          toast.success('Cập nhật bài viết thành công!', {
-            duration: 3000,
-            icon: '✅',
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          });
+          success('Cập nhật bài viết thành công!', 3000);
           navigate(`/blogs/${blogId}`);
         }
       } else {
         response = await blogService.createBlog(title, content);
         if (response.success) {
-          toast.success('Tạo bài viết thành công!', {
-            duration: 3000,
-            icon: '✅',
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          });
+          success('Tạo bài viết thành công!', 3000);
           navigate(`/blogs/${response.data.blog.blog_id}`);
         }
       }
 
       if (!response.success) {
-        toast.error(response.message || 'Có lỗi xảy ra', {
-          duration: 4000,
-          icon: '❌',
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        });
+        showError(response.message || 'Có lỗi xảy ra', 4000);
         setError(response.message || 'Có lỗi xảy ra');
       }
     } catch (error) {
       console.error('Error saving blog:', error);
-      toast.error('Có lỗi xảy ra khi lưu bài viết', {
-        duration: 4000,
-        icon: '❌',
-        style: {
-          background: '#363636',
-          color: '#fff',
-        },
-      });
+      showError('Có lỗi xảy ra khi lưu bài viết', 4000);
       setError('Có lỗi xảy ra khi lưu bài viết');
     } finally {
       setSaving(false);

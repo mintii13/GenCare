@@ -78,12 +78,17 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/period-tracking" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
                   </Link>
-                  <Link to="/consultation" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                  <Link to="/dashboard/customer" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Đặt lịch tư vấn
                   </Link>
                   <Link to="/test-packages" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Dịch vụ xét nghiệm
                   </Link>
+                  {/* {isAuthenticated && user?.role === 'customer' && (
+                    <Link to="/dashboard/customer" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Dashboard khách hàng
+                    </Link>
+                  )} */}
                 </div>
               )}
             </div>
@@ -203,6 +208,15 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     >
                       Dịch vụ xét nghiệm
                     </Link>
+                    {isAuthenticated && user?.role === 'customer' && (
+                      <Link 
+                        to="/dashboard/customer" 
+                        className="block text-gray-600 hover:text-primary-700"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Dashboard khách hàng
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
