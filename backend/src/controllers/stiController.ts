@@ -242,7 +242,7 @@ router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), as
         const customer_id = (req.jwtUser as JWTPayload).userId;
         const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
         const orderDateHandling = await StiService.normalizeAndHandleOrderSchedule(order_date);
-        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, orderDateHandling.normalizedDate, orderDateHandling.order_schedule._id, notes);
+        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, orderDateHandling.order_schedule.order_date, orderDateHandling.order_schedule._id, notes);
         if (result.success){
             return res.status(201).json(result);
         }
@@ -296,8 +296,5 @@ router.get('/getStiOrder/:id', authenticateToken, authorizeRoles('customer', 'st
         });
     }
 });
-
-//update orders                                         (put)
-
 
 export default router;

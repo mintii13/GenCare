@@ -57,6 +57,5 @@ export interface StiPackageTestResponse{
 export interface StiOrderScheduleResponse{
     success: boolean;
     message: string;
-    normalizedDate: Date;
     order_schedule: IStiOrderSchedule
 };

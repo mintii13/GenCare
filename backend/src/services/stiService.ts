@@ -303,7 +303,7 @@ export class StiService{
     }
 
     private static async handleStiTest(sti_test_ids: string[]) {
-        const objectIds = sti_test_ids.map(id => new mongoose.Types.ObjectId(id));
+        const objectIds = sti_test_ids.filter(id => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id));
         const stiTests = await StiTest.find({ _id: { $in: objectIds }, is_active: true });
 
         if (stiTests.length === 0) {
@@ -451,7 +451,6 @@ export class StiService{
     public static async updateOrCreateScheduleOnOrder(order_date: Date){
         try {
             const orderDate = new Date(order_date);
-            orderDate.setHours(0, 0, 0, 0);
             const existingSchedule = await StiOrderScheduleRepository.findOrderDate(orderDate);
 
             if (existingSchedule) {
@@ -480,9 +479,7 @@ export class StiService{
     };
 
     public static async normalizeAndHandleOrderSchedule(order_date: Date){
-        const normalizedDate = new Date(order_date);
-        normalizedDate.setHours(0, 0, 0, 0);
-        const schedule = await StiService.updateOrCreateScheduleOnOrder(normalizedDate);
+        const schedule = await StiService.updateOrCreateScheduleOnOrder(order_date);
         if (schedule.is_holiday) {
             return { 
                 success: false,
@@ -499,7 +496,6 @@ export class StiService{
         return{
             success: true,
             message: 'Handle schedule successfully',
-            normalizedDate,
             order_schedule: schedule
         }
     };

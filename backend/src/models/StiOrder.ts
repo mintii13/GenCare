@@ -1,6 +1,4 @@
-import { NextFunction } from 'express';
 import mongoose, { Schema, Document } from 'mongoose';
-
 export interface IStiOrder extends Document {
   customer_id: mongoose.Types.ObjectId;
   consultant_id?: mongoose.Types.ObjectId;

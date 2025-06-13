@@ -1,0 +1,12 @@
+{
+    "_id": { "$oid": "675e1a2b3c4d5e6f7a8b9201" },
+    "customer_id": { "$oid": "675e1a2b3c4d5e6f7a8b9c11" },
+    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9102" },
+    "sti_test_ids": [
+        { "$oid": "675e1a2b3c4d5e6f7a8b9001" },
+        { "$oid": "675e1a2b3c4d5e6f7a8b9004" },
+        { "$oid": "675e1a2b3c4d5e6f7a8b9008" }
+    ],
+    "order_date": { "$date": "2025-15-06T04:00:00.000Z" },
+    "notes": "Khách yêu cầu thực hiện xét nghiệm vào buổi sáng."
+}
