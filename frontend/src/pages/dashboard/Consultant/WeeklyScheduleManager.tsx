@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../contexts/AuthContext';
+import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
 
 interface WorkingDay {
   start_time: string;
@@ -79,27 +80,17 @@ const WeeklyScheduleManager: React.FC = () => {
   const fetchScheduleForWeek = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken');
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
-      // Get consultant's schedules for this week
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/weekly-schedule/my-schedules?start_date=${weekStartDate}&end_date=${weekStartDate}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      const data = await response.json();
-      console.log('📊 Backend response for my-schedules:', data);
+      // Sử dụng weeklyScheduleService thay vì fetch trực tiếp
+      const response = await weeklyScheduleService.getMySchedules(weekStartDate, weekStartDate);
       
-      if (data.success && data.data && data.data.schedules && data.data.schedules.length > 0) {
+      console.log('📊 Backend response for my-schedules:', response);
+      
+      if (response.success && response.data && response.data.schedules && response.data.schedules.length > 0) {
         // Filter schedules for the exact week we're looking for
         const targetWeekStart = format(currentWeek, 'yyyy-MM-dd');
-        const matchingSchedule = data.data.schedules.find((schedule: Schedule) => {
+        const matchingSchedule = response.data.schedules.find((schedule: Schedule) => {
           const scheduleWeekStart = format(new Date(schedule.week_start_date), 'yyyy-MM-dd');
           return scheduleWeekStart === targetWeekStart;
         });
@@ -175,7 +166,6 @@ const WeeklyScheduleManager: React.FC = () => {
       setSaving(true);
       setMessage(null);
       
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken');
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
       // Ensure weekStartDate is a Monday
@@ -208,40 +198,19 @@ const WeeklyScheduleManager: React.FC = () => {
       let response;
       if (existingSchedule) {
         // Update existing schedule
-        response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/weekly-schedule/${existingSchedule._id}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestData)
-        });
+        response = await weeklyScheduleService.updateSchedule(existingSchedule._id, requestData);
       } else {
         // Create new schedule
-        response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/weekly-schedule`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestData)
-        });
+        response = await weeklyScheduleService.createSchedule(requestData);
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`HTTP ${response.status}: ${errorText}`);
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('📨 Save response:', data);
+      console.log('📨 Save response:', response);
       
-      if (data.success) {
+      if (response.success) {
         setMessage({ type: 'success', text: existingSchedule ? 'Cập nhật lịch thành công!' : 'Tạo lịch thành công!' });
         fetchScheduleForWeek(); // Refresh data
       } else {
-        setMessage({ type: 'error', text: data.message || 'Có lỗi xảy ra khi lưu lịch' });
+        setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi lưu lịch' });
       }
     } catch (err) {
       console.error('Error saving schedule:', err);
@@ -256,27 +225,15 @@ const WeeklyScheduleManager: React.FC = () => {
     
     try {
       setSaving(true);
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken');
       const targetWeekStart = format(addWeeks(currentWeek, 1), 'yyyy-MM-dd');
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/weekly-schedule/copy/${existingSchedule._id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          target_week_start_date: targetWeekStart
-        })
-      });
-
-      const data = await response.json();
+      const response = await weeklyScheduleService.copySchedule(existingSchedule._id, targetWeekStart);
       
-      if (data.success) {
+      if (response.success) {
         setMessage({ type: 'success', text: 'Sao chép lịch thành công!' });
         setCurrentWeek(addWeeks(currentWeek, 1)); // Move to next week
       } else {
-        setMessage({ type: 'error', text: data.message || 'Có lỗi xảy ra khi sao chép lịch' });
+        setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi sao chép lịch' });
       }
     } catch (err) {
       console.error('Error copying schedule:', err);

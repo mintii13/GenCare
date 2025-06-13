@@ -66,7 +66,7 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
+        onSuccess={handleLoginSuccess}
       />
     </>
   );

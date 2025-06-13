@@ -15,55 +15,78 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const u = localStorage.getItem('user');
-    return u ? JSON.parse(u) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Sync user state with localStorage changes (multi-tab)
-    const syncUser = () => {
-      const u = localStorage.getItem('user');
-      setUser(u ? JSON.parse(u) : null);
-    };
-    window.addEventListener('storage', syncUser);
-    return () => window.removeEventListener('storage', syncUser);
-  }, []);
-
-  // Kiểm tra token và lấy user info khi app load
-  useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) {
-      axios.get(`${import.meta.env.VITE_API_URL}/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => {
-        if (res.data.success) {
-          setUser(res.data.user);
-          localStorage.setItem('user', JSON.stringify(res.data.user));
+    const validateToken = async () => {
+      console.log("AuthContext: Starting token validation...");
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      
+      if (token) {
+        console.log("AuthContext: Token found in localStorage.", token);
+        try {
+          const apiUrl = `${import.meta.env.VITE_API_URL}/auth/getUserProfile`;
+          console.log(`AuthContext: Sending request to ${apiUrl}`);
+          const res = await axios.get(apiUrl, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          console.log("AuthContext: API response received:", res.data);
+          if (res.data.success) {
+            const userData = res.data.user;
+            console.log("AuthContext: Profile fetch successful. Setting user:", userData);
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+          } else {
+            throw new Error('API returned success: false');
+          }
+        } catch (error) {
+          console.error("AuthContext: Token validation API call failed.", error);
+          setUser(null);
+          localStorage.removeItem('user');
+          localStorage.removeItem(AUTH_TOKEN_KEY);
         }
-      })
-      .catch(() => {
-        // Token không hợp lệ, xóa token và user
-        setUser(null);
-        localStorage.removeItem('user');
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-      });
-    }
+      } else {
+        console.log("AuthContext: No token found in localStorage.");
+      }
+      
+      console.log("AuthContext: Finished token validation. Setting isLoading to false.");
+      setIsLoading(false);
+    };
+    
+    validateToken();
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === AUTH_TOKEN_KEY || event.key === 'user') {
+        validateToken();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
+
 
   const login = (userData: User, token: string) => {
+    console.log("AuthContext: login function called. Storing user and token.");
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem(AUTH_TOKEN_KEY, token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   };
 
   const logout = async () => {
+    console.log("AuthContext: logout function called.");
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
@@ -77,12 +100,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       localStorage.removeItem('user');
       localStorage.removeItem(AUTH_TOKEN_KEY);
-      window.location.href = '/';
+      delete axios.defaults.headers.common['Authorization'];
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !isLoading && !!user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -92,4 +115,4 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
-}; 
+};

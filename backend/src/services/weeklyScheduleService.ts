@@ -91,10 +91,11 @@ export class WeeklyScheduleService {
             if (updateData.week_start_date) {
                 finalUpdateData.week_end_date = WeeklyScheduleRepository.getWeekEndDate(updateData.week_start_date);
 
-                // Kiểm tra conflict với tuần mới
+                // Kiểm tra conflict với tuần mới, bỏ qua chính schedule này
                 const hasConflict = await WeeklyScheduleRepository.existsByConsultantAndWeek(
                     existingSchedule.consultant_id.toString(),
-                    updateData.week_start_date
+                    updateData.week_start_date,
+                    scheduleId
                 );
 
                 if (hasConflict) {
@@ -510,84 +511,56 @@ export class WeeklyScheduleService {
     }
 
     /**
- * Copy schedule từ tuần này sang tuần khác
- */
+     * Sao chép weekly schedule từ một tuần có sẵn sang một tuần mới
+     */
     public static async copySchedule(
         sourceScheduleId: string,
         targetWeekStartDate: Date,
         createdBy: { user_id: string, role: string, name: string }
     ): Promise<ScheduleResponse> {
         try {
-            // Validate sourceScheduleId
-            if (!mongoose.Types.ObjectId.isValid(sourceScheduleId)) {
-                return {
-                    success: false,
-                    message: 'Invalid source schedule ID format'
-                };
-            }
-
-            // Find source schedule
+            // 1. Tìm lịch gốc
             const sourceSchedule = await WeeklyScheduleRepository.findById(sourceScheduleId);
             if (!sourceSchedule) {
-                return {
-                    success: false,
-                    message: 'Source schedule not found'
-                };
+                return { success: false, message: 'Source schedule not found' };
             }
 
-            // Validate target week start date (must be Monday)
-            const targetDate = new Date(targetWeekStartDate);
-            const dayOfWeek = targetDate.getUTCDay();
-
-            if (dayOfWeek !== 1) {
-                return {
-                    success: false,
-                    message: 'Target week start date must be a Monday'
-                };
-            }
-
-            // Check if target week already has schedule
+            // 2. Kiểm tra xem tuần mới đã có lịch chưa
+            const consultantId = sourceSchedule.consultant_id.toString();
             const existingSchedule = await WeeklyScheduleRepository.existsByConsultantAndWeek(
-                sourceSchedule.consultant_id.toString(),
-                targetDate
+                consultantId,
+                targetWeekStartDate
             );
 
             if (existingSchedule) {
-                return {
-                    success: false,
-                    message: 'Schedule already exists for target week'
-                };
+                return { success: false, message: 'A schedule already exists for the target week. Please edit it instead.' };
             }
-
-            // Calculate target week end date
-            const targetWeekEndDate = WeeklyScheduleRepository.getWeekEndDate(targetDate);
-
-            // Create new schedule
-            const newSchedule = await WeeklyScheduleRepository.create({
-                consultant_id: sourceSchedule.consultant_id,
-                week_start_date: targetDate,
-                week_end_date: targetWeekEndDate,
-                working_days: sourceSchedule.working_days,
+            
+            // 3. Chuẩn bị dữ liệu cho lịch mới
+            const newScheduleData = {
+                consultant_id: consultantId,
+                week_start_date: targetWeekStartDate,
+                week_end_date: WeeklyScheduleRepository.getWeekEndDate(targetWeekStartDate),
+                working_days: sourceSchedule.working_days, // Sao chép toàn bộ cấu trúc working_days
                 default_slot_duration: sourceSchedule.default_slot_duration,
-                notes: `Copied from week ${sourceSchedule.week_start_date.toISOString().split('T')[0]}`,
-                created_by: {
-                    user_id: new mongoose.Types.ObjectId(createdBy.user_id),
-                    role: createdBy.role,
-                    name: createdBy.name
-                },
+                notes: sourceSchedule.notes,
+                status: 'active', // Đặt lại trạng thái là active
+                created_by: createdBy,
                 created_date: new Date(),
-                updated_date: new Date()
-            });
+                updated_date: new Date(),
+            };
+
+            // 4. Tạo lịch mới
+            const newSchedule = await WeeklyScheduleRepository.create(newScheduleData as any);
 
             return {
                 success: true,
                 message: 'Schedule copied successfully',
-                data: {
-                    schedule: newSchedule
-                },
-                timestamp: new Date().toISOString()
+                data: { schedule: newSchedule },
+                timestamp: new Date().toISOString(),
             };
-        } catch (error: any) {
+
+        } catch (error) {
             console.error('Copy schedule service error:', error);
             return {
                 success: false,

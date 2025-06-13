@@ -6,10 +6,10 @@ import { useAuth } from '../../contexts/AuthContext';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess?: (user?: any) => void;
+  onSuccess?: (user: any) => void;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
@@ -34,7 +34,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
       );
       if (res.data.success) {
         login(res.data.user, res.data.accessToken);
-        if (onLoginSuccess) onLoginSuccess(res.data.user);
+        if (onSuccess) onSuccess(res.data.user);
         onClose();
       } else {
         setError(res.data.message || 'Đăng nhập thất bại');

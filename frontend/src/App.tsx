@@ -23,6 +23,9 @@ import ConsultantList from './pages/dashboard/Customer/ConsultantList';
 import BookAppointment from './pages/consultation/BookAppointment';
 import ApiTest from './components/common/ApiTest';
 
+// Lazy load Staff Dashboard
+const StaffDashboard = lazy(() => import('./pages/dashboard/Staff'));
+const WeeklyScheduleManagement = lazy(() => import('./pages/dashboard/Staff/WeeklyScheduleManagement'));
 
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
@@ -32,7 +35,7 @@ const App = () => {
   return (
     <ToastProvider defaultPosition="top-center">
       <Layout onLoginClick={() => setShowLogin(true)}>
-      <Suspense fallback={<div>Đang tải...</div>}>
+      <Suspense fallback={<div className="flex justify-center items-center h-screen"><div>Đang tải trang...</div></div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/api-test" element={<ApiTest />} />
@@ -77,6 +80,17 @@ const App = () => {
 
           {/* Consultation routes */}
           <Route path="/consultation/book" element={<BookAppointment />} />
+          
+          {/* Staff Dashboard routes */}
+          <Route path="/staff/*" element={<StaffDashboard />}>
+            <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
+            <Route path="appointments" element={<div>Quản lý cuộc hẹn</div>} />
+            <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
+            <Route path="users" element={<div>Quản lý người dùng</div>} />
+            <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
+            <Route path="blogs" element={<div>Quản lý bài viết</div>} />
+            <Route path="settings" element={<div>Cài đặt</div>} />
+          </Route>
         </Routes>
       </Suspense>
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />

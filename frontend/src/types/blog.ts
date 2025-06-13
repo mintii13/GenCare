@@ -44,7 +44,7 @@ export interface Comment {
   parent_comment_id: string | null;
   status: boolean;
   is_anonymous: boolean;
-  user: User | null;
+  user: Customer | null;
 }
 
 export interface BlogsResponse {
