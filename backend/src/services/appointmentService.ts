@@ -19,8 +19,8 @@ interface AppointmentResponse {
 
 export class AppointmentService {
     /**
-     * Book appointment với business rules mới
-     */
+ * Book appointment với business rules mới
+ */
     public static async bookAppointment(appointmentData: {
         customer_id: string;
         consultant_id: string;
@@ -30,6 +30,9 @@ export class AppointmentService {
         customer_notes?: string;
     }): Promise<AppointmentResponse> {
         try {
+            console.log('=== BOOKING APPOINTMENT DEBUG ===');
+            console.log('Input data:', appointmentData);
+
             // BUSINESS RULE 1: Check if customer already has pending appointment
             const existingPending = await AppointmentRepository.findByCustomerId(
                 appointmentData.customer_id,
@@ -43,15 +46,26 @@ export class AppointmentService {
                 };
             }
 
-            // BUSINESS RULE 2: Validate 2-hour lead time (đã validate ở validation layer, double-check ở đây)
+            // BUSINESS RULE 2: Validate 2-hour lead time (double-check từ validation)
             const now = new Date();
-            const appointmentDateTime = new Date(`${appointmentData.appointment_date.toISOString().split('T')[0]} ${appointmentData.start_time}:00`);
-            const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+            // Parse start_time để tạo datetime chính xác
+            const [hours, minutes] = appointmentData.start_time.split(':').map(Number);
+            const appointmentDateTime = new Date(appointmentData.appointment_date);
+            appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+            const diffMs = appointmentDateTime.getTime() - now.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+
+            console.log('Time validation:');
+            console.log('Current time:', now.toISOString());
+            console.log('Appointment datetime:', appointmentDateTime.toISOString());
+            console.log('Difference in hours:', diffHours);
 
             if (diffHours < 2) {
                 return {
                     success: false,
-                    message: 'Appointment must be booked at least 2 hours in advance'
+                    message: `Appointment must be booked at least 2 hours in advance. Current difference: ${diffHours.toFixed(2)} hours`
                 };
             }
 
@@ -144,6 +158,8 @@ export class AppointmentService {
             // Populate thông tin để trả về
             const populatedAppointment = await AppointmentRepository.findById(newAppointment._id.toString());
 
+            console.log('=== APPOINTMENT CREATED SUCCESSFULLY ===');
+
             return {
                 success: true,
                 message: 'Appointment booked successfully',
@@ -160,7 +176,6 @@ export class AppointmentService {
             };
         }
     }
-
     /**
      * Cancel appointment với business rule 4-hour lead time
      */

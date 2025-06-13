@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 
+// Simplified validation - chỉ validate format, logic business rules sẽ handle ở service layer
 const bookAppointmentSchema = Joi.object({
     consultant_id: Joi.string()
         .pattern(/^[0-9a-fA-F]{24}$/)
@@ -10,11 +11,9 @@ const bookAppointmentSchema = Joi.object({
             'any.required': 'Consultant ID is required'
         }),
     appointment_date: Joi.date()
-        .min('now')
         .required()
         .messages({
             'date.base': 'Appointment date must be a valid date',
-            'date.min': 'Appointment date cannot be in the past',
             'any.required': 'Appointment date is required'
         }),
     start_time: Joi.string()
@@ -37,56 +36,13 @@ const bookAppointmentSchema = Joi.object({
         .messages({
             'string.max': 'Customer notes cannot exceed 500 characters'
         })
-}).custom((value, helpers) => {
-    // Validate that start_time is before end_time
-    const startTime = value.start_time.split(':').map(Number);
-    const endTime = value.end_time.split(':').map(Number);
-
-    const startMinutes = startTime[0] * 60 + startTime[1];
-    const endMinutes = endTime[0] * 60 + endTime[1];
-
-    if (startMinutes >= endMinutes) {
-        return helpers.error('any.invalid', {
-            message: 'Start time must be before end time'
-        });
-    }
-
-    // Validate minimum duration (15 minutes)
-    const duration = endMinutes - startMinutes;
-    if (duration < 15) {
-        return helpers.error('any.invalid', {
-            message: 'Appointment duration must be at least 15 minutes'
-        });
-    }
-
-    // Validate maximum duration (4 hours = 240 minutes)
-    if (duration > 240) {
-        return helpers.error('any.invalid', {
-            message: 'Appointment duration cannot exceed 4 hours'
-        });
-    }
-
-    // BUSINESS RULE: Phải đặt trước ít nhất 2 tiếng
-    const now = new Date();
-    const appointmentDateTime = new Date(`${value.appointment_date.toISOString().split('T')[0]} ${value.start_time}:00`);
-    const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    if (diffHours < 2) {
-        return helpers.error('any.invalid', {
-            message: 'Appointment must be booked at least 2 hours in advance'
-        });
-    }
-
-    return value;
 });
 
 const updateAppointmentSchema = Joi.object({
     appointment_date: Joi.date()
-        .min('now')
         .optional()
         .messages({
-            'date.base': 'Appointment date must be a valid date',
-            'date.min': 'Appointment date cannot be in the past'
+            'date.base': 'Appointment date must be a valid date'
         }),
     start_time: Joi.string()
         .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
@@ -120,61 +76,6 @@ const updateAppointmentSchema = Joi.object({
         .messages({
             'string.max': 'Consultant notes cannot exceed 500 characters'
         })
-}).custom((value, helpers) => {
-    // If both start_time and end_time are provided, validate them
-    if (value.start_time && value.end_time) {
-        const startTime = value.start_time.split(':').map(Number);
-        const endTime = value.end_time.split(':').map(Number);
-
-        const startMinutes = startTime[0] * 60 + startTime[1];
-        const endMinutes = endTime[0] * 60 + endTime[1];
-
-        if (startMinutes >= endMinutes) {
-            return helpers.error('any.invalid', {
-                message: 'Start time must be before end time'
-            });
-        }
-
-        // Validate minimum duration (15 minutes)
-        const duration = endMinutes - startMinutes;
-        if (duration < 15) {
-            return helpers.error('any.invalid', {
-                message: 'Appointment duration must be at least 15 minutes'
-            });
-        }
-
-        // Validate maximum duration (4 hours = 240 minutes)
-        if (duration > 240) {
-            return helpers.error('any.invalid', {
-                message: 'Appointment duration cannot exceed 4 hours'
-            });
-        }
-
-        // BUSINESS RULE: Nếu update thời gian, vẫn phải đặt trước ít nhất 2 tiếng
-        if (value.appointment_date || value.start_time) {
-            const now = new Date();
-            // Nếu có appointment_date mới thì dùng, không thì cần check trong service
-            if (value.appointment_date) {
-                const appointmentDateTime = new Date(`${value.appointment_date.toISOString().split('T')[0]} ${value.start_time}`);
-                const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-                if (diffHours < 2) {
-                    return helpers.error('any.invalid', {
-                        message: 'Updated appointment time must be at least 2 hours from now'
-                    });
-                }
-            }
-        }
-    }
-
-    // If only one time is provided, require both
-    if ((value.start_time && !value.end_time) || (!value.start_time && value.end_time)) {
-        return helpers.error('any.invalid', {
-            message: 'Both start_time and end_time are required when updating appointment time'
-        });
-    }
-
-    return value;
 });
 
 export const validateBookAppointment = (req: Request, res: Response, next: NextFunction): void => {
@@ -188,6 +89,45 @@ export const validateBookAppointment = (req: Request, res: Response, next: NextF
         });
         return;
     }
+
+    // Basic business rule validation here
+    const { start_time, end_time } = req.body;
+
+    // Check start_time < end_time
+    const startTime = start_time.split(':').map(Number);
+    const endTime = end_time.split(':').map(Number);
+    const startMinutes = startTime[0] * 60 + startTime[1];
+    const endMinutes = endTime[0] * 60 + endTime[1];
+
+    if (startMinutes >= endMinutes) {
+        res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            details: 'Start time must be before end time'
+        });
+        return;
+    }
+
+    // Check duration
+    const duration = endMinutes - startMinutes;
+    if (duration < 15) {
+        res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            details: 'Appointment duration must be at least 15 minutes'
+        });
+        return;
+    }
+
+    if (duration > 240) {
+        res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            details: 'Appointment duration cannot exceed 4 hours'
+        });
+        return;
+    }
+
     next();
 };
 
@@ -202,5 +142,34 @@ export const validateUpdateAppointment = (req: Request, res: Response, next: Nex
         });
         return;
     }
+
+    // Basic validation for time if provided
+    const { start_time, end_time } = req.body;
+
+    if (start_time && end_time) {
+        const startTime = start_time.split(':').map(Number);
+        const endTime = end_time.split(':').map(Number);
+        const startMinutes = startTime[0] * 60 + startTime[1];
+        const endMinutes = endTime[0] * 60 + endTime[1];
+
+        if (startMinutes >= endMinutes) {
+            res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                details: 'Start time must be before end time'
+            });
+            return;
+        }
+    }
+
+    if ((start_time && !end_time) || (!start_time && end_time)) {
+        res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            details: 'Both start_time and end_time are required when updating appointment time'
+        });
+        return;
+    }
+
     next();
 };
