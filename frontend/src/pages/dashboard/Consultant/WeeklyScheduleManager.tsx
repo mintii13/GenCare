@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns';
+import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
+import { appointmentService } from '../../../services/appointmentService';
 
 interface WorkingDay {
   start_time: string;
@@ -52,6 +53,30 @@ interface Schedule {
   updated_date: string;
 }
 
+interface Appointment {
+  _id: string;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  customer_id: {
+    _id: string;
+    full_name: string;
+    email: string;
+    phone?: string;
+  };
+  consultant_id: {
+    _id: string;
+    specialization: string;
+    user_id: {
+      full_name: string;
+    };
+  };
+  customer_notes?: string;
+  consultant_notes?: string;
+  created_date: string;
+}
+
 const WeeklyScheduleManager: React.FC = () => {
   const { user } = useAuth();
   const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -61,9 +86,13 @@ const WeeklyScheduleManager: React.FC = () => {
     notes: ''
   });
   const [existingSchedule, setExistingSchedule] = useState<Schedule | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [hoveredAppointment, setHoveredAppointment] = useState<Appointment | null>(null);
+  const [modalPosition, setModalPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
   
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const dayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
@@ -74,12 +103,34 @@ const WeeklyScheduleManager: React.FC = () => {
 
   useEffect(() => {
     console.log('🔍 Fetching schedule for week:', format(currentWeek, 'yyyy-MM-dd (EEEE)', { locale: vi }));
-    fetchScheduleForWeek();
+    fetchWeekData();
   }, [currentWeek]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+    };
+  }, [hideTimeout]);
+
+  const fetchWeekData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchScheduleForWeek(),
+        fetchAppointmentsForWeek()
+      ]);
+    } catch (error) {
+      console.error('Error fetching week data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchScheduleForWeek = async () => {
     try {
-      setLoading(true);
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
       // Sử dụng weeklyScheduleService thay vì fetch trực tiếp
@@ -125,8 +176,37 @@ const WeeklyScheduleManager: React.FC = () => {
     } catch (err) {
       console.error('Error fetching schedule:', err);
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi tải lịch làm việc' });
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchAppointmentsForWeek = async () => {
+    try {
+      const weekStart = format(currentWeek, 'yyyy-MM-dd');
+      const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
+      
+      console.log('📅 Fetching appointments for week:', weekStart, 'to', weekEnd);
+      
+      const data = await appointmentService.getConsultantAppointments(undefined, weekStart, weekEnd);
+      console.log('📊 Appointments Response data:', data);
+      
+      if (data.success && data.data) {
+        console.log('✅ Found appointments:', data.data.appointments?.length || 0);
+        
+        // Debug: log each appointment to check structure
+        data.data.appointments?.forEach((appointment: Appointment, index: number) => {
+          console.log(`📄 Appointment ${index + 1}:`, appointment);
+          console.log(`👤 Customer ID:`, appointment.customer_id);
+          console.log(`📛 Customer Name:`, appointment.customer_id?.full_name);
+        });
+        
+        setAppointments(data.data.appointments || []);
+      } else {
+        console.log('ℹ️ No appointments found for this week');
+        setAppointments([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching appointments:', error);
+      setAppointments([]);
     }
   };
 
@@ -251,6 +331,90 @@ const WeeklyScheduleManager: React.FC = () => {
     setCurrentWeek(prev => addWeeks(prev, 1));
   };
 
+  const handleAppointmentAction = async (appointmentId: string, action: 'confirm' | 'cancel') => {
+    try {
+      console.log(`${action} appointment:`, appointmentId);
+      
+      let response;
+      if (action === 'confirm') {
+        // Use appointmentService to confirm appointment
+        response = await fetch(`/api/appointments/${appointmentId}/confirm`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+      } else {
+        // Use appointmentService to cancel appointment
+        response = await fetch(`/api/appointments/${appointmentId}/cancel`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+      }
+
+      if (response.ok) {
+        setMessage({ 
+          type: 'success', 
+          text: action === 'confirm' ? 'Đã chấp nhận cuộc hẹn' : 'Đã từ chối cuộc hẹn' 
+        });
+        
+        // Refresh appointments
+        fetchAppointmentsForWeek();
+        setHoveredAppointment(null);
+      } else {
+        setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
+      }
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
+    }
+  };
+
+  const handleMouseEnter = (appointment: Appointment, event: React.MouseEvent) => {
+    // Clear any existing timeout
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    setModalPosition({
+      x: rect.right + 10,
+      y: rect.top
+    });
+    setHoveredAppointment(appointment);
+  };
+
+  const handleMouseLeave = () => {
+    // Set a delay before hiding the modal
+    const timeout = setTimeout(() => {
+      setHoveredAppointment(null);
+    }, 300); // 300ms delay
+    
+    setHideTimeout(timeout);
+  };
+
+  const handleModalMouseEnter = () => {
+    // Clear the hide timeout when hovering over the modal
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+  };
+
+  const handleModalMouseLeave = () => {
+    // Hide the modal immediately when leaving the modal area
+    setHoveredAppointment(null);
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -355,71 +519,214 @@ const WeeklyScheduleManager: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Calendar Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {dayNames.map((dayName, index) => {
-                    const dayData = scheduleData.working_days[dayName as keyof typeof scheduleData.working_days];
-                    const isWorking = dayData?.is_available || false;
-                    const dayDate = addDays(currentWeek, index);
-                    
-                    return (
-                      <div key={dayName} className={`border-2 rounded-lg p-4 ${
-                        isWorking 
-                          ? 'border-green-200 bg-green-50' 
-                          : 'border-gray-200 bg-gray-50'
-                      }`}>
-                        <div className="text-center mb-3">
-                          <h3 className="font-semibold text-gray-800">{dayLabels[index]}</h3>
-                          <p className="text-sm text-gray-600">
-                            {format(dayDate, 'dd/MM')}
-                          </p>
-                        </div>
-
-                        {isWorking && dayData ? (
-                          <div className="space-y-2">
-                            {/* Working Hours */}
-                            <div className="bg-white rounded p-2 text-center">
-                              <div className="flex items-center justify-center space-x-1 text-green-700">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                {/* Weekly Calendar View */}
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Calendar Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        {/* Week Navigation Header */}
+                        <tr className="bg-gray-50 border-b">
+                          <th className="w-20 p-4 text-right text-sm font-medium text-gray-500 border-r">
+                            <div className="flex items-center justify-center">
+                              <button
+                                onClick={handlePreviousWeek}
+                                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+                                disabled={loading}
+                                title="Tuần trước"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                 </svg>
-                                <span className="font-medium text-sm">
-                                  {dayData.start_time} - {dayData.end_time}
-                                </span>
+                              </button>
+                            </div>
+                          </th>
+                          
+                          <th colSpan={7} className="p-4 text-center">
+                            <div className="flex items-center justify-center space-x-4">
+                              <button
+                                onClick={() => setCurrentWeek(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                disabled={loading}
+                              >
+                                Hôm nay
+                              </button>
+                              
+                              <div className="text-center">
+                                <h3 className="font-semibold text-lg text-gray-800">
+                                  {format(currentWeek, 'dd/MM')} - {format(addDays(currentWeek, 6), 'dd/MM/yyyy')}
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  {existingSchedule ? 'Có lịch làm việc' : 'Chưa có lịch làm việc'}
+                                </p>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2 text-sm">
+                                <span className="text-gray-600">View:</span>
+                                <span className="font-medium text-blue-600">Tuần</span>
+                                <span className="text-gray-400">Tháng</span>
                               </div>
                             </div>
+                          </th>
 
-                            {/* Break Time */}
-                            {dayData.break_start && dayData.break_end && (
-                              <div className="bg-yellow-50 rounded p-2 text-center">
-                                <div className="flex items-center justify-center space-x-1 text-yellow-700">
-                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/>
-                                  </svg>
-                                  <span className="text-xs">
-                                    Nghỉ: {dayData.break_start} - {dayData.break_end}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Available Status */}
-                            <div className="text-center">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                ✓ Có thể làm việc
-                              </span>
+                          <th className="w-20 p-4 text-left text-sm font-medium text-gray-500">
+                            <div className="flex items-center justify-center">
+                              <button
+                                onClick={handleNextWeek}
+                                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+                                disabled={loading}
+                                title="Tuần sau"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="text-center">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                              ✗ Không làm việc
-                            </span>
-                          </div>
-                        )}
+                          </th>
+                        </tr>
+
+                        {/* Days Header */}
+                        <tr className="bg-gray-50">
+                          <th className="w-20 p-4 text-right text-sm font-medium text-gray-500 border-r">
+                            Thời gian
+                          </th>
+                          {dayNames.map((dayName, index) => {
+                            const dayDate = addDays(currentWeek, index);
+                            return (
+                              <th key={dayName} className="p-3 text-center border-r last:border-r-0">
+                                <div className="font-semibold text-gray-800">{dayLabels[index]}</div>
+                                <div className="text-sm text-gray-600">{format(dayDate, 'dd')}</div>
+                                <div className="text-xs text-gray-500">tháng {format(dayDate, 'MM')}</div>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Generate time slots from 7 AM to 7 PM (12 hours) */}
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const hour = 7 + i;
+                          const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
+                          
+                          return (
+                            <tr key={timeLabel} className="border-t">
+                              {/* Time column */}
+                              <td className="w-20 p-4 text-right text-sm font-medium text-gray-500 border-r bg-gray-50">
+                                {timeLabel}
+                              </td>
+                              
+                              {/* Day columns */}
+                              {dayNames.map((dayName, dayIndex) => {
+                                const dayData = scheduleData.working_days[dayName as keyof typeof scheduleData.working_days];
+                                const isWorking = dayData?.is_available || false;
+                                const dayDate = addDays(currentWeek, dayIndex);
+                                
+                                // Get appointments for this specific day and hour
+                                const dayAppointments = appointments.filter(appointment => {
+                                  const appointmentDate = parseISO(appointment.appointment_date);
+                                  const appointmentHour = parseInt(appointment.start_time.split(':')[0]);
+                                  return isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
+                                });
+                                
+                                let cellContent = null;
+                                let cellClass = "p-1 h-16 border-r last:border-r-0 relative";
+                                
+                                // Sunday is always gray with "Không làm việc"
+                                if (dayName === 'sunday') {
+                                  cellClass += " bg-gray-100";
+                                  cellContent = (
+                                    <span className="text-xs text-gray-500 font-medium">Không làm việc</span>
+                                  );
+                                } else if (dayAppointments.length > 0) {
+                                  // Show appointment
+                                  const appointment = dayAppointments[0];
+                                  cellClass += " bg-blue-50";
+                                  cellContent = (
+                                    <div 
+                                      className="absolute inset-1 bg-blue-500 rounded-lg flex flex-col justify-center items-center text-white p-1 cursor-pointer hover:bg-blue-600 transition-colors"
+                                      onMouseEnter={(e) => handleMouseEnter(appointment, e)}
+                                      onMouseLeave={handleMouseLeave}
+                                    >
+                                      <span className="text-xs font-semibold">
+                                        {appointment.customer_id?.full_name || 'Khách hàng'}
+                                      </span>
+                                      <span className="text-xs">
+                                        {appointment.start_time} - {appointment.end_time}
+                                      </span>
+                                    </div>
+                                  );
+                                } else if (isWorking && dayData) {
+                                  const startHour = parseInt(dayData.start_time.split(':')[0]);
+                                  const endHour = parseInt(dayData.end_time.split(':')[0]);
+                                  const breakStartHour = dayData.break_start ? parseInt(dayData.break_start.split(':')[0]) : null;
+                                  const breakEndHour = dayData.break_end ? parseInt(dayData.break_end.split(':')[0]) : null;
+                                  
+                                  // Check if current hour is within working hours
+                                  if (hour >= startHour && hour < endHour) {
+                                    // Check if it's break time
+                                    if (breakStartHour && breakEndHour && hour >= breakStartHour && hour < breakEndHour) {
+                                      cellClass += " bg-yellow-100";
+                                      cellContent = (
+                                        <div className="flex items-center justify-center h-full">
+                                          <span className="text-xs text-yellow-800 font-medium">• Nghỉ trưa</span>
+                                        </div>
+                                      );
+                                    } else {
+                                      cellClass += " bg-green-50";
+                                      cellContent = (
+                                        <span className="text-xs text-green-600 font-medium">Trống</span>
+                                      );
+                                    }
+                                  } else {
+                                    cellClass += " bg-gray-50";
+                                    cellContent = (
+                                      <span className="text-xs text-gray-400">Không làm việc</span>
+                                    );
+                                  }
+                                } else {
+                                  cellClass += " bg-gray-50";
+                                  cellContent = (
+                                    <span className="text-xs text-gray-400">Không làm việc</span>
+                                  );
+                                }
+                                
+                                return (
+                                  <td key={`${dayName}-${timeLabel}`} className={cellClass}>
+                                    <div className="flex items-center justify-center h-full text-center">
+                                      {cellContent}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="p-4 bg-gray-50 border-t">
+                    <div className="flex items-center justify-start space-x-6 text-sm">
+                      <span className="font-medium text-gray-700">Chú thích:</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
+                        <span className="text-gray-700">Có thể đặt lịch</span>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                        <span className="text-gray-700">Có cuộc hẹn</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-yellow-100 border border-yellow-200 rounded"></div>
+                        <span className="text-gray-700">Giờ nghỉ</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+                        <span className="text-gray-700">Không làm việc</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Schedule Info */}
@@ -448,6 +755,123 @@ const WeeklyScheduleManager: React.FC = () => {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có lịch làm việc</h3>
                 <p className="text-gray-600">Tuần này chưa có lịch làm việc được thiết lập.</p>
                 <p className="text-sm text-gray-500 mt-2">Liên hệ với staff để được thiết lập lịch làm việc.</p>
+              </div>
+            )}
+
+            {/* Appointment Info Modal */}
+            {hoveredAppointment && (
+              <div
+                className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm"
+                style={{
+                  left: modalPosition.x,
+                  top: modalPosition.y,
+                  transform: modalPosition.x > window.innerWidth - 300 ? 'translateX(-100%)' : 'none'
+                }}
+                onMouseEnter={handleModalMouseEnter}
+                onMouseLeave={handleModalMouseLeave}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                  <h3 className="font-semibold text-gray-800">Thông tin cuộc hẹn</h3>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    hoveredAppointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                    hoveredAppointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    hoveredAppointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {hoveredAppointment.status === 'confirmed' ? 'Đã xác nhận' :
+                     hoveredAppointment.status === 'pending' ? 'Chờ xác nhận' :
+                     hoveredAppointment.status === 'cancelled' ? 'Đã hủy' :
+                     'Hoàn thành'}
+                  </span>
+                </div>
+
+                {/* Customer Info */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="font-medium text-gray-700">
+                      {hoveredAppointment.customer_id?.full_name || 'Không có tên'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                    </svg>
+                    <span className="text-sm text-gray-600">
+                      {hoveredAppointment.customer_id?.email || 'Không có email'}
+                    </span>
+                  </div>
+                  
+                  {hoveredAppointment.customer_id?.phone && (
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                      </svg>
+                      <span className="text-sm text-gray-600">
+                        {hoveredAppointment.customer_id.phone}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Appointment Details */}
+                <div className="space-y-2 mb-4 pt-2 border-t">
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-sm">
+                      <strong>Ngày:</strong> {format(parseISO(hoveredAppointment.appointment_date), 'dd/MM/yyyy')}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-sm">
+                      <strong>Thời gian:</strong> {hoveredAppointment.start_time} - {hoveredAppointment.end_time}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Customer Notes */}
+                {hoveredAppointment.customer_notes && (
+                  <div className="mb-4 pt-2 border-t">
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-4 h-4 text-gray-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd"/>
+                      </svg>
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Ghi chú từ khách hàng:</span>
+                        <p className="text-sm text-gray-600 mt-1">{hoveredAppointment.customer_notes}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                {hoveredAppointment.status === 'pending' && (
+                  <div className="flex space-x-2 pt-3 border-t">
+                    <button
+                      onClick={() => handleAppointmentAction(hoveredAppointment._id, 'confirm')}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+                    >
+                      ✓ Chấp nhận
+                    </button>
+                    <button
+                      onClick={() => handleAppointmentAction(hoveredAppointment._id, 'cancel')}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+                    >
+                      ✗ Từ chối
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -18,7 +18,7 @@ const ConsultantDashboard: React.FC = () => {
       <main
         className={`transition-all duration-300 ${
           isSidebarOpen ? 'ml-64' : 'ml-0'
-        } pt-16`}
+        } pt-16 min-h-screen`}
       >
         <div className="container mx-auto px-4 py-6">
           <Outlet />
