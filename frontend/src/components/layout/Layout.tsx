@@ -11,7 +11,7 @@ export default function Layout({ children, onLoginClick }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation onLoginClick={onLoginClick} />
-      <main className="flex-grow">
+      <main className="flex-grow pt-16">
         {children}
       </main>
       <Footer />
