@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AppointmentService } from '../services/appointmentService';
+import { AppointmentHistoryService } from '../services/appointmentHistoryService';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { validateBookAppointment, validateUpdateAppointment } from '../middlewares/appointmentValidation';
 import { JWTPayload } from '../utils/jwtUtils';
@@ -25,6 +26,16 @@ router.post(
             };
 
             const result = await AppointmentService.bookAppointment(appointmentData);
+
+            // Log history if booking successful
+            if (result.success && result.data?.appointment) {
+                await AppointmentHistoryService.logAppointmentCreated(
+                    result.data.appointment._id,
+                    result.data.appointment,
+                    user.userId,
+                    user.role
+                );
+            }
 
             if (result.success) {
                 res.status(201).json(result);
@@ -150,7 +161,7 @@ router.get(
     }
 );
 
-// Update appointment
+// UNIFIED UPDATE: Handles notes, time, status updates - includes duplicate validation
 router.put(
     '/:appointmentId',
     authenticateToken,
@@ -166,6 +177,7 @@ router.put(
                 req.body.appointment_date = new Date(req.body.appointment_date);
             }
 
+            // Service handles all validation, duplicate checking, and history logging
             const result = await AppointmentService.updateAppointment(
                 appointmentId,
                 req.body,
@@ -187,9 +199,9 @@ router.put(
     }
 );
 
-// Cancel appointment
-router.put(
-    '/:appointmentId/cancel',
+// Get appointment history
+router.get(
+    '/:appointmentId/history',
     authenticateToken,
     authorizeRoles('customer', 'consultant', 'staff', 'admin'),
     async (req, res) => {
@@ -197,118 +209,43 @@ router.put(
             const user = req.jwtUser as JWTPayload;
             const appointmentId = req.params.appointmentId;
 
-            const result = await AppointmentService.cancelAppointment(
-                appointmentId,
-                user.userId,
-                user.role
-            );
-
-            if (result.success) {
-                res.json(result);
-            } else {
-                res.status(400).json(result);
+            // Check if user has permission to view this appointment's history
+            const appointmentResult = await AppointmentService.getAppointmentById(appointmentId);
+            if (!appointmentResult.success) {
+                return res.status(404).json(appointmentResult);
             }
-        } catch (error: any) {
-            res.status(500).json({
-                success: false,
-                message: error.message
+
+            const appointment = appointmentResult.data?.appointment;
+
+            // Same permission check as viewing appointment
+            if (user.role === 'customer') {
+                if (appointment.customer_id._id.toString() !== user.userId) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'You can only view history of your own appointments'
+                    });
+                }
+            } else if (user.role === 'consultant') {
+                const consultant = await Consultant.findOne({ user_id: user.userId });
+                if (!consultant || appointment.consultant_id._id.toString() !== consultant._id.toString()) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'You can only view history of your own appointments'
+                    });
+                }
+            }
+
+            const history = await AppointmentHistoryService.getAppointmentHistory(appointmentId);
+
+            res.json({
+                success: true,
+                message: 'Appointment history retrieved successfully',
+                data: {
+                    appointment_id: appointmentId,
+                    history: history
+                },
+                timestamp: new Date().toISOString()
             });
-        }
-    }
-);
-
-// Confirm appointment (consultant only)
-router.put(
-    '/:appointmentId/confirm',
-    authenticateToken,
-    authorizeRoles('consultant'),
-    async (req, res) => {
-        try {
-            const user = req.jwtUser as JWTPayload;
-            const appointmentId = req.params.appointmentId;
-
-            const result = await AppointmentService.confirmAppointment(
-                appointmentId,
-                user.userId
-            );
-
-            if (result.success) {
-                res.json(result);
-            } else {
-                res.status(400).json(result);
-            }
-        } catch (error: any) {
-            res.status(500).json({
-                success: false,
-                message: error.message
-            });
-        }
-    }
-);
-
-// Complete appointment (consultant only)
-router.put(
-    '/:appointmentId/complete',
-    authenticateToken,
-    authorizeRoles('consultant'),
-    async (req, res) => {
-        try {
-            const user = req.jwtUser as JWTPayload;
-            const appointmentId = req.params.appointmentId;
-            const { consultant_notes } = req.body;
-
-            const result = await AppointmentService.completeAppointment(
-                appointmentId,
-                user.userId,
-                consultant_notes
-            );
-
-            if (result.success) {
-                res.json(result);
-            } else {
-                res.status(400).json(result);
-            }
-        } catch (error: any) {
-            res.status(500).json({
-                success: false,
-                message: error.message
-            });
-        }
-    }
-);
-
-// Reschedule appointment
-router.put(
-    '/:appointmentId/reschedule',
-    authenticateToken,
-    authorizeRoles('customer', 'consultant', 'staff', 'admin'),
-    async (req, res) => {
-        try {
-            const user = req.jwtUser as JWTPayload;
-            const appointmentId = req.params.appointmentId;
-            const { appointment_date, start_time, end_time } = req.body;
-
-            if (!appointment_date || !start_time || !end_time) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'appointment_date, start_time, and end_time are required'
-                });
-            }
-
-            const result = await AppointmentService.rescheduleAppointment(
-                appointmentId,
-                new Date(appointment_date),
-                start_time,
-                end_time,
-                user.userId,
-                user.role
-            );
-
-            if (result.success) {
-                res.json(result);
-            } else {
-                res.status(400).json(result);
-            }
         } catch (error: any) {
             res.status(500).json({
                 success: false,
@@ -376,6 +313,51 @@ router.get(
             );
 
             res.json(result);
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get activity history (for admin/staff)
+router.get(
+    '/admin/activity-history',
+    authenticateToken,
+    authorizeRoles('staff', 'admin'),
+    async (req, res) => {
+        try {
+            const { user_id, limit } = req.query;
+
+            let history;
+            if (user_id) {
+                history = await AppointmentHistoryService.getUserActivityHistory(
+                    user_id as string,
+                    limit ? parseInt(limit as string) : 50
+                );
+            } else {
+                // Get general action stats
+                const stats = await AppointmentHistoryService.getActionStats();
+                return res.json({
+                    success: true,
+                    message: 'Activity statistics retrieved successfully',
+                    data: {
+                        action_stats: stats
+                    },
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Activity history retrieved successfully',
+                data: {
+                    history: history
+                },
+                timestamp: new Date().toISOString()
+            });
         } catch (error: any) {
             res.status(500).json({
                 success: false,
