@@ -7,6 +7,6 @@
         { "$oid": "675e1a2b3c4d5e6f7a8b9004" },
         { "$oid": "675e1a2b3c4d5e6f7a8b9008" }
     ],
-    "order_date": { "$date": "2025-15-06T04:00:00.000Z" },
+    "order_date": { "$date": "2025-15-06T04:00:00.000" },
     "notes": "Khách yêu cầu thực hiện xét nghiệm vào buổi sáng."
 }

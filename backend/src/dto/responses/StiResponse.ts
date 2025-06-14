@@ -2,7 +2,7 @@ import { ObjectId } from "mongoose";
 import { IStiOrder, StiOrder } from '../../models/StiOrder';
 import { IStiPackage } from "../../models/StiPackage";
 import { IStiTest } from "../../models/StiTest";
-import { IStiOrderSchedule, StiOrderSchedule } from '../../models/StiOrderSchedule';
+import { IStiTestSchedule, StiTestSchedule } from '../../models/StiTestSchedule';
 
 export interface StiTestResponse{
     success: boolean;
@@ -54,8 +54,8 @@ export interface StiPackageTestResponse{
     total_amount?: number;
 };
 
-export interface StiOrderScheduleResponse{
+export interface StiTestScheduleResponse{
     success: boolean;
     message: string;
-    order_schedule: IStiOrderSchedule
+    order_schedule: IStiTestSchedule
 };

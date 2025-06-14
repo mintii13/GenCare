@@ -7,8 +7,8 @@ import { IStiOrder, StiOrder } from '../models/StiOrder';
 import { StiOrderRepository } from '../repositories/stiOrderRepository';
 import { StiPackageTestRepository } from '../repositories/stiPackageTestRepository';
 import mongoose from 'mongoose';
-import { IStiOrderSchedule, StiOrderSchedule } from '../models/StiOrderSchedule';
-import { StiOrderScheduleRepository } from '../repositories/stiOrderScheduleRepository';
+import { IStiTestSchedule, StiTestSchedule } from '../models/StiTestSchedule';
+import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
@@ -364,6 +364,7 @@ export class StiService{
                     message: 'No valid STI tests or package provided'
                 };
             }
+            console.log("sti sch id: ", sti_schedule_id);
             const sti_order = new StiOrder({
                 customer_id,
                 sti_package_item,
@@ -451,7 +452,7 @@ export class StiService{
     public static async updateOrCreateScheduleOnOrder(order_date: Date){
         try {
             const orderDate = new Date(order_date);
-            const existingSchedule = await StiOrderScheduleRepository.findOrderDate(orderDate);
+            const existingSchedule = await StiTestScheduleRepository.findOrderDate(orderDate);
 
             if (existingSchedule) {
                 existingSchedule.number_current_orders += 1;
@@ -460,17 +461,17 @@ export class StiService{
                     existingSchedule.is_locked = true;
                 }
 
-                const result = await StiOrderScheduleRepository.updateStiOrderSchedule(existingSchedule);
+                const result = await StiTestScheduleRepository.updateStiTestSchedule(existingSchedule);
                 return result;
             } else {
-                const newSchedule = new StiOrderSchedule({
+                const newSchedule = new StiTestSchedule({
                     order_date: orderDate,
                     number_current_orders: 1,
                     is_locked: false,
                     is_holiday: false,
                 });
 
-                const result = await StiOrderScheduleRepository.updateStiOrderSchedule(newSchedule);
+                const result = await StiTestScheduleRepository.updateStiTestSchedule(newSchedule);
                 return result;
             }
         } catch (error) {
@@ -478,25 +479,75 @@ export class StiService{
         }
     };
 
-    public static async normalizeAndHandleOrderSchedule(order_date: Date){
-        const schedule = await StiService.updateOrCreateScheduleOnOrder(order_date);
-        if (schedule.is_holiday) {
-            return { 
-                success: false,
-                message: 'Cannot create order on holiday' 
-            };
-        }
+    public static async normalizeAndHandleTestSchedule(order_date: Date){
+        try {
+            const schedule = await StiService.updateOrCreateScheduleOnOrder(order_date);
+            if (schedule.is_holiday) {
+                return { 
+                    success: false,
+                    message: 'Cannot create order on holiday' 
+                };
+            }
 
-        if (schedule.is_locked) {
-            return { 
+            if (schedule.is_locked) {
+                return { 
+                    success: false,
+                    message: 'Schedule locked for this date' 
+                };
+            }
+            return{
+                success: true,
+                message: 'Handle schedule successfully',
+                order_schedule: schedule
+            }
+        } catch (error) {
+            console.error(error);
+            return{
                 success: false,
-                message: 'Schedule locked for this date' 
-            };
-        }
-        return{
-            success: true,
-            message: 'Handle schedule successfully',
-            order_schedule: schedule
+                message: 'Server error'
+            }
         }
     };
+
+    public static async viewAllOrdersByTestSchedule(schedules: IStiTestSchedule[]){
+        try {
+            const result = await Promise.all(schedules.map(async (schedule) => {
+                const orders = await StiOrder.find({ sti_schedule_id: schedule._id }).lean<IStiOrder[]>();
+                if (!orders){
+                    return{
+                        success: false,
+                        message: 'Cannot find StiOrder'
+                    }
+                }
+                return {
+                    success: true,
+                    message: 'View Orders successfully',
+                    date: schedule.order_date.toISOString().slice(0, 10),
+                    is_locked: schedule.is_locked,
+                    is_holiday: schedule.is_holiday,
+                    number_current_orders: schedule.number_current_orders,
+                    tasks: orders.map(order => ({
+                        id: order._id,
+                        customer_id: order.customer_id,
+                        status: order.order_status,
+                        amount: order.total_amount,
+                        notes: order.notes || ''
+                    }))
+                };
+            }));
+            return {
+                success: true,
+                message: 'Fetched all schedules with orders',
+                result
+            };
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+        
+    };
+
 }

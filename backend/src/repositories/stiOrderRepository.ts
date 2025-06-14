@@ -1,4 +1,5 @@
 import { StiOrder, IStiOrder } from '../models/StiOrder';
+import { IStiTestSchedule } from '../models/StiTestSchedule';
 
 export class StiOrderRepository{
     public static async findByOrderCode(order_code: string): Promise<IStiOrder | null> {
@@ -37,9 +38,18 @@ export class StiOrderRepository{
         try {
             return await StiOrder.findById(id);
         } catch (error) {
-            
+            console.error(error);
+            throw error;
+        }
+    }
+
+    public static async getOrdersByTestScheduleId(schedule: IStiTestSchedule){
+        try {
+            return await StiOrder.find({ sti_schedule_id: schedule._id }).lean<IStiTestSchedule>();
+        } catch (error) {
+            console.error(error);
+            throw error;
         }
     }
     
 }
-

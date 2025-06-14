@@ -8,6 +8,8 @@ import {IStiPackage, StiPackage } from '../models/StiPackage';
 import {StiOrder, IStiOrder } from '../models/StiOrder';
 import { JWTPayload } from '../utils/jwtUtils';
 import { ObjectId } from 'mongoose';
+import { StiTestSchedule } from '../models/StiTestSchedule';
+import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
 
 const router = Router();
 
@@ -241,7 +243,7 @@ router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), as
     try {
         const customer_id = (req.jwtUser as JWTPayload).userId;
         const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
-        const orderDateHandling = await StiService.normalizeAndHandleOrderSchedule(order_date);
+        const orderDateHandling = await StiService.normalizeAndHandleTestSchedule(order_date);
         const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, orderDateHandling.order_schedule.order_date, orderDateHandling.order_schedule._id, notes);
         if (result.success){
             return res.status(201).json(result);
@@ -295,6 +297,24 @@ router.get('/getStiOrder/:id', authenticateToken, authorizeRoles('customer', 'st
             message: 'Server error' 
         });
     }
+});
+
+router.get('/viewTestScheduleWithOrders', async (req, res) => {
+  try {
+    // Get all schedules
+    const schedules = await StiTestScheduleRepository.getAllStiTestSchedule();
+
+    // With each schedule, get all orders
+    const result = await StiService.viewAllOrdersByTestSchedule(schedules);
+
+    if (result.success){
+        return res.status(200).json(result);
+    }
+    return res.status(400).json(result);
+  } catch (error) {
+    console.error('Error generating test schedule:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 export default router;
