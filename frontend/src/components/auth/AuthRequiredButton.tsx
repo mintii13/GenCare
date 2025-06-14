@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useToast } from "../ui/ToastProvider";
+import toast from "react-hot-toast";
 import LoginModal from "./LoginModal";
 
 interface AuthRequiredButtonProps {
@@ -23,7 +23,6 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
 }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { error, success } = useToast();        
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const handleClick = () => {
@@ -36,14 +35,14 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
       }
     } else {
       // Hiển thị thông báo và modal đăng nhập
-      error(message, 3000);
+      toast.error(message);
       setShowLoginModal(true);
     }
   };
 
   const handleLoginSuccess = (user: any) => {
     const defaultSuccessMessage = `Chào mừng ${user.full_name || user.email}!`;
-    success(successMessage || defaultSuccessMessage, 2000);
+    toast.success(successMessage || defaultSuccessMessage);
     setShowLoginModal(false);
     
     // Chuyển hướng sau khi đăng nhập thành công
@@ -66,10 +65,10 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
+        onSuccess={handleLoginSuccess}
       />
     </>
   );
 };
 
-export default AuthRequiredButton; 
+export default AuthRequiredButton;

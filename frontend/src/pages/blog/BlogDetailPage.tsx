@@ -19,14 +19,14 @@ import {
   Trash2,
   X
 } from 'lucide-react';
-import { useToast } from '../../components/ui/ToastProvider';
+import toast from 'react-hot-toast';
 import QuillEditor from '../../components/common/QuillEditor';
-
+import LoginModal from '../../components/auth/LoginModal';
+    
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { success, error: showError } = useToast();
   
   const [blog, setBlog] = useState<Blog | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -36,6 +36,7 @@ const BlogDetailPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);  
 
   const fetchBlogDetail = useCallback(async () => {
     if (!blogId) return;
@@ -70,7 +71,7 @@ const BlogDetailPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
-      showError('Không thể tải bình luận');
+      toast.error('Không thể tải bình luận');
     }
   }, [blogId]);
 
@@ -125,11 +126,12 @@ const BlogDetailPage: React.FC = () => {
       if (updated.success) {
         setBlog({ ...blog, title: editTitle, content: editContent });
         setIsEditing(false);
+        toast.success('Cập nhật bài viết thành công');
       } else {
-        alert(updated.message || 'Cập nhật thất bại');
+        toast.error(updated.message || 'Cập nhật thất bại');
       }
     } catch (error) {
-      alert('Có lỗi khi cập nhật blog');
+      toast.error('Có lỗi khi cập nhật blog');
     }
   };
 
@@ -138,14 +140,14 @@ const BlogDetailPage: React.FC = () => {
     try {
       const response = await blogService.deleteBlog(blog.blog_id);
       if (response.success) {
-        success('Xóa bài viết thành công!', 3000);
+        toast.success('Xóa bài viết thành công!', { duration: 3000 });
         navigate('/blogs');
       } else {
-        showError(response.message || 'Có lỗi xảy ra khi xóa bài viết', 4000);
+        toast.error(response.message || 'Có lỗi xảy ra khi xóa bài viết', { duration: 4000 });
       }
     } catch (error) {
       console.error('Error deleting blog:', error);
-      showError('Có lỗi xảy ra khi xóa bài viết', 4000);
+      toast.error('Có lỗi xảy ra khi xóa bài viết', { duration: 4000 });
     } finally {
       setShowDeleteConfirm(false);
     }
@@ -342,6 +344,7 @@ const BlogDetailPage: React.FC = () => {
             blogId={blog?.blog_id || ''}
             comments={comments}
             onCommentsUpdate={handleCommentsUpdate}
+            onLoginRequired={() => setShowLoginModal(true)}
           />
         </div>
       </div>
@@ -383,4 +386,4 @@ const BlogDetailPage: React.FC = () => {
   );
 };
 
-export default BlogDetailPage; 
+export default BlogDetailPage;

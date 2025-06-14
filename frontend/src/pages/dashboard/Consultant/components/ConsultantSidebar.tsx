@@ -49,7 +49,7 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
 
   return (
     <aside
-      className={`fixed left-0 top-16 h-screen bg-white shadow-lg transition-all duration-300 ${
+      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white shadow-lg transition-all duration-300 z-40 ${
         isOpen ? 'w-64' : 'w-0'
       }`}
     >

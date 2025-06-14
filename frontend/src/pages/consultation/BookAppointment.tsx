@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import WeeklySlotPicker from './WeeklySlotPicker';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Consultant {
   _id: string;
@@ -19,13 +20,27 @@ interface SelectedSlot {
   endTime: string;
 }
 
+interface GuestInfo {
+  full_name: string;
+  email: string;
+  phone: string;
+}
+
 const BookAppointment: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [selectedConsultant, setSelectedConsultant] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [step, setStep] = useState<number>(1); // 1: Choose consultant, 2: Choose time, 3: Confirm
+  const [step, setStep] = useState<number>(1); // 1: Choose consultant, 2: Choose time, 3: Guest info (if not authenticated), 4: Confirm
+  
+  // Guest information state
+  const [guestInfo, setGuestInfo] = useState<GuestInfo>({
+    full_name: '',
+    email: '',
+    phone: ''
+  });
 
   useEffect(() => {
     fetchConsultants();
@@ -70,7 +85,18 @@ const BookAppointment: React.FC = () => {
 
   const handleSlotSelect = (date: string, startTime: string, endTime: string) => {
     setSelectedSlot({ date, startTime, endTime });
-    setStep(3);
+    if (isAuthenticated) {
+      setStep(4); // Skip guest info step for authenticated users
+    } else {
+      setStep(3); // Go to guest info step for non-authenticated users
+    }
+  };
+
+  const handleGuestInfoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (guestInfo.full_name && guestInfo.email && guestInfo.phone) {
+      setStep(4);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,32 +106,50 @@ const BookAppointment: React.FC = () => {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
       const appointmentData = {
         consultant_id: selectedConsultant,
         appointment_date: new Date(selectedSlot.date).toISOString(),
         start_time: selectedSlot.startTime,
         end_time: selectedSlot.endTime,
-        customer_notes: notes
+        customer_notes: notes,
+        // Include guest info if user is not authenticated
+        ...(isAuthenticated ? {} : {
+          guest_info: guestInfo
+        })
       };
 
-      const response = await fetch('/api/appointments/book', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(appointmentData)
-      });
+      let response;
+      if (isAuthenticated) {
+        // Authenticated user booking
+        const token = localStorage.getItem('token');
+        response = await fetch('/api/appointments/book', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(appointmentData)
+        });
+      } else {
+        // Guest booking
+        response = await fetch('/api/appointments/book-guest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(appointmentData)
+        });
+      }
 
       const data = await response.json();
 
       if (data.success) {
-        alert('Đặt lịch hẹn thành công!');
+        alert('Đặt lịch hẹn thành công! Chúng tôi sẽ liên hệ với bạn để xác nhận thông tin.');
         // Reset form
         setSelectedConsultant('');
         setSelectedSlot(null);
         setNotes('');
+        setGuestInfo({ full_name: '', email: '', phone: '' });
         setStep(1);
       } else {
         alert(data.message || 'Có lỗi xảy ra khi đặt lịch hẹn');
@@ -120,6 +164,29 @@ const BookAppointment: React.FC = () => {
 
   const getSelectedConsultantInfo = () => {
     return consultants.find(c => c._id === selectedConsultant);
+  };
+
+  const getTotalSteps = () => {
+    return isAuthenticated ? 3 : 4; // 3 steps for authenticated, 4 for guests
+  };
+
+  const getStepTitle = (stepNumber: number) => {
+    if (isAuthenticated) {
+      switch (stepNumber) {
+        case 1: return 'Chọn chuyên gia';
+        case 2: return 'Chọn thời gian';
+        case 3: return 'Xác nhận';
+        default: return '';
+      }
+    } else {
+      switch (stepNumber) {
+        case 1: return 'Chọn chuyên gia';
+        case 2: return 'Chọn thời gian';
+        case 3: return 'Thông tin liên hệ';
+        case 4: return 'Xác nhận';
+        default: return '';
+      }
+    }
   };
 
   const columns: TableColumn<Consultant>[] = [
@@ -158,30 +225,30 @@ const BookAppointment: React.FC = () => {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Đặt Lịch Tư Vấn</h1>
-          <p className="text-gray-600">Chọn chuyên gia và thời gian phù hợp cho buổi tư vấn</p>
+          <p className="text-gray-600">
+            {isAuthenticated 
+              ? 'Chọn chuyên gia và thời gian phù hợp cho buổi tư vấn' 
+              : 'Đặt lịch tư vấn nhanh chóng - không cần đăng ký tài khoản'
+            }
+          </p>
           
           {/* Steps indicator */}
-          <div className="flex items-center mt-4">
-            <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                1
-              </div>
-              <span className="ml-2">Chọn chuyên gia</span>
-            </div>
-            <div className="w-12 h-px bg-gray-300 mx-4"></div>
-            <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                2
-              </div>
-              <span className="ml-2">Chọn thời gian</span>
-            </div>
-            <div className="w-12 h-px bg-gray-300 mx-4"></div>
-            <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                3
-              </div>
-              <span className="ml-2">Xác nhận</span>
-            </div>
+          <div className="flex items-center mt-4 overflow-x-auto">
+            {Array.from({ length: getTotalSteps() }, (_, index) => {
+              const stepNum = index + 1;
+              const isActive = step >= stepNum;
+              return (
+                <React.Fragment key={stepNum}>
+                  <div className={`flex items-center ${isActive ? 'text-blue-600' : 'text-gray-400'} flex-shrink-0`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isActive ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
+                      {stepNum}
+                    </div>
+                    <span className="ml-2 text-sm font-medium">{getStepTitle(stepNum)}</span>
+                  </div>
+                  {stepNum < getTotalSteps() && <div className="w-8 h-px bg-gray-300 mx-4 flex-shrink-0"></div>}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 
@@ -198,14 +265,13 @@ const BookAppointment: React.FC = () => {
               customStyles={{
                 header: {
                   style: {
-                    backgroundColor: '#f8fafc',
-                    borderBottom: '1px solid #e2e8f0',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
                   },
                 },
                 headRow: {
                   style: {
-                    backgroundColor: '#f1f5f9',
-                    borderBottom: '1px solid #e2e8f0',
+                    backgroundColor: '#f8f9fa',
                   },
                 },
               }}
@@ -213,7 +279,7 @@ const BookAppointment: React.FC = () => {
           </div>
         )}
 
-        {/* Step 2: Choose Time Slot */}
+        {/* Step 2: Choose Time */}
         {step === 2 && selectedConsultant && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
@@ -243,16 +309,96 @@ const BookAppointment: React.FC = () => {
           </div>
         )}
 
-        {/* Step 3: Confirm and Submit */}
-        {step === 3 && selectedConsultant && selectedSlot && (
+        {/* Step 3: Guest Information (only for non-authenticated users) */}
+        {step === 3 && !isAuthenticated && (
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">Bước 3: Xác Nhận Thông Tin</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Bước 3: Thông Tin Liên Hệ</h2>
               <button
                 onClick={() => setStep(2)}
                 className="text-blue-600 hover:text-blue-700 text-sm"
               >
                 ← Thay đổi thời gian
+              </button>
+            </div>
+
+            <form onSubmit={handleGuestInfoSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="guest_name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Họ và tên <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="guest_name"
+                  value={guestInfo.full_name}
+                  onChange={(e) => setGuestInfo({ ...guestInfo, full_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập họ và tên của bạn"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="guest_email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="guest_email"
+                  value={guestInfo.email}
+                  onChange={(e) => setGuestInfo({ ...guestInfo, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập địa chỉ email của bạn"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="guest_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Số điện thoại <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="guest_phone"
+                  value={guestInfo.phone}
+                  onChange={(e) => setGuestInfo({ ...guestInfo, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập số điện thoại của bạn"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Tiếp tục
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Step 4: Confirm and Submit (or Step 3 for authenticated users) */}
+        {((step === 4 && !isAuthenticated) || (step === 3 && isAuthenticated)) && selectedSlot && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {isAuthenticated ? 'Bước 3: Xác Nhận Thông Tin' : 'Bước 4: Xác Nhận Thông Tin'}
+              </h2>
+              <button
+                onClick={() => setStep(isAuthenticated ? 2 : 3)}
+                className="text-blue-600 hover:text-blue-700 text-sm"
+              >
+                ← {isAuthenticated ? 'Thay đổi thời gian' : 'Thay đổi thông tin'}
               </button>
             </div>
 
@@ -277,6 +423,22 @@ const BookAppointment: React.FC = () => {
                     <span className="text-gray-600">Thời gian:</span>
                     <p className="font-medium">{selectedSlot.startTime} - {selectedSlot.endTime}</p>
                   </div>
+                  {!isAuthenticated && (
+                    <>
+                      <div>
+                        <span className="text-gray-600">Họ tên:</span>
+                        <p className="font-medium">{guestInfo.full_name}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Email:</span>
+                        <p className="font-medium">{guestInfo.email}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Điện thoại:</span>
+                        <p className="font-medium">{guestInfo.phone}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -303,6 +465,7 @@ const BookAppointment: React.FC = () => {
                     setSelectedConsultant('');
                     setSelectedSlot(null);
                     setNotes('');
+                    setGuestInfo({ full_name: '', email: '', phone: '' });
                     setStep(1);
                   }}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"

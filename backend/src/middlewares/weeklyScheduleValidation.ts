@@ -158,7 +158,7 @@ const updateWeeklyScheduleSchema = Joi.object({
         .messages({
             'string.max': 'Notes cannot exceed 500 characters'
         })
-}).custom((value, helpers) => {
+}).unknown(true).custom((value, helpers) => {
     // Validate working hours and breaks if provided
     if (value.working_days) {
         const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];

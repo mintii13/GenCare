@@ -137,13 +137,20 @@ export class WeeklyScheduleRepository {
      */
     public static async existsByConsultantAndWeek(
         consultantId: string,
-        weekStartDate: Date
+        weekStartDate: Date,
+        excludeScheduleId?: string
     ): Promise<boolean> {
         try {
-            const schedule = await WeeklySchedule.findOne({
+            const query: any = {
                 consultant_id: consultantId,
                 week_start_date: weekStartDate
-            });
+            };
+
+            if (excludeScheduleId) {
+                query._id = { $ne: excludeScheduleId };
+            }
+
+            const schedule = await WeeklySchedule.findOne(query);
             return !!schedule;
         } catch (error) {
             console.error('Error checking schedule existence:', error);

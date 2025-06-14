@@ -1,25 +1,15 @@
 import api from './api';
 
 export interface Consultant {
-  _id: string;
-  user_id: {
-    _id: string;
-    full_name: string;
-    email: string;
-    phone?: string;
-    avatar?: string;
-  };
+  consultant_id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
   specialization: string;
-  license_number: string;
+  qualifications: string;
   experience_years: number;
-  bio?: string;
-  rating: {
-    average: number;
-    count: number;
-  };
-  availability_status: 'available' | 'busy' | 'offline';
-  consultation_fee: number;
-  created_date: string;
 }
 
 export interface ConsultantResponse {

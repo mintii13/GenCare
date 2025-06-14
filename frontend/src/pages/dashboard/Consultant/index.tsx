@@ -5,17 +5,26 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 const ConsultantDashboard: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
 
-  // Kiểm tra quyền truy cập
+  // Hiển thị loading trong khi đang kiểm tra authentication
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-lg">Đang kiểm tra quyền truy cập...</div>
+      </div>
+    );
+  }
+
+  // Kiểm tra quyền truy cập sau khi đã load xong
   if (!user || user.role !== 'consultant') {
     return <Navigate to="/" replace />;
   }
 
   // Nếu đang ở route gốc /consultant, chuyển hướng đến trang schedule
   if (location.pathname === '/consultant') {
-    return <Navigate to="/consultant/schedule" replace />;
+    return <Navigate to="/consultant/weekly-schedule" replace />;
   }
 
   return (

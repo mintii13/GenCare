@@ -12,7 +12,7 @@ const ConsultantHeader: React.FC<ConsultantHeaderProps> = ({ onMenuClick }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   return (
-    <header className="bg-white shadow-sm fixed w-full z-10">
+    <header className="bg-white shadow-sm fixed top-0 left-0 right-0 w-full z-50">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Left side */}
@@ -47,7 +47,7 @@ const ConsultantHeader: React.FC<ConsultantHeaderProps> = ({ onMenuClick }) => {
 
               {/* Notifications dropdown */}
               {isNotificationsOpen && (
-                <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
                       <h3 className="font-semibold">Thông báo</h3>
@@ -74,7 +74,7 @@ const ConsultantHeader: React.FC<ConsultantHeaderProps> = ({ onMenuClick }) => {
               >
                 {/* <img
                   className="h-8 w-8 rounded-full"
-                  src={user?. || "https://via.placeholder.com/32"}
+                  src={user?.avatar || "https://via.placeholder.com/32"}
                   alt="User avatar"
                 /> */}
                 <span className="text-sm font-medium text-gray-700">
@@ -84,7 +84,7 @@ const ConsultantHeader: React.FC<ConsultantHeaderProps> = ({ onMenuClick }) => {
 
               {/* User dropdown */}
               {isUserMenuOpen && (
-                <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
                     <Link to="/consultant/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       👤 Hồ sơ cá nhân

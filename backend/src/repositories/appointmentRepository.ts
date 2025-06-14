@@ -64,6 +64,37 @@ export class AppointmentRepository {
     }
 
     /**
+     * NEW: Kiểm tra customer có pending appointment không
+     */
+    public static async hasPendingAppointment(customerId: string): Promise<boolean> {
+        try {
+            const pendingCount = await Appointment.countDocuments({
+                customer_id: customerId,
+                status: 'pending'
+            });
+            return pendingCount > 0;
+        } catch (error) {
+            console.error('Error checking pending appointments:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * NEW: Đếm số pending appointments của customer
+     */
+    public static async countPendingAppointments(customerId: string): Promise<number> {
+        try {
+            return await Appointment.countDocuments({
+                customer_id: customerId,
+                status: 'pending'
+            });
+        } catch (error) {
+            console.error('Error counting pending appointments:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Tìm appointments theo consultant ID
      */
     public static async findByConsultantId(

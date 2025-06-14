@@ -21,7 +21,7 @@ const Banner: React.FC = () => {
   };
 
   return (
-    <section className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 py-20 md:py-32 overflow-hidden">
+    <section className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 py-20 md:py-32 overflow-hidden pt-20 md:pt-24">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -122,12 +122,7 @@ const Banner: React.FC = () => {
                 </div>
                 
                 {/* Floating Elements */}
-                <div className="absolute -top-4 -right-4 bg-cyan-400 text-blue-800 px-4 py-2 rounded-lg font-semibold shadow-lg">
-                  ✨ Mới
-                </div>
-                <div className="absolute -bottom-4 -left-4 bg-white text-blue-700 px-4 py-2 rounded-lg font-semibold shadow-lg">
-                  🏆 #1 Tin cậy
-                </div>
+
               </div>
 
               {/* Background Glow */}

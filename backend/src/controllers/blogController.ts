@@ -304,8 +304,8 @@ router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Req
     }
 });
 
-// GET /api/blogs/:blogId - Lấy chi tiết blog theo ID (cần đăng nhập)
-router.get('/:blogId', authenticateToken, async (req: Request, res: Response) => {
+// GET /api/blogs/:blogId - Lấy chi tiết blog theo ID
+router.get('/:blogId', async (req: Request, res: Response) => {
     try {
         const { blogId } = req.params;
 

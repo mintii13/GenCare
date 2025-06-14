@@ -57,7 +57,15 @@ export class AuthService {
                     full_name: user.full_name,
                     role: user.role,
                     status: user.status,
-                    avatar: user.avatar // Thêm avatar
+                    avatar: user.avatar, // Thêm avatar
+                    phone: user.phone || null,
+                    date_of_birth: user.date_of_birth || null,
+                    gender: user.gender || null,
+                    registration_date: user.registration_date,
+                    updated_date: user.updated_date,
+                    last_login: user.last_login || null,
+                    email_verified: user.email_verified,
+                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -92,7 +100,15 @@ export class AuthService {
                     full_name: user.full_name,
                     role: user.role,
                     status: user.status,
-                    avatar: user.avatar // Thêm avatar
+                    avatar: user.avatar,
+                    phone: user.phone || null,
+                    date_of_birth: user.date_of_birth || null,
+                    gender: user.gender || null,
+                    registration_date: user.registration_date,
+                    updated_date: user.updated_date,
+                    last_login: user.last_login || null,
+                    email_verified: user.email_verified,
+                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, addHours, isSameDay, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../contexts/AuthContext';
+import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
+import { appointmentService } from '../../../services/appointmentService';
 
 interface WorkingDay {
   start_time: string;
@@ -222,34 +224,12 @@ const WeeklyCalendarView: React.FC = () => {
 
   const fetchScheduleForWeek = async () => {
     try {
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken');
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
       console.log('📅 Fetching schedule for week:', weekStartDate);
-      console.log('🔑 Token:', token ? 'Present' : 'Missing');
-      console.log('🌐 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
       
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/weekly-schedule/my-schedules?start_date=${weekStartDate}&end_date=${weekStartDate}`;
-      console.log('📡 Fetching from:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('📊 Schedule Response status:', response.status);
-      console.log('📊 Schedule Response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Schedule API Error:', response.status, errorText);
-        setSchedule(null);
-        return;
-      }
-
-      const data = await response.json();
+      // Use weeklyScheduleService instead of direct fetch
+      const data = await weeklyScheduleService.getMySchedules(weekStartDate, weekStartDate);
       console.log('📊 Schedule Response data:', data);
       
       if (data.success && data.data && data.data.schedules && data.data.schedules.length > 0) {
@@ -273,37 +253,13 @@ const WeeklyCalendarView: React.FC = () => {
 
   const fetchAppointmentsForWeek = async () => {
     try {
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken');
       const weekStart = format(currentWeek, 'yyyy-MM-dd');
       const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
       
       console.log('📅 Fetching appointments for week:', weekStart, 'to', weekEnd);
-      console.log('🔑 Token:', token ? 'Present' : 'Missing');
       
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const url = `${baseUrl}/appointments/consultant-appointments?start_date=${weekStart}&end_date=${weekEnd}`;
-      console.log('🌐 Base URL from env:', import.meta.env.VITE_API_URL);
-      console.log('🌐 Final base URL:', baseUrl);
-      console.log('📡 Fetching appointments from:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('📊 Appointments Response status:', response.status);
-      console.log('📊 Appointments Response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Appointments API Error:', response.status, errorText);
-        setAppointments([]);
-        return;
-      }
-
-      const data = await response.json();
+      // Use appointmentService instead of direct fetch
+      const data = await appointmentService.getConsultantAppointments(undefined, weekStart, weekEnd);
       console.log('📊 Appointments Response data:', data);
       
       if (data.success && data.data) {
