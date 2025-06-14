@@ -4,6 +4,7 @@ import { User } from '../models/User';
 import { Consultant } from '../models/Consultant';
 import { IAppointment } from '../models/Appointment';
 import mongoose from 'mongoose';
+import { AppointmentHistoryService } from './appointmentHistoryService';
 
 interface AppointmentResponse {
     success: boolean;
@@ -19,8 +20,8 @@ interface AppointmentResponse {
 
 export class AppointmentService {
     /**
- * Book appointment với business rules mới
- */
+     * Book appointment với business rules
+     */
     public static async bookAppointment(appointmentData: {
         customer_id: string;
         consultant_id: string;
@@ -46,21 +47,14 @@ export class AppointmentService {
                 };
             }
 
-            // BUSINESS RULE 2: Validate 2-hour lead time (double-check từ validation)
+            // BUSINESS RULE 2: Validate 2-hour lead time
             const now = new Date();
-
-            // Parse start_time để tạo datetime chính xác
             const [hours, minutes] = appointmentData.start_time.split(':').map(Number);
             const appointmentDateTime = new Date(appointmentData.appointment_date);
             appointmentDateTime.setHours(hours, minutes, 0, 0);
 
             const diffMs = appointmentDateTime.getTime() - now.getTime();
             const diffHours = diffMs / (1000 * 60 * 60);
-
-            console.log('Time validation:');
-            console.log('Current time:', now.toISOString());
-            console.log('Appointment datetime:', appointmentDateTime.toISOString());
-            console.log('Difference in hours:', diffHours);
 
             if (diffHours < 2) {
                 return {
@@ -142,7 +136,7 @@ export class AppointmentService {
                 };
             }
 
-            // Tạo appointment với ObjectId conversion
+            // Tạo appointment
             const newAppointment = await AppointmentRepository.create({
                 customer_id: new mongoose.Types.ObjectId(appointmentData.customer_id),
                 consultant_id: new mongoose.Types.ObjectId(appointmentData.consultant_id),
@@ -157,8 +151,6 @@ export class AppointmentService {
 
             // Populate thông tin để trả về
             const populatedAppointment = await AppointmentRepository.findById(newAppointment._id.toString());
-
-            console.log('=== APPOINTMENT CREATED SUCCESSFULLY ===');
 
             return {
                 success: true,
@@ -176,6 +168,327 @@ export class AppointmentService {
             };
         }
     }
+
+    /**
+     * UNIFIED UPDATE: Handles all types of updates (notes, time, status)
+     */
+    public static async updateAppointment(
+        appointmentId: string,
+        updateData: Partial<IAppointment>,
+        requestUserId: string,
+        requestUserRole: string
+    ): Promise<AppointmentResponse> {
+        try {
+            console.log('=== UPDATE APPOINTMENT DEBUG ===');
+            console.log('Appointment ID:', appointmentId);
+            console.log('Update data:', updateData);
+            console.log('User ID:', requestUserId);
+            console.log('User role:', requestUserRole);
+
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return {
+                    success: false,
+                    message: 'Appointment not found'
+                };
+            }
+
+            console.log('Current appointment:', appointment);
+
+            // Kiểm tra quyền update
+            const canUpdate = this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
+            if (!canUpdate) {
+                return {
+                    success: false,
+                    message: 'You do not have permission to update this appointment'
+                };
+            }
+
+            // NEW: Validate if there are any actual changes
+            const hasChanges = this.hasActualChanges(appointment, updateData);
+            if (!hasChanges) {
+                return {
+                    success: false,
+                    message: 'No changes detected. Update data is identical to current appointment data.'
+                };
+            }
+
+            // Determine action type trước khi update
+            let explicitAction: 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | undefined;
+
+            // 1. Ưu tiên cao nhất: thay đổi status
+            if (updateData.status && updateData.status !== appointment.status) {
+                switch (updateData.status) {
+                    case 'confirmed':
+                        explicitAction = 'confirmed';
+                        break;
+                    case 'cancelled':
+                        explicitAction = 'cancelled';
+                        break;
+                    case 'completed':
+                        explicitAction = 'completed';
+                        break;
+                }
+            }
+            // 2. Ưu tiên trung bình: thay đổi thời gian
+            else if (this.isTimeBeingUpdated(updateData, appointment)) {
+                explicitAction = 'rescheduled';
+            }
+            // 3. Mặc định: 'updated' cho các thay đổi khác
+
+            console.log('Explicit action determined:', explicitAction);
+
+            // Validation cho thay đổi thời gian - chỉ khi có time change
+            if (this.isTimeBeingUpdated(updateData, appointment)) {
+                console.log('Time is being updated, validating...');
+
+                try {
+                    const validationResult = await this.validateTimeUpdate(
+                        updateData,
+                        appointment,
+                        appointmentId,
+                        requestUserRole
+                    );
+
+                    if (!validationResult.success) {
+                        console.log('Time validation failed:', validationResult.message);
+                        return validationResult;
+                    }
+                    console.log('Time validation passed');
+                } catch (validationError) {
+                    console.error('Time validation error:', validationError);
+                    return {
+                        success: false,
+                        message: `Time validation failed: ${validationError.message}`
+                    };
+                }
+            }
+
+            // Store old data for history
+            const oldData = { ...appointment };
+
+            // Perform update
+            console.log('Performing update...');
+            const updatedAppointment = await AppointmentRepository.updateById(
+                appointmentId,
+                updateData
+            );
+
+            if (!updatedAppointment) {
+                return {
+                    success: false,
+                    message: 'Failed to update appointment'
+                };
+            }
+
+            console.log('Update successful, logging history...');
+
+            // Log history với action chính xác
+            try {
+                await AppointmentHistoryService.logAppointmentUpdated(
+                    appointmentId,
+                    oldData,
+                    updatedAppointment,
+                    requestUserId,
+                    requestUserRole,
+                    explicitAction
+                );
+                console.log('History logged successfully');
+            } catch (historyError) {
+                console.error('History logging error:', historyError);
+                // Continue even if history logging fails
+            }
+
+            // Determine success message based on action
+            let message = 'Appointment updated successfully';
+            if (explicitAction === 'rescheduled') {
+                message = 'Appointment rescheduled successfully';
+            } else if (explicitAction === 'confirmed') {
+                message = 'Appointment confirmed successfully';
+            } else if (explicitAction === 'cancelled') {
+                message = 'Appointment cancelled successfully';
+            } else if (explicitAction === 'completed') {
+                message = 'Appointment completed successfully';
+            }
+
+            return {
+                success: true,
+                message,
+                data: {
+                    appointment: updatedAppointment
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Update appointment service error:', error);
+            return {
+                success: false,
+                message: `Internal server error when updating appointment: ${error.message}`
+            };
+        }
+    }
+
+    /**
+     * NEW: Validate if there are actual changes between old and new data
+     */
+    private static hasActualChanges(currentAppointment: any, updateData: Partial<IAppointment>): boolean {
+        // Compare each field in updateData with current values
+        for (const [key, newValue] of Object.entries(updateData)) {
+            const currentValue = currentAppointment[key];
+
+            // Special handling for dates
+            if (key === 'appointment_date') {
+                const currentDateStr = new Date(currentValue).toISOString().split('T')[0];
+                const newDateStr = new Date(newValue as Date).toISOString().split('T')[0];
+                if (currentDateStr !== newDateStr) {
+                    return true;
+                }
+            }
+            // Regular field comparison
+            else if (currentValue !== newValue) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Extracted time validation logic với improved error handling
+     */
+    private static async validateTimeUpdate(
+        updateData: Partial<IAppointment>,
+        appointment: any,
+        appointmentId: string,
+        requestUserRole: string
+    ): Promise<AppointmentResponse> {
+        try {
+            const newStartTime = updateData.start_time || appointment.start_time;
+            const newEndTime = updateData.end_time || appointment.end_time;
+            const newDate = updateData.appointment_date || appointment.appointment_date;
+
+            console.log('Validating time update:', {
+                newStartTime,
+                newEndTime,
+                newDate: new Date(newDate).toISOString().split('T')[0]
+            });
+
+            // BUSINESS RULE: 2-hour lead time cho việc update thời gian
+            const now = new Date();
+            const newAppointmentDateTime = new Date(newDate);
+            const [hours, minutes] = newStartTime.split(':').map(Number);
+            newAppointmentDateTime.setHours(hours, minutes, 0, 0);
+
+            const diffHours = (newAppointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+            console.log('Time check:', {
+                now: now.toISOString(),
+                appointmentDateTime: newAppointmentDateTime.toISOString(),
+                diffHours
+            });
+
+            // Staff và Admin có thể update bất cứ lúc nào
+            if (requestUserRole !== 'staff' && requestUserRole !== 'admin' && diffHours < 2) {
+                return {
+                    success: false,
+                    message: 'Appointment time can only be updated to at least 2 hours from now'
+                };
+            }
+
+            // Kiểm tra consultant có available không
+            console.log('Finding consultant schedule...');
+
+            let consultantId: string;
+
+            // Lấy consultant ID từ appointment (có thể là populated object hoặc ObjectId)
+            if (typeof appointment.consultant_id === 'string') {
+                consultantId = appointment.consultant_id;
+            } else if (appointment.consultant_id._id) {
+                consultantId = appointment.consultant_id._id.toString();
+            } else {
+                consultantId = appointment.consultant_id.toString();
+            }
+
+            console.log('Consultant ID:', consultantId);
+
+            const schedule = await WeeklyScheduleRepository.findByConsultantAndDate(
+                consultantId,
+                newDate
+            );
+
+            console.log('Schedule found:', !!schedule);
+
+            if (!schedule) {
+                return {
+                    success: false,
+                    message: 'Consultant is not available on the new date - no schedule found'
+                };
+            }
+
+            const dayOfWeek = new Date(newDate).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            const workingDay = schedule.working_days[dayOfWeek as keyof typeof schedule.working_days];
+
+            console.log('Working day check:', {
+                dayOfWeek,
+                workingDay: workingDay ? {
+                    start_time: workingDay.start_time,
+                    end_time: workingDay.end_time,
+                    is_available: workingDay.is_available
+                } : null
+            });
+
+            if (!workingDay || !workingDay.is_available) {
+                return {
+                    success: false,
+                    message: 'Consultant is not available on the new day'
+                };
+            }
+
+            // Kiểm tra thời gian trong working hours
+            const isValidTime = this.isTimeWithinWorkingHours(
+                newStartTime,
+                newEndTime,
+                workingDay.start_time,
+                workingDay.end_time,
+                workingDay.break_start,
+                workingDay.break_end
+            );
+
+            console.log('Working hours check:', isValidTime);
+
+            if (!isValidTime) {
+                return {
+                    success: false,
+                    message: 'New time is outside working hours or during break time'
+                };
+            }
+
+            // Kiểm tra time conflict
+            console.log('Checking time conflicts...');
+            const hasConflict = await AppointmentRepository.checkTimeConflict(
+                consultantId,
+                newDate,
+                newStartTime,
+                newEndTime,
+                appointmentId
+            );
+
+            console.log('Time conflict check:', hasConflict);
+
+            if (hasConflict) {
+                return {
+                    success: false,
+                    message: 'Time slot conflict with existing appointment'
+                };
+            }
+
+            return { success: true, message: 'Time validation passed' };
+
+        } catch (error) {
+            console.error('Time validation error:', error);
+            throw new Error(`Time validation failed: ${error.message}`);
+        }
+    }
+
     /**
      * Cancel appointment với business rule 4-hour lead time
      */
@@ -250,226 +563,7 @@ export class AppointmentService {
         }
     }
 
-    /**
-     * Update appointment với validation cho lead time
-     */
-    public static async updateAppointment(
-        appointmentId: string,
-        updateData: Partial<IAppointment>,
-        requestUserId: string,
-        requestUserRole: string
-    ): Promise<AppointmentResponse> {
-        try {
-            const appointment = await AppointmentRepository.findById(appointmentId);
-            if (!appointment) {
-                return {
-                    success: false,
-                    message: 'Appointment not found'
-                };
-            }
-
-            // Kiểm tra quyền update
-            const canUpdate = this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
-            if (!canUpdate) {
-                return {
-                    success: false,
-                    message: 'You do not have permission to update this appointment'
-                };
-            }
-
-            // Nếu update thời gian, kiểm tra 2-hour lead time và conflict
-            if (updateData.start_time || updateData.end_time || updateData.appointment_date) {
-                const newStartTime = updateData.start_time || appointment.start_time;
-                const newEndTime = updateData.end_time || appointment.end_time;
-                const newDate = updateData.appointment_date || appointment.appointment_date;
-
-                // BUSINESS RULE: 2-hour lead time cho việc update thời gian
-                const now = new Date();
-                const newAppointmentDateTime = new Date(`${newDate.toISOString().split('T')[0]} ${newStartTime}:00`);
-                const diffHours = (newAppointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-                // Staff và Admin có thể update bất cứ lúc nào
-                if (requestUserRole !== 'staff' && requestUserRole !== 'admin' && diffHours < 2) {
-                    return {
-                        success: false,
-                        message: 'Appointment time can only be updated to at least 2 hours from now'
-                    };
-                }
-
-                const hasConflict = await AppointmentRepository.checkTimeConflict(
-                    appointment.consultant_id.toString(),
-                    newDate,
-                    newStartTime,
-                    newEndTime,
-                    appointmentId
-                );
-
-                if (hasConflict) {
-                    return {
-                        success: false,
-                        message: 'Time slot conflict with existing appointment'
-                    };
-                }
-            }
-
-            const updatedAppointment = await AppointmentRepository.updateById(
-                appointmentId,
-                updateData
-            );
-
-            return {
-                success: true,
-                message: 'Appointment updated successfully',
-                data: {
-                    appointment: updatedAppointment
-                },
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Update appointment service error:', error);
-            return {
-                success: false,
-                message: 'Internal server error when updating appointment'
-            };
-        }
-    }
-
-    /**
-     * Reschedule appointment với validation
-     */
-    public static async rescheduleAppointment(
-        appointmentId: string,
-        newDate: Date,
-        newStartTime: string,
-        newEndTime: string,
-        requestUserId: string,
-        requestUserRole: string
-    ): Promise<AppointmentResponse> {
-        try {
-            const appointment = await AppointmentRepository.findById(appointmentId);
-            if (!appointment) {
-                return {
-                    success: false,
-                    message: 'Appointment not found'
-                };
-            }
-
-            if (appointment.status === 'completed' || appointment.status === 'cancelled') {
-                return {
-                    success: false,
-                    message: 'Cannot reschedule completed or cancelled appointment'
-                };
-            }
-
-            // Kiểm tra quyền reschedule
-            const canReschedule = this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
-            if (!canReschedule) {
-                return {
-                    success: false,
-                    message: 'You do not have permission to reschedule this appointment'
-                };
-            }
-
-            // BUSINESS RULE: 2-hour lead time cho reschedule
-            const now = new Date();
-            const newAppointmentDateTime = new Date(`${newDate.toISOString().split('T')[0]} ${newStartTime}:00`);
-            const diffHours = (newAppointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-            // Staff và Admin có thể reschedule bất cứ lúc nào
-            if (requestUserRole !== 'staff' && requestUserRole !== 'admin' && diffHours < 2) {
-                return {
-                    success: false,
-                    message: 'Rescheduled appointment must be at least 2 hours from now'
-                };
-            }
-
-            // Kiểm tra thời gian mới có available không
-            const schedule = await WeeklyScheduleRepository.findByConsultantAndDate(
-                appointment.consultant_id.toString(),
-                newDate
-            );
-
-            if (!schedule) {
-                return {
-                    success: false,
-                    message: 'Consultant is not available on the new date'
-                };
-            }
-
-            const dayOfWeek = newDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-            const workingDay = schedule.working_days[dayOfWeek as keyof typeof schedule.working_days];
-
-            if (!workingDay || !workingDay.is_available) {
-                return {
-                    success: false,
-                    message: 'Consultant is not available on the new day'
-                };
-            }
-
-            // Kiểm tra thời gian trong working hours
-            const isValidTime = this.isTimeWithinWorkingHours(
-                newStartTime,
-                newEndTime,
-                workingDay.start_time,
-                workingDay.end_time,
-                workingDay.break_start,
-                workingDay.break_end
-            );
-
-            if (!isValidTime) {
-                return {
-                    success: false,
-                    message: 'New time is outside working hours or during break time'
-                };
-            }
-
-            // Kiểm tra conflict
-            const hasConflict = await AppointmentRepository.checkTimeConflict(
-                appointment.consultant_id.toString(),
-                newDate,
-                newStartTime,
-                newEndTime,
-                appointmentId
-            );
-
-            if (hasConflict) {
-                return {
-                    success: false,
-                    message: 'New time slot is already booked'
-                };
-            }
-
-            // Update appointment
-            const updateData: Partial<IAppointment> = {
-                appointment_date: newDate,
-                start_time: newStartTime,
-                end_time: newEndTime,
-                status: 'pending' // Reset to pending when rescheduled
-            };
-
-            const rescheduledAppointment = await AppointmentRepository.updateById(
-                appointmentId,
-                updateData
-            );
-
-            return {
-                success: true,
-                message: 'Appointment rescheduled successfully',
-                data: {
-                    appointment: rescheduledAppointment
-                },
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Reschedule appointment service error:', error);
-            return {
-                success: false,
-                message: 'Internal server error when rescheduling appointment'
-            };
-        }
-    }
-
-    // Các method khác giữ nguyên từ code cũ...
+    // Các method khác giữ nguyên...
     public static async getCustomerAppointments(
         customerId: string,
         status?: string,
@@ -731,6 +825,29 @@ export class AppointmentService {
                 message: 'Internal server error when retrieving statistics'
             };
         }
+    }
+
+    /**
+     * Helper: Kiểm tra có đang update thời gian không
+     */
+    private static isTimeBeingUpdated(updateData: Partial<IAppointment>, currentAppointment: any): boolean {
+        // Kiểm tra xem có field thời gian nào trong updateData không
+        if (updateData.appointment_date || updateData.start_time || updateData.end_time) {
+            // So sánh với giá trị hiện tại
+            const newDate = updateData.appointment_date || currentAppointment.appointment_date;
+            const newStartTime = updateData.start_time || currentAppointment.start_time;
+            const newEndTime = updateData.end_time || currentAppointment.end_time;
+
+            const currentDate = new Date(currentAppointment.appointment_date).toISOString().split('T')[0];
+            const updatedDate = new Date(newDate).toISOString().split('T')[0];
+
+            return (
+                currentDate !== updatedDate ||
+                currentAppointment.start_time !== newStartTime ||
+                currentAppointment.end_time !== newEndTime
+            );
+        }
+        return false;
     }
 
     /**
