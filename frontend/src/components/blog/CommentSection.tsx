@@ -14,13 +14,13 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { useToast } from '../ui/ToastProvider';
+import toast from 'react-hot-toast';
 
 interface CommentSectionProps {
   blogId: string;
   comments: Comment[];
   onCommentsUpdate: () => void;
-      onLoginRequired: () => void;
+  onLoginRequired: () => void;
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({
@@ -30,7 +30,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   onLoginRequired
 }) => {
   const { user } = useAuth();
-  const { success, error: showError } = useToast();
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
@@ -78,12 +77,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         
         // Fetch lại comments
         await onCommentsUpdate();
+        toast.success('Đã đăng bình luận thành công');
       } else {
-        showError(response.message || 'Không thể đăng bình luận');
+        toast.error(response.message || 'Không thể đăng bình luận');
       }
     } catch (error) {
       console.error('Error posting comment:', error);
-      showError('Không thể đăng bình luận');
+      toast.error('Không thể đăng bình luận');
     } finally {
       setIsSubmitting(false);
     }
@@ -113,11 +113,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         setIsEditing(false);
         await onCommentsUpdate();
       } else {
-        showError(response.message || 'Không thể cập nhật bình luận');
+        toast.error(response.message || 'Không thể cập nhật bình luận');
       }
     } catch (error) {
       console.error('Error updating comment:', error);
-      showError('Không thể cập nhật bình luận');
+      toast.error('Không thể cập nhật bình luận');
     } finally {
       setIsSubmitting(false);
     }
@@ -128,14 +128,14 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     try {
       const response = await blogService.deleteComment(blogId, commentId);
       if (response.success) {
-        success('Xóa bình luận thành công!');
+        toast.success('Xóa bình luận thành công!');
         await onCommentsUpdate();
       } else {
-        showError(response.message || 'Xóa bình luận thất bại!');
+        toast.error(response.message || 'Xóa bình luận thất bại!');
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
-      showError('Xóa bình luận thất bại!');
+      toast.error('Xóa bình luận thất bại!');
     } finally {
       setIsSubmitting(false);
     }
@@ -412,4 +412,4 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   );
 };
 
-export default CommentSection; 
+export default CommentSection;

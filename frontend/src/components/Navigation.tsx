@@ -11,8 +11,10 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, isSidebarOpen }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false); // New state for user dropdown
   const { user, isAuthenticated, logout } = useAuth();
   const timeoutRef = useRef<NodeJS.Timeout>();
+  const userMenuTimeoutRef = useRef<NodeJS.Timeout>(); // New ref for user menu timeout
   const location = useLocation();
 
   const handleMouseEnter = () => {
@@ -28,10 +30,26 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
     }, 300); // 300ms delay before closing
   };
 
+  const handleUserMenuEnter = () => {
+    if (userMenuTimeoutRef.current) {
+      clearTimeout(userMenuTimeoutRef.current);
+    }
+    setIsUserMenuOpen(true);
+  };
+
+  const handleUserMenuLeave = () => {
+    userMenuTimeoutRef.current = setTimeout(() => {
+      setIsUserMenuOpen(false);
+    }, 300); // 300ms delay before closing
+  };
+
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+      if (userMenuTimeoutRef.current) { // Clear user menu timeout on unmount
+        clearTimeout(userMenuTimeoutRef.current);
       }
     };
   }, []);
@@ -111,19 +129,54 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                 Dashboard
               </Link>
             )}
+            {isAuthenticated && user?.role === 'admin' && (
+              <Link to="/admin/overview" className="text-gray-600 hover:text-primary-700">
+                Quản trị viên
+              </Link>
+            )}
           </div>
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
               {isAuthenticated ? (
-              <>
-                <span className="text-gray-700 font-semibold">{user?.full_name || user?.email}</span>
-                <Link to="/user/profile" className="text-gray-600 hover:text-primary-700">Trang cá nhân</Link>
-                <button onClick={logout} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition">Đăng xuất</button>
-              </>
+              <div
+                className="relative group"
+                onMouseEnter={handleUserMenuEnter}
+                onMouseLeave={handleUserMenuLeave}
+              >
+                <button
+                  className="text-gray-700 font-semibold hover:text-primary-700 flex items-center"
+                >
+                  {user?.full_name || user?.email}
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isUserMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50"
+                  >
+                    <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Xem thông tin user
+                    </Link>
+                    <Link to="/user/test-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Lịch sử xét nghiệm
+                    </Link>
+                    <Link to="/user/consultation-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Lịch sử tư vấn
+                    </Link>
+                    <button
+                      onClick={() => { logout(); setIsUserMenuOpen(false); }}
+                      className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
-                <button 
+                <button
                   onClick={onLoginClick}
                   className="text-gray-600 hover:text-primary-700"
                 >
@@ -243,8 +296,14 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
               {isAuthenticated ? (
                 <>
                   <span className="block text-gray-700 font-semibold mb-2">{user?.full_name || user?.email}</span>
-                  <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2">Trang cá nhân</Link>
-                  <button 
+                  <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
+                  <Link to="/user/test-history" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                    Lịch sử xét nghiệm
+                  </Link>
+                  <Link to="/user/consultation-history" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                    Lịch sử tư vấn
+                  </Link>
+                  <button
                     className="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition mb-2"
                     onClick={() => { setIsMenuOpen(false); logout(); }}
                   >
@@ -279,4 +338,4 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
   );
 };
 
-export default Navigation; 
+export default Navigation;

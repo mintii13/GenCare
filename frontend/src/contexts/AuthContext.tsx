@@ -4,10 +4,15 @@ import axios from "axios";
 const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken';
 
 interface User {
+  phone: string;
+  avatar: string;
+  status: boolean;
   id: string;
   email: string;
   full_name?: string;
   role?: string;
+  date_of_birth?: string;
+  gender?: string;
 }
 
 interface AuthContextType {
@@ -16,6 +21,7 @@ interface AuthContextType {
   login: (user: User, token: string) => void;
   logout: () => void;
   isLoading: boolean;
+  updateUserInfo: (userData: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,8 +110,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUserInfo = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !isLoading && !!user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !isLoading && !!user, login, logout, isLoading, updateUserInfo }}>
       {children}
     </AuthContext.Provider>
   );
