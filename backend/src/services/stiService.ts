@@ -628,10 +628,10 @@ export class StiService{
                     message: 'You are not allowed to cancel this order' 
                 };
             }
-            if (order.order_status !== 'Pending') {
+            if (order.order_status !== 'Pending' && order.order_status !== 'Accepted') {
                 return { 
                     success: false, 
-                    message: 'Only Pending orders can be canceled' 
+                    message: 'Only Pending or Accepted orders can be canceled' 
                 };
             }
 
@@ -653,7 +653,7 @@ export class StiService{
         }
     }
 
-    public static async updateOrderStatus(order_id: string, newStatus: OrderStatus) {
+    public static async updateOrderStatus(order_id: string, newStatus: OrderStatus, userId: string) {
         try {
             const order = await StiOrderRepository.findOrderById(order_id);
             if (!order) 
@@ -671,7 +671,8 @@ export class StiService{
 
             // Đảm bảo order status đi theo trình tự
             const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-                Pending: ['Processing', 'Canceled'],
+                Pending: ['Accepted', 'Canceled'],
+                Accepted: ['Processing', 'Canceled'],
                 Processing: ['SpecimenCollected'],
                 SpecimenCollected: ['Testing'],
                 Testing: ['Completed'],
@@ -688,7 +689,8 @@ export class StiService{
             return { 
                 success: true, 
                 message: 'Update order status successfully',
-                data: result 
+                data: result,
+                updatedBy: userId
             };
         } catch (error) {
             console.error(error);

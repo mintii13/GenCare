@@ -57,3 +57,6 @@ Banned Update Result: Không được thay đổi thông tin mẫu hoặc kết 
 Final Verification from Consultant: Kết quả xét nghiệm phải được ký xác nhận bởi người có chứng chỉ hành nghề phù hợp.
 Pre-Test Consent for STI Examinations: Đối với xét nghiệm STI, bệnh nhân phải ký cam kết hoặc đồng ý trước khi thực hiện.
 Children in STI Test: Trẻ vị thành niên cần được sự chấp nhận từ người giám hộ.
+Processing in Order: Pending -> (Accepted, Canceled), Accepted -> (Processing, Canceled), Processing -> SpecimenCollected -> Testing -> Completed, Canceled và Completed là trạng thái cuối cùng, nên không được thay đổi status sau đó.
+History and Audit Log mechanism for Admin: Cần có cơ chế để ghi lại lịch sử các thao tác để đảm bảo tính pháp lý, và truy vết minh bạch
+Canceled Order Rule: Đơn đã ở trạng thái Canceled thì không được sử dụng lại ở bất kỳ trường hợp nào

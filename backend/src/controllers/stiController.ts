@@ -393,8 +393,9 @@ router.patch('/updateOrderStatus/:id', authenticateToken, authorizeRoles('staff'
     try {
         const order_id = req.params.id;
         const { newStatus } = req.body;
+        const userId = (req.user as any).userId;
 
-        const result = await StiService.updateOrderStatus(order_id, newStatus);
+        const result = await StiService.updateOrderStatus(order_id, newStatus, userId);
 
         if (result.success) 
             return res.status(200).json(result);
