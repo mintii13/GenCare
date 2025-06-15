@@ -69,7 +69,8 @@ export const getAppointmentStatusLabel = (status: string): string => {
 
 /**
  * Check if slot can be clicked/selected
+ * Now allows all available slots to be clickable, validation happens on click
  */
 export const canSelectSlot = (date: string, startTime: string, isAvailable: boolean): boolean => {
-  return isAvailable && !isSlotDisabled(date, startTime);
+  return isAvailable; // Allow all available slots to be clickable
 }; 

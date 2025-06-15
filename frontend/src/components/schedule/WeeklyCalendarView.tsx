@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { addDays, format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { DAY_NAMES, DAY_LABELS, DayName, DaySchedule, WorkingDay } from '../../types/schedule';
 import { formatDateDisplay, getCurrentWeekLabel, canNavigateToPreviousWeek } from '../../utils/dateUtils';
-import { getSlotStatusColor, isSlotSelected, canSelectSlot } from '../../utils/slotUtils';
 
 interface WeeklyCalendarViewProps {
   currentWeek: Date;
@@ -44,84 +43,56 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   onRetry
 }) => {
   
-  const handleSlotClick = (date: string, startTime: string, endTime: string, isAvailable: boolean) => {
+  // State để quản lý ngày được chọn
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  
+  const handleSlotClick = (date: string, startTime: string, endTime: string) => {
     if (mode !== 'slot-picker' || !onSlotSelect) return;
-    if (!canSelectSlot(date, startTime, isAvailable)) return;
+    
+    const slotDateTime = new Date(`${date}T${startTime}:00`);
+    const now = new Date();
+    const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (slotDateTime <= now) {
+      import('react-hot-toast').then(({ default: toast }) => {
+        toast.error('Không thể chọn thời gian đã qua');
+      });
+      return;
+    }
+    
+    if (diffHours < 2) {
+      import('react-hot-toast').then(({ default: toast }) => {
+        toast.error(`Lịch hẹn phải được đặt trước ít nhất 2 giờ. Hiện tại chỉ còn ${diffHours.toFixed(1)} giờ.`);
+      });
+      return;
+    }
     
     onSlotSelect(date, startTime, endTime);
   };
 
-  // Tạo time slots từ 8:00 đến 18:00
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 8; hour <= 17; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
-
-  // Check if a time slot is within working hours
-  const isTimeSlotWorking = (time: string, workingDay?: WorkingDay): boolean => {
-    if (!workingDay?.is_available) return false;
-    
-    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    const startMinutes = parseInt(workingDay.start_time.split(':')[0]) * 60 + parseInt(workingDay.start_time.split(':')[1]);
-    const endMinutes = parseInt(workingDay.end_time.split(':')[0]) * 60 + parseInt(workingDay.end_time.split(':')[1]);
-    
-    // Check if in break time
-    if (workingDay.break_start && workingDay.break_end) {
-      const breakStartMinutes = parseInt(workingDay.break_start.split(':')[0]) * 60 + parseInt(workingDay.break_start.split(':')[1]);
-      const breakEndMinutes = parseInt(workingDay.break_end.split(':')[0]) * 60 + parseInt(workingDay.break_end.split(':')[1]);
-      
-      if (timeMinutes >= breakStartMinutes && timeMinutes < breakEndMinutes) {
-        return false;
-      }
-    }
-    
-    return timeMinutes >= startMinutes && timeMinutes < endMinutes;
-  };
-
-  // Check if slot is booked
-  const isSlotBooked = (date: string, time: string, dayName: string): any => {
-    const dayData = weeklyData?.days[dayName];
-    
-    return dayData?.booked_appointments?.find(appointment => {
-      const appointmentStart = appointment.start_time;
-      const appointmentEnd = appointment.end_time;
-      return time >= appointmentStart && time < appointmentEnd;
-    });
-  };
-
-  // Loading state
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-lg shadow-sm p-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Đang tải lịch làm việc...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải lịch làm việc...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-lg shadow-sm p-8">
         <div className="text-center">
           <div className="text-red-600 mb-4">
-            <svg className="mx-auto w-12 h-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm">{error}</p>
+            <div className="text-6xl mb-4">⚠️</div>
+            <p className="text-lg">{error}</p>
           </div>
           {onRetry && (
             <button
               onClick={onRetry}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Thử lại
             </button>
@@ -131,213 +102,262 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     );
   }
 
+  // Tạo danh sách các ngày trong tuần
+  const weekDays = DAY_LABELS.map((dayLabel, dayIndex) => {
+    const dayName = DAY_NAMES[dayIndex];
+    const dayDate = addDays(currentWeek, dayIndex);
+    const dayDateString = format(dayDate, 'yyyy-MM-dd');
+    const dayData = weeklyData?.days[dayName];
+    const isToday = dayDateString === format(new Date(), 'yyyy-MM-dd');
+    
+    return {
+      index: dayIndex,
+      label: dayLabel,
+      name: dayName,
+      date: dayDate,
+      dateString: dayDateString,
+      data: dayData,
+      isToday,
+      slotsCount: dayData?.available_slots?.length || 0
+    };
+  });
+
+  // Lấy thông tin ngày được chọn
+  const selectedDay = weekDays[selectedDayIndex];
+  const selectedDayData = selectedDay?.data;
+
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      {/* Header với navigation */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+    <div className="bg-white rounded-lg shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
         <button
           onClick={onPreviousWeek}
           disabled={!canNavigateToPreviousWeek(currentWeek)}
-          className="flex items-center px-3 py-2 text-blue-100 hover:text-white hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Tuần trước
+          ← Tuần trước
         </button>
         
-        <h3 className="text-xl font-bold">
+        <h2 className="text-2xl font-bold">
           {getCurrentWeekLabel(currentWeek)}
-        </h3>
+        </h2>
         
         <button
           onClick={onNextWeek}
-          className="flex items-center px-3 py-2 text-blue-100 hover:text-white hover:bg-blue-500 rounded-lg transition-colors"
+          className="px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors"
         >
-          Tuần sau
-          <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          Tuần sau →
         </button>
       </div>
 
-      {/* Summary info */}
+      {/* Summary */}
       {weeklyData?.summary && (
-        <div className="px-4 py-3 bg-blue-50 border-b">
+        <div className="px-6 py-4 bg-blue-50 border-b">
           <div className="flex items-center justify-center gap-8 text-sm">
-            <div className="flex items-center text-blue-700">
-              <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-              <span>Ngày làm việc: <strong>{weeklyData.summary.total_working_days}</strong></span>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+              <span className="text-blue-700 font-medium">Ngày làm việc: {weeklyData.summary.total_working_days}</span>
             </div>
-            <div className="flex items-center text-green-700">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-              <span>Slot có sẵn: <strong>{weeklyData.summary.total_available_slots}</strong></span>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+              <span className="text-green-700 font-medium">Slot có sẵn: {weeklyData.summary.total_available_slots}</span>
             </div>
-            <div className="flex items-center text-red-700">
-              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-              <span>Đã đặt: <strong>{weeklyData.summary.total_booked_slots}</strong></span>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+              <span className="text-red-700 font-medium">Đã đặt: {weeklyData.summary.total_booked_slots}</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Timetable Grid */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[800px]">
-          {/* Header Row - Days */}
-          <div className="grid grid-cols-8 border-b-2 border-gray-200">
-            <div className="p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r">
-              Giờ
-            </div>
-            {DAY_LABELS.map((dayLabel, index) => {
-              const dayDate = addDays(currentWeek, index);
-              const isToday = format(dayDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-              
-              return (
-                <div 
-                  key={index} 
-                  className={`p-3 text-center font-semibold border-r ${
-                    isToday 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <div className="text-sm">{dayLabel}</div>
-                  <div className={`text-xs mt-1 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
-                    {format(dayDate, 'dd/MM', { locale: vi })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Time Rows */}
-          {timeSlots.map((timeSlot, timeIndex) => (
-            <div key={timeSlot} className="grid grid-cols-8 border-b border-gray-100">
-              {/* Time Label */}
-              <div className="p-2 text-center text-sm font-medium text-gray-600 bg-gray-50 border-r flex items-center justify-center">
-                {timeSlot}
-              </div>
-
-              {/* Day Cells */}
-              {DAY_NAMES.map((dayName, dayIndex) => {
-                const dayDate = addDays(currentWeek, dayIndex);
-                const dayDateString = format(dayDate, 'yyyy-MM-dd');
-                const workingDay = scheduleData?.working_days[dayName as DayName];
-                const dayData = weeklyData?.days[dayName];
-                
-                                 const isWorking = isTimeSlotWorking(timeSlot, workingDay);
-                 const bookedAppointment = isSlotBooked(dayDateString, timeSlot, dayName);
-                 const isToday = dayDateString === format(new Date(), 'yyyy-MM-dd');
-                
-                // Find available slot for this time
-                const availableSlot = dayData?.available_slots?.find(slot => 
-                  slot.start_time === timeSlot && slot.is_available
-                );
-
-                const isSelected = selectedSlot && 
-                  selectedSlot.date === dayDateString && 
-                  selectedSlot.startTime === timeSlot;
-
-                let cellClass = "p-1 border-r min-h-[40px] relative transition-colors duration-200 ";
-                let cellContent = null;
-
-                if (!isWorking) {
-                  // Non-working hours
-                  cellClass += isToday ? "bg-blue-50" : "bg-gray-50";
-                } else if (bookedAppointment) {
-                  // Booked appointment
-                  cellClass += "bg-red-100 border-red-200";
-                  cellContent = (
-                    <div className="text-xs p-1 text-red-700 font-medium">
-                      <div className="flex items-center justify-center">
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                        Đã đặt
-                      </div>
-                    </div>
-                  );
-                } else if (availableSlot && mode === 'slot-picker') {
-                  // Available slot for booking
-                  cellClass += isSelected 
-                    ? "bg-blue-200 border-blue-300 cursor-pointer" 
-                    : "bg-green-100 hover:bg-green-200 border-green-200 cursor-pointer";
-                  cellContent = (
-                    <button
-                      onClick={() => handleSlotClick(dayDateString, timeSlot, availableSlot.end_time, true)}
-                      className="w-full h-full text-xs text-green-700 font-medium flex items-center justify-center"
-                      disabled={!canSelectSlot(dayDateString, timeSlot, true)}
-                    >
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      Có sẵn
-                    </button>
-                  );
-                                 } else if (isWorking) {
-                   // Working hours but no available slot
-                   cellClass += isToday ? "bg-blue-50" : "bg-white";
-                   if (mode === 'schedule-manager' || mode === 'read-only') {
-                     cellContent = (
-                       <div className="w-full h-full flex items-center justify-center">
-                         <div className="w-2 h-2 bg-blue-400 rounded-full" title="Giờ làm việc"></div>
-                       </div>
-                     );
-                   }
-                 } else {
-                   // Default case - non-working or no schedule data
-                   cellClass += isToday ? "bg-blue-50" : "bg-gray-50";
-                 }
-
-                return (
-                  <div key={dayIndex} className={cellClass}>
-                    {cellContent}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+      {/* Day Selector Dropdown */}
+      <div className="p-6 border-b bg-gray-50">
+        <div className="max-w-md mx-auto">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Chọn ngày để xem lịch trống:
+          </label>
+          <select
+            value={selectedDayIndex}
+            onChange={(e) => setSelectedDayIndex(parseInt(e.target.value))}
+            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          >
+            {weekDays.map((day) => (
+              <option key={day.index} value={day.index}>
+                {day.label} - {format(day.date, 'dd/MM', { locale: vi })}
+                {day.isToday && ' (Hôm nay)'}
+                {day.slotsCount > 0 && ` - ${day.slotsCount} slots`}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
+      {/* Selected Day Content */}
+      <div className="p-6">
+        {selectedDay && (
+          <div className="max-w-4xl mx-auto">
+            {/* Selected Day Header */}
+            <div className="text-center mb-6">
+              <h3 className={`text-2xl font-bold mb-2 ${selectedDay.isToday ? 'text-blue-600' : 'text-gray-800'}`}>
+                {selectedDay.label}
+              </h3>
+              <p className="text-gray-600">
+                {format(selectedDay.date, 'dd/MM/yyyy', { locale: vi })}
+                {selectedDay.isToday && (
+                  <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+                    Hôm nay
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Slots Grid */}
+            {!selectedDayData?.available_slots || selectedDayData.available_slots.length === 0 ? (
+              selectedDayData && selectedDayData.total_slots === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">🚫</div>
+                  <h4 className="text-xl font-semibold text-gray-700 mb-2">Không làm việc</h4>
+                  <p className="text-gray-500">Ngày này không có lịch làm việc</p>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📋</div>
+                  <h4 className="text-xl font-semibold text-gray-700 mb-2">Không có lịch trống</h4>
+                  <p className="text-gray-500">Ngày này không có slot nào khả dụng</p>
+                </div>
+              )
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800">
+                    Tất cả khung giờ trong ngày
+                  </h4>
+                  <div className="text-sm text-gray-600">
+                    {selectedDayData.available_slots.length} trống • {selectedDayData.booked_appointments?.length || 0} đã đặt
+                  </div>
+                </div>
+                
+                {/* Combined Slots Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {/* Booked Appointments */}
+                  {selectedDayData.booked_appointments && selectedDayData.booked_appointments.map((appointment, appointmentIndex) => (
+                    <div
+                      key={`booked-${appointmentIndex}`}
+                      className="w-full px-4 py-4 text-center font-semibold rounded-xl border-2 bg-red-100 text-red-700 border-red-300 cursor-not-allowed"
+                    >
+                      <div className="text-lg font-bold">{appointment.start_time}</div>
+                      <div className="text-sm opacity-75">đến {appointment.end_time}</div>
+                      <div className="text-xs mt-2 font-medium">
+                        Đã đặt
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Available Slots */}
+                  {selectedDayData.available_slots.map((slot, slotIndex) => {
+                    const slotDateTime = new Date(`${selectedDay.dateString}T${slot.start_time}:00`);
+                    const now = new Date();
+                    const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+                    const isPast = slotDateTime <= now;
+                    const isRestricted = diffHours < 2 && !isPast;
+                    
+                    const isSelected = selectedSlot && 
+                      selectedSlot.date === selectedDay.dateString && 
+                      selectedSlot.startTime === slot.start_time;
+
+                    const isBooked = selectedDayData.booked_appointments?.some(appointment => {
+                      return slot.start_time >= appointment.start_time && slot.start_time < appointment.end_time;
+                    });
+
+                    let buttonClass = "w-full px-4 py-4 text-center font-semibold rounded-xl transition-all duration-200 border-2 ";
+                    let buttonContent = (
+                      <div>
+                        <div className="text-lg font-bold">{slot.start_time}</div>
+                        <div className="text-sm opacity-75">đến {slot.end_time}</div>
+                      </div>
+                    );
+                    let statusText = "";
+                    let isClickable = false;
+
+                    if (isBooked) {
+                      buttonClass += "bg-red-100 text-red-700 border-red-300 cursor-not-allowed";
+                      statusText = "Đã đặt";
+                    } else if (isPast) {
+                      buttonClass += "bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed";
+                      statusText = "Đã qua";
+                    } else if (isRestricted) {
+                      buttonClass += "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200 cursor-pointer transform hover:scale-105";
+                      statusText = "Hạn chế";
+                      isClickable = mode === 'slot-picker';
+                    } else if (slot.is_available) {
+                      if (isSelected) {
+                        buttonClass += "bg-blue-200 text-blue-800 border-blue-400 cursor-pointer shadow-lg transform scale-105";
+                        statusText = "Đã chọn";
+                      } else {
+                        buttonClass += "bg-green-100 text-green-700 border-green-300 hover:bg-green-200 cursor-pointer transform hover:scale-105 hover:shadow-md";
+                        statusText = "Có thể đặt";
+                      }
+                      isClickable = mode === 'slot-picker';
+                    }
+
+                    return (
+                      <button
+                        key={slotIndex}
+                        onClick={() => isClickable ? handleSlotClick(selectedDay.dateString, slot.start_time, slot.end_time) : undefined}
+                        disabled={!isClickable}
+                        className={buttonClass}
+                        title={`${slot.start_time} - ${slot.end_time} (${statusText})`}
+                      >
+                        {buttonContent}
+                        <div className="text-xs mt-2 font-medium">
+                          {statusText}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Legend */}
-      <div className="p-4 bg-gray-50 border-t">
-        <div className="flex flex-wrap items-center justify-center gap-6 text-xs">
+      <div className="px-6 py-4 bg-gray-50 border-t rounded-b-lg">
+        <div className="text-center mb-2">
+          <h4 className="text-sm font-semibold text-gray-700">Chú thích màu sắc</h4>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-100 border border-green-200 rounded mr-2"></div>
+            <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded mr-2"></div>
             <span>Có thể đặt</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-red-100 border border-red-200 rounded mr-2"></div>
+            <div className="w-4 h-4 bg-orange-100 border-2 border-orange-300 rounded mr-2"></div>
+            <span>Hạn chế (&lt; 2h)</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded mr-2"></div>
             <span>Đã đặt</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded mr-2"></div>
-            <span>Giờ làm việc</span>
+            <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded mr-2"></div>
+            <span>Đã chọn</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded mr-2"></div>
-            <span>Không làm việc</span>
+            <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded mr-2"></div>
+            <span>Không có/Đã qua</span>
           </div>
-          {selectedSlot && (
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-200 border border-blue-300 rounded mr-2"></div>
-              <span>Đã chọn</span>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Notes */}
       {scheduleData?.notes && (
-        <div className="p-4 bg-yellow-50 border-t">
+        <div className="px-6 py-4 bg-yellow-50 border-t">
           <div className="flex items-start">
-            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
+            <div className="text-2xl mr-3">📝</div>
             <div>
-              <p className="text-sm font-medium text-yellow-800">Ghi chú:</p>
+              <p className="text-sm font-semibold text-yellow-800">Ghi chú quan trọng:</p>
               <p className="text-sm text-yellow-700 mt-1">{scheduleData.notes}</p>
             </div>
           </div>

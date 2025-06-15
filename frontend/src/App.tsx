@@ -39,8 +39,7 @@ const App = () => {
   const [showLogin, setShowLogin] = useState(false);
 
   return (
-    <ErrorBoundary>
-      <Toaster position="top-right" />
+    <>      <Toaster position="top-right" />
       <Layout onLoginClick={() => setShowLogin(true)}>
         <Suspense fallback={<div className="flex justify-center items-center h-screen"><div>Đang tải trang...</div></div>}>
           <Routes>
@@ -113,8 +112,9 @@ const App = () => {
           </Routes>
         </Suspense>
         <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
+     
       </Layout>
-    </ErrorBoundary>
+    </>
   );
 };
 

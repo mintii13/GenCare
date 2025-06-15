@@ -528,9 +528,21 @@ const BookAppointment: React.FC = () => {
     );
   };
 
+  // Debug info
+  console.log('BookAppointment Debug:', {
+    isAuthenticated,
+    step,
+    selectedConsultant,
+    selectedSlot,
+    consultants: consultants.length,
+    consultantsLoading,
+    errors
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
