@@ -161,6 +161,102 @@ router.get(
     }
 );
 
+// Cancel appointment
+router.put(
+    '/:appointmentId/cancel',
+    authenticateToken,
+    authorizeRoles('customer', 'consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const result = await AppointmentService.cancelAppointment(
+                appointmentId,
+                user.userId,
+                user.role
+            );
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Confirm appointment
+router.put(
+    '/:appointmentId/confirm',
+    authenticateToken,
+    authorizeRoles('consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const result = await AppointmentService.updateAppointment(
+                appointmentId,
+                { status: 'confirmed' },
+                user.userId,
+                user.role
+            );
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Complete appointment
+router.put(
+    '/:appointmentId/complete',
+    authenticateToken,
+    authorizeRoles('consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+            const { consultant_notes } = req.body;
+
+            const result = await AppointmentService.updateAppointment(
+                appointmentId,
+                { 
+                    status: 'completed',
+                    consultant_notes: consultant_notes 
+                },
+                user.userId,
+                user.role
+            );
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
 // UNIFIED UPDATE: Handles notes, time, status updates - includes duplicate validation
 router.put(
     '/:appointmentId',

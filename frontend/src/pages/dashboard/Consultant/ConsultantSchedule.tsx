@@ -1,34 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import DataTable, { TableColumn } from 'react-data-table-component';
-import api from '../../../services/api';
+import { format, addDays } from 'date-fns';
+import { consultantService } from '../../../services/consultantService';
+import { useWeeklySchedule } from '../../../hooks/useWeeklySchedule';
+import WeeklyCalendarView from '../../../components/schedule/WeeklyCalendarView';
+import { WorkingDay, DAY_NAMES, DAY_LABELS, DayName } from '../../../types/schedule';
+import { formatWeekRange } from '../../../utils/dateUtils';
 
 interface Consultant {
   _id: string;
   full_name: string;
 }
-
-interface WorkingDay {
-  start_time: string;
-  end_time: string;
-  break_start?: string;
-  break_end?: string;
-  is_available: boolean;
-}
-
-interface WeeklySchedule {
-  week_start_date: string;
-  week_end_date: string;
-  working_days: {
-    [key: string]: WorkingDay;
-  };
-}
-
-const dayNames = [
-  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
-];
-const dayLabels = [
-  'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'
-];
 
 interface TableRow {
   day: string;
@@ -39,112 +20,175 @@ interface TableRow {
 
 const ConsultantSchedule: React.FC = () => {
   const [consultants, setConsultants] = useState<Consultant[]>([]);
-  const [consultantId, setConsultantId] = useState('');
-  const [weekStart, setWeekStart] = useState('');
-  const [schedule, setSchedule] = useState<WeeklySchedule | null>(null);
-  const [message, setMessage] = useState('');
+  const [selectedConsultantId, setSelectedConsultantId] = useState('');
+
+  // Use shared hook for schedule management
+  const {
+    currentWeek,
+    scheduleData,
+    loading,
+    error,
+    goToPreviousWeek,
+    goToNextWeek,
+    handleRetry
+  } = useWeeklySchedule({
+    mode: 'consultant-schedule',
+    consultantId: selectedConsultantId
+  });
 
   useEffect(() => {
-    api.get('/consultant/list').then((res: any) => {
-      setConsultants(res.data.consultants || []);
-    });
+    loadConsultants();
   }, []);
 
-  const handleFetchSchedule = async () => {
-    setMessage('');
-    setSchedule(null);
-    if (!consultantId || !weekStart) return;
+  const loadConsultants = async () => {
     try {
-      const res = await api.get(`/weekly-schedule?consultant_id=${consultantId}&week_start_date=${weekStart}`);
-      if (res.data.success && res.data.data?.schedule) {
-        setSchedule(res.data.data.schedule);
-      } else {
-        setMessage(res.data.message || 'Không tìm thấy lịch tuần này!');
+      const response = await consultantService.getAllConsultants();
+      if (response.success && response.data) {
+        setConsultants(response.data.consultants || []);
       }
-    } catch (err) {
-      setMessage('Có lỗi khi lấy lịch làm việc.');
+    } catch (error) {
+      console.error('Error loading consultants:', error);
     }
   };
 
-  // Tự động fetch khi chọn đủ
-  useEffect(() => {
-    if (consultantId && weekStart) handleFetchSchedule();
-    // eslint-disable-next-line
-  }, [consultantId, weekStart]);
-
-  // Tính ngày đầu tuần (thứ 2)
-  const getMonday = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
-    return new Date(d.setDate(diff)).toISOString().split('T')[0];
-  };
-
   // Chuẩn bị dữ liệu cho bảng
-  const tableData: TableRow[] = schedule
-    ? dayNames.map((day, idx) => {
-        const wd = schedule.working_days[day];
-        return {
-          day: dayLabels[idx],
-          working: wd && wd.is_available ? `${wd.start_time} - ${wd.end_time}` : '-',
-          break: wd && wd.is_available && wd.break_start && wd.break_end ? `${wd.break_start} - ${wd.break_end}` : '-',
-          status: wd && wd.is_available ? 'Làm việc' : 'Không làm việc',
-        };
-      })
-    : [];
-
-  const columns: TableColumn<TableRow>[] = [
-    { name: 'Thứ', selector: row => row.day, sortable: true },
-    { name: 'Giờ làm việc', selector: row => row.working, sortable: false },
-    { name: 'Giờ nghỉ', selector: row => row.break, sortable: false },
-    { name: 'Trạng thái', selector: row => row.status, sortable: false, cell: row => (
-      <span style={{ color: row.status === 'Làm việc' ? '#1976d2' : '#aaa', fontWeight: 600 }}>{row.status}</span>
-    ) },
-  ];
+  const tableData: TableRow[] = DAY_NAMES.map((day, idx) => {
+    const wd = scheduleData?.working_days[day as DayName];
+    return {
+      day: DAY_LABELS[idx],
+      working: wd && wd.is_available ? `${wd.start_time} - ${wd.end_time}` : '-',
+      break: wd && wd.is_available && wd.break_start && wd.break_end ? `${wd.break_start} - ${wd.break_end}` : '-',
+      status: wd && wd.is_available ? 'Làm việc' : 'Không làm việc',
+    };
+  });
 
   return (
-    <div className="consultant-schedule-container">
-      <h2>Lịch làm việc của chuyên gia</h2>
-      <div className="schedule-form">
-        <label>
-          Chuyên gia:
-          <select value={consultantId} onChange={e => setConsultantId(e.target.value)} required>
-            <option value="">-- Chọn chuyên gia --</option>
-            {consultants.map(c => (
-              <option key={c._id} value={c._id}>{c.full_name}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Chọn ngày bất kỳ trong tuần:
-          <input type="date" value={weekStart} onChange={e => setWeekStart(getMonday(e.target.value))} required />
-        </label>
-      </div>
-      {message && <div className="message">{message}</div>}
-      {schedule && (
-        <div className="schedule-table-wrapper">
-          <DataTable
-            columns={columns}
-            data={tableData}
-            noHeader
-            highlightOnHover
-            striped
-            pagination={false}
-          />
-          <div className="week-range">
-            Tuần: {schedule.week_start_date} - {schedule.week_end_date}
-          </div>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-900">Lịch Làm Việc Chuyên Gia</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Xem lịch làm việc của các chuyên gia tư vấn
+          </p>
         </div>
-      )}
-      <style>{`
-        .consultant-schedule-container { max-width: 800px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #eee; }
-        .schedule-form { display: flex; gap: 24px; margin-bottom: 24px; }
-        label { display: flex; flex-direction: column; font-weight: 500; }
-        select, input[type=date] { margin-top: 4px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        .message { margin: 16px 0; color: #d32f2f; font-weight: 600; }
-        .schedule-table-wrapper { margin-top: 24px; }
-        .week-range { margin-top: 12px; font-size: 15px; color: #1976d2; text-align: right; }
-      `}</style>
+
+        <div className="p-6">
+          {/* Consultant Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Chọn chuyên gia
+            </label>
+            <select
+              value={selectedConsultantId}
+              onChange={(e) => setSelectedConsultantId(e.target.value)}
+              className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">-- Chọn chuyên gia --</option>
+              {consultants.map((consultant) => (
+                <option key={consultant._id} value={consultant._id}>
+                  {consultant.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
+              <button 
+                onClick={handleRetry}
+                className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+              >
+                Thử lại
+              </button>
+            </div>
+          )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-gray-600">Đang tải lịch làm việc...</span>
+            </div>
+          )}
+
+          {/* Schedule Display */}
+          {selectedConsultantId && !loading && (
+            <>
+              <div className="mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Lịch tuần {formatWeekRange(format(currentWeek, 'yyyy-MM-dd'), format(addDays(currentWeek, 6), 'yyyy-MM-dd'))}
+                </h3>
+              </div>
+
+                             <WeeklyCalendarView
+                 currentWeek={currentWeek}
+                 scheduleData={scheduleData || undefined}
+                 mode="read-only"
+                 onPreviousWeek={goToPreviousWeek}
+                 onNextWeek={goToNextWeek}
+                 loading={loading}
+                 error={error}
+                 onRetry={handleRetry}
+               />
+
+              {/* Schedule Table */}
+              {scheduleData && (
+                <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Chi tiết lịch làm việc</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Thứ</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Giờ làm việc</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Giờ nghỉ</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Trạng thái</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {tableData.map((row, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 font-medium">{row.day}</td>
+                            <td className="px-4 py-2">{row.working}</td>
+                            <td className="px-4 py-2">{row.break}</td>
+                            <td className="px-4 py-2">
+                              <span 
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  row.status === 'Làm việc' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                {row.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* No Schedule Found */}
+              {!scheduleData && !loading && !error && selectedConsultantId && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Không tìm thấy lịch làm việc cho tuần này</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* No Consultant Selected */}
+          {!selectedConsultantId && (
+            <div className="text-center py-8 text-gray-500">
+              <p>Vui lòng chọn chuyên gia để xem lịch làm việc</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

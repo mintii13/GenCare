@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DataTable, { TableColumn } from 'react-data-table-component';
+import { consultantService } from '../../../services/consultantService';
 
 interface Consultant {
-  _id: string;
+  consultant_id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
   specialization: string;
   qualifications: string;
-  experience_years?: number;
+  experience_years: number;
+  // Additional fields for display
   rating?: number;
   total_consultations?: number;
-  user_id: {
-    _id: string;
-    full_name: string;
-    email: string;
-    avatar?: string;
-  };
   bio?: string;
   is_available?: boolean;
 }
@@ -44,75 +45,49 @@ const ConsultantList: React.FC = () => {
     'Nhi khoa'
   ];
 
-  useEffect(() => {
-    fetchConsultants();
-  }, [filterSpecialization]);
-
   const fetchConsultants = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // For now using mock data
-      const mockConsultants: Consultant[] = [
-        {
-          _id: '1',
-          specialization: 'Sức khỏe sinh sản',
-          qualifications: 'Bác sĩ chuyên khoa I',
-          experience_years: 8,
-          rating: 4.8,
-          total_consultations: 324,
-          user_id: {
-            _id: 'u1',
-            full_name: 'BS. Nguyễn Văn An',
-            email: 'nguyen.van.an@hospital.com'
-          },
-          bio: 'Chuyên gia với 8 năm kinh nghiệm trong lĩnh vực sức khỏe sinh sản, tư vấn kế hoạch hóa gia đình.',
-          is_available: true
-        },
-        {
-          _id: '2',
-          specialization: 'Dinh dưỡng',
-          qualifications: 'Thạc sĩ Dinh dưỡng',
-          experience_years: 5,
-          rating: 4.6,
-          total_consultations: 156,
-          user_id: {
-            _id: 'u2',
-            full_name: 'ThS. Trần Thị Bích',
-            email: 'tran.thi.bich@nutrition.com'
-          },
-          bio: 'Chuyên gia dinh dưỡng với kinh nghiệm tư vấn chế độ ăn uống khoa học cho mọi lứa tuổi.',
-          is_available: true
-        },
-        {
-          _id: '3',
-          specialization: 'Sức khỏe tâm thần',
-          qualifications: 'Bác sĩ tâm thần',
-          experience_years: 12,
-          rating: 4.9,
-          total_consultations: 542,
-          user_id: {
-            _id: 'u3',
-            full_name: 'BS. Lê Minh Cường',
-            email: 'le.minh.cuong@mental.com'
-          },
-          bio: 'Bác sĩ tâm thần với 12 năm kinh nghiệm, chuyên trị các vấn đề về stress, trầm cảm, lo âu.',
-          is_available: false
-        }
-      ];
-
-      // Apply filter
-      const filteredData = filterSpecialization === 'all' 
-        ? mockConsultants 
-        : mockConsultants.filter(c => c.specialization === filterSpecialization);
-
-      setConsultants(filteredData);
-    } catch (err) {
-      setError('Có lỗi xảy ra khi tải danh sách chuyên gia');
+      setError('');
+      
+      console.log('Fetching consultants with specialization:', filterSpecialization);
+      const response = await consultantService.getAllConsultants(
+        1, 
+        100, // Get more consultants
+        filterSpecialization === 'all' ? undefined : filterSpecialization
+      );
+      
+      console.log('API Response:', response);
+      
+      if (response.success && response.data) {
+        const consultantsData = response.data.consultants || [];
+        console.log('Consultants data:', consultantsData);
+        
+        // Add mock additional fields for better display
+        const enrichedConsultants = consultantsData.map((consultant: Consultant) => ({
+          ...consultant,
+          rating: Math.random() * 2 + 3, // Random rating between 3-5
+          total_consultations: Math.floor(Math.random() * 500) + 50, // Random consultations
+          bio: `Chuyên gia ${consultant.specialization} với ${consultant.experience_years} năm kinh nghiệm.`,
+          is_available: Math.random() > 0.2 // 80% available
+        }));
+        
+        setConsultants(enrichedConsultants);
+      } else {
+        console.error('Failed to fetch consultants:', response.message);
+        setError(response.message || 'Không thể tải danh sách chuyên gia');
+      }
+    } catch (err: any) {
+      console.error('Error fetching consultants:', err);
+      setError('Có lỗi xảy ra khi tải danh sách chuyên gia: ' + (err.message || ''));
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchConsultants();
+  }, [filterSpecialization]);
 
   const renderStars = (rating: number) => {
     const stars = [];
@@ -141,23 +116,23 @@ const ConsultantList: React.FC = () => {
       cell: row => (
         <div className="flex items-center py-2">
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-            {row.user_id.avatar ? (
-              <img src={row.user_id.avatar} alt={row.user_id.full_name} className="w-12 h-12 rounded-full object-cover" />
+            {row.avatar ? (
+              <img src={row.avatar} alt={row.full_name} className="w-12 h-12 rounded-full object-cover" />
             ) : (
               <span className="text-blue-600 font-semibold text-lg">
-                {row.user_id.full_name.charAt(0)}
+                {row.full_name.charAt(0)}
               </span>
             )}
           </div>
           <div>
-            <div className="font-semibold text-gray-900">{row.user_id.full_name}</div>
+            <div className="font-semibold text-gray-900">{row.full_name}</div>
             <div className="text-sm text-gray-600">{row.qualifications}</div>
           </div>
         </div>
       ),
       minWidth: '200px',
       sortable: true,
-      selector: row => row.user_id.full_name,
+      selector: row => row.full_name,
     },
     {
       name: 'Chuyên khoa',
@@ -222,7 +197,7 @@ const ConsultantList: React.FC = () => {
           </button>
           {row.is_available && (
             <Link
-              to={`/dashboard/customer/book-appointment?consultant=${row._id}`}
+              to={`/consultation/book-appointment?consultant=${row.consultant_id}`}
               className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
             >
               Đặt lịch
@@ -248,175 +223,167 @@ const ConsultantList: React.FC = () => {
         borderBottom: '1px solid #e2e8f0',
       },
     },
-    rows: {
+    headCells: {
       style: {
         fontSize: '14px',
-        minHeight: '60px',
+        fontWeight: '600',
+        color: '#374151',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+      },
+    },
+    cells: {
+      style: {
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        paddingTop: '12px',
+        paddingBottom: '12px',
       },
     },
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Đang tải danh sách chuyên gia...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="container mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-sm">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="p-6 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Danh Sách Chuyên Gia</h1>
-          <p className="text-gray-600">Tìm và kết nối với các chuyên gia y tế</p>
+          <p className="text-gray-600">Tìm hiểu về các chuyên gia tư vấn sức khỏe</p>
         </div>
 
-        {/* Filter */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <label className="font-medium text-gray-700">Lọc theo chuyên khoa:</label>
-            <select
-              value={filterSpecialization}
-              onChange={(e) => setFilterSpecialization(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Tất cả</option>
-              {specializations.map(spec => (
-                <option key={spec} value={spec}>{spec}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
-
-        {/* Consultants Table */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <DataTable
-            title="Chuyên Gia Y Tế"
-            columns={columns}
-            data={consultants}
-            pagination
-            paginationPerPage={10}
-            paginationRowsPerPageOptions={[10, 20, 30]}
-            highlightOnHover
-            striped
-            customStyles={customStyles}
-            noDataComponent={
-              <div className="p-8 text-center">
-                <div className="text-gray-400 text-6xl mb-4">👨‍⚕️</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy chuyên gia</h3>
-                <p className="text-gray-600">Không có chuyên gia nào phù hợp với bộ lọc hiện tại.</p>
-              </div>
-            }
-          />
-        </div>
-
-        {/* Detail Modal */}
-        {selectedConsultant && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Thông Tin Chuyên Gia</h2>
-                  <button
-                    onClick={() => setSelectedConsultant(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="flex items-start gap-6 mb-6">
-                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
-                    {selectedConsultant.user_id.avatar ? (
-                      <img 
-                        src={selectedConsultant.user_id.avatar} 
-                        alt={selectedConsultant.user_id.full_name} 
-                        className="w-24 h-24 rounded-full object-cover" 
-                      />
-                    ) : (
-                      <span className="text-blue-600 font-semibold text-2xl">
-                        {selectedConsultant.user_id.full_name.charAt(0)}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                      {selectedConsultant.user_id.full_name}
-                    </h3>
-                    <p className="text-blue-600 font-medium mb-2">{selectedConsultant.qualifications}</p>
-                    <p className="text-gray-600 mb-2">
-                      <strong>Chuyên khoa:</strong> {selectedConsultant.specialization}
-                    </p>
-                    <p className="text-gray-600 mb-2">
-                      <strong>Kinh nghiệm:</strong> {selectedConsultant.experience_years} năm
-                    </p>
-                    
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className="flex items-center">
-                        <span className="mr-2">Đánh giá:</span>
-                        <div className="flex mr-2">
-                          {renderStars(selectedConsultant.rating || 0)}
-                        </div>
-                        <span>({selectedConsultant.rating?.toFixed(1)})</span>
-                      </div>
-                      <span className="text-gray-600">
-                        {selectedConsultant.total_consultations} buổi tư vấn
-                      </span>
-                    </div>
-
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedConsultant.is_available 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedConsultant.is_available ? 'Có thể tư vấn' : 'Tạm nghỉ'}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedConsultant.bio && (
-                  <div className="mb-6">
-                    <h4 className="font-medium text-gray-900 mb-2">Giới thiệu:</h4>
-                    <p className="text-gray-600 leading-relaxed">{selectedConsultant.bio}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setSelectedConsultant(null)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                  >
-                    Đóng
-                  </button>
-                  
-                  {selectedConsultant.is_available && (
-                    <Link
-                      to={`/dashboard/customer/book-appointment?consultant=${selectedConsultant._id}`}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
-                      onClick={() => setSelectedConsultant(null)}
-                    >
-                      Đặt lịch tư vấn
-                    </Link>
-                  )}
-                </div>
-              </div>
+        {/* Filters */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Chuyên khoa:</label>
+              <select
+                value={filterSpecialization}
+                onChange={(e) => setFilterSpecialization(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">Tất cả</option>
+                {specializations.map(spec => (
+                  <option key={spec} value={spec}>{spec}</option>
+                ))}
+              </select>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {error ? (
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-4">❌ {error}</div>
+              <button
+                onClick={fetchConsultants}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Thử lại
+              </button>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={consultants}
+              pagination
+              highlightOnHover
+              striped
+              progressPending={loading}
+              noDataComponent={
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Không tìm thấy chuyên gia nào</p>
+                </div>
+              }
+              customStyles={customStyles}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Consultant Detail Modal */}
+      {selectedConsultant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Thông tin chuyên gia</h3>
+              <button
+                onClick={() => setSelectedConsultant(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="text-center mb-4">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                {selectedConsultant.avatar ? (
+                  <img 
+                    src={selectedConsultant.avatar} 
+                    alt={selectedConsultant.full_name} 
+                    className="w-20 h-20 rounded-full object-cover" 
+                  />
+                ) : (
+                  <span className="text-blue-600 font-semibold text-2xl">
+                    {selectedConsultant.full_name.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <h4 className="text-xl font-semibold text-gray-800">{selectedConsultant.full_name}</h4>
+              <p className="text-gray-600">{selectedConsultant.specialization}</p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div>
+                <span className="text-gray-600 text-sm">Trình độ:</span>
+                <p className="font-medium">{selectedConsultant.qualifications}</p>
+              </div>
+              <div>
+                <span className="text-gray-600 text-sm">Kinh nghiệm:</span>
+                <p className="font-medium">{selectedConsultant.experience_years} năm</p>
+              </div>
+              <div>
+                <span className="text-gray-600 text-sm">Đánh giá:</span>
+                <div className="flex items-center">
+                  <div className="flex mr-2">
+                    {renderStars(selectedConsultant.rating || 0)}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    ({selectedConsultant.rating?.toFixed(1) || '0.0'})
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-600 text-sm">Số buổi tư vấn:</span>
+                <p className="font-medium">{selectedConsultant.total_consultations || 0} buổi</p>
+              </div>
+              {selectedConsultant.bio && (
+                <div>
+                  <span className="text-gray-600 text-sm">Giới thiệu:</span>
+                  <p className="text-sm">{selectedConsultant.bio}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setSelectedConsultant(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Đóng
+              </button>
+              {selectedConsultant.is_available && (
+                <Link
+                  to={`/consultation/book-appointment?consultant=${selectedConsultant.consultant_id}`}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center"
+                >
+                  Đặt lịch tư vấn
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

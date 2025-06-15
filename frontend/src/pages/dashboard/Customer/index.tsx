@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const CustomerDashboard: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
 
   const menuItems = [
     { path: '/dashboard/customer/appointments', label: 'Lịch Hẹn Của Tôi', icon: '📅' },
@@ -15,7 +17,7 @@ const CustomerDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Khách Hàng</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Xin chào, {user?.full_name}</h1>
           <p className="text-gray-600">Quản lý lịch hẹn tư vấn và thông tin cá nhân</p>
         </div>
 

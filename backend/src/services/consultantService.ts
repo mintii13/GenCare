@@ -83,4 +83,61 @@ export class ConsultantService {
             };
         }
     }
+
+    /**
+     * Lấy thông tin chi tiết của một chuyên gia theo ID
+     * @param {string} consultantId - ID của chuyên gia
+     * @returns {Promise<IServiceResponse>}
+     */
+    public static async getConsultantById(consultantId: string): Promise<IServiceResponse> {
+        try {
+            console.log(`[DEBUG] ConsultantService: Starting getConsultantById with id=${consultantId}`);
+
+            // Lấy consultant và populate thông tin user liên quan
+            const consultant = await Consultant.findById(consultantId)
+                .populate({
+                    path: 'user_id',
+                    select: '_id full_name email avatar phone' // Lấy các trường cần thiết
+                });
+
+            if (!consultant) {
+                console.log(`[DEBUG] ConsultantService: Consultant not found with id=${consultantId}`);
+                return {
+                    success: false,
+                    message: "Consultant not found."
+                };
+            }
+
+            // Chuyển đổi cấu trúc dữ liệu
+            const user = consultant.user_id as any; // Type assertion
+            const formattedConsultant = {
+                consultant_id: consultant._id,
+                user_id: user._id,
+                full_name: user.full_name,
+                email: user.email,
+                phone: user.phone,
+                avatar: user.avatar,
+                specialization: consultant.specialization,
+                qualifications: consultant.qualifications,
+                experience_years: consultant.experience_years,
+                consultation_rating: consultant.consultation_rating,
+                total_consultations: consultant.total_consultations
+            };
+
+            console.log(`[DEBUG] ConsultantService: Successfully formatted consultant ${consultant._id}`);
+
+            return {
+                success: true,
+                data: {
+                    consultant: formattedConsultant
+                }
+            };
+        } catch (error: any) {
+            console.error(`[DEBUG] ConsultantService: Error occurred: ${error.message}`);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 } 

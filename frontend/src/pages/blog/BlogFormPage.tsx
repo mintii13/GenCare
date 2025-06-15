@@ -12,13 +12,13 @@ import {
   FileText
 } from 'lucide-react';
 import QuillEditor from '../../components/common/QuillEditor';
-import { useToast } from '../../components/ui/ToastProvider';
+import toast from 'react-hot-toast';
 
 const BlogFormPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { success, error: showError } = useToast();
+  // Removed useToast - using react-hot-toast directly
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -116,24 +116,24 @@ const BlogFormPage: React.FC = () => {
       if (isEdit) {
         response = await blogService.updateBlog(blogId!, title, content);
         if (response.success) {
-          success('Cập nhật bài viết thành công!', 3000);
+          toast.success('Cập nhật bài viết thành công!'); 
           navigate(`/blogs/${blogId}`);
         }
       } else {
         response = await blogService.createBlog(title, content);
         if (response.success) {
-          success('Tạo bài viết thành công!', 3000);
+          toast.success('Tạo bài viết thành công!');
           navigate(`/blogs/${response.data.blog.blog_id}`);
         }
       }
 
       if (!response.success) {
-        showError(response.message || 'Có lỗi xảy ra', 4000);
+        toast.error(response.message || 'Có lỗi xảy ra');
         setError(response.message || 'Có lỗi xảy ra');
       }
     } catch (error) {
       console.error('Error saving blog:', error);
-      showError('Có lỗi xảy ra khi lưu bài viết', 4000);
+      toast.error('Có lỗi xảy ra khi lưu bài viết');
       setError('Có lỗi xảy ra khi lưu bài viết');
     } finally {
       setSaving(false);
@@ -272,12 +272,18 @@ const BlogFormPage: React.FC = () => {
 
             {/* Content */}
             <div className="mb-6">
-              <label className="block font-medium text-gray-700 mb-2">Nội dung bài viết</label>
-              <QuillEditor
-                value={content}
-                onChange={setContent}
-                placeholder="Nhập nội dung bài viết..."
-              />
+              <label className="block font-medium text-gray-700 mb-2">Nội dung bài viết *</label>
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                <QuillEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Nhập nội dung bài viết... Hãy chia sẻ kiến thức chuyên môn của bạn một cách chi tiết và dễ hiểu."
+                  height={500}
+                />
+              </div>
+              <p className="mt-2 text-sm text-gray-500">
+                Sử dụng các công cụ định dạng để làm nổi bật nội dung quan trọng
+              </p>
             </div>
 
             {/* Writing tips */}

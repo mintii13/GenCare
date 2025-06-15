@@ -29,7 +29,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
     setError('');
     try {
       const res = await axios.post(
-        import.meta.env.VITE_API_URL + '/auth/login',
+        (import.meta.env.VITE_API_URL || 'http://localhost:3000/api') + '/auth/login',
         form
       );
       if (res.data.success) {
@@ -107,7 +107,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
             {/* Nút Google OAuth */}
             <button
               className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-900 font-semibold py-2 rounded transition mt-2 hover:bg-gray-100"
-              onClick={() => window.location.href = 'http://localhost:3000/api/auth/google/verify'}
+              onClick={() => window.location.href = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api') + '/auth/google/verify'}
             >
               <span className="inline-block align-middle mr-2">
                 <svg width="20" height="20" viewBox="0 0 48 48">
