@@ -5,3 +5,4 @@
 .vscode/
 .vscode/
 .venv/
+/redis-docker/

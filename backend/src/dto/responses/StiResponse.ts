@@ -1,5 +1,8 @@
+import { ObjectId } from "mongoose";
+import { IStiOrder, StiOrder } from '../../models/StiOrder';
 import { IStiPackage } from "../../models/StiPackage";
 import { IStiTest } from "../../models/StiTest";
+import { IStiTestSchedule, StiTestSchedule } from '../../models/StiTestSchedule';
 
 export interface StiTestResponse{
     success: boolean;
@@ -23,4 +26,36 @@ export interface AllStiPackageResponse{
     success: boolean;
     message: string;
     stipackage?: Partial<IStiPackage[]>
+};
+
+export interface StiOrderResponse{
+    success: boolean;
+    message: string;
+    stiorder?: Partial<IStiOrder>
+};
+
+export interface AllStiOrderResponse{
+    success: boolean;
+    message: string;
+    stiorder?: Partial<IStiOrder[]>
+};
+
+export interface StiPackageTestResponse{
+    success: boolean;
+    message: string;
+    sti_package_item?: {
+        sti_package_id: ObjectId;
+        sti_test_ids: ObjectId[];
+    };
+
+    sti_test_items?: {
+        sti_test_id: ObjectId;
+    }[];
+    total_amount?: number;
+};
+
+export interface StiTestScheduleResponse{
+    success: boolean;
+    message: string;
+    order_schedule: IStiTestSchedule
 };

@@ -1,30 +1,34 @@
 [
-    {
+  {
+    "_id": { "$oid": "675e1a2b3c4d5e6f7a8b9101" },
     "sti_package_name": "Gói xét nghiệm STIs CƠ BẢN 1",
     "sti_package_code": "STI-BASIC-01",
     "price": 1687000,
     "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia",
     "is_active": true
-    },
-    {
+  },
+  {
+    "_id": { "$oid": "675e1a2b3c4d5e6f7a8b9102" },
     "sti_package_name": "Gói xét nghiệm STIs CƠ BẢN 2",
     "sti_package_code": "STI-BASIC-02",
     "price": 2462000,
     "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia, Viêm gan siêu vi B và Viêm gan siêu vi C",
     "is_active": true
-    },
-    {
+  },
+  {
+    "_id": { "$oid": "675e1a2b3c4d5e6f7a8b9103" },
     "sti_package_name": "Gói xét nghiệm STIs NÂNG CAO NỮ",
     "sti_package_code": "STI-ADVANCE-FEMALE",
     "price": 2986000,
     "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia, Viêm gan siêu vi B, Viêm gan siêu vi C, phết Trichomonas và xét nghiệm cổ tử cung HPV",
     "is_active": true
-    },
-    {
+  },
+  {
+    "_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
     "sti_package_name": "Gói xét nghiệm STIs NÂNG CAO NAM",
     "sti_package_code": "STI-ADVANCE-MALE",
     "price": 2851000,
     "description": "Gói test nhanh HIV, Giang mai, Lậu, Chlamydia, Viêm gan siêu vi B, Viêm gan siêu vi C, phết Trichomonas và xét nghiệm mụn rộp HSV",
     "is_active": true
-    }
+  }
 ]
