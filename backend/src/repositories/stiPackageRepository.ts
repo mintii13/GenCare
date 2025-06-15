@@ -34,7 +34,8 @@ export class StiPackageRepository{
         try {
             return await StiPackage.findById(id);
         } catch (error) {
-            
+            console.error(error);
+            throw error;
         }
     }
 

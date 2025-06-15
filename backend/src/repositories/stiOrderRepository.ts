@@ -31,7 +31,10 @@ export class StiOrderRepository{
     }
 
     public static async getOrdersByCustomer(customer_id: string): Promise<IStiOrder[] | null> {
-        return await StiOrder.find({ customer_id }).sort({ createdAt: 1 });
+        return await StiOrder.find({
+            customer_id,
+            order_status: { $ne: 'Canceled' }
+        }).sort({ createdAt: 1 });
     }
 
     public static async findOrderById(id: string){
@@ -50,6 +53,10 @@ export class StiOrderRepository{
             console.error(error);
             throw error;
         }
+    }
+
+    public static async saveOrder(order: IStiOrder): Promise<IStiOrder> {
+        return await order.save();
     }
     
 }

@@ -71,7 +71,8 @@ export const stiPackageSchema = Joi.object({
     'any.required': 'Description is required',
     'string.empty': 'Description cannot be empty'
   }),
-  is_active: Joi.boolean().optional()
+  is_active: Joi.boolean().optional(),
+  sti_test_ids: Joi.array().items(Joi.string().regex(/^[0-9a-fA-F]{24}$/)).optional()
 });
 
 export const validateStiPackage = (req: Request, res: Response, next: NextFunction) => {

@@ -3,7 +3,7 @@ import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
 import { IStiPackage } from "../models/StiPackage";
 import { StiPackageRepository } from "../repositories/stiPackageRepository";
-import { IStiOrder, StiOrder } from '../models/StiOrder';
+import { IStiOrder, OrderStatus, StiOrder } from '../models/StiOrder';
 import { StiOrderRepository } from '../repositories/stiOrderRepository';
 import { StiPackageTestRepository } from '../repositories/stiPackageTestRepository';
 import mongoose from 'mongoose';
@@ -104,7 +104,7 @@ export class StiService{
         try {
             // Tìm bản ghi khác có cùng mã nhưng không phải bản ghi đang update
             const exists = await StiTest.findOne({ sti_test_code: updateData.sti_test_code, _id: { $ne: sti_test_id } });
-            if (exists) {
+            if (exists && exists._id.toString() !== sti_test_id) {
                 return {
                     success: false,
                     message: 'STI test code already exists',
@@ -224,10 +224,34 @@ export class StiService{
         }
     }
 
+    public static async getStiPackageById(sti_package_id: string): Promise<StiPackageResponse> {
+        try {
+            const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
+            if (!stiPackage) {
+                return {
+                    success: false,
+                    message: 'STI Package not found'
+                };
+            }
+            return {
+                success: true,
+                message: 'Fetched STI Package successfully',
+                stipackage: stiPackage
+            };
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: 'Server error'
+            };
+        }
+    }
+
+
     public static async updateStiPackage(sti_package_id: string, updateData: Partial<IStiPackage>): Promise<StiPackageResponse> {
         try {
             const exists = await StiPackageRepository.findByStiPackageCode(updateData.sti_package_code);
-            if (exists) {
+            if (exists && exists._id.toString() !== sti_package_id) {
                 return {
                     success: false,
                     message: 'STI package code already exists',
@@ -549,5 +573,130 @@ export class StiService{
         }
         
     };
+
+    public static async insertNewStiPackageTests(sti_test_ids: string[], stiPackage: IStiPackage): Promise<void>{
+        try {
+            if (Array.isArray(sti_test_ids) && sti_test_ids.length > 0) {
+                const stiPackageTests = sti_test_ids.map(testId => ({
+                    sti_package_id: stiPackage._id,
+                    sti_test_id: testId,
+                    is_active: true
+                }));
+                await StiPackageTestRepository.insertManyPackageTests(stiPackageTests);
+            }
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    };
+
+    public static async updateStiPackageTests(sti_package_id: string, sti_test_ids: string[]): Promise<void> {
+        try {
+            if (!Array.isArray(sti_test_ids)) return;
+
+            // Xoá hết liên kết cũ
+            await StiPackageTestRepository.deletePackageTestsByPackageId(sti_package_id);
+
+            // Tạo mới lại danh sách
+            const newStiPackageTests = sti_test_ids.map(testId => ({
+                sti_package_id,
+                sti_test_id: testId,
+                is_active: true
+            }));
+
+            await StiPackageTestRepository.insertManyPackageTests(newStiPackageTests);
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+
+    public static async cancelOrder(order_id: string, userId: string) {
+        try {
+            const order = await StiOrder.findById(order_id);
+
+            if (!order) {
+                return { 
+                    success: false,
+                    message: 'Order not found' 
+                };
+            }
+
+            if (order.customer_id.toString() !== userId) {
+                return { 
+                    success: false,
+                    message: 'You are not allowed to cancel this order' 
+                };
+            }
+            if (order.order_status !== 'Pending') {
+                return { 
+                    success: false, 
+                    message: 'Only Pending orders can be canceled' 
+                };
+            }
+
+            // Nếu là staff/admin, có thể mở rộng logic tại đây nếu muốn
+
+            order.order_status = 'Canceled';
+            await StiOrderRepository.saveOrder(order);
+
+            return { 
+                success: true, 
+                message: 'Order canceled successfully',
+            };
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async updateOrderStatus(order_id: string, newStatus: OrderStatus) {
+        try {
+            const order = await StiOrderRepository.findOrderById(order_id);
+            if (!order) 
+                return { 
+                    success: false, 
+                    message: 'Order not found' 
+                };
+
+            if (order.order_status === 'Canceled' || order.order_status === 'Completed') {
+                return { 
+                    success: false, 
+                    message: 'Cannot change status of completed or canceled order' 
+                };
+            }
+
+            // Đảm bảo order status đi theo trình tự
+            const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+                Pending: ['Processing', 'Canceled'],
+                Processing: ['SpecimenCollected'],
+                SpecimenCollected: ['Testing'],
+                Testing: ['Completed'],
+                Completed: [],
+                Canceled: [],
+            };
+
+            if (!validTransitions[order.order_status].includes(newStatus)) {
+                return { success: false, message: `Cannot change from ${order.order_status} to ${newStatus}` };
+            }
+
+            order.order_status = newStatus;
+            const result = await StiOrderRepository.saveOrder(order);
+            return { 
+                success: true, 
+                message: 'Update order status successfully',
+                data: result 
+            };
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
 
 }

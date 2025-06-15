@@ -1,4 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
+
+export type OrderStatus = 'Pending' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
+
 export interface IStiOrder extends Document {
   customer_id: mongoose.Types.ObjectId;
   consultant_id?: mongoose.Types.ObjectId;
@@ -12,7 +15,7 @@ export interface IStiOrder extends Document {
   }[];
   sti_schedule_id: mongoose.Types.ObjectId;
   order_date: Date;
-  order_status: 'Pending' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
+  order_status: OrderStatus;
   total_amount: number;
   payment_status: 'Pending' | 'Paid' | 'Failed';
   notes?: string;

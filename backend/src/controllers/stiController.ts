@@ -5,10 +5,7 @@ import { IStiTest, StiTest } from '../models/StiTest';
 import { StiService } from '../services/stiService';
 import { validateStiTest, validateStiPackage } from '../middlewares/stiValidation';
 import {IStiPackage, StiPackage } from '../models/StiPackage';
-import {StiOrder, IStiOrder } from '../models/StiOrder';
 import { JWTPayload } from '../utils/jwtUtils';
-import { ObjectId } from 'mongoose';
-import { StiTestSchedule } from '../models/StiTestSchedule';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
 
 const router = Router();
@@ -98,8 +95,7 @@ router.put('/updateStiTest/:id', validateStiTest, authenticateToken, authorizeRo
             sti_test_type: req.body.sti_test_type,
             createdBy: user.userId
         };
-        console.log(user.userId);
-        
+
         const result = await StiService.updateStiTest(sti_test_id, updateData);
         if (result.success){
             res.status(200).json(result);
@@ -152,6 +148,8 @@ router.post('/createStiPackage', validateStiPackage, authenticateToken, authoriz
         const result = await StiService.createStiPackage(stiPackage);
         console.log('POST /createStiPackage - result:', result);
         if (result.success){
+            const sti_test_ids: string[] = req.body.sti_test_ids;
+            await StiService.insertNewStiPackageTests(sti_test_ids, stiPackage);
             res.status(200).json(result);
         }
         else res.status(400).json(result);
@@ -181,6 +179,33 @@ router.get('/getAllStiPackage', async (req: Request, res: Response): Promise<voi
     }
 });
 
+//get sti-package by id API
+router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const id = req.params.id;
+        const result = await StiService.getStiPackageById(id);
+
+        if (!result.success) {
+            if (result.message === 'Invalid STI Package ID') {
+                res.status(400).json(result);
+            } else if (result.message === 'STI Package not found') {
+                res.status(404).json(result);
+            } else {
+                res.status(500).json(result);
+            }
+            return;
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+
 //update sti-package API
 router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
@@ -201,6 +226,8 @@ router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, autho
         };        
         const result = await StiService.updateStiPackage(sti_package_id, updateData);
         if (result.success){
+            const sti_test_ids: string[] = req.body.sti_test_ids;
+            await StiService.updateStiPackageTests(sti_package_id, sti_test_ids);
             res.status(200).json(result);
         }
         else if (result.message === 'STIPackage not found'){
@@ -249,7 +276,7 @@ router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), as
             return res.status(201).json(result);
         }
         else if (result.message === 'No valid STI tests or package provided'){
-            return res.status(409).json(result);
+            return res.status(400).json(result);
         }
         return res.status(400).json(result);                    //lỗi nghiệp vụ
     } catch (error) {
@@ -264,6 +291,26 @@ router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), as
 router.get('/getAllStiOrders/:id', authenticateToken, authorizeRoles('customer', 'staff', 'manager', 'admin'), async (req: Request, res: Response) => {
     try {
         const customer_id = req.params.id;
+        const result = await StiService.getOrdersByCustomer(customer_id);
+        if (result.success){
+            return res.status(200).json(result);
+        }
+        else if (result.message === 'Customer_id is invalid'){
+            return res.status(400).json(result);
+        }
+        return res.status(404).json(result);
+    } catch (error) {
+        console.error('Error getting orders by customer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error' 
+        });
+    }
+});
+
+router.get('/getAllStiOrders', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response) => {
+    try {
+        const customer_id = (req.user as any).userId;
         const result = await StiService.getOrdersByCustomer(customer_id);
         if (result.success){
             return res.status(200).json(result);
@@ -300,21 +347,66 @@ router.get('/getStiOrder/:id', authenticateToken, authorizeRoles('customer', 'st
 });
 
 router.get('/viewTestScheduleWithOrders', async (req, res) => {
-  try {
-    // Get all schedules
-    const schedules = await StiTestScheduleRepository.getAllStiTestSchedule();
+    try {
+        // Get all schedules
+        const schedules = await StiTestScheduleRepository.getAllStiTestSchedule();
 
-    // With each schedule, get all orders
-    const result = await StiService.viewAllOrdersByTestSchedule(schedules);
+        // With each schedule, get all orders
+        const result = await StiService.viewAllOrdersByTestSchedule(schedules);
 
-    if (result.success){
-        return res.status(200).json(result);
+        if (result.success){
+            return res.status(200).json(result);
+        }
+        return res.status(400).json(result);
+    } catch (error) {
+        console.error('Error generating test schedule:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-    return res.status(400).json(result);
-  } catch (error) {
-    console.error('Error generating test schedule:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+});
+
+//xử lý order_status
+router.patch('/cancelOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), async (req: Request, res: Response) => {
+    const orderId = req.params.id;
+    const userId = (req.user as any).userId;
+
+    try {
+        const result = await StiService.cancelOrder(orderId, userId);
+        if (!result.success) {
+            res.status(200).json(result);
+        } else if (result.message === 'Order not found') {
+            res.status(404).json(result);
+        } else if (result.message === 'You are not allowed to cancel this order') {
+            res.status(403).json(result);
+        } else if (result.message === 'Only Pending orders can be canceled') {
+            res.status(400).json(result);
+        }
+
+    } catch (error) {
+        return res.status(500).json({   
+            success: false, 
+            message: 'Server error'
+        });
+    }
+});
+
+router.patch('/updateOrderStatus/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req, res) => {
+    try {
+        const order_id = req.params.id;
+        const { newStatus } = req.body;
+
+        const result = await StiService.updateOrderStatus(order_id, newStatus);
+
+        if (result.success) 
+            return res.status(200).json(result);
+        else if (result.message === 'Order not found') 
+            return res.status(404).json(result);
+        else return res.status(400).json(result);
+    } catch (error) {
+        return res.status(500).json({   
+            success: false, 
+            message: 'Server error'
+        });
+    }
 });
 
 export default router;
