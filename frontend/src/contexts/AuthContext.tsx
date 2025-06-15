@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (token) {
         console.log("AuthContext: Token found in localStorage.", token);
         try {
-          const apiUrl = `${import.meta.env.VITE_API_URL}/auth/getUserProfile`;
+          const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/getUserProfile`;
           console.log(`AuthContext: Sending request to ${apiUrl}`);
           const res = await axios.get(apiUrl, {
             headers: { Authorization: `Bearer ${token}` }
@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
-        await axios.post(`${import.meta.env.VITE_API_URL}/auth/logout`, {}, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }

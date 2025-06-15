@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
+import GenCareLogo from '../pages/home/components/GenCareLogo';
 
 interface NavigationProps {
   onLoginClick?: () => void;
@@ -58,8 +59,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
     <nav className="bg-white shadow-lg fixed top-0 left-0 right-0 w-full z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="text-2xl font-bold text-primary-700">
-            GenCare
+          <Link to="/" className="flex items-center space-x-2 text-2xl font-bold text-primary-700">
+            <GenCareLogo />
+            <span>GenCare</span>
           </Link>
           {/* Nút ẩn/hiện sidebar chỉ khi ở dashboard consultant */}
           {location.pathname.startsWith('/consultant') && onToggleSidebar && (

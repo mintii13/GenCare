@@ -59,12 +59,35 @@ export const appointmentService = {
   },
 
   async cancelAppointment(appointmentId: string) {
-    const response = await api.put(`/appointments/${appointmentId}/cancel`);
-    return response.data;
+    console.log('Cancel request:', {
+      appointmentId,
+      url: `/appointments/${appointmentId}/cancel`
+    });
+    
+    try {
+      const response = await api.put(`/appointments/${appointmentId}/cancel`);
+      console.log('Cancel response:', response);
+      return response.data;
+    } catch (error: any) {
+      console.error('Cancel error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw error;
+    }
   },
 
   async rescheduleAppointment(appointmentId: string, data: { appointment_date: string; start_time: string; end_time: string }) {
-    const response = await api.put(`/appointments/${appointmentId}/reschedule`, data);
+    console.log('Reschedule request:', {
+      appointmentId,
+      url: `/appointments/${appointmentId}`,
+      data
+    });
+    
+    const response = await api.put(`/appointments/${appointmentId}`, data);
+    console.log('Reschedule response:', response);
     return response.data;
   },
 

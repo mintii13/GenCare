@@ -1,5 +1,5 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/home";
 import TestPackagesPage from "./pages/test-packages";
 import STITestPage from "./pages/test-packages/sti";
@@ -11,17 +11,18 @@ import OAuthSuccess from "./pages/OAuthSuccess";
 // Blog imports
 import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
 import { Toaster } from 'react-hot-toast';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import ConsultantDashboard from './pages/dashboard/Consultant';
 import ConsultantBlogList from './pages/dashboard/Consultant/components/ConsultantBlogList';
-import ConsultantSchedule from './pages/dashboard/Consultant/ConsultantSchedule';
 import WeeklyScheduleManager from './pages/dashboard/Consultant/WeeklyScheduleManager';
-import WeeklyCalendarView from './pages/dashboard/Consultant/WeeklyCalendarView';
+
 import AppointmentManagement from './pages/dashboard/Consultant/AppointmentManagement';
 import CustomerDashboard from './pages/dashboard/Customer';
 import MyAppointments from './pages/dashboard/Customer/MyAppointments';
 import ConsultantList from './pages/dashboard/Customer/ConsultantList';
 import BookAppointment from './pages/consultation/BookAppointment';
 import ApiTest from './components/common/ApiTest';
+
 
 // Lazy load Admin Dashboard
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
@@ -64,7 +65,7 @@ const App = () => {
               <Route path="online" element={<div>Tư vấn trực tuyến</div>} />
               <Route path="records" element={<div>Hồ sơ tư vấn</div>} />
               <Route path="qa" element={<div>Q&A / Câu hỏi</div>} />
-              <Route path="calendar-view" element={<WeeklyCalendarView />} />
+
               <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
               <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
               <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
@@ -84,7 +85,8 @@ const App = () => {
             <Route path="/dashboard/customer/history" element={<div>Lịch sử tư vấn</div>} />
 
             {/* Consultation routes */}
-            <Route path="/consultation/book" element={<BookAppointment />} />
+            <Route path="/consultation/book" element={<Navigate to="/consultation/book-appointment" replace />} />
+            <Route path="/consultation/book-appointment" element={<BookAppointment />} />
             
             {/* Admin Dashboard routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -110,6 +112,7 @@ const App = () => {
           </Routes>
         </Suspense>
         <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
+     
       </Layout>
     </>
   );

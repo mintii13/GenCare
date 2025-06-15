@@ -33,7 +33,7 @@ export interface ConsultantStats {
 }
 
 export const consultantService = {
-  // Get all consultants (for customer)
+  // Get all consultants (for customer và guest - không cần đăng nhập)
   async getAllConsultants(page: number = 1, limit: number = 10, specialization?: string) {
     const params = new URLSearchParams();
     params.append('page', page.toString());
@@ -42,14 +42,61 @@ export const consultantService = {
       params.append('specialization', specialization);
     }
 
-    const response = await api.get(`/consultants?${params}`);
-    return response.data;
+    try {
+      // Sử dụng fetch API trực tiếp để tránh authentication headers
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const url = `${baseURL}/consultants/public?${params}`;
+      
+      console.log('Fetching from URL:', url);
+      
+      const publicResponse = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Không thêm Authorization header
+        }
+      });
+
+      console.log('Response status:', publicResponse.status);
+      console.log('Response ok:', publicResponse.ok);
+
+      if (!publicResponse.ok) {
+        const errorText = await publicResponse.text();
+        console.error('Response error text:', errorText);
+        throw new Error(`HTTP error! status: ${publicResponse.status}`);
+      }
+
+      const jsonData = await publicResponse.json();
+      console.log('Response JSON:', jsonData);
+      return jsonData;
+    } catch (error: any) {
+      console.error('Error fetching consultants:', error);
+      throw error;
+    }
   },
 
-  // Get consultant by ID
+  // Get consultant by ID (public endpoint - không cần đăng nhập)
   async getConsultantById(consultantId: string) {
-    const response = await api.get(`/consultants/${consultantId}`);
-    return response.data;
+    try {
+      // Sử dụng fetch API trực tiếp để tránh authentication headers
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const publicResponse = await fetch(`${baseURL}/consultants/public/${consultantId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Không thêm Authorization header
+        }
+      });
+
+      if (!publicResponse.ok) {
+        throw new Error(`HTTP error! status: ${publicResponse.status}`);
+      }
+
+      return await publicResponse.json();
+    } catch (error: any) {
+      console.error('Error fetching consultant by ID:', error);
+      throw error;
+    }
   },
 
   // Get consultant profile (for logged in consultant)
