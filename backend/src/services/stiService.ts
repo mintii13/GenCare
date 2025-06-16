@@ -703,26 +703,25 @@ export class StiService{
     }
 
     public static async getAllAuditLog (){
-    try {
-        const result = await StiAuditLogRepository.getAllAuditLogs();
-        if (!result){
-            return{
-                success: false,
-                message: 'Cannot find the audit logs'
+        try {
+            const result = await StiAuditLogRepository.getAllAuditLogs();
+            if (!result){
+                return{
+                    success: false,
+                    message: 'Cannot find the audit logs'
+                }
             }
+            return{
+                success: true,
+                message: 'Fetched All Audit Logs successfully',
+                audit_logs: result
+            }
+        } catch (error) {
+            console.error('Error fetching audit logs:', error);
+            return{ 
+                success: true,
+                message: 'Internal server error' 
+            };
         }
-        return{
-            success: true,
-            message: 'Fetched All Audit Logs successfully',
-            audit_logs: result
-        }
-    } catch (error) {
-        console.error('Error fetching audit logs:', error);
-        return{ 
-            success: true,
-            message: 'Internal server error' 
-        };
-    }
-};
-
+    };
 }
