@@ -15,8 +15,11 @@ const stiPackageSchema: Schema<IStiPackage> = new Schema({
     price: { type: Number, required: true, min: 0},
     description: {type: String, required: true, trim: true},
     is_active: {type: Boolean, default: true},
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+    createdBy: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
+  },
+  { 
+    timestamps: true 
   }
 );
 
-export const StiPackage = mongoose.model<IStiPackage>('STIPackage', stiPackageSchema, 'stipackages');
+export const StiPackage = mongoose.model<IStiPackage>('STIPackage', stiPackageSchema);

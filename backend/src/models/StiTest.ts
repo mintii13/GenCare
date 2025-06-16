@@ -26,7 +26,8 @@ const stiTestSchema = new Schema<IStiTest>({
     is_active: { type: Boolean, default: true },
     category: { type: String, enum: ['bacterial', 'viral', 'parasitic'], required: true },
     sti_test_type: {type: String, enum: ['máu', 'nước tiểu', 'dịch ngoáy'], required: true},
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
-});
+    createdBy: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
+}, { timestamps: true }
+);
 
-export const StiTest = mongoose.model<IStiTest>('StiTest', stiTestSchema, 'stitests');
+export const StiTest = mongoose.model<IStiTest>('StiTest', stiTestSchema);
