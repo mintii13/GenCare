@@ -16,6 +16,9 @@ const stiPackageSchema: Schema<IStiPackage> = new Schema({
     description: {type: String, required: true, trim: true},
     is_active: {type: Boolean, default: true},
     createdBy: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
+  },
+  { 
+    timestamps: true 
   }
 );
 

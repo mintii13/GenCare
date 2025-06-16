@@ -1,5 +1,8 @@
 // models/AuditLog.ts
 import mongoose, { Schema, Document } from 'mongoose';
+import { StiOrder } from '../models/StiOrder';
+import { StiPackage } from '../models/StiPackage';
+import { StiTest } from '../models/StiTest';
 
 export type TargetType = 'StiOrder' | 'StiPackage' | 'StiTest';
 
@@ -26,3 +29,9 @@ const stiAuditLogSchema = new Schema<IStiAuditLog>({
 });
 
 export const StiAuditLog = mongoose.model<IStiAuditLog>('AuditLog', stiAuditLogSchema);
+
+export const modelMap: Record<TargetType, mongoose.Model<any>> = {
+  StiOrder: StiOrder,
+  StiPackage: StiPackage,
+  StiTest: StiTest
+};

@@ -7,11 +7,14 @@ import { validateStiTest, validateStiPackage } from '../middlewares/stiValidatio
 import {IStiPackage, StiPackage } from '../models/StiPackage';
 import { JWTPayload } from '../utils/jwtUtils';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
+import { stiAuditLogger } from '../middlewares/stiAuditLogger';
+import { TargetType } from '../models/StiAuditLog';
+import { StiOrder } from '../models/StiOrder';
 
 const router = Router();
 
 //create sti-test API
-router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.post('/createStiTest', validateStiTest, authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiTest', 'Create StiTest'), async (req: Request, res: Response): Promise<void> => {
     try {
         console.log('POST /createStiTest - req.body:', req.body);
         const userId = (req.user as any).userId;
@@ -76,7 +79,7 @@ router.get('/getStiTest/:id', async (req: Request, res: Response): Promise<void>
 });
 
 //update sti-test API
-router.put('/updateStiTest/:id', validateStiTest, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.put('/updateStiTest/:id', validateStiTest, authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiTest', 'Update StiTest'), async (req: Request, res: Response): Promise<void> => {
     try {
         const sti_test_id = req.params.id;
         const user = req.user as any;
@@ -117,7 +120,7 @@ router.put('/updateStiTest/:id', validateStiTest, authenticateToken, authorizeRo
 });
 
 //update sti-test API
-router.put('/deleteStiTest/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.put('/deleteStiTest/:id', authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiTest', 'Delete StiTest'), async (req: Request, res: Response): Promise<void> => {
     try {
         const sti_test_id = req.params.id;
         const userId = (req.user as any).userId;
@@ -137,7 +140,7 @@ router.put('/deleteStiTest/:id', authenticateToken, authorizeRoles('staff', 'adm
 });
 
 //create sti-package API
-router.post('/createStiPackage', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.post('/createStiPackage', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiPackage', 'Create StiPackage'), async (req: Request, res: Response): Promise<void> => {
     try {
         console.log('POST /createStiPackage - req.body:', req.body);
         const userId = (req.user as any).userId;
@@ -207,7 +210,7 @@ router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('staff', 'adm
 
 
 //update sti-package API
-router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiPackage', 'Update StiPackage'), async (req: Request, res: Response): Promise<void> => {
     try {
         const sti_package_id = req.params.id;
         const user = req.user as any;
@@ -246,7 +249,7 @@ router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, autho
     }
 });
 //delete sti-package API
-router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiPackage', 'Delete StiPackage'), async (req: Request, res: Response): Promise<void> => {
     try {
         const sti_package_id = req.params.id;
         const userId = (req.user as any).userId;
@@ -266,7 +269,7 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
 });
 
 //create orders                                         (post)
-router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response) => {
+router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
     try {
         const customer_id = (req.jwtUser as JWTPayload).userId;
         const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
@@ -288,7 +291,7 @@ router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), as
     }
 });
 //get orders by customer id                                           (get)
-router.get('/getAllStiOrders/:id', authenticateToken, authorizeRoles('customer', 'staff', 'manager', 'admin'), async (req: Request, res: Response) => {
+router.get('/getAllStiOrders/:id', authenticateToken, async (req: Request, res: Response) => {
     try {
         const customer_id = req.params.id;
         const result = await StiService.getOrdersByCustomer(customer_id);
@@ -329,7 +332,7 @@ router.get('/getAllStiOrders', authenticateToken, authorizeRoles('customer'), as
 });
 
 //get order by id                                       (get)
-router.get('/getStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'manager', 'admin'), async (req: Request, res: Response) => {
+router.get('/getStiOrder/:id', authenticateToken, async (req: Request, res: Response) => {
     try {
         const order_id = req.params.id;
         const result = await StiService.getOrderById(order_id);
@@ -365,7 +368,7 @@ router.get('/viewTestScheduleWithOrders', async (req, res) => {
 });
 
 //xử lý order_status
-router.patch('/cancelOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), async (req: Request, res: Response) => {
+router.patch('/cancelOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), stiAuditLogger('StiOrder', 'Update OrderStatus'), async (req: Request, res: Response) => {
     const orderId = req.params.id;
     const userId = (req.user as any).userId;
 
@@ -389,7 +392,7 @@ router.patch('/cancelOrder/:id', authenticateToken, authorizeRoles('customer', '
     }
 });
 
-router.patch('/updateOrderStatus/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req, res) => {
+router.patch('/updateOrderStatus/:id', authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiOrder', 'Update OrderStatus'), async (req, res) => {
     try {
         const order_id = req.params.id;
         const { newStatus } = req.body;
@@ -407,6 +410,18 @@ router.patch('/updateOrderStatus/:id', authenticateToken, authorizeRoles('staff'
             success: false, 
             message: 'Server error'
         });
+    }
+});
+
+router.get('/getAllAuditLogs', authenticateToken, authorizeRoles('admin'), async (req: Request, res: Response) => {
+    try {
+        const result = await StiService.getAllAuditLog();
+        if (!result.success)
+            return res.status(400).json(result);
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 

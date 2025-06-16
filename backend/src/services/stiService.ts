@@ -1,4 +1,4 @@
-import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse, StiOrderResponse, AllStiOrderResponse, StiPackageTestResponse } from '../dto/responses/StiResponse';
+import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse, StiOrderResponse, AllStiOrderResponse } from '../dto/responses/StiResponse';
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
 import { IStiPackage } from "../models/StiPackage";
@@ -9,6 +9,7 @@ import { StiPackageTestRepository } from '../repositories/stiPackageTestReposito
 import mongoose from 'mongoose';
 import { IStiTestSchedule, StiTestSchedule } from '../models/StiTestSchedule';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
+import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
@@ -701,4 +702,26 @@ export class StiService{
         }
     }
 
+    public static async getAllAuditLog (){
+        try {
+            const result = await StiAuditLogRepository.getAllAuditLogs();
+            if (!result){
+                return{
+                    success: false,
+                    message: 'Cannot find the audit logs'
+                }
+            }
+            return{
+                success: true,
+                message: 'Fetched All Audit Logs successfully',
+                audit_logs: result
+            }
+        } catch (error) {
+            console.error('Error fetching audit logs:', error);
+            return{ 
+                success: true,
+                message: 'Internal server error' 
+            };
+        }
+    };
 }
