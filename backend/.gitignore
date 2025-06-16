@@ -24,5 +24,4 @@ package-lock.json
 
 #Redis server
 *.rdb
-/redis-docker/
 .package-lock.json
