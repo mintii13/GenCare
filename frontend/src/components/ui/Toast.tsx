@@ -1,152 +1,215 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 export type ToastPosition = 'top-center' | 'top-right' | 'bottom-center' | 'bottom-right';
 
-interface ToastProps {
+interface ToastMessage {
   id: string;
   type: ToastType;
-  message: string;
+  title: string;
+  message?: string;
   duration?: number;
-  position?: ToastPosition;
+  actions?: Array<{
+    label: string;
+    onClick: () => void;
+    variant?: 'primary' | 'secondary';
+  }>;
+}
+
+interface ToastProps {
+  toast: ToastMessage;
   onClose: (id: string) => void;
 }
 
-const Toast: React.FC<ToastProps> = ({
-  id,
-  type,
-  message,
-  duration = 3000,
-  onClose,
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isLeaving, setIsLeaving] = useState(false);
+interface ToastContainerProps {
+  toasts: ToastMessage[];
+  onClose: (id: string) => void;
+}
+
+// Single Toast Component
+const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    // Trigger entrance animation
-    const timer = setTimeout(() => setIsVisible(true), 50);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (duration > 0) {
+    if (toast.duration !== 0) {
       const timer = setTimeout(() => {
-        handleClose();
-      }, duration);
+        setIsVisible(false);
+        setTimeout(() => onClose(toast.id), 300); // Wait for animation
+      }, toast.duration || 5000);
+
       return () => clearTimeout(timer);
     }
-  }, [duration]);
+  }, [toast.id, toast.duration, onClose]);
 
-  const handleClose = () => {
-    setIsLeaving(true);
-    setTimeout(() => {
-      onClose(id);
-    }, 300);
-  };
+  const getToastStyles = () => {
+    const baseStyles = "transform transition-all duration-300 ease-in-out";
+    const visibilityStyles = isVisible 
+      ? "translate-x-0 opacity-100" 
+      : "translate-x-full opacity-0";
 
-  const getToastConfig = () => {
-    switch (type) {
+    switch (toast.type) {
       case 'success':
-        return {
-          icon: <CheckCircle className="w-5 h-5" />,
-          bgColor: 'bg-gradient-to-r from-green-500 to-emerald-500',
-          borderColor: 'border-green-400',
-          iconColor: 'text-white',
-          textColor: 'text-white',
-        };
+        return `${baseStyles} ${visibilityStyles} bg-green-50 border-green-200 text-green-800`;
       case 'error':
-        return {
-          icon: <XCircle className="w-5 h-5" />,
-          bgColor: 'bg-gradient-to-r from-red-500 to-rose-500',
-          borderColor: 'border-red-400',
-          iconColor: 'text-white',
-          textColor: 'text-white',
-        };
+        return `${baseStyles} ${visibilityStyles} bg-red-50 border-red-200 text-red-800`;
       case 'warning':
-        return {
-          icon: <AlertCircle className="w-5 h-5" />,
-          bgColor: 'bg-gradient-to-r from-amber-500 to-orange-500',
-          borderColor: 'border-amber-400',
-          iconColor: 'text-white',
-          textColor: 'text-white',
-        };
+        return `${baseStyles} ${visibilityStyles} bg-yellow-50 border-yellow-200 text-yellow-800`;
       case 'info':
-        return {
-          icon: <Info className="w-5 h-5" />,
-          bgColor: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-          borderColor: 'border-blue-400',
-          iconColor: 'text-white',
-          textColor: 'text-white',
-        };
+        return `${baseStyles} ${visibilityStyles} bg-blue-50 border-blue-200 text-blue-800`;
       default:
-        return {
-          icon: <Info className="w-5 h-5" />,
-          bgColor: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-          borderColor: 'border-blue-400',
-          iconColor: 'text-white',
-          textColor: 'text-white',
-        };
+        return `${baseStyles} ${visibilityStyles} bg-gray-50 border-gray-200 text-gray-800`;
     }
   };
 
-  const config = getToastConfig();
+  const getIcon = () => {
+    switch (toast.type) {
+      case 'success':
+        return (
+          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'error':
+        return (
+          <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 18.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        );
+      case 'warning':
+        return (
+          <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 18.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        );
+      case 'info':
+        return (
+          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const handleClose = () => {
+    setIsVisible(false);
+    setTimeout(() => onClose(toast.id), 300);
+  };
 
   return (
-    <div
-      className={`
-        relative flex items-center gap-3 p-4 rounded-xl shadow-lg border backdrop-blur-sm
-        transition-all duration-300 ease-out min-w-[320px] max-w-[480px]
-        ${config.bgColor} ${config.borderColor}
-        ${isVisible && !isLeaving 
-          ? 'translate-x-0 opacity-100 scale-100' 
-          : 'translate-x-full opacity-0 scale-95'
-        }
-        hover:shadow-xl hover:scale-105
-      `}
-    >
-      {/* Icon */}
-      <div className={`flex-shrink-0 ${config.iconColor}`}>
-        {config.icon}
-      </div>
-
-      {/* Message */}
-      <p className={`flex-1 font-medium ${config.textColor}`}>
-        {message}
-      </p>
-
-      {/* Close Button */}
-      <button
-        onClick={handleClose}
-        className={`
-          flex-shrink-0 p-1 rounded-full transition-all duration-200
-          ${config.textColor} hover:bg-white/20
-        `}
-      >
-        <X className="w-4 h-4" />
-      </button>
-
-      {/* Progress Bar (if duration > 0) */}
-      {duration > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 rounded-b-xl overflow-hidden">
-          <div
-            className="h-full bg-white/60 rounded-b-xl transition-all ease-linear"
-            style={{
-              animation: `shrink ${duration}ms linear forwards`,
-            }}
-          />
+    <div className={`max-w-sm w-full border rounded-lg shadow-lg p-4 mb-3 ${getToastStyles()}`}>
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          {getIcon()}
         </div>
-      )}
-
-      {/* Custom CSS for progress bar animation */}
-      <style>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
+        
+        <div className="ml-3 flex-1">
+          <h4 className="text-sm font-medium">{toast.title}</h4>
+          {toast.message && (
+            <p className="mt-1 text-sm opacity-90">{toast.message}</p>
+          )}
+          
+          {toast.actions && toast.actions.length > 0 && (
+            <div className="mt-3 flex space-x-2">
+              {toast.actions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={action.onClick}
+                  className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${
+                    action.variant === 'primary'
+                      ? 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                      : 'hover:bg-white hover:bg-opacity-10'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="ml-4 flex-shrink-0">
+          <button
+            onClick={handleClose}
+            className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   );
+};
+
+// Toast Container Component
+export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <Toast key={toast.id} toast={toast} onClose={onClose} />
+      ))}
+    </div>
+  );
+};
+
+// Toast Hook for easy usage
+export const useToast = () => {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newToast: ToastMessage = {
+      id,
+      duration: 5000,
+      ...toast,
+    };
+    
+    setToasts(prev => [...prev, newToast]);
+    return id;
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  const removeAllToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
+
+  // Convenient methods
+  const showSuccess = useCallback((title: string, message?: string, options?: Partial<ToastMessage>) => {
+    return addToast({ ...options, type: 'success', title, message });
+  }, [addToast]);
+
+  const showError = useCallback((title: string, message?: string, options?: Partial<ToastMessage>) => {
+    return addToast({ ...options, type: 'error', title, message });
+  }, [addToast]);
+
+  const showWarning = useCallback((title: string, message?: string, options?: Partial<ToastMessage>) => {
+    return addToast({ ...options, type: 'warning', title, message });
+  }, [addToast]);
+
+  const showInfo = useCallback((title: string, message?: string, options?: Partial<ToastMessage>) => {
+    return addToast({ ...options, type: 'info', title, message });
+  }, [addToast]);
+
+  return {
+    toasts,
+    addToast,
+    removeToast,
+    removeAllToasts,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    ToastContainer: () => <ToastContainer toasts={toasts} onClose={removeToast} />
+  };
 };
 
 export default Toast; 

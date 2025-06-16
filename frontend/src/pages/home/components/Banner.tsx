@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { TestTube, ArrowRight, Calendar, Shield, User, ChevronDown } from "lucide-react";
 import AuthRequiredButton from "../../../components/auth/AuthRequiredButton";
+import GenCareLogo from './GenCareLogo';
+import homepageImg from '../../../assets/images/homepage.jpg';
 
 const Banner: React.FC = () => {
   const scrollToNextSection = () => {
@@ -20,8 +22,29 @@ const Banner: React.FC = () => {
     }
   };
 
+  // --- Scroll Down Indicator logic ---
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const [indicatorFixed, setIndicatorFixed] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const banner = bannerRef.current;
+      if (!banner) return;
+      const bannerRect = banner.getBoundingClientRect();
+      // If bottom of banner is below viewport, keep fixed
+      if (bannerRect.bottom > window.innerHeight + 8) {
+        setIndicatorFixed(true);
+      } else {
+        setIndicatorFixed(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <section className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 py-20 md:py-32 overflow-hidden pt-20 md:pt-24">
+    <section ref={bannerRef} className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 py-20 md:py-32 overflow-hidden pt-20 md:pt-24">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -109,24 +132,12 @@ const Banner: React.FC = () => {
             <div className="relative">
               {/* Main Image Container */}
               <div className="relative w-full max-w-lg">
-                <div className="aspect-[4/3] bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-sm rounded-3xl border border-white/20 shadow-2xl p-8">
-                  {/* Placeholder for actual image */}
-                  <div className="w-full h-full bg-white/10 rounded-2xl flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                                             <div className="w-16 h-16 bg-cyan-300 rounded-full mx-auto flex items-center justify-center">
-                         <TestTube className="w-8 h-8 text-blue-700" />
-                       </div>
-                      <p className="text-white font-medium">GenCare Platform</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Floating Elements */}
-
+                <img 
+                  src={homepageImg} 
+                  alt="GenCare homepage" 
+                  className="rounded-3xl shadow-2xl border border-white/20 w-full object-cover aspect-[4/3] bg-white/10 transition-transform duration-300 origin-right lg:scale-[1.35]" 
+                />
               </div>
-
-              {/* Background Glow */}
-              <div className="absolute inset-0 bg-cyan-400/20 rounded-3xl blur-3xl -z-10 scale-110"></div>
             </div>
           </div>
         </div>
@@ -153,7 +164,15 @@ const Banner: React.FC = () => {
        </div>
 
        {/* Scroll Down Indicator */}
-       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 animate-float">
+       <div
+         className={
+           (indicatorFixed
+             ? "fixed left-1/2 transform -translate-x-1/2 bottom-0 z-20 animate-float"
+             : "absolute left-1/2 transform -translate-x-1/2 bottom-0 z-20 animate-float") +
+           " scale-[0.85]"
+         }
+         style={{ pointerEvents: 'auto' }}
+       >
          <button
            onClick={scrollToNextSection}
            className="group flex flex-col items-center gap-3 text-white/90 hover:text-white transition-all duration-500 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg p-2"

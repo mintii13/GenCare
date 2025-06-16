@@ -171,6 +171,7 @@ export class AppointmentService {
 
     /**
      * UNIFIED UPDATE: Handles all types of updates (notes, time, status)
+     * FIXED: Better permission checking for customers and consultants
      */
     public static async updateAppointment(
         appointmentId: string,
@@ -195,13 +196,42 @@ export class AppointmentService {
 
             console.log('Current appointment:', appointment);
 
-            // Kiểm tra quyền update
-            const canUpdate = this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
+            // FIXED: Improved permission checking
+            const canUpdate = await this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
             if (!canUpdate) {
                 return {
                     success: false,
                     message: 'You do not have permission to update this appointment'
                 };
+            }
+
+            // BUSINESS RULE: Customer chỉ được update notes và cancel appointment (status = 'cancelled')
+            if (requestUserRole === 'customer') {
+                const allowedFields = ['customer_notes', 'status'];
+                const invalidFields = Object.keys(updateData).filter(field => !allowedFields.includes(field));
+
+                if (invalidFields.length > 0) {
+                    return {
+                        success: false,
+                        message: `Customers can only update: customer_notes and status (to cancel). Invalid fields: ${invalidFields.join(', ')}`
+                    };
+                }
+
+                // Customer chỉ có thể change status thành 'cancelled'
+                if (updateData.status && updateData.status !== 'cancelled') {
+                    return {
+                        success: false,
+                        message: 'Customers can only change status to cancelled'
+                    };
+                }
+
+                // Kiểm tra business rule cho việc cancel (4 giờ trước)
+                if (updateData.status === 'cancelled') {
+                    const cancelValidation = this.validateCancellationTime(appointment, requestUserRole);
+                    if (!cancelValidation.success) {
+                        return cancelValidation;
+                    }
+                }
             }
 
             // NEW: Validate if there are any actual changes
@@ -230,16 +260,16 @@ export class AppointmentService {
                         break;
                 }
             }
-            // 2. Ưu tiên trung bình: thay đổi thời gian
-            else if (this.isTimeBeingUpdated(updateData, appointment)) {
+            // 2. Ưu tiên trung bình: thay đổi thời gian (chỉ cho consultant, staff, admin)
+            else if (requestUserRole !== 'customer' && this.isTimeBeingUpdated(updateData, appointment)) {
                 explicitAction = 'rescheduled';
             }
             // 3. Mặc định: 'updated' cho các thay đổi khác
 
             console.log('Explicit action determined:', explicitAction);
 
-            // Validation cho thay đổi thời gian - chỉ khi có time change
-            if (this.isTimeBeingUpdated(updateData, appointment)) {
+            // Validation cho thay đổi thời gian - chỉ khi có time change và không phải customer
+            if (requestUserRole !== 'customer' && this.isTimeBeingUpdated(updateData, appointment)) {
                 console.log('Time is being updated, validating...');
 
                 try {
@@ -326,6 +356,33 @@ export class AppointmentService {
                 message: `Internal server error when updating appointment: ${error.message}`
             };
         }
+    }
+
+    /**
+     * NEW: Validate cancellation time business rule
+     */
+    private static validateCancellationTime(
+        appointment: any,
+        userRole: string
+    ): AppointmentResponse {
+        // Staff và Admin có thể cancel bất cứ lúc nào
+        if (userRole === 'staff' || userRole === 'admin') {
+            return { success: true, message: 'Cancellation allowed for staff/admin' };
+        }
+
+        // BUSINESS RULE: Hủy lịch trước 4 tiếng
+        const now = new Date();
+        const appointmentDateTime = new Date(`${appointment.appointment_date.toISOString().split('T')[0]} ${appointment.start_time}:00`);
+        const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        if (diffHours < 4) {
+            return {
+                success: false,
+                message: 'Appointment can only be cancelled at least 4 hours before the scheduled time'
+            };
+        }
+
+        return { success: true, message: 'Cancellation time validation passed' };
     }
 
     /**
@@ -534,7 +591,7 @@ export class AppointmentService {
             }
 
             // Kiểm tra quyền cancel
-            const canCancel = this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
+            const canCancel = await this.canUserModifyAppointment(appointment, requestUserId, requestUserRole);
             if (!canCancel) {
                 return {
                     success: false,
@@ -851,31 +908,55 @@ export class AppointmentService {
     }
 
     /**
-     * Helper: Check if user can modify appointment
+     * FIXED: Improved permission checking with proper consultant lookup
      */
-    private static canUserModifyAppointment(
+    private static async canUserModifyAppointment(
         appointment: any,
         userId: string,
         userRole?: string
-    ): boolean {
-        // Customer can modify their own appointments
-        if (appointment.customer_id.toString() === userId) {
-            return true;
-        }
+    ): Promise<boolean> {
+        try {
+            // Customer can modify their own appointments
+            let customerIdToCheck: string;
+            if (typeof appointment.customer_id === 'string') {
+                customerIdToCheck = appointment.customer_id;
+            } else if (appointment.customer_id._id) {
+                customerIdToCheck = appointment.customer_id._id.toString();
+            } else {
+                customerIdToCheck = appointment.customer_id.toString();
+            }
 
-        // Consultant can modify appointments assigned to them
-        if (appointment.consultant_id && appointment.consultant_id.user_id) {
-            if (appointment.consultant_id.user_id.toString() === userId) {
+            if (customerIdToCheck === userId) {
                 return true;
             }
-        }
 
-        // Staff and admin can modify any appointment
-        if (userRole === 'staff' || userRole === 'admin') {
-            return true;
-        }
+            // Consultant can modify appointments assigned to them
+            // Need to get consultant_id from appointment and find the consultant to get user_id
+            let consultantIdFromAppointment: string;
+            if (typeof appointment.consultant_id === 'string') {
+                consultantIdFromAppointment = appointment.consultant_id;
+            } else if (appointment.consultant_id._id) {
+                consultantIdFromAppointment = appointment.consultant_id._id.toString();
+            } else {
+                consultantIdFromAppointment = appointment.consultant_id.toString();
+            }
 
-        return false;
+            // Find the consultant document to get user_id
+            const consultant = await Consultant.findById(consultantIdFromAppointment).lean();
+            if (consultant && consultant.user_id.toString() === userId) {
+                return true;
+            }
+
+            // Staff and admin can modify any appointment
+            if (userRole === 'staff' || userRole === 'admin') {
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error checking user permission:', error);
+            return false;
+        }
     }
 
     /**
