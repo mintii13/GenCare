@@ -39,7 +39,7 @@ class ApiClient {
     this.instance.interceptors.request.use(
       (config) => {
         // Add auth token if available
-        const token = localStorage.getItem('accessToken');
+        const token = localStorage.getItem('gencare_auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -81,7 +81,7 @@ class ApiClient {
         // Handle specific error cases
         if (status === 401) {
           // Token expired or invalid
-          localStorage.removeItem('accessToken');
+          localStorage.removeItem('gencare_auth_token');
           localStorage.removeItem('user');
           
           // Only redirect if not already on login page

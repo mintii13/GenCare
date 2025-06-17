@@ -60,8 +60,8 @@ export const userService = {
     // Store tokens and user info
     if (response.data.success) {
       const { accessToken, refreshToken, user } = response.data.data;
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('gencare_auth_token', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
     }
     
@@ -80,8 +80,8 @@ export const userService = {
       console.error('Logout error:', error);
     } finally {
       // Clear local storage regardless of API call result
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+        localStorage.removeItem('gencare_auth_token');
+  localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
     }
   },
@@ -98,7 +98,7 @@ export const userService = {
 
     if (response.data.success) {
       const { accessToken } = response.data.data;
-      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('gencare_auth_token', accessToken);
     }
 
     return response.data;
@@ -176,7 +176,7 @@ export const userService = {
   },
 
   isLoggedIn(): boolean {
-    return !!localStorage.getItem('accessToken');
+    return !!localStorage.getItem('gencare_auth_token');
   },
 
   hasRole(role: string): boolean {

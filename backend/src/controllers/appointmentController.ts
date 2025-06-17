@@ -233,14 +233,10 @@ router.put(
             const appointmentId = req.params.appointmentId;
             const { consultant_notes } = req.body;
 
-            const result = await AppointmentService.updateAppointment(
+            const result = await AppointmentService.completeAppointment(
                 appointmentId,
-                { 
-                    status: 'completed',
-                    consultant_notes: consultant_notes 
-                },
                 user.userId,
-                user.role
+                consultant_notes
             );
 
             if (result.success) {

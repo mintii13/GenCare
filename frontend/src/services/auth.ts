@@ -1,6 +1,6 @@
 import api from './api';
 
-const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY;
+const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'gencare_auth_token';
 
 interface LoginCredentials {
   email: string;

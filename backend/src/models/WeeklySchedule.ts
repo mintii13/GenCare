@@ -36,7 +36,7 @@ const workingDaySchema = new Schema<WorkingDay>({
     start_time: {
         type: String,
         required: true,
-        default: "08:00",
+        default: "07:00",
         validate: {
             validator: function (v: string) {
                 return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);

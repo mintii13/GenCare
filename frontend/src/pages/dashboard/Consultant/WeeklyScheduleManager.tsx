@@ -4,6 +4,7 @@ import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
 import { appointmentService } from '../../../services/appointmentService';
+import Icon from '../../../components/icons/IconMapping';
 
 interface WorkingDay {
   start_time: string;
@@ -485,7 +486,8 @@ const WeeklyScheduleManager: React.FC = () => {
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
                   disabled={loading}
                 >
-                  ← Tuần trước
+                  <Icon name="←" className="mr-2" />
+                  Tuần trước
                 </button>
                 
                 <button
@@ -510,7 +512,8 @@ const WeeklyScheduleManager: React.FC = () => {
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
                   disabled={loading}
                 >
-                  Tuần sau →
+                  Tuần sau
+                  <Icon name="→" className="ml-2" />
                 </button>
               </div>
             </div>
@@ -536,51 +539,37 @@ const WeeklyScheduleManager: React.FC = () => {
                 {/* Weekly Calendar View */}
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   {/* Calendar Table */}
-                  <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                  <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
                     <table className="w-full table-fixed min-w-[800px]">
-                      <thead className="sticky top-0 z-10">
-                        {/* Days Header */}
+                      <thead>
                         <tr className="bg-gray-100 shadow-sm">
-                          <th className="w-[6%] p-2 text-center text-sm font-bold text-gray-700 border-r border-gray-300 bg-gradient-to-r from-gray-200 to-gray-100 sticky left-0 z-20 shadow-sm">
+                          <th className="w-[6%] p-2 text-center text-sm font-bold text-gray-700 border-r border-gray-300 bg-gradient-to-r from-gray-200 to-gray-100 sticky left-0 top-0 z-30 shadow-sm">
                             <div className="text-xs text-gray-600 mb-1">Thời gian</div>
                           </th>
                           {dayNames.map((dayName, index) => {
                             const dayDate = addDays(currentWeek, index);
                             const isToday = isSameDay(dayDate, new Date());
                             return (
-                              <th key={dayName} className={`w-[13.43%] p-3 text-center border-r last:border-r-0 border-gray-300 ${
-                                isToday ? 'bg-blue-100 border-blue-300' : 'bg-gray-100'
-                              }`}>
-                                <div className={`font-bold text-sm ${isToday ? 'text-blue-800' : 'text-gray-800'}`}>
-                                  {dayLabels[index]}
-                                </div>
-                                <div className={`text-sm ${isToday ? 'text-blue-700 font-semibold' : 'text-gray-600'}`}>
-                                  {format(dayDate, 'dd')}
-                                </div>
-                                {isToday && (
-                                  <div className="text-xs text-blue-600 font-medium mt-1">HÔM NAY</div>
-                                )}
+                              <th key={dayName} className={`w-[13.43%] p-3 text-center border-r last:border-r-0 border-gray-300 ${isToday ? 'bg-blue-100 border-blue-300' : 'bg-gray-100'} sticky top-0 z-20`}>
+                                <div className={`font-bold text-sm ${isToday ? 'text-blue-800' : 'text-gray-800'}`}>{dayLabels[index]}</div>
+                                <div className={`text-sm ${isToday ? 'text-blue-700 font-semibold' : 'text-gray-600'}`}>{format(dayDate, 'dd')}</div>
+                                {isToday && (<div className="text-xs text-blue-600 font-medium mt-1">HÔM NAY</div>)}
                               </th>
                             );
                           })}
                         </tr>
                       </thead>
                       <tbody>
-                        {/* Generate time slots from 8 AM to 6 PM (10 hours) for better fit */}
                         {Array.from({ length: 10 }, (_, i) => {
-                          const hour = 8 + i;
+                          const hour = 7 + i;
                           const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
-                          
                           return (
                             <tr key={timeLabel} className="border-t border-gray-200">
-                              {/* Time column */}
                               <td className="w-[6%] p-2 text-center text-sm font-bold text-gray-700 border-r border-gray-300 bg-gradient-to-r from-gray-200 to-gray-100 sticky left-0 z-10 shadow-sm">
                                 <div className="bg-white rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-sm border">
                                   {timeLabel}
                                 </div>
                               </td>
-                              
-                              {/* Day columns */}
                               {dayNames.map((dayName, dayIndex) => {
                                 const dayData = scheduleData.working_days[dayName as keyof typeof scheduleData.working_days];
                                 const isWorking = dayData?.is_available || false;
