@@ -9,8 +9,8 @@ import { StiPackageTestRepository } from '../repositories/stiPackageTestReposito
 import mongoose from 'mongoose';
 import { IStiTestSchedule, StiTestSchedule } from '../models/StiTestSchedule';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
-import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
 import { validTransitions } from '../middlewares/stiValidation';
+import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
@@ -713,5 +713,6 @@ export class StiService{
                 message: 'Internal server error' 
             };
         }
-    };
+    }
+
 }

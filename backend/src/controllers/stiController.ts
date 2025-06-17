@@ -406,4 +406,16 @@ router.get('/getAllAuditLogs', authenticateToken, authorizeRoles('admin'), async
     }
 });
 
+router.get('/getAllAuditLogs', authenticateToken, authorizeRoles('admin'), async (req: Request, res: Response) => {
+    try {
+        const result = await StiService.getAllAuditLog();
+        if (!result.success)
+            return res.status(400).json(result);
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 export default router;
