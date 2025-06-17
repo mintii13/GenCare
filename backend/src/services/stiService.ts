@@ -3,13 +3,14 @@ import { IStiTest, StiTest } from '../models/StiTest';
 import { StiRepository } from "../repositories/stiRepository";
 import { IStiPackage } from "../models/StiPackage";
 import { StiPackageRepository } from "../repositories/stiPackageRepository";
-import { IStiOrder, OrderStatus, StiOrder } from '../models/StiOrder';
+import { IStiOrder, StiOrder } from '../models/StiOrder';
 import { StiOrderRepository } from '../repositories/stiOrderRepository';
 import { StiPackageTestRepository } from '../repositories/stiPackageTestRepository';
 import mongoose from 'mongoose';
 import { IStiTestSchedule, StiTestSchedule } from '../models/StiTestSchedule';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
 import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
+import { validTransitions } from '../middlewares/stiValidation';
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
@@ -612,95 +613,84 @@ export class StiService{
         }
     }
 
-    public static async cancelOrder(order_id: string, userId: string) {
+    public static async updateOrder(orderId: string, updates: Partial<IStiOrder>, userId: string, role: string) {
         try {
-            const order = await StiOrder.findById(order_id);
-
+            const order = await StiOrderRepository.findOrderById(orderId);
             if (!order) {
                 return { 
-                    success: false,
-                    message: 'Order not found' 
-                };
-            }
-
-            if (order.customer_id.toString() !== userId) {
-                return { 
-                    success: false,
-                    message: 'You are not allowed to cancel this order' 
-                };
-            }
-            if (order.order_status !== 'Pending' && order.order_status !== 'Accepted') {
-                return { 
-                    success: false, 
-                    message: 'Only Pending or Accepted orders can be canceled' 
-                };
-            }
-
-            // Nếu là staff/admin, có thể mở rộng logic tại đây nếu muốn
-
-            order.order_status = 'Canceled';
-            await StiOrderRepository.saveOrder(order);
-
-            return { 
-                success: true, 
-                message: 'Order canceled successfully',
-            };
-        } catch (error) {
-            console.error(error);
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
-
-    public static async updateOrderStatus(order_id: string, newStatus: OrderStatus, userId: string) {
-        try {
-            const order = await StiOrderRepository.findOrderById(order_id);
-            if (!order) 
-                return { 
                     success: false, 
                     message: 'Order not found' 
                 };
+            }
+            // Xử lý logic update order_status
+            if (updates.order_status && updates.order_status !== order.order_status) {
+                const currentStatus = order.order_status;
+                const nextStatus = updates.order_status;
 
-            if (order.order_status === 'Canceled' || order.order_status === 'Completed') {
-                return { 
-                    success: false, 
-                    message: 'Cannot change status of completed or canceled order' 
-                };
+                if (nextStatus && !validTransitions[currentStatus].includes(nextStatus)) {
+                    return {
+                        success: false,
+                        message: `Chuyển trạng thái không hợp lệ: từ "${currentStatus}" sang "${nextStatus}". Trạng thái cho phép: ${validTransitions[currentStatus].join(', ') || 'không có'}.`
+                    };
+                }
+
+                if (['Canceled', 'Completed'].includes(currentStatus)) {
+                    return { 
+                        success: false, 
+                        message: 'Cannot change status of completed or canceled order' 
+                    };
+                }
+
+                if (role === 'customer') {
+                    if (currentStatus === nextStatus){
+                    }
+                    else if (currentStatus === 'Pending' && nextStatus === 'Canceled') {
+                        order.order_status = 'Canceled';
+                    }
+                    else {
+                        return { 
+                            success: false, 
+                            message: 'Unauthorized status update' 
+                        };
+                    }
+                } else if (role === 'staff' || role === 'admin') {
+                    order.order_status = nextStatus;
+                    if (order.order_status === 'Processing') {
+                        order.payment_status = 'Paid';
+                    }
+                } else {
+                    return { 
+                        success: false, 
+                        message: 'Unauthorized role' 
+                    };
+                }
             }
 
-            // Đảm bảo order status đi theo trình tự
-            const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-                Pending: ['Accepted', 'Canceled'],
-                Accepted: ['Processing', 'Canceled'],
-                Processing: ['SpecimenCollected'],
-                SpecimenCollected: ['Testing'],
-                Testing: ['Completed'],
-                Completed: [],
-                Canceled: [],
-            };
-
-            if (!validTransitions[order.order_status].includes(newStatus)) {
-                return { success: false, message: `Cannot change from ${order.order_status} to ${newStatus}` };
+            if (Array.isArray(updates.sti_test_items)) {
+                order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
             }
 
-            order.order_status = newStatus;
+            const validFields = Object.keys(order.toObject());
+            for (const [key, value] of Object.entries(updates)) {
+                if (key !== 'order_status' && key !== 'sti_test_items' && validFields.includes(key)) {
+                    (order as any)[key] = value;
+                }
+            }
+
             const result = await StiOrderRepository.saveOrder(order);
-            return { 
-                success: true, 
-                message: 'Update order status successfully',
+            return {
+                success: true,
+                message: 'Order updated successfully',
                 data: result,
                 updatedBy: userId
             };
+
         } catch (error) {
             console.error(error);
-            return{
-                success: false,
-                message: 'Server error'
-            }
+            return { success: false, message: 'Server error' };
         }
     }
+
 
     public static async getAllAuditLog (){
         try {

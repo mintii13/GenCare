@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiService } from '../services/stiService';
-import { validateStiTest, validateStiPackage } from '../middlewares/stiValidation';
+import { validateStiTest, validateStiPackage, validateStiOrder} from '../middlewares/stiValidation';
 import {IStiPackage, StiPackage } from '../models/StiPackage';
 import { JWTPayload } from '../utils/jwtUtils';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
@@ -269,7 +269,7 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
 });
 
 //create orders                                         (post)
-router.post('/createStiOrder', authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
+router.post('/createStiOrder', validateStiOrder, authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
     try {
         const customer_id = (req.jwtUser as JWTPayload).userId;
         const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
@@ -349,6 +349,33 @@ router.get('/getStiOrder/:id', authenticateToken, async (req: Request, res: Resp
     }
 });
 
+//update order by id
+router.patch('/updateStiOrder/:id', authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
+    const orderId = req.params.id;
+    const userId = (req.user as any).userId;
+    const role = (req.user as any).role;
+    const updates = req.body;
+
+    try {
+        const result = await StiService.updateOrder(orderId, updates, userId, role);
+
+        if (!result.success && result.message === 'Order not found')
+            return res.status(404).json(result);
+        if (!result.success && result.message === 'Unauthorized status update')
+            return res.status(403).json(result);
+        if (!result.success)
+            return res.status(400).json(result);
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ 
+            success: false, message: 'Server error' 
+        });
+    }
+});
+
+
 router.get('/viewTestScheduleWithOrders', async (req, res) => {
     try {
         // Get all schedules
@@ -364,52 +391,6 @@ router.get('/viewTestScheduleWithOrders', async (req, res) => {
     } catch (error) {
         console.error('Error generating test schedule:', error);
         res.status(500).json({ error: 'Server error' });
-    }
-});
-
-//xử lý order_status
-router.patch('/cancelOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), stiAuditLogger('StiOrder', 'Update OrderStatus'), async (req: Request, res: Response) => {
-    const orderId = req.params.id;
-    const userId = (req.user as any).userId;
-
-    try {
-        const result = await StiService.cancelOrder(orderId, userId);
-        if (!result.success) {
-            res.status(200).json(result);
-        } else if (result.message === 'Order not found') {
-            res.status(404).json(result);
-        } else if (result.message === 'You are not allowed to cancel this order') {
-            res.status(403).json(result);
-        } else if (result.message === 'Only Pending orders can be canceled') {
-            res.status(400).json(result);
-        }
-
-    } catch (error) {
-        return res.status(500).json({   
-            success: false, 
-            message: 'Server error'
-        });
-    }
-});
-
-router.patch('/updateOrderStatus/:id', authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiOrder', 'Update OrderStatus'), async (req, res) => {
-    try {
-        const order_id = req.params.id;
-        const { newStatus } = req.body;
-        const userId = (req.user as any).userId;
-
-        const result = await StiService.updateOrderStatus(order_id, newStatus, userId);
-
-        if (result.success) 
-            return res.status(200).json(result);
-        else if (result.message === 'Order not found') 
-            return res.status(404).json(result);
-        else return res.status(400).json(result);
-    } catch (error) {
-        return res.status(500).json({   
-            success: false, 
-            message: 'Server error'
-        });
     }
 });
 
