@@ -54,7 +54,14 @@ export class AppointmentRepository {
             }
 
             return await Appointment.find(query)
-                .populate('consultant_id', 'user_id specialization qualifications')
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id specialization qualifications',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name'
+                    }
+                })
                 .sort({ appointment_date: 1, start_time: 1 })
                 .lean();
         } catch (error) {
@@ -342,7 +349,14 @@ export class AppointmentRepository {
 
             return await Appointment.find(query)
                 .populate('customer_id', 'full_name email phone')
-                .populate('consultant_id', 'user_id specialization qualifications')
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id specialization qualifications',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name'
+                    }
+                })
                 .sort({ appointment_date: 1, start_time: 1 })
                 .lean();
         } catch (error) {

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from "axios";
 
-const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken';
+const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'gencare_auth_token';
 
 interface User {
   phone: string;
@@ -107,6 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('user');
       localStorage.removeItem(AUTH_TOKEN_KEY);
       delete axios.defaults.headers.common['Authorization'];
+      window.location.href = '/';
     }
   };
 

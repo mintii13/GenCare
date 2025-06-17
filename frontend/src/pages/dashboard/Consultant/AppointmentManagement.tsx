@@ -3,6 +3,9 @@ import { format, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { useAuth } from '../../../contexts/AuthContext';
+import axios from 'axios';
+import Icon from '../../../components/icons/IconMapping';
+import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
 
 interface Appointment {
   _id: string;
@@ -85,7 +88,6 @@ const AppointmentManagement: React.FC = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       // Check if user is authenticated and has consultant role
       if (!user) {
@@ -98,13 +100,6 @@ const AppointmentManagement: React.FC = () => {
         return;
       }
       
-      if (!token) {
-        showNotification('error', 'Token không tồn tại. Vui lòng đăng nhập lại');
-        // Redirect to login
-        window.location.href = '/auth/login';
-        return;
-      }
-      
       console.log('🔍 Fetching appointments for consultant:', user.full_name, 'Role:', user.role);
       
       const queryParams = new URLSearchParams();
@@ -112,51 +107,45 @@ const AppointmentManagement: React.FC = () => {
         queryParams.append('status', filter);
       }
 
-      const response = await fetch(`http://localhost:3000/api/appointments/consultant-appointments?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axios.get(`http://localhost:3000/api/appointments/consultant-appointments?${queryParams}`);
 
       console.log('📡 API Response status:', response.status);
       
-      if (response.status === 401) {
-        showNotification('error', 'Token đã hết hạn. Vui lòng đăng nhập lại');
-        localStorage.removeItem('token');
-        window.location.href = '/auth/login';
-        return;
-      }
-      
-      if (response.status === 403) {
-        showNotification('error', 'Bạn không có quyền truy cập. Vui lòng kiểm tra role của bạn');
-        return;
-      }
-
-      const data: ApiResponse = await response.json();
-      console.log('📊 API Response data:', data);
-      
-      if (data.success) {
-        console.log('✅ Successfully loaded', data.data.appointments.length, 'appointments');
+      if (response.data.success) {
+        console.log('✅ Successfully loaded', response.data.data.appointments.length, 'appointments');
+        
+        // Log tất cả các lịch hẹn để kiểm tra
+        console.log('📋 All appointments:', response.data.data.appointments);
         
         // Filter out appointments with null customer_id
-        const validAppointments = data.data.appointments.filter(appointment => 
-          appointment && appointment.customer_id && appointment.customer_id.full_name
-        );
+        const validAppointments = response.data.data.appointments.filter((appointment: Appointment) => {
+          const isValid = appointment && appointment.customer_id && appointment.customer_id.full_name;
+          if (!isValid) {
+            console.log('❌ Invalid appointment:', appointment);
+          }
+          return isValid;
+        });
         
-        if (validAppointments.length !== data.data.appointments.length) {
-          console.warn('⚠️ Filtered out', data.data.appointments.length - validAppointments.length, 'invalid appointments');
+        if (validAppointments.length !== response.data.data.appointments.length) {
+          console.warn('⚠️ Filtered out', response.data.data.appointments.length - validAppointments.length, 'invalid appointments');
         }
         
         setAppointments(validAppointments);
         calculateStats(validAppointments);
       } else {
-        console.error('❌ API Error:', data.message);
-        showNotification('error', data.message || 'Không thể tải danh sách lịch hẹn');
+        console.error('❌ API Error:', response.data.message);
+        showNotification('error', response.data.message || 'Không thể tải danh sách lịch hẹn');
       }
     } catch (err: any) {
       console.error('💥 Network Error:', err);
-      showNotification('error', 'Có lỗi mạng xảy ra. Vui lòng kiểm tra kết nối');
+      if (err.response?.status === 401) {
+        showNotification('error', 'Token đã hết hạn. Vui lòng đăng nhập lại');
+        window.location.href = '/auth/login';
+      } else if (err.response?.status === 403) {
+        showNotification('error', 'Bạn không có quyền truy cập. Vui lòng kiểm tra role của bạn');
+      } else {
+        showNotification('error', 'Có lỗi mạng xảy ra. Vui lòng kiểm tra kết nối');
+      }
     } finally {
       setLoading(false);
     }
@@ -204,7 +193,7 @@ const AppointmentManagement: React.FC = () => {
   const handleConfirmAppointment = async (appointmentId: string) => {
     try {
       setActionLoading(appointmentId);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('gencare_auth_token');
       
       const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/confirm`, {
         method: 'PUT',
@@ -234,7 +223,7 @@ const AppointmentManagement: React.FC = () => {
 
     try {
       setActionLoading(selectedAppointment._id);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('gencare_auth_token');
       
       const response = await fetch(`http://localhost:3000/api/appointments/${selectedAppointment._id}/complete`, {
         method: 'PUT',
@@ -269,7 +258,7 @@ const AppointmentManagement: React.FC = () => {
 
     try {
       setActionLoading(appointmentId);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('gencare_auth_token');
       
       const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/cancel`, {
         method: 'PUT',
@@ -355,10 +344,16 @@ const AppointmentManagement: React.FC = () => {
             <div className="font-medium whitespace-nowrap">{formatDate(row.appointment_date)}</div>
             <div className="text-sm whitespace-nowrap">{row.start_time} - {row.end_time}</div>
             {priority === 'urgent' && (
-              <div className="text-xs text-red-500 font-semibold whitespace-nowrap">🚨 Sắp diễn ra</div>
+              <div className="text-xs text-red-500 font-semibold whitespace-nowrap">
+                <Icon name="⚠️" className="mr-1" />
+                Sắp diễn ra
+              </div>
             )}
             {priority === 'soon' && (
-              <div className="text-xs text-orange-500 whitespace-nowrap">⏰ Trong 24h</div>
+              <div className="text-xs text-orange-500 whitespace-nowrap">
+                <Icon name="⏰" className="mr-1" />
+                Trong 24h
+              </div>
             )}
           </div>
         );
@@ -420,10 +415,15 @@ const AppointmentManagement: React.FC = () => {
             <button
               onClick={() => handleConfirmAppointment(row._id)}
               disabled={actionLoading === row._id}
-              className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors flex items-center"
               title="Xác nhận lịch hẹn"
             >
-              {actionLoading === row._id ? '⏳' : '✅'} Xác nhận
+              {actionLoading === row._id ? (
+                <Icon name="⏳" className="mr-1" />
+              ) : (
+                <Icon name="✅" className="mr-1" />
+              )}
+              Xác nhận
             </button>
           )}
           
@@ -433,21 +433,24 @@ const AppointmentManagement: React.FC = () => {
                 setSelectedAppointment(row);
                 setConsultantNotes(row.consultant_notes || '');
               }}
-              className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors whitespace-nowrap"
-              title="Hoàn thành buổi tư vấn"
-            >
-              ✅ Hoàn thành
-            </button>
+              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors flex items-center">
+                <Icon name="✅" className="mr-1" />
+                Hoàn thành
+              </button>
           )}
           
           {(row.status === 'pending' || row.status === 'confirmed') && (
             <button
               onClick={() => handleCancelAppointment(row._id)}
               disabled={actionLoading === row._id}
-              className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-              title="Hủy lịch hẹn"
+              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center"
             >
-              {actionLoading === row._id ? '⏳' : '❌'} Hủy
+              {actionLoading === row._id ? (
+                <Icon name="⏳" className="mr-1" />
+              ) : (
+                <Icon name="❌" className="mr-1" />
+              )}
+              Hủy
             </button>
           )}
         </div>
@@ -538,12 +541,18 @@ const AppointmentManagement: React.FC = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={fetchAppointments}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm lg:text-base"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               >
-                🔄 Làm mới
+                <Icon name="🔄" className="mr-2" />
+                Làm mới
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Auto Confirm Status */}
+        <div className="mb-6">
+          <AutoConfirmStatus />
         </div>
 
         {/* Stats Cards */}
@@ -554,7 +563,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Tổng lịch hẹn</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
-              <div className="text-blue-500 text-2xl">📅</div>
+              <div className="text-blue-500 text-2xl">
+                <Icon name="📅" size={32} />
+              </div>
             </div>
           </div>
           
@@ -564,7 +575,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Chờ xác nhận</p>
                 <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
               </div>
-              <div className="text-yellow-500 text-2xl">⏳</div>
+              <div className="text-yellow-500 text-2xl">
+                <Icon name="⏳" size={32} />
+              </div>
             </div>
           </div>
           
@@ -574,7 +587,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Đã xác nhận</p>
                 <p className="text-2xl font-bold text-blue-600">{stats.confirmed}</p>
               </div>
-              <div className="text-blue-500 text-2xl">✅</div>
+              <div className="text-blue-500 text-2xl">
+                <Icon name="✅" size={32} />
+              </div>
             </div>
           </div>
           
@@ -635,7 +650,9 @@ const AppointmentManagement: React.FC = () => {
               fixedHeaderScrollHeight="600px"
               noDataComponent={
                 <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📅</div>
+                  <div className="text-6xl mb-4">
+                    <Icon name="📅" size={64} className="mx-auto" />
+                  </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Không có lịch hẹn nào</h3>
                   <p className="text-gray-500">
                     {filter === 'all' 
@@ -762,7 +779,12 @@ const AppointmentManagement: React.FC = () => {
                         disabled={actionLoading === selectedAppointment._id}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                       >
-                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '✅ Xác nhận'}
+                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : (
+                          <>
+                            <Icon name="✅" className="mr-2" />
+                            Xác nhận
+                          </>
+                        )}
                       </button>
                     )}
                     
@@ -772,7 +794,7 @@ const AppointmentManagement: React.FC = () => {
                         disabled={actionLoading === selectedAppointment._id}
                         className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
                       >
-                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '🎉 Hoàn thành'}
+                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : ' Hoàn thành'}
                       </button>
                     )}
                     
