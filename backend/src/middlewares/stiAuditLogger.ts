@@ -30,6 +30,7 @@ export const stiAuditLogger = (targetType: TargetType, action: string) => {
                         const createdRecord = await modelMap[targetType].findOne({ createdBy: user_id }).sort({ createdAt: -1 }); // cần có `timestamps: true` trong schema
                         finalId = createdRecord?._id;
                     }
+                    if (!finalId) return;
                     const after = action === 'Delete' ? null: action === 'Create' ? parsedBody: await GenericRepository.findByTargetId(modelMap[targetType], finalId);
                     
                     try {
