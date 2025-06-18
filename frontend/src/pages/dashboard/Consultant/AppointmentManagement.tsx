@@ -551,20 +551,10 @@ const AppointmentManagement: React.FC = () => {
                 setSelectedAppointment(row);
                 setConsultantNotes(row.consultant_notes || '');
               }}
-              disabled={!canCompleteAppointment(row)}
-              className={`px-3 py-1 text-xs rounded transition-colors flex items-center ${
-                canCompleteAppointment(row)
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-              title={
-                canCompleteAppointment(row)
-                  ? 'Hoàn thành buổi tư vấn'
-                  : `Chỉ có thể hoàn thành sau 15 phút tư vấn (còn ${getRemainingTimeToComplete(row)} phút)`
-              }
+              className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors whitespace-nowrap"
+              title="Hoàn thành buổi tư vấn"
             >
-              <Icon name="✅" className="mr-1" />
-              {canCompleteAppointment(row) ? 'Hoàn thành' : `Còn ${getRemainingTimeToComplete(row)}p`}
+              ✅ Hoàn thành
             </button>
           )}
           
@@ -924,12 +914,7 @@ const AppointmentManagement: React.FC = () => {
                         disabled={actionLoading === selectedAppointment._id}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                       >
-                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : (
-                          <>
-                            <Icon name="🔄" className="mr-2" />
-                            Xác nhận
-                          </>
-                        )}
+                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '✅ Xác nhận'}
                       </button>
                     )}
                     
@@ -948,12 +933,7 @@ const AppointmentManagement: React.FC = () => {
                             : `Chỉ có thể hoàn thành sau 1 giờ tư vấn (còn ${getRemainingTimeToComplete(selectedAppointment)} phút)`
                         }
                       >
-                        {actionLoading === selectedAppointment._id 
-                          ? 'Đang xử lý...' 
-                          : canCompleteAppointment(selectedAppointment)
-                            ? 'Hoàn thành'
-                            : `Còn ${getRemainingTimeToComplete(selectedAppointment)} phút`
-                        }
+                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '🎉 Hoàn thành'}
                       </button>
                     )}
                     

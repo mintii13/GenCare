@@ -5,7 +5,7 @@ import {
   FaCalendarAlt, 
   FaUsers, 
   FaCog,
-  FaSignOutAlt 
+  FaSignOutAlt
 } from 'react-icons/fa';
 
 const StaffSidebar: React.FC = () => {
@@ -79,7 +79,6 @@ const StaffSidebar: React.FC = () => {
           </div>
         ))}
       </nav>
-
       {/* Logout button at bottom */}
       <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
         <button
