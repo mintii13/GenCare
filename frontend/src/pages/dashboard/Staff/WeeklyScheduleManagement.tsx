@@ -155,7 +155,7 @@ const WeeklyScheduleManagement: React.FC = () => {
 
     const handleCopySuccess = () => {
         handleCloseCopyModal();
-        fetchSchedules(); // Tải lại danh sách lịch
+        fetchSchedules();
     };
     
     const columns = useMemo(() => [

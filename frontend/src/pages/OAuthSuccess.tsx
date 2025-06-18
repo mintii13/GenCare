@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import { Loading } from "../components/ui";
+import { navigateAfterLogin } from "../utils/navigationUtils";
 
 function OAuthSuccess() {
   const navigate = useNavigate();
@@ -37,15 +38,8 @@ function OAuthSuccess() {
           // Đăng nhập qua AuthContext
           login(response.data.user, token);
           
-          // Redirect dựa trên role
-          const userRole = response.data.user.role;
-          if (userRole === 'consultant') {
-            navigate("/consultant");
-          } else if (userRole === 'customer') {
-            navigate("/dashboard/customer");
-          } else {
-            navigate("/");
-          }
+          // Redirect dựa trên role sử dụng helper function
+          navigateAfterLogin(response.data.user, navigate);
         } else {
           throw new Error("Không thể lấy thông tin người dùng");
         }
