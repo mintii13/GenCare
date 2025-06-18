@@ -102,6 +102,19 @@ export const appointmentService = {
     return response.data;
   },
 
+  // Staff/Admin APIs
+  async getAllAppointments(status?: string, startDate?: string, endDate?: string, consultantId?: string, customerId?: string) {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (consultantId) params.append('consultant_id', consultantId);
+    if (customerId) params.append('customer_id', customerId);
+
+    const response = await api.get(`/appointments/admin/all?${params}`);
+    return response.data;
+  },
+
   async confirmAppointment(appointmentId: string) {
     const response = await api.put(`/appointments/${appointmentId}/confirm`);
     return response.data;

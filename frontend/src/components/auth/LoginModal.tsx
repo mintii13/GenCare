@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { navigateAfterLogin } from '../../utils/navigationUtils';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -34,7 +35,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
       );
       if (res.data.success) {
         login(res.data.user, res.data.accessToken);
-        if (onSuccess) onSuccess(res.data.user);
+        if (onSuccess) {
+          onSuccess(res.data.user);
+        } else {
+          // Nếu không có callback success, tự động redirect đến dashboard
+          navigateAfterLogin(res.data.user, navigate);
+        }
         onClose();
       } else {
         setError(res.data.message || 'Đăng nhập thất bại');

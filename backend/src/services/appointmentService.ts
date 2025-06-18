@@ -979,6 +979,60 @@ export class AppointmentService {
                 };
             }
 
+            if (appointment.status !== 'confirmed') {
+                return {
+                    success: false,
+                    message: 'Only confirmed appointments can be completed'
+                };
+            }
+
+            // Kiểm tra consultant có quyền complete không
+            const consultant = await Consultant.findById(appointment.consultant_id);
+            if (!consultant || consultant.user_id.toString() !== consultantUserId) {
+                return {
+                    success: false,
+                    message: 'You can only complete your own appointments'
+                };
+            }
+
+            // Kiểm tra đã đủ 15 phút từ lúc bắt đầu buổi tư vấn chưa
+            try {
+                const appointmentDate = new Date(appointment.appointment_date);
+                const [hours, minutes] = appointment.start_time.split(':').map(Number);
+                
+                if (isNaN(appointmentDate.getTime()) || isNaN(hours) || isNaN(minutes)) {
+                    return {
+                        success: false,
+                        message: 'Invalid appointment date or time format'
+                    };
+                }
+
+                const appointmentDateTime = new Date(appointmentDate);
+                appointmentDateTime.setHours(hours, minutes, 0, 0);
+                
+                const now = new Date();
+                const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
+                
+                if (minutesPassed < 15) {
+                    const remainingMinutes = Math.ceil(15 - minutesPassed);
+                    return {
+                        success: false,
+                        message: `Appointment can only be completed after 15 minutes from start time. Please wait ${remainingMinutes} more minutes.`
+                    };
+                }
+            } catch (error) {
+                console.error('Error checking completion time:', error);
+                return {
+                    success: false,
+                    message: 'Error validating completion time'
+                };
+            }
+
+            const completedAppointment = await AppointmentRepository.completeById(
+                appointmentId,
+                consultantNotes
+            );
+
             return {
                 success: true,
                 message: 'Appointment retrieved successfully',

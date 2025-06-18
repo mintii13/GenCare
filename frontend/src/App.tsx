@@ -32,6 +32,7 @@ const ConsultantLayout = lazy(() => import('./components/layout/ConsultantLayout
 // Lazy load Staff Dashboard
 const StaffDashboard = lazy(() => import('./pages/dashboard/Staff'));
 const WeeklyScheduleManagement = lazy(() => import('./pages/dashboard/Staff/WeeklyScheduleManagement'));
+const StaffAppointmentManagement = lazy(() => import('./pages/dashboard/Staff/components/StaffAppointmentManagement'));
 const UserManagement = lazy(() => import('./pages/dashboard/Admin/UserManagement'));
 
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
@@ -134,7 +135,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             {/* Staff Dashboard routes */}
             <Route path="/staff/*" element={<StaffDashboard />}>
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
-              <Route path="appointments" element={<div>Quản lý cuộc hẹn</div>} />
+              <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
