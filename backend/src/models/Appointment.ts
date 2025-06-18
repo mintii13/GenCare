@@ -1,17 +1,50 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+interface MeetingInfo {
+    meet_url: string;
+    meeting_id: string;
+    created_at: Date;
+    reminder_sent: boolean;
+    meeting_password?: string;
+}
+
 export interface IAppointment extends Document {
     customer_id: mongoose.Types.ObjectId;
     consultant_id: mongoose.Types.ObjectId;
     appointment_date: Date;
     start_time: string; // Format: "HH:mm"
     end_time: string;   // Format: "HH:mm"
-    status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+    status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'in_progress';
     customer_notes?: string;
     consultant_notes?: string;
+    meeting_info?: MeetingInfo;
+    video_call_status?: 'not_started' | 'in_progress' | 'ended';
     created_date: Date;
     updated_date: Date;
 }
+
+const meetingInfoSchema = new Schema<MeetingInfo>({
+    meet_url: {
+        type: String,
+        required: true
+    },
+    meeting_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    created_at: {
+        type: Date,
+        default: Date.now
+    },
+    reminder_sent: {
+        type: Boolean,
+        default: false
+    },
+    meeting_password: {
+        type: String
+    }
+});
 
 const appointmentSchema = new Schema<IAppointment>({
     customer_id: {
@@ -50,7 +83,7 @@ const appointmentSchema = new Schema<IAppointment>({
     },
     status: {
         type: String,
-        enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+        enum: ['pending', 'confirmed', 'cancelled', 'completed', 'in_progress'],
         default: 'pending'
     },
     customer_notes: {
@@ -58,6 +91,12 @@ const appointmentSchema = new Schema<IAppointment>({
     },
     consultant_notes: {
         type: String
+    },
+    meeting_info: meetingInfoSchema,
+    video_call_status: {
+        type: String,
+        enum: ['not_started', 'in_progress', 'ended'],
+        default: 'not_started'
     },
     created_date: {
         type: Date,
@@ -99,5 +138,6 @@ appointmentSchema.index({ customer_id: 1 });
 appointmentSchema.index({ consultant_id: 1 });
 appointmentSchema.index({ appointment_date: 1 });
 appointmentSchema.index({ status: 1 });
+appointmentSchema.index({ 'meeting_info.meeting_id': 1 });
 
 export const Appointment = mongoose.model<IAppointment>('Appointment', appointmentSchema);

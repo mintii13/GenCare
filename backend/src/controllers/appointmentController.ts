@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AppointmentService } from '../services/appointmentService';
 import { AppointmentHistoryService } from '../services/appointmentHistoryService';
+import { ReminderSchedulerService } from '../services/reminderSchedulerService';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { validateBookAppointment, validateUpdateAppointment } from '../middlewares/appointmentValidation';
 import { JWTPayload } from '../utils/jwtUtils';
@@ -191,7 +192,7 @@ router.put(
     }
 );
 
-// Confirm appointment
+// Confirm appointment - ENHANCED với meeting link generation
 router.put(
     '/:appointmentId/confirm',
     authenticateToken,
@@ -201,17 +202,32 @@ router.put(
             const user = req.jwtUser as JWTPayload;
             const appointmentId = req.params.appointmentId;
 
-            const result = await AppointmentService.updateAppointment(
-                appointmentId,
-                { status: 'confirmed' },
-                user.userId,
-                user.role
-            );
+            // Nếu là consultant, dùng confirmAppointment method với meeting link
+            if (user.role === 'consultant') {
+                const result = await AppointmentService.confirmAppointment(
+                    appointmentId,
+                    user.userId
+                );
 
-            if (result.success) {
-                res.json(result);
+                if (result.success) {
+                    res.json(result);
+                } else {
+                    res.status(400).json(result);
+                }
             } else {
-                res.status(400).json(result);
+                // Staff/Admin dùng updateAppointment method
+                const result = await AppointmentService.updateAppointment(
+                    appointmentId,
+                    { status: 'confirmed' },
+                    user.userId,
+                    user.role
+                );
+
+                if (result.success) {
+                    res.json(result);
+                } else {
+                    res.status(400).json(result);
+                }
             }
         } catch (error: any) {
             res.status(500).json({
@@ -244,6 +260,120 @@ router.put(
             } else {
                 res.status(400).json(result);
             }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Send meeting reminder
+router.post(
+    '/:appointmentId/send-reminder',
+    authenticateToken,
+    authorizeRoles('consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const appointmentId = req.params.appointmentId;
+
+            const result = await AppointmentService.sendMeetingReminder(appointmentId);
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Start meeting
+router.put(
+    '/:appointmentId/start-meeting',
+    authenticateToken,
+    authorizeRoles('customer', 'consultant'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const result = await AppointmentService.startMeeting(appointmentId, user.userId);
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get meeting info
+router.get(
+    '/:appointmentId/meeting-info',
+    authenticateToken,
+    authorizeRoles('customer', 'consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const result = await AppointmentService.getAppointmentById(appointmentId);
+
+            if (!result.success) {
+                return res.status(404).json(result);
+            }
+
+            const appointment = result.data?.appointment;
+
+            // Check permission
+            if (user.role === 'customer') {
+                if (appointment.customer_id._id.toString() !== user.userId) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'You can only view your own appointment meeting info'
+                    });
+                }
+            } else if (user.role === 'consultant') {
+                const consultant = await Consultant.findOne({ user_id: user.userId });
+                if (!consultant || appointment.consultant_id._id.toString() !== consultant._id.toString()) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'You can only view your own appointment meeting info'
+                    });
+                }
+            }
+
+            // Return meeting info
+            if (!appointment.meeting_info) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No meeting information available. Appointment may not be confirmed yet.'
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Meeting information retrieved successfully',
+                data: {
+                    meeting_info: appointment.meeting_info,
+                    appointment_status: appointment.status,
+                    video_call_status: appointment.video_call_status
+                },
+                timestamp: new Date().toISOString()
+            });
         } catch (error: any) {
             res.status(500).json({
                 success: false,
@@ -504,6 +634,146 @@ router.get(
             );
 
             res.json(result);
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// ================== REMINDER SCHEDULER MANAGEMENT ROUTES ==================
+
+// Get reminder scheduler status
+router.get(
+    '/admin/reminder-status',
+    authenticateToken,
+    authorizeRoles('admin'),
+    async (req, res) => {
+        try {
+            const status = ReminderSchedulerService.getStatus();
+
+            res.json({
+                success: true,
+                message: 'Reminder scheduler status retrieved successfully',
+                data: status,
+                timestamp: new Date().toISOString()
+            });
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Manual trigger reminder check
+router.post(
+    '/admin/reminder-manual-check',
+    authenticateToken,
+    authorizeRoles('admin'),
+    async (req, res) => {
+        try {
+            const result = await ReminderSchedulerService.triggerReminderCheck();
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get upcoming reminders
+router.get(
+    '/admin/upcoming-reminders',
+    authenticateToken,
+    authorizeRoles('admin'),
+    async (req, res) => {
+        try {
+            const result = await ReminderSchedulerService.getUpcomingReminders();
+
+            if (result.success) {
+                res.json({
+                    success: true,
+                    message: 'Upcoming reminders retrieved successfully',
+                    ...result,
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Force send reminder for specific appointment
+router.post(
+    '/admin/reminder-force-send/:appointmentId',
+    authenticateToken,
+    authorizeRoles('admin'),
+    async (req, res) => {
+        try {
+            const appointmentId = req.params.appointmentId;
+
+            const result = await ReminderSchedulerService.forceSendReminder(appointmentId);
+
+            if (result.success) {
+                res.json({
+                    success: true,
+                    message: result.message,
+                    data: {
+                        appointment_id: appointmentId,
+                        action: 'force_reminder_sent'
+                    },
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Restart reminder scheduler
+router.post(
+    '/admin/reminder-restart',
+    authenticateToken,
+    authorizeRoles('admin'),
+    async (req, res) => {
+        try {
+            ReminderSchedulerService.restartScheduler();
+
+            res.json({
+                success: true,
+                message: 'Reminder scheduler restarted successfully',
+                data: {
+                    action: 'scheduler_restarted',
+                    status: ReminderSchedulerService.getStatus()
+                },
+                timestamp: new Date().toISOString()
+            });
         } catch (error: any) {
             res.status(500).json({
                 success: false,
