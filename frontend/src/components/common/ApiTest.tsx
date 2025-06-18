@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { userService, appointmentService, consultantService } from '../../services';
 import { Spinner } from '../ui';
+import LoginTest from '../auth/LoginTest';
 
 const ApiTest: React.FC = () => {
   const [result, setResult] = useState<any>(null);
@@ -36,8 +37,11 @@ const ApiTest: React.FC = () => {
   const testAppointments = () => testEndpoint('GET /appointments/my-appointments', () => appointmentService.getMyAppointments());
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md max-w-2xl mx-auto mt-8">
-      <h2 className="text-xl font-bold mb-4">🔧 API Connection Test</h2>
+    <div className="space-y-6 max-w-2xl mx-auto mt-8">
+      <LoginTest />
+      
+      <div className="p-6 bg-white rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">🔧 API Connection Test</h2>
       
       <div className="space-y-3">
         <button
@@ -83,6 +87,7 @@ const ApiTest: React.FC = () => {
           </pre>
         </div>
       )}
+      </div>
     </div>
   );
 };

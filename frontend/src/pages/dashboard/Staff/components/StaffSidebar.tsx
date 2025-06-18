@@ -4,12 +4,13 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { 
   FaCalendarAlt, 
   FaUsers, 
-  FaCog 
+  FaCog,
+  FaSignOutAlt 
 } from 'react-icons/fa';
 
 const StaffSidebar: React.FC = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     {
@@ -78,6 +79,17 @@ const StaffSidebar: React.FC = () => {
           </div>
         ))}
       </nav>
+
+      {/* Logout button at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
+        <button
+          onClick={logout}
+          className="flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          <FaSignOutAlt className="w-5 h-5 mr-3" />
+          Đăng xuất
+        </button>
+      </div>
     </div>
   );
 };

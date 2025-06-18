@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import toast from "react-hot-toast";
 import LoginModal from "./LoginModal";
+import { navigateAfterLogin } from "../../utils/navigationUtils";
 
 interface AuthRequiredButtonProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface AuthRequiredButtonProps {
   onClick?: () => void;
   message?: string;
   successMessage?: string;
+  redirectToDashboard?: boolean; // Nếu true, sẽ redirect đến dashboard thay vì redirectTo
 }
 
 const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
@@ -20,6 +22,7 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
   onClick,
   message = "Vui lòng đăng nhập để sử dụng dịch vụ này!",
   successMessage,
+  redirectToDashboard = false,
 }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -49,6 +52,9 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
     setTimeout(() => {
       if (onClick) {
         onClick();
+      } else if (redirectToDashboard) {
+        // Redirect đến dashboard theo role
+        navigateAfterLogin(user, navigate);
       } else {
         navigate(redirectTo);
       }
