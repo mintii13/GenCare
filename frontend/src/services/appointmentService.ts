@@ -63,7 +63,7 @@ export const appointmentService = {
       appointmentId,
       url: `/appointments/${appointmentId}/cancel`
     });
-    
+
     try {
       const response = await api.put(`/appointments/${appointmentId}/cancel`);
       console.log('Cancel response:', response);
@@ -85,7 +85,7 @@ export const appointmentService = {
       url: `/appointments/${appointmentId}`,
       data
     });
-    
+
     const response = await api.put(`/appointments/${appointmentId}`, data);
     console.log('Reschedule response:', response);
     return response.data;
