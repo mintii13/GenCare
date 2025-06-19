@@ -1,12 +1,20 @@
-{
-    "_id": { "$oid": "675e1a2b3c4d5e6f7a8b9201" },
-    "customer_id": { "$oid": "675e1a2b3c4d5e6f7a8b9c11" },
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9102" },
-    "sti_test_ids": [
-        { "$oid": "675e1a2b3c4d5e6f7a8b9001" },
-        { "$oid": "675e1a2b3c4d5e6f7a8b9004" },
-        { "$oid": "675e1a2b3c4d5e6f7a8b9008" }
-    ],
-    "order_date": { "$date": "2025-15-06T04:00:00.000" },
-    "notes": "Khách yêu cầu thực hiện xét nghiệm vào buổi sáng."
-}
+[
+    {
+        "sti_package_id": "675e1a2b3c4d5e6f7a8b9101",
+        "order_date": "2025-06-25",
+        "notes": "Khách yêu cầu thực hiện xét nghiệm vào buổi sáng."
+    },
+    {
+        "sti_package_id": "675e1a2b3c4d5e6f7a8b9102",
+        "order_date": "2025-06-24",
+        "notes": "Tôi có chứng viêm gan B và muốn kiểm tra lại. Vui lòng liên hệ để xác nhận lịch hẹn."
+    },
+    {
+        "sti_test_items": [
+            "675e1a2b3c4d5e6f7a8b9003",
+            "675e1a2b3c4d5e6f7a8b9005"
+        ],
+        "order_date": "2025-06-22",
+        "notes": "Tôi muốn thực hiện xét nghiệm viêm gan B và giang mai. Vui lòng liên hệ để xác nhận lịch hẹn."
+    }
+]
