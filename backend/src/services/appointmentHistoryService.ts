@@ -7,7 +7,7 @@ export class AppointmentHistoryService {
      */
     public static async createHistory(historyData: {
         appointment_id: string;
-        action: 'created' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | 'updated';
+        action: 'created' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | 'updated' | 'started';
         performed_by_user_id: string;
         performed_by_role: 'customer' | 'consultant' | 'staff' | 'admin';
         old_data?: any;
@@ -123,8 +123,84 @@ export class AppointmentHistoryService {
     }
 
     /**
-     * Helper: Tạo history cho việc update appointment với logic cải tiến
+     * Helper: Tạo history cho việc confirm appointment
      */
+    public static async logAppointmentConfirmed(
+        appointmentId: string,
+        oldData: any,
+        newData: any,
+        userId: string,
+        userRole: string
+    ): Promise<void> {
+        await this.createHistory({
+            appointment_id: appointmentId,
+            action: 'confirmed',
+            performed_by_user_id: userId,
+            performed_by_role: userRole as any,
+            old_data: oldData,
+            new_data: newData
+        });
+    }
+
+    /**
+     * Helper: Tạo history cho việc cancel appointment
+     */
+    public static async logAppointmentCancelled(
+        appointmentId: string,
+        oldData: any,
+        newData: any,
+        userId: string,
+        userRole: string
+    ): Promise<void> {
+        await this.createHistory({
+            appointment_id: appointmentId,
+            action: 'cancelled',
+            performed_by_user_id: userId,
+            performed_by_role: userRole as any,
+            old_data: oldData,
+            new_data: newData
+        });
+    }
+
+    /**
+     * Helper: Tạo history cho việc complete appointment
+     */
+    public static async logAppointmentCompleted(
+        appointmentId: string,
+        oldData: any,
+        newData: any,
+        userId: string,
+        userRole: string
+    ): Promise<void> {
+        await this.createHistory({
+            appointment_id: appointmentId,
+            action: 'completed',
+            performed_by_user_id: userId,
+            performed_by_role: userRole as any,
+            old_data: oldData,
+            new_data: newData
+        });
+    }
+
+    /**
+     * Helper: Tạo history cho việc start meeting
+     */
+    public static async logMeetingStarted(
+        appointmentId: string,
+        oldData: any,
+        newData: any,
+        userId: string,
+        userRole: string
+    ): Promise<void> {
+        await this.createHistory({
+            appointment_id: appointmentId,
+            action: 'started',
+            performed_by_user_id: userId,
+            performed_by_role: userRole as any,
+            old_data: oldData,
+            new_data: newData
+        });
+    }
     public static async logAppointmentUpdated(
         appointmentId: string,
         oldData: any,

@@ -38,6 +38,8 @@ Cancellation: Phải hủy lịch trước ít nhất 4 giờ
 Reminder System: Gửi reminder tự động
 Rating System: Chỉ cho đánh giá sau khi completed
 Time Zone: Xử lý múi giờ cho online consultation
+30p trước khi lịch hẹn bắt đầu, thì hệ thống sẽ tự động nhận lịch
+Consultant chỉ có thể hoàn thành buổi tư vấn sau 15p kh bắt đầu 
 
 PROFILE SERVICE
 Avatar Upload Filter: Dung lượng của ảnh chân dung phải ≤ 5MB và chỉ được upload file dạng ảnh

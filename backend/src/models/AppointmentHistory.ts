@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAppointmentHistory extends Document {
     appointment_id: mongoose.Types.ObjectId;
-    action: 'created' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | 'updated';
+    action: 'created' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | 'updated' | 'started';
     performed_by_user_id: mongoose.Types.ObjectId;
     performed_by_role: 'customer' | 'consultant' | 'staff' | 'admin';
     old_data?: any; // JSON object - trạng thái cũ
@@ -18,7 +18,7 @@ const appointmentHistorySchema = new Schema<IAppointmentHistory>({
     },
     action: {
         type: String,
-        enum: ['created', 'confirmed', 'rescheduled', 'cancelled', 'completed', 'updated'],
+        enum: ['created', 'confirmed', 'rescheduled', 'cancelled', 'completed', 'updated', 'started'],
         required: true
     },
     performed_by_user_id: {
