@@ -9,7 +9,7 @@ export interface IStiTestSchedule extends Document{
 
 const stiTestScheduleSchema = new Schema({
     order_date: { type: Date, unique: true, required: true },
-    number_current_orders: { type: Number, default: 1, min: 0 },
+    number_current_orders: { type: Number, default: 0, min: 0 },
     is_locked: { type: Boolean, default: false },
     is_holiday: { type: Boolean, default: false },
 });
