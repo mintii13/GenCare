@@ -272,9 +272,9 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
 router.post('/createStiOrder', validateStiOrder, authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
     try {
         const customer_id = (req.jwtUser as JWTPayload).userId;
-        const {sti_package_id, sti_test_ids, order_date, notes} = req.body;
-        const orderDateHandling = await StiService.normalizeAndHandleTestSchedule(order_date);
-        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_ids, orderDateHandling.order_schedule.order_date, orderDateHandling.order_schedule._id, notes);
+        const {sti_package_id, sti_test_items, order_date, notes} = req.body;
+        console.log("BODY===>", req.body)
+        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_items, order_date, notes);
         if (result.success){
             return res.status(201).json(result);
         }

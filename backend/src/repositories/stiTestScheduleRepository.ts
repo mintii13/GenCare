@@ -12,7 +12,7 @@ export class StiTestScheduleRepository{
 
     public static async insertStiTestSchedule(stiTestSchedule: IStiTestSchedule): Promise<IStiTestSchedule | null>{
         try {
-            return await StiTestSchedule.create(stiTestSchedule);
+            return await stiTestSchedule.save();
         } catch (error) {
             console.error(error);
             throw error;
