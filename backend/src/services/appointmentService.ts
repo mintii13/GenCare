@@ -207,8 +207,16 @@ export class AppointmentService {
                 };
             }
 
+            // Get customer info để gửi email
+            const customer = await User.findById(appointment.customer_id);
+
             // Generate Google Meet link
-            const meetingDetails = GoogleMeetService.generateMeetLink();
+            const meetingDetails = await GoogleMeetService.generateRealMeetLink(
+                `Tư vấn với ${(consultant.user_id as any).full_name}`,
+                new Date(appointment.appointment_date),
+                new Date(appointment.appointment_date),
+                customer ? [customer.email] : []
+            );
 
             // Update appointment với meeting info
             const updateData = {
@@ -244,8 +252,6 @@ export class AppointmentService {
                 console.error('History logging error:', historyError);
             }
 
-            // Get customer info để gửi email
-            const customer = await User.findById(appointment.customer_id);
             if (customer) {
                 // Prepare email data
                 const emailData = {
@@ -767,8 +773,17 @@ export class AppointmentService {
 
             // Special handling for status change to 'confirmed'
             if (updateData.status === 'confirmed' && appointment.status === 'pending') {
+                // Get consultant and customer info for meeting link
+                const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name');
+                const customer = await User.findById(appointment.customer_id);
+
                 // Generate meeting link when confirming
-                const meetingDetails = GoogleMeetService.generateMeetLink();
+                const meetingDetails = await GoogleMeetService.generateRealMeetLink(
+                    `Tư vấn với ${(consultant?.user_id as any)?.full_name || 'Chuyên gia'}`,
+                    new Date(appointment.appointment_date),
+                    new Date(appointment.appointment_date),
+                    customer ? [customer.email] : []
+                );
                 updateData.meeting_info = {
                     meet_url: meetingDetails.meet_url,
                     meeting_id: meetingDetails.meeting_id,
@@ -978,60 +993,6 @@ export class AppointmentService {
                     message: 'Appointment not found'
                 };
             }
-
-            if (appointment.status !== 'confirmed') {
-                return {
-                    success: false,
-                    message: 'Only confirmed appointments can be completed'
-                };
-            }
-
-            // Kiểm tra consultant có quyền complete không
-            const consultant = await Consultant.findById(appointment.consultant_id);
-            if (!consultant || consultant.user_id.toString() !== consultantUserId) {
-                return {
-                    success: false,
-                    message: 'You can only complete your own appointments'
-                };
-            }
-
-            // Kiểm tra đã đủ 15 phút từ lúc bắt đầu buổi tư vấn chưa
-            try {
-                const appointmentDate = new Date(appointment.appointment_date);
-                const [hours, minutes] = appointment.start_time.split(':').map(Number);
-                
-                if (isNaN(appointmentDate.getTime()) || isNaN(hours) || isNaN(minutes)) {
-                    return {
-                        success: false,
-                        message: 'Invalid appointment date or time format'
-                    };
-                }
-
-                const appointmentDateTime = new Date(appointmentDate);
-                appointmentDateTime.setHours(hours, minutes, 0, 0);
-                
-                const now = new Date();
-                const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
-                
-                if (minutesPassed < 15) {
-                    const remainingMinutes = Math.ceil(15 - minutesPassed);
-                    return {
-                        success: false,
-                        message: `Appointment can only be completed after 15 minutes from start time. Please wait ${remainingMinutes} more minutes.`
-                    };
-                }
-            } catch (error) {
-                console.error('Error checking completion time:', error);
-                return {
-                    success: false,
-                    message: 'Error validating completion time'
-                };
-            }
-
-            const completedAppointment = await AppointmentRepository.completeById(
-                appointmentId,
-                consultantNotes
-            );
 
             return {
                 success: true,
