@@ -649,7 +649,7 @@ export class StiService{
                 if (role === 'customer') {
                     if (currentStatus === nextStatus){
                     }
-                    else if (currentStatus === 'Pending' && nextStatus === 'Canceled') {
+                    else if (currentStatus === 'Booked' && nextStatus === 'Canceled') {
                         order.order_status = 'Canceled';
                     }
                     else {
