@@ -1,5 +1,6 @@
 import { StiOrder, IStiOrder } from '../models/StiOrder';
 import { IStiTestSchedule } from '../models/StiTestSchedule';
+import mongoose from 'mongoose';
 
 export class StiOrderRepository{
     public static async findByOrderCode(order_code: string): Promise<IStiOrder | null> {
@@ -58,5 +59,43 @@ export class StiOrderRepository{
     public static async saveOrder(order: IStiOrder): Promise<IStiOrder> {
         return await order.save();
     }
-    
+
+    public static async getTotalRevenueByCustomer(customerId: string): Promise<number> {
+        const result = await StiOrder.aggregate([
+        {
+            $match: {
+                customer_id: new mongoose.Types.ObjectId(customerId),
+                order_status: 'Completed',
+                payment_status: 'Paid'
+            }
+        },
+        {
+            $group: {
+                _id: '$customer_id',
+                total_revenue: { $sum: '$total_amount' },
+                count_orders: { $sum: 1 }
+            }
+        }
+        ]);
+        return result[0]?.total_revenue || 0;
+    }
+
+    public static async getTotalRevenue(): Promise<number> {
+        const result = await StiOrder.aggregate([
+        {
+            $match: {
+                order_status: 'Completed',
+                payment_status: 'Paid'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                total_revenue: { $sum: '$total_amount' },
+                count_orders: { $sum: 1 }
+            }
+        }
+        ]);
+        return result[0]?.total_revenue || 0;
+    }
 }

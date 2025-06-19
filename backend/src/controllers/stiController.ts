@@ -278,10 +278,7 @@ router.post('/createStiOrder', validateStiOrder, authenticateToken, authorizeRol
         if (result.success){
             return res.status(201).json(result);
         }
-        else if (result.message === 'No valid STI tests or package provided'){
-            return res.status(400).json(result);
-        }
-        return res.status(400).json(result);                    //lỗi nghiệp vụ
+        return res.status(400).json(result);
     } catch (error) {
         console.error(error);
         return res.status(500).json({
@@ -415,6 +412,42 @@ router.get('/getAllAuditLogs', authenticateToken, authorizeRoles('admin'), async
     } catch (error) {
         console.error('Error fetching audit logs:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/getRevenueByCustomer/:id', async (req: Request, res: Response) => {
+    try {
+        const customerId = req.params.id;
+        console.log('GET /getRevenueByCustomer - customerId:', customerId);
+        const result = await StiService.getTotalRevenueByCustomer(customerId);
+        if (result.success === false) {
+            if (result.message === 'Invalid customer ID') {
+                return res.status(400).json(result);
+            } else if (result.message === 'Customer not found') {
+                return res.status(404).json(result);
+            }
+        }
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+        });
+    }
+});
+
+router.get('/getTotalRevenue', async (req: Request, res: Response) => {
+    try {
+        const result = await StiService.getTotalRevenue();
+        if (result.success === false) {
+            return res.status(400).json(result);
+        }
+        return res.status(200).json(result);        
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+        });
     }
 });
 

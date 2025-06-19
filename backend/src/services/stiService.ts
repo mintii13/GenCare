@@ -390,7 +390,12 @@ export class StiService{
                     message: 'No valid STI tests or package provided'
                 };
             }
-            console.log("sti sch id: ", sti_schedule_id);
+            if (!noPackage && !noTest){
+                return {
+                    success: false,
+                    message: 'Cannot provide both STI package and individual tests'
+                };
+            }
             const sti_order = new StiOrder({
                 customer_id,
                 sti_package_item,
@@ -691,7 +696,6 @@ export class StiService{
         }
     }
 
-
     public static async getAllAuditLog (){
         try {
             const result = await StiAuditLogRepository.getAllAuditLogs();
@@ -715,4 +719,51 @@ export class StiService{
         }
     }
 
+    public static async getTotalRevenueByCustomer(customerId: string) {
+        try {
+            if (!customerId) {
+                return {
+                    success: false,
+                    message: 'Customer ID is invalid',
+                };
+            }
+            const total = await StiOrderRepository.getTotalRevenueByCustomer(customerId);
+            console.log('Total revenue for customer:', total);
+            if (total === null || total === undefined) {
+                return {
+                    success: false,
+                    message: 'Customer revenue not found',
+                };
+            }
+            return { 
+                success: true, 
+                message: 'Fetched customer revenue', 
+                total_revenue: total
+            };
+        } catch (err) {
+            return { 
+                success: false, 
+                message: 'Failed to fetch customer revenue' 
+            };
+        }
+    }
+
+    public static async getTotalRevenue() {
+        try {
+            const total = await StiOrderRepository.getTotalRevenue();
+            if (total === null || total === undefined) {
+                return {
+                    success: false,
+                    message: 'Total revenue not found',
+                };
+            }
+            return { 
+                success: true,  
+                message: 'Fetched total revenue',
+                total_revenue: total
+            };
+        } catch (err) {
+            return { success: false, message: 'Failed to fetch total revenue' };
+        }
+    }
 }
