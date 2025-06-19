@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type OrderStatus = 'Pending' | 'Accepted' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
+export type OrderStatus = 'Booked' | 'Accepted' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
 
 export interface IStiOrder extends Document {
     customer_id: mongoose.Types.ObjectId;
@@ -48,7 +48,7 @@ const stiOrderSchema: Schema = new Schema<IStiOrder>({
     ],
     sti_schedule_id: {type: mongoose.Schema.Types.ObjectId, required: true},
     order_date: { type: Date, required: true },
-    order_status: {type: String, enum: ['Pending', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'], default: 'Pending', required: true},
+    order_status: {type: String, enum: ['Booked', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'], default: 'Booked', required: true},
     total_amount: { type: Number, required: true, min: 0 },
     payment_status: {type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending', required: true},
     notes: { type: String, required: false },

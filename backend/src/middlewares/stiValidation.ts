@@ -134,7 +134,7 @@ export const validateStiOrder = (req: Request, res: Response, next: NextFunction
 }
 
 export const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-    Pending: ['Accepted', 'Canceled'],
+    Booked: ['Accepted', 'Canceled'],
     Accepted: ['Processing', 'Canceled'],
     Processing: ['SpecimenCollected'],
     SpecimenCollected: ['Testing'],
