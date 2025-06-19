@@ -402,7 +402,6 @@ export class StiService{
                     message: 'Cannot provide both STI package and individual tests'
                 };
             }
-
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
                 return {
