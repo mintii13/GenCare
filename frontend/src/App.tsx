@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/home";
 import TestPackagesPage from "./pages/test-packages";
@@ -12,34 +12,67 @@ import OAuthSuccess from "./pages/OAuthSuccess";
 import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import ConsultantDashboard from './pages/dashboard/Consultant';
 import ConsultantBlogList from './pages/dashboard/Consultant/components/ConsultantBlogList';
 import WeeklyScheduleManager from './pages/dashboard/Consultant/WeeklyScheduleManager';
-
 import AppointmentManagement from './pages/dashboard/Consultant/AppointmentManagement';
 import CustomerDashboard from './pages/dashboard/Customer';
 import MyAppointments from './pages/dashboard/Customer/MyAppointments';
 import ConsultantList from './pages/dashboard/Customer/ConsultantList';
 import BookAppointment from './pages/consultation/BookAppointment';
 import ApiTest from './components/common/ApiTest';
-
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AutoConfirmService from './services/autoConfirmService';
+import AutoConfirmNotification from './components/notifications/AutoConfirmNotification';
 
 // Lazy load Admin Dashboard
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
+const ConsultantLayout = lazy(() => import('./components/layout/ConsultantLayout'));
 
 // Lazy load Staff Dashboard
 const StaffDashboard = lazy(() => import('./pages/dashboard/Staff'));
 const WeeklyScheduleManagement = lazy(() => import('./pages/dashboard/Staff/WeeklyScheduleManagement'));
+const StaffAppointmentManagement = lazy(() => import('./pages/dashboard/Staff/components/StaffAppointmentManagement'));
 const UserManagement = lazy(() => import('./pages/dashboard/Admin/UserManagement'));
 
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
-const App = () => {
-  const [showLogin, setShowLogin] = useState(false);
+interface AppContentProps {
+  showLogin: boolean;
+  setShowLogin: (show: boolean) => void;
+}
+
+const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  useEffect(() => {
+    // Khởi động AutoConfirmService khi user đăng nhập
+    if (isAuthenticated && user) {
+      console.log('🚀 User đã đăng nhập, khởi động AutoConfirmService');
+      
+      // Yêu cầu quyền notification
+      AutoConfirmService.requestNotificationPermission();
+      
+      // Khởi động service
+      AutoConfirmService.start();
+    } else {
+      // Dừng service khi user đăng xuất
+      if (AutoConfirmService.isRunning()) {
+        console.log('🛑 User đăng xuất, dừng AutoConfirmService');
+        AutoConfirmService.stop();
+      }
+    }
+
+    // Cleanup khi component unmount
+    return () => {
+      AutoConfirmService.stop();
+    };
+  }, [isAuthenticated, user]);
 
   return (
-    <>      <Toaster position="top-right" />
+    <>      
+      <Toaster position="top-right" />
+      <AutoConfirmNotification />
       <Layout onLoginClick={() => setShowLogin(true)}>
         <Suspense fallback={<div className="flex justify-center items-center h-screen"><div>Đang tải trang...</div></div>}>
           <Routes>
@@ -59,7 +92,7 @@ const App = () => {
             <Route path="/blogs/:blogId/edit" element={<BlogFormPage />} />
 
             {/* Consultant Dashboard routes */}
-            <Route path="/consultant/*" element={<ConsultantDashboard />}>
+            <Route path="/consultant/*" element={<ConsultantLayout />}>
               <Route path="schedule" element={<AppointmentManagement />} />
               <Route path="clients" element={<div>Khách hàng</div>} />
               <Route path="online" element={<div>Tư vấn trực tuyến</div>} />
@@ -102,7 +135,7 @@ const App = () => {
             {/* Staff Dashboard routes */}
             <Route path="/staff/*" element={<StaffDashboard />}>
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
-              <Route path="appointments" element={<div>Quản lý cuộc hẹn</div>} />
+              <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
@@ -112,9 +145,18 @@ const App = () => {
           </Routes>
         </Suspense>
         <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
-     
       </Layout>
     </>
+  );
+};
+
+const App: React.FC = () => {
+  const [showLogin, setShowLogin] = useState(false);
+
+  return (
+    <AuthProvider>
+      <AppContent showLogin={showLogin} setShowLogin={setShowLogin} />
+    </AuthProvider>
   );
 };
 

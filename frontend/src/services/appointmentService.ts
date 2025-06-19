@@ -63,7 +63,7 @@ export const appointmentService = {
       appointmentId,
       url: `/appointments/${appointmentId}/cancel`
     });
-    
+
     try {
       const response = await api.put(`/appointments/${appointmentId}/cancel`);
       console.log('Cancel response:', response);
@@ -85,7 +85,7 @@ export const appointmentService = {
       url: `/appointments/${appointmentId}`,
       data
     });
-    
+
     const response = await api.put(`/appointments/${appointmentId}`, data);
     console.log('Reschedule response:', response);
     return response.data;
@@ -99,6 +99,19 @@ export const appointmentService = {
     if (endDate) params.append('end_date', endDate);
 
     const response = await api.get(`/appointments/consultant-appointments?${params}`);
+    return response.data;
+  },
+
+  // Staff/Admin APIs
+  async getAllAppointments(status?: string, startDate?: string, endDate?: string, consultantId?: string, customerId?: string) {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (consultantId) params.append('consultant_id', consultantId);
+    if (customerId) params.append('customer_id', customerId);
+
+    const response = await api.get(`/appointments/admin/all?${params}`);
     return response.data;
   },
 

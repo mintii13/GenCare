@@ -3,6 +3,9 @@ import { format, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { useAuth } from '../../../contexts/AuthContext';
+import axios from 'axios';
+import Icon from '../../../components/icons/IconMapping';
+import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
 
 interface Appointment {
   _id: string;
@@ -82,10 +85,24 @@ const AppointmentManagement: React.FC = () => {
     fetchAppointments();
   }, [filter]);
 
+  // Cập nhật UI mỗi phút để refresh thời gian completion
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force re-render để cập nhật thời gian remaining
+      setAppointments(prev => [...prev]);
+      
+      // Nếu có modal đang mở, cập nhật selectedAppointment
+      if (selectedAppointment) {
+        setSelectedAppointment(prev => prev ? {...prev} : null);
+      }
+    }, 60000); // Cập nhật mỗi phút
+
+    return () => clearInterval(interval);
+  }, [selectedAppointment]);
+
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       // Check if user is authenticated and has consultant role
       if (!user) {
@@ -98,13 +115,6 @@ const AppointmentManagement: React.FC = () => {
         return;
       }
       
-      if (!token) {
-        showNotification('error', 'Token không tồn tại. Vui lòng đăng nhập lại');
-        // Redirect to login
-        window.location.href = '/auth/login';
-        return;
-      }
-      
       console.log('🔍 Fetching appointments for consultant:', user.full_name, 'Role:', user.role);
       
       const queryParams = new URLSearchParams();
@@ -112,51 +122,45 @@ const AppointmentManagement: React.FC = () => {
         queryParams.append('status', filter);
       }
 
-      const response = await fetch(`http://localhost:3000/api/appointments/consultant-appointments?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axios.get(`http://localhost:3000/api/appointments/consultant-appointments?${queryParams}`);
 
       console.log('📡 API Response status:', response.status);
       
-      if (response.status === 401) {
-        showNotification('error', 'Token đã hết hạn. Vui lòng đăng nhập lại');
-        localStorage.removeItem('token');
-        window.location.href = '/auth/login';
-        return;
-      }
-      
-      if (response.status === 403) {
-        showNotification('error', 'Bạn không có quyền truy cập. Vui lòng kiểm tra role của bạn');
-        return;
-      }
-
-      const data: ApiResponse = await response.json();
-      console.log('📊 API Response data:', data);
-      
-      if (data.success) {
-        console.log('✅ Successfully loaded', data.data.appointments.length, 'appointments');
+      if (response.data.success) {
+        console.log('✅ Successfully loaded', response.data.data.appointments.length, 'appointments');
+        
+        // Log tất cả các lịch hẹn để kiểm tra
+        console.log('📋 All appointments:', response.data.data.appointments);
         
         // Filter out appointments with null customer_id
-        const validAppointments = data.data.appointments.filter(appointment => 
-          appointment && appointment.customer_id && appointment.customer_id.full_name
-        );
+        const validAppointments = response.data.data.appointments.filter((appointment: Appointment) => {
+          const isValid = appointment && appointment.customer_id && appointment.customer_id.full_name;
+          if (!isValid) {
+            console.log('❌ Invalid appointment:', appointment);
+          }
+          return isValid;
+        });
         
-        if (validAppointments.length !== data.data.appointments.length) {
-          console.warn('⚠️ Filtered out', data.data.appointments.length - validAppointments.length, 'invalid appointments');
+        if (validAppointments.length !== response.data.data.appointments.length) {
+          console.warn('⚠️ Filtered out', response.data.data.appointments.length - validAppointments.length, 'invalid appointments');
         }
         
         setAppointments(validAppointments);
         calculateStats(validAppointments);
       } else {
-        console.error('❌ API Error:', data.message);
-        showNotification('error', data.message || 'Không thể tải danh sách lịch hẹn');
+        console.error('❌ API Error:', response.data.message);
+        showNotification('error', response.data.message || 'Không thể tải danh sách lịch hẹn');
       }
     } catch (err: any) {
       console.error('💥 Network Error:', err);
-      showNotification('error', 'Có lỗi mạng xảy ra. Vui lòng kiểm tra kết nối');
+      if (err.response?.status === 401) {
+        showNotification('error', 'Token đã hết hạn. Vui lòng đăng nhập lại');
+        window.location.href = '/auth/login';
+      } else if (err.response?.status === 403) {
+        showNotification('error', 'Bạn không có quyền truy cập. Vui lòng kiểm tra role của bạn');
+      } else {
+        showNotification('error', 'Có lỗi mạng xảy ra. Vui lòng kiểm tra kết nối');
+      }
     } finally {
       setLoading(false);
     }
@@ -204,7 +208,7 @@ const AppointmentManagement: React.FC = () => {
   const handleConfirmAppointment = async (appointmentId: string) => {
     try {
       setActionLoading(appointmentId);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('gencare_auth_token');
       
       const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/confirm`, {
         method: 'PUT',
@@ -232,9 +236,21 @@ const AppointmentManagement: React.FC = () => {
   const handleCompleteAppointment = async () => {
     if (!selectedAppointment) return;
 
+    // Kiểm tra thời gian trước khi hoàn thành
+    if (!canCompleteAppointment(selectedAppointment)) {
+      const remainingTime = getRemainingTimeToComplete(selectedAppointment);
+      showNotification('warning', `Bạn chỉ có thể hoàn thành buổi tư vấn sau 1 giờ từ lúc bắt đầu. Còn lại ${remainingTime} phút.`);
+      return;
+    }
+
+    // Xác nhận trước khi hoàn thành
+    if (!confirm('Bạn có chắc chắn muốn hoàn thành buổi tư vấn này? Hành động này không thể hoàn tác.')) {
+      return;
+    }
+
     try {
       setActionLoading(selectedAppointment._id);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('gencare_auth_token');
       
       const response = await fetch(`http://localhost:3000/api/appointments/${selectedAppointment._id}/complete`, {
         method: 'PUT',
@@ -269,7 +285,7 @@ const AppointmentManagement: React.FC = () => {
 
     try {
       setActionLoading(appointmentId);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('gencare_auth_token');
       
       const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/cancel`, {
         method: 'PUT',
@@ -319,6 +335,97 @@ const AppointmentManagement: React.FC = () => {
     return 'normal';
   };
 
+  // Kiểm tra xem có thể hoàn thành lịch hẹn không (sau 15 phút từ lúc bắt đầu)
+  const canCompleteAppointment = (appointment: Appointment) => {
+    if (appointment.status !== 'confirmed') return false;
+    
+    try {
+      // Kiểm tra dữ liệu đầu vào
+      if (!appointment.appointment_date || !appointment.start_time) {
+        console.warn('Missing appointment date or start time:', appointment);
+        return false;
+      }
+
+      // Parse ngày hẹn (format: YYYY-MM-DD)
+      const appointmentDate = new Date(appointment.appointment_date);
+      
+      // Parse giờ bắt đầu (format: HH:MM)
+      const [hours, minutes] = appointment.start_time.split(':').map(Number);
+      
+      // Kiểm tra giá trị hợp lệ
+      if (isNaN(appointmentDate.getTime()) || isNaN(hours) || isNaN(minutes)) {
+        console.warn('Invalid date or time format:', appointment.appointment_date, appointment.start_time);
+        return false;
+      }
+      
+      // Tạo datetime hoàn chỉnh
+      const appointmentDateTime = new Date(appointmentDate);
+      appointmentDateTime.setHours(hours, minutes, 0, 0);
+      
+      const now = new Date();
+      
+      // Tính số phút đã trôi qua kể từ lúc bắt đầu
+      const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
+      
+      // Chỉ cho phép hoàn thành sau 15 phút
+      return minutesPassed >= 15;
+    } catch (error) {
+      console.error('Error checking completion time:', error, appointment);
+      return false;
+    }
+  };
+
+  // Tính thời gian còn lại để có thể hoàn thành (tính bằng phút)
+  const getRemainingTimeToComplete = (appointment: Appointment) => {
+    if (appointment.status !== 'confirmed') return 0;
+    
+    try {
+      // Kiểm tra dữ liệu đầu vào
+      if (!appointment.appointment_date || !appointment.start_time) {
+        console.warn('Missing appointment date or start time:', appointment);
+        return 0;
+      }
+
+      // Parse ngày hẹn (format: YYYY-MM-DD)
+      const appointmentDate = new Date(appointment.appointment_date);
+      
+      // Parse giờ bắt đầu (format: HH:MM)
+      const [hours, minutes] = appointment.start_time.split(':').map(Number);
+      
+      // Kiểm tra giá trị hợp lệ
+      if (isNaN(appointmentDate.getTime()) || isNaN(hours) || isNaN(minutes)) {
+        console.warn('Invalid date or time format:', appointment.appointment_date, appointment.start_time);
+        return 0;
+      }
+      
+      // Tạo datetime hoàn chỉnh
+      const appointmentDateTime = new Date(appointmentDate);
+      appointmentDateTime.setHours(hours, minutes, 0, 0);
+      
+      const now = new Date();
+      const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
+      const remainingMinutes = 15 - minutesPassed;
+      
+      const result = Math.max(0, Math.ceil(remainingMinutes));
+      
+      // Kiểm tra kết quả hợp lệ
+      if (isNaN(result)) {
+        console.warn('Invalid calculation result:', result, {
+          appointmentDateTime: appointmentDateTime.toISOString(),
+          now: now.toISOString(),
+          minutesPassed,
+          remainingMinutes
+        });
+        return 0;
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error calculating remaining time:', error, appointment);
+      return 0;
+    }
+  };
+
   const columns: TableColumn<Appointment>[] = [
     {
       name: 'Khách hàng',
@@ -355,10 +462,16 @@ const AppointmentManagement: React.FC = () => {
             <div className="font-medium whitespace-nowrap">{formatDate(row.appointment_date)}</div>
             <div className="text-sm whitespace-nowrap">{row.start_time} - {row.end_time}</div>
             {priority === 'urgent' && (
-              <div className="text-xs text-red-500 font-semibold whitespace-nowrap">🚨 Sắp diễn ra</div>
+              <div className="text-xs text-red-500 font-semibold whitespace-nowrap">
+                <Icon name="⚠️" className="mr-1" />
+                Sắp diễn ra
+              </div>
             )}
             {priority === 'soon' && (
-              <div className="text-xs text-orange-500 whitespace-nowrap">⏰ Trong 24h</div>
+              <div className="text-xs text-orange-500 whitespace-nowrap">
+                <Icon name="⏰" className="mr-1" />
+                Trong 24h
+              </div>
             )}
           </div>
         );
@@ -420,10 +533,15 @@ const AppointmentManagement: React.FC = () => {
             <button
               onClick={() => handleConfirmAppointment(row._id)}
               disabled={actionLoading === row._id}
-              className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors flex items-center"
               title="Xác nhận lịch hẹn"
             >
-              {actionLoading === row._id ? '⏳' : '✅'} Xác nhận
+              {actionLoading === row._id ? (
+                <Icon name="⏳" className="mr-1" />
+              ) : (
+                <Icon name="✅" className="mr-1" />
+              )}
+              Xác nhận
             </button>
           )}
           
@@ -444,10 +562,14 @@ const AppointmentManagement: React.FC = () => {
             <button
               onClick={() => handleCancelAppointment(row._id)}
               disabled={actionLoading === row._id}
-              className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-              title="Hủy lịch hẹn"
+              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center"
             >
-              {actionLoading === row._id ? '⏳' : '❌'} Hủy
+              {actionLoading === row._id ? (
+                <Icon name="⏳" className="mr-1" />
+              ) : (
+                <Icon name="❌" className="mr-1" />
+              )}
+              Hủy
             </button>
           )}
         </div>
@@ -538,12 +660,18 @@ const AppointmentManagement: React.FC = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={fetchAppointments}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm lg:text-base"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               >
-                🔄 Làm mới
+                <Icon name="🔄" className="mr-2" />
+                Làm mới
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Auto Confirm Status */}
+        <div className="mb-6">
+          <AutoConfirmStatus />
         </div>
 
         {/* Stats Cards */}
@@ -554,7 +682,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Tổng lịch hẹn</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
-              <div className="text-blue-500 text-2xl">📅</div>
+              <div className="text-blue-500 text-2xl">
+                <Icon name="📅" size={32} />
+              </div>
             </div>
           </div>
           
@@ -564,7 +694,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Chờ xác nhận</p>
                 <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
               </div>
-              <div className="text-yellow-500 text-2xl">⏳</div>
+              <div className="text-yellow-500 text-2xl">
+                <Icon name="⏳" size={32} />
+              </div>
             </div>
           </div>
           
@@ -574,7 +706,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Đã xác nhận</p>
                 <p className="text-2xl font-bold text-blue-600">{stats.confirmed}</p>
               </div>
-              <div className="text-blue-500 text-2xl">✅</div>
+              <div className="text-blue-500 text-2xl">
+                <Icon name="✅" size={32} />
+              </div>
             </div>
           </div>
           
@@ -635,7 +769,9 @@ const AppointmentManagement: React.FC = () => {
               fixedHeaderScrollHeight="600px"
               noDataComponent={
                 <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📅</div>
+                  <div className="text-6xl mb-4">
+                    <Icon name="📅" size={64} className="mx-auto" />
+                  </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Không có lịch hẹn nào</h3>
                   <p className="text-gray-500">
                     {filter === 'all' 
@@ -728,6 +864,22 @@ const AppointmentManagement: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Completion Time Warning */}
+                  {selectedAppointment.status === 'confirmed' && !canCompleteAppointment(selectedAppointment) && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <Icon name="⏰" className="text-yellow-600 mr-2" />
+                        <div>
+                          <h4 className="font-semibold text-yellow-800">Chờ để hoàn thành</h4>
+                          <p className="text-sm text-yellow-700">
+                            Bạn chỉ có thể hoàn thành buổi tư vấn sau 1 giờ từ lúc bắt đầu. 
+                            Còn lại <strong>{getRemainingTimeToComplete(selectedAppointment)} phút</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Consultant Notes */}
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Ghi chú của Chuyên gia</h3>
@@ -769,8 +921,17 @@ const AppointmentManagement: React.FC = () => {
                     {selectedAppointment.status === 'confirmed' && (
                       <button
                         onClick={handleCompleteAppointment}
-                        disabled={actionLoading === selectedAppointment._id}
-                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        disabled={actionLoading === selectedAppointment._id || !canCompleteAppointment(selectedAppointment)}
+                        className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                          canCompleteAppointment(selectedAppointment)
+                            ? 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={
+                          canCompleteAppointment(selectedAppointment)
+                            ? 'Hoàn thành buổi tư vấn'
+                            : `Chỉ có thể hoàn thành sau 1 giờ tư vấn (còn ${getRemainingTimeToComplete(selectedAppointment)} phút)`
+                        }
                       >
                         {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '🎉 Hoàn thành'}
                       </button>
