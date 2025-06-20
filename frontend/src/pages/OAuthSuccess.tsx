@@ -28,7 +28,7 @@ function OAuthSuccess() {
 
         // Gọi API để lấy thông tin user
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}/auth/profile`,
+          `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}/auth/getUserProfile`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }

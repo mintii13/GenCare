@@ -51,7 +51,7 @@ app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 // Session middleware
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    secret: process.env.SESSION_SECRET ?? 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {

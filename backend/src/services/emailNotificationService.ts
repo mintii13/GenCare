@@ -22,8 +22,8 @@ export class EmailNotificationService {
         return nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_FOR_VERIFY || '',
-                pass: process.env.EMAIL_APP_PASSWORD || ''
+                user: process.env.EMAIL_FOR_VERIFY ?? '',
+                pass: process.env.EMAIL_APP_PASSWORD ?? ''
             }
         });
     }
@@ -54,7 +54,7 @@ export class EmailNotificationService {
                             <p><strong>👩‍⚕️ Chuyên gia tư vấn:</strong> ${emailData.consultantName}</p>
                             <p><strong>📅 Ngày:</strong> ${emailData.appointmentDate}</p>
                             <p><strong>⏰ Thời gian:</strong> ${emailData.startTime} - ${emailData.endTime}</p>
-                            <p><strong>💬 Ghi chú của bạn:</strong> ${emailData.customerNotes || 'Không có'}</p>
+                            <p><strong>💬 Ghi chú của bạn:</strong> ${emailData.customerNotes ?? 'Không có'}</p>
                         </div>
 
                         <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
@@ -104,7 +104,7 @@ export class EmailNotificationService {
                         </p>
                         
                         <p style="text-align: center; margin-top: 30px;">
-                            <strong style="color: #2a9d8f;">${process.env.APP_NAME || 'GenCare'}</strong><br>
+                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong><br>
                             <em>Chăm sóc sức khỏe sinh sản toàn diện</em>
                         </p>
                     </div>
@@ -180,7 +180,7 @@ export class EmailNotificationService {
                         </p>
                         
                         <p style="text-align: center; margin-top: 30px;">
-                            <strong style="color: #2a9d8f;">${process.env.APP_NAME || 'GenCare'}</strong>
+                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong>
                         </p>
                     </div>
                 </body>`
@@ -244,7 +244,7 @@ export class EmailNotificationService {
                         </p>
                         
                         <p style="text-align: center; margin-top: 30px;">
-                            <strong style="color: #2a9d8f;">${process.env.APP_NAME || 'GenCare'}</strong><br>
+                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong><br>
                             <em>Rất tiếc vì sự bất tiện này</em>
                         </p>
                     </div>
