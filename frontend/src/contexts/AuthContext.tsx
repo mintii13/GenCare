@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from "axios";
+import { config } from "../config/constants";
 
-const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'gencare_auth_token';
+const AUTH_TOKEN_KEY = config.auth.tokenKey;
 
 interface User {
   phone: string;
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (token) {
         console.log("AuthContext: Token found in localStorage.", token);
         try {
-          const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/getUserProfile`;
+          const apiUrl = `${config.api.url}/auth/getUserProfile`;
           console.log(`AuthContext: Sending request to ${apiUrl}`);
           const res = await axios.get(apiUrl, {
             headers: { Authorization: `Bearer ${token}` }
@@ -96,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
-        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/logout`, {}, {
+        await axios.post(`${config.api.url}/auth/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }

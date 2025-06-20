@@ -44,7 +44,7 @@ export const consultantService = {
 
     try {
       // Sử dụng fetch API trực tiếp để tránh authentication headers
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
       const url = `${baseURL}/consultants/public?${params}`;
       
       console.log('Fetching from URL:', url);
@@ -79,7 +79,7 @@ export const consultantService = {
   async getConsultantById(consultantId: string) {
     try {
       // Sử dụng fetch API trực tiếp để tránh authentication headers
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
       const publicResponse = await fetch(`${baseURL}/consultants/public/${consultantId}`, {
         method: 'GET',
         headers: {
