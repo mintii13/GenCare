@@ -5,3 +5,12 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.conf text eol=lf
+
+# Các file package.json và package-lock.json
+package.json text eol=lf
+package-lock.json text eol=lf
+
+# Các file cấu hình .env
+.env text eol=lf
+.env.local text eol=lf
+.env.development.local text eol=lf
