@@ -96,7 +96,7 @@ const UserProfilePage: React.FC = () => {  const { user, updateUserInfo } = useA
         console.log('Avatar file added to FormData');
       }
       
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY);
+      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? 'gencare_auth_token');
       if (!token) {
         toast.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
         return;

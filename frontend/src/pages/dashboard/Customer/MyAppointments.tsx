@@ -26,6 +26,7 @@ const MyAppointments: React.FC = () => {
   const statusLabels = {
     pending: 'Chờ xác nhận',
     confirmed: 'Đã xác nhận',
+    in_progress: 'Đang tư vấn',
     completed: 'Đã hoàn thành',
     cancelled: 'Đã hủy'
   };
@@ -33,6 +34,7 @@ const MyAppointments: React.FC = () => {
   const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-purple-100 text-purple-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800'
   };

@@ -195,7 +195,7 @@ const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY);
+      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? 'gencare_auth_token');
       if (!token) {
         toast.error('Phiên đăng nhập đã hết hạn');
         return;
@@ -227,7 +227,7 @@ const UserManagement: React.FC = () => {
 
   const handleStatusChange = async (userId: string, newStatus: boolean) => {
     try {
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY);
+      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? 'gencare_auth_token');
       if (!token) {
         toast.error('Phiên đăng nhập đã hết hạn');
         return;
