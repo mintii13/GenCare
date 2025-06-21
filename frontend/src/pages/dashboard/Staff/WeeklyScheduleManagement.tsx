@@ -50,7 +50,7 @@ const WeeklyScheduleManagement: React.FC = () => {
                 console.log('📡 [DEBUG] Calling consultantService.getAllConsultants(1, 1000)');
                 const response = await consultantService.getAllConsultants(1, 1000); 
                 console.log('📨 [DEBUG] Response from consultantService:', response);
-                
+                    
                 if (response.success) {
                     console.log('✅ [DEBUG] Success! Consultants data:', response.data.consultants);
                     console.log('📊 [DEBUG] Number of consultants:', response.data.consultants.length);
@@ -60,9 +60,7 @@ const WeeklyScheduleManagement: React.FC = () => {
                     toast.error("Không thể tải danh sách chuyên gia.");
                 }
             } catch (error: any) {
-                console.error('💥 [DEBUG] Error occurred:', error);
-                console.error('💥 [DEBUG] Error response:', error.response?.data);
-                console.error('💥 [DEBUG] Error status:', error.response?.status);
+                
                 toast.error("Lỗi khi tải danh sách chuyên gia: " + (error.response?.data?.message || error.message));
             } finally {
                 setLoading(false);

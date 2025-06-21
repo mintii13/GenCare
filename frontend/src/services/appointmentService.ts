@@ -130,5 +130,10 @@ export const appointmentService = {
   async getAppointmentById(appointmentId: string) {
     const response = await api.get(`/appointments/${appointmentId}`);
     return response.data;
+  },
+
+  async startMeeting(appointmentId: string) {
+    const response = await api.put(`/appointments/${appointmentId}/start-meeting`);
+    return response.data;
   }
 }; 

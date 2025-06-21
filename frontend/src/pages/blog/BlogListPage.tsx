@@ -73,7 +73,6 @@ const BlogListPage: React.FC = () => {
     navigate('/blogs/create');
   };
 
-  // Tổng hợp danh sách chuyên khoa duy nhất từ blogs
   const specializations = Array.from(
     new Set(blogs.map(blog => blog.author?.specialization).filter(Boolean))
   );
@@ -139,7 +138,7 @@ const BlogListPage: React.FC = () => {
 
         {/* Blog grid */}
         {blogs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
             {blogs.map((blog) => (
               <BlogCard
                 key={blog.blog_id}
