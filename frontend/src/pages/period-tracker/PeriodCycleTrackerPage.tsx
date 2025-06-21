@@ -203,4 +203,8 @@ const PeriodCycleTrackerPage: React.FC = () => {
   )
 }
 
+<<<<<<< HEAD
 export default PeriodCycleTrackerPage
+=======
+export default PeriodCycleTrackerPage 
+>>>>>>> 6a5e8ced6369211448e3f8988081b82b3fce476b
