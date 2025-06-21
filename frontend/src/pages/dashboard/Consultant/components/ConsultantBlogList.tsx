@@ -252,4 +252,4 @@ const ConsultantBlogList: React.FC = () => {
   );
 };
 
-export default ConsultantBlogList; 
+export default ConsultantBlogList;

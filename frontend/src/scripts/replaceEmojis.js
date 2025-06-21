@@ -134,4 +134,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { replaceEmojisInContent, addIconImport }; 
+module.exports = { replaceEmojisInContent, addIconImport };

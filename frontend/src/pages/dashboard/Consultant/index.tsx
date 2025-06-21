@@ -16,4 +16,4 @@ const ConsultantRoutes: React.FC = () => {
   );
 };
 
-export default ConsultantRoutes; 
+export default ConsultantRoutes;

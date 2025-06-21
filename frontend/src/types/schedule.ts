@@ -83,4 +83,4 @@ export const DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'
 export const DAY_LABELS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'] as const;
 
 export type DayName = typeof DAY_NAMES[number];
-export type DayLabel = typeof DAY_LABELS[number]; 
+export type DayLabel = typeof DAY_LABELS[number];

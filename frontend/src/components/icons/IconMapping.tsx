@@ -197,4 +197,4 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, color, className })
   );
 };
 
-export default Icon; 
+export default Icon;

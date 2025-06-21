@@ -131,4 +131,4 @@ const AutoConfirmNotification: React.FC<AutoConfirmNotificationProps> = ({ onClo
   );
 };
 
-export default AutoConfirmNotification; 
+export default AutoConfirmNotification;

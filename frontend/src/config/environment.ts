@@ -63,4 +63,4 @@ export const validateEnvironment = (): void => {
 };
 
 // Initialize validation
-validateEnvironment(); 
+validateEnvironment();

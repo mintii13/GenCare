@@ -100,4 +100,8 @@ export interface Symptom {
 
 export type ViewMode = "calendar" | "ring" | "chart"
 export type AnalysisStep = "input" | "analyzing" | "results"
+<<<<<<< HEAD
+export type ReminderFrequency = "daily" | "twice-daily" | "three-times-daily" | "weekly" | "as-needed"
+=======
 export type ReminderFrequency = "daily" | "twice-daily" | "three-times-daily" | "weekly" | "as-needed" 
+>>>>>>> 6a5e8ced6369211448e3f8988081b82b3fce476b

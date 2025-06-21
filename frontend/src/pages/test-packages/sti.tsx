@@ -75,4 +75,4 @@ const STITestPage = () => {
   );
 };
 
-export default STITestPage; 
+export default STITestPage;

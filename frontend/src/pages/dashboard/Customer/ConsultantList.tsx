@@ -388,4 +388,4 @@ const ConsultantList: React.FC = () => {
   );
 };
 
-export default ConsultantList; 
+export default ConsultantList;

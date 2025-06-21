@@ -99,4 +99,4 @@ export const getWeekRange = (currentWeek: Date): { weekStart: string; weekEnd: s
   const weekStart = format(currentWeek, 'yyyy-MM-dd');
   const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
   return { weekStart, weekEnd };
-}; 
+};

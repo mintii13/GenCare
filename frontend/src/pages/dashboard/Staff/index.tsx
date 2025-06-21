@@ -18,4 +18,4 @@ const StaffDashboard: React.FC = () => {
     );
 };
 
-export default StaffDashboard; 
+export default StaffDashboard;

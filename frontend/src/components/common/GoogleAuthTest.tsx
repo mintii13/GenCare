@@ -141,4 +141,4 @@ const GoogleAuthTest: React.FC = () => {
   );
 };
 
-export default GoogleAuthTest; 
+export default GoogleAuthTest;

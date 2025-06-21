@@ -58,7 +58,6 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
     } else {
       // Dừng service khi user đăng xuất
       if (AutoConfirmService.isRunning()) {
-        console.log('🛑 User đăng xuất, dừng AutoConfirmService');
         AutoConfirmService.stop();
       }
     }
@@ -85,13 +84,13 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             <Route path="/user/profile" element={<UserProfilePage />} />
             <Route path="/oauth-success" element={<OAuthSuccess />} />
             
-            {/* Blog routes */}
+
             <Route path="/blogs" element={<BlogListPage />} />
             <Route path="/blogs/create" element={<BlogFormPage />} />
             <Route path="/blogs/:blogId" element={<BlogDetailPage />} />
             <Route path="/blogs/:blogId/edit" element={<BlogFormPage />} />
 
-            {/* Consultant Dashboard routes */}
+
             <Route path="/consultant/*" element={<ConsultantLayout />}>
               <Route path="schedule" element={<AppointmentManagement />} />
               <Route path="clients" element={<div>Khách hàng</div>} />

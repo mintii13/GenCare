@@ -170,4 +170,4 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
   );
 };
 
-export default LoginModal; 
+export default LoginModal;

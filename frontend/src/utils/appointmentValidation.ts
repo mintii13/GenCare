@@ -304,4 +304,4 @@ export const checkTimeSlotConflict = (
       // Check if time slots overlap
       return newStart < existingEnd && newEnd > existingStart;
     });
-}; 
+};

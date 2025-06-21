@@ -82,4 +82,4 @@ export const authService = {
     const response = await api.get('/auth/me');
     return response.data;
   },
-}; 
+};

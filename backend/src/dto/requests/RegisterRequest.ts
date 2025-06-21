@@ -7,6 +7,3 @@ export interface RegisterRequest {
     date_of_birth?: Date;
     gender?: string;
 }
-
-
-

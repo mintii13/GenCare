@@ -13,4 +13,4 @@ export interface StiTestResponse {
   success: boolean;
   message?: string;
   stitest: StiTest | StiTest[];
-} 
+}

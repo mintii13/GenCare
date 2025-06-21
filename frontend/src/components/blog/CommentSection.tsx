@@ -304,7 +304,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                     Hủy
                   </button>
                   <button
-                    onClick={() => handleSubmitComment(replyContent, comment.comment_id)}
+                    onClick={() => {
+                      // Nếu đang trả lời comment cấp 2 (level 1), thì reply vào comment gốc
+                      const parentId = level === 1 && comment.parent_comment_id 
+                        ? comment.parent_comment_id 
+                        : comment.comment_id;
+                      handleSubmitComment(replyContent, parentId);
+                    }}
                     disabled={!replyContent.trim() || isSubmitting}
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   >
@@ -317,8 +323,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           )}
         </div>
 
-        {/* Render replies */}
-        {localComments
+        {/* Render replies - chỉ cho phép tối đa 2 cấp */}
+        {level < 1 && localComments
           .filter(reply => reply.parent_comment_id === comment.comment_id)
           .map(reply => renderComment(reply, level + 1))
         }

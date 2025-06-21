@@ -153,4 +153,4 @@ export const consultantService = {
     const response = await api.get(`/consultants/search?${params}`);
     return response.data;
   }
-}; 
+};

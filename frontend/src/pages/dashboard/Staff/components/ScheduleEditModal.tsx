@@ -314,4 +314,4 @@ const ScheduleEditModal: React.FC<ScheduleEditModalProps> = ({ isOpen, onClose, 
   );
 };
 
-export default ScheduleEditModal; 
+export default ScheduleEditModal;

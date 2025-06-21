@@ -49,4 +49,4 @@ const About: React.FC<AboutProps> = ({
   );
 };
 
-export default About; 
+export default About;

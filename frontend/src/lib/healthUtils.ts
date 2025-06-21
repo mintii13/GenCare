@@ -178,4 +178,8 @@ export function getTimeUntilNext(time: string): string {
     return `${hoursLeft}h ${minutesLeft}m`
   }
   return `${minutesLeft}m`
+<<<<<<< HEAD
+}
+=======
 } 
+>>>>>>> 6a5e8ced6369211448e3f8988081b82b3fce476b

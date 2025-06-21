@@ -73,4 +73,4 @@ export const getAppointmentStatusLabel = (status: string): string => {
  */
 export const canSelectSlot = (date: string, startTime: string, isAvailable: boolean): boolean => {
   return isAvailable; // Allow all available slots to be clickable
-}; 
+};
