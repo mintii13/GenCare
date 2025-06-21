@@ -60,4 +60,4 @@ const BlogCardHeader: React.FC<BlogCardHeaderProps> = ({ blog }) => {
   );
 };
 
-export default BlogCardHeader; 
+export default BlogCardHeader;

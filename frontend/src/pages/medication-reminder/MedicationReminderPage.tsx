@@ -196,4 +196,4 @@ const MedicationReminderPage: React.FC = () => {
   )
 }
 
-export default MedicationReminderPage 
+export default MedicationReminderPage

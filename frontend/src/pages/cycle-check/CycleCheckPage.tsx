@@ -653,4 +653,4 @@ const CycleCheckPage: React.FC = () => {
   )
 }
 
-export default CycleCheckPage 
+export default CycleCheckPage

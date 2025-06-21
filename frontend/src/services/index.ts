@@ -36,4 +36,4 @@ export type {
   AuthResponse,
   UpdateProfileRequest,
   ChangePasswordRequest
-} from './userService'; 
+} from './userService';

@@ -87,4 +87,4 @@ Mock service hỗ trợ tất cả các tính năng như API thật:
 
 3. Set `VITE_USE_MOCK_DATA=false`
 
-4. Test các chức năng để đảm bảo API response format khớp với mock data 
+4. Test các chức năng để đảm bảo API response format khớp với mock data

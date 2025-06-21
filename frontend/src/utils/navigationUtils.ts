@@ -20,4 +20,4 @@ export const getDashboardPathByRole = (role?: string): string => {
 export const navigateAfterLogin = (user: { role?: string }, navigate: (path: string) => void): void => {
   const dashboardPath = getDashboardPathByRole(user.role);
   navigate(dashboardPath);
-}; 
+};

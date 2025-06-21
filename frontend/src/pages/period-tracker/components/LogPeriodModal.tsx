@@ -106,4 +106,4 @@ const LogPeriodModal: React.FC<LogPeriodModalProps> = ({ isOpen, onClose, onSave
   )
 }
 
-export default LogPeriodModal 
+export default LogPeriodModal

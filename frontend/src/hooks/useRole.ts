@@ -35,4 +35,4 @@ export const useRole = (): UseRoleReturn => {
     hasAnyRole,
     currentRole: user?.role as UserRole | undefined
   };
-}; 
+};

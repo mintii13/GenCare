@@ -137,4 +137,4 @@ export const weeklyScheduleService = {
     const response = await api.get(`/weekly-schedule/${scheduleId}`);
     return response.data;
   }
-}; 
+};

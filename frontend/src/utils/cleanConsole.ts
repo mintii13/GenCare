@@ -34,4 +34,4 @@ export function setupConsoleCleanup() {
 }
 
 // Call this in your main entry point
-setupConsoleCleanup(); 
+setupConsoleCleanup();

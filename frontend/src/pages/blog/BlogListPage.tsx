@@ -213,4 +213,4 @@ const BlogListPage: React.FC = () => {
   );
 };
 
-export default BlogListPage; 
+export default BlogListPage;

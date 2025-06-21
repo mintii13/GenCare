@@ -29,4 +29,4 @@ export interface IWeeklySchedule {
     };
     created_date?: string;
     updated_date?: string;
-} 
+}

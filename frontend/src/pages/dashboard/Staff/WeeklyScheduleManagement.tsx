@@ -242,4 +242,4 @@ const WeeklyScheduleManagement: React.FC = () => {
     );
 };
 
-export default WeeklyScheduleManagement; 
+export default WeeklyScheduleManagement;

@@ -791,4 +791,4 @@ const StaffAppointmentManagement: React.FC = () => {
   );
 };
 
-export default StaffAppointmentManagement; 
+export default StaffAppointmentManagement;

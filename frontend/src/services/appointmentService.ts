@@ -136,4 +136,4 @@ export const appointmentService = {
     const response = await api.put(`/appointments/${appointmentId}/start-meeting`);
     return response.data;
   }
-}; 
+};

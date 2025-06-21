@@ -180,4 +180,4 @@ const BlogFilters: React.FC<BlogFiltersProps> = ({
   );
 };
 
-export default BlogFilters; 
+export default BlogFilters;

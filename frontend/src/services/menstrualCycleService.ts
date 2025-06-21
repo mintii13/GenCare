@@ -26,4 +26,4 @@ export const updateMenstrualCycleData = async (id: string, data: Partial<Menstru
 
 export const deleteMenstrualCycleData = async (id: string): Promise<void> => {
     await apiClient.delete(`/menstrual-cycle/${id}`);
-}; 
+};

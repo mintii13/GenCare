@@ -184,4 +184,4 @@ export function useMemoryMonitor() {
   }, []);
 
   return memoryInfo;
-} 
+}

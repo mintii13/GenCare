@@ -134,4 +134,4 @@ const PeriodCycleRing: React.FC<CycleRingProps> = ({ cycleLength, periodLength, 
   )
 }
 
-export default PeriodCycleRing 
+export default PeriodCycleRing

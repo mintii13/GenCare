@@ -27,4 +27,4 @@ const ImportantNotes: React.FC<ImportantNotesProps> = ({ title, notes }) => {
   );
 };
 
-export default ImportantNotes; 
+export default ImportantNotes;

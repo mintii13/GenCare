@@ -67,4 +67,4 @@ const PeriodCycleCalendar: React.FC<PeriodCycleCalendarProps> = ({ periods }) =>
   );
 };
 
-export default PeriodCycleCalendar; 
+export default PeriodCycleCalendar;

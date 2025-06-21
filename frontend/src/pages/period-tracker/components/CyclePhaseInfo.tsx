@@ -82,4 +82,4 @@ const CyclePhaseInfo: React.FC<CyclePhaseInfoProps> = ({ currentDay, cycleLength
   )
 }
 
-export default CyclePhaseInfo 
+export default CyclePhaseInfo

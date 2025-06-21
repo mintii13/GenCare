@@ -70,4 +70,4 @@ export interface BlogFilters {
   specialization?: string;
   sortBy?: 'publish_date' | 'updated_date' | 'title';
   sortOrder?: 'asc' | 'desc';
-} 
+}

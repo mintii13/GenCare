@@ -45,4 +45,4 @@ const LoginTest: React.FC = () => {
   );
 };
 
-export default LoginTest; 
+export default LoginTest;

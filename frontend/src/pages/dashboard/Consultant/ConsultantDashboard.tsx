@@ -28,4 +28,4 @@ const ConsultantDashboard: React.FC = () => {
   );
 };
 
-export default ConsultantDashboard; 
+export default ConsultantDashboard;

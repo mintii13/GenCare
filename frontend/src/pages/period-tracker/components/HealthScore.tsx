@@ -169,4 +169,4 @@ const HealthScore: React.FC<HealthScoreProps> = ({ periods, cycleLength, symptom
   )
 }
 
-export default HealthScore 
+export default HealthScore

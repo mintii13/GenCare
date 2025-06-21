@@ -20,4 +20,4 @@ const BlogCard: React.FC<BlogCardProps> = ({ blog, onClick }) => {
   );
 };
 
-export default BlogCard; 
+export default BlogCard;

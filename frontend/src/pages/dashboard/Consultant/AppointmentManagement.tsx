@@ -1108,4 +1108,4 @@ const AppointmentManagement: React.FC = () => {
   );
 };
 
-export default AppointmentManagement; 
+export default AppointmentManagement;

@@ -126,4 +126,4 @@ export const formatViewCount = (views: number): string => {
     return `${(views / 1000).toFixed(1)}K`;
   }
   return views.toString();
-}; 
+};

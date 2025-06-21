@@ -85,4 +85,4 @@ const CycleSettingsModal: React.FC<CycleSettingsModalProps> = ({ isOpen, onClose
   )
 }
 
-export default CycleSettingsModal 
+export default CycleSettingsModal

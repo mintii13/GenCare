@@ -1143,4 +1143,4 @@ const WeeklyScheduleManager: React.FC = () => {
   );
 };
 
-export default WeeklyScheduleManager; 
+export default WeeklyScheduleManager;

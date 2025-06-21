@@ -32,4 +32,3 @@ export interface MedicationReminder {
       return []
     },
   }
-  

@@ -276,4 +276,4 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   );
 };
 
-export default AppointmentDetailModal; 
+export default AppointmentDetailModal;

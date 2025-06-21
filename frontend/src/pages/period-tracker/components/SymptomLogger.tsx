@@ -100,4 +100,4 @@ const SymptomLogger: React.FC<SymptomLoggerProps> = ({ onSymptomsChange }) => {
   )
 }
 
-export default SymptomLogger 
+export default SymptomLogger

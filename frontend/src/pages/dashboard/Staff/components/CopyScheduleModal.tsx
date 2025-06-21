@@ -100,4 +100,4 @@ const CopyScheduleModal: React.FC<CopyScheduleModalProps> = ({ isOpen, onClose, 
   );
 };
 
-export default CopyScheduleModal; 
+export default CopyScheduleModal;

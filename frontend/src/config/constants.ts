@@ -152,4 +152,4 @@ export const config = {
   social: {
     googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
   }
-} as const; 
+} as const;

@@ -623,4 +623,4 @@ const MyAppointments: React.FC = () => {
   );
 };
 
-export default MyAppointments; 
+export default MyAppointments;

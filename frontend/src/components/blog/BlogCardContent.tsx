@@ -96,4 +96,4 @@ const BlogCardContent: React.FC<BlogCardContentProps> = ({ blog }) => {
   );
 };
 
-export default BlogCardContent; 
+export default BlogCardContent;
