@@ -105,4 +105,44 @@ router.get('/getTodayStatus', authenticateToken, async (req: Request, res: Respo
         });
     }
 });
+
+//statistics
+router.get('/getCycleStatistics', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const user_id = (req.user as any).userId;
+        const result = await MenstrualCycleService.getCycleStats(user_id);
+        
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Error in GET /analytics/cycle-stats:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống khi lấy thống kê chu kỳ'
+        });
+    }
+});
+
+// GET /api/analytics/period-stats - Thống kê kinh nguyệt
+router.get('/getPeriodStatistics', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const user_id = (req.user as any).userId;
+        const result = await MenstrualCycleService.getPeriodStats(user_id);
+        
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Error in GET /analytics/period-stats:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống khi lấy thống kê kinh nguyệt'
+        });
+    }
+});
 export default router;

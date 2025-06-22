@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import { IMenstrualCycle, MenstrualCycle} from '../models/MenstrualCycle';
+import { CycleStatsData, PeriodStatsData } from '../dto/requests/menstrualCycleRequest';
 
 export class MenstrualCycleRepository {
     public static async deleteCyclesByUser(user_id: string) {
@@ -68,5 +70,93 @@ export class MenstrualCycleRepository {
             console.error('Error getting latest cycles:', error);
             throw error;
         }
+    }
+
+    public static async getCycleStatsData(user_id: string, months: number = 12): Promise<CycleStatsData[]> {
+        const monthsAgo = new Date();
+        monthsAgo.setMonth(monthsAgo.getMonth() - months);
+
+        const cycles = await MenstrualCycle.find({
+            user_id: new mongoose.Types.ObjectId(user_id),
+            cycle_start_date: { $gte: monthsAgo },
+            cycle_length: { $exists: true, $gt: 0 }
+        })
+        .select('cycle_start_date cycle_length period_days createdAt')
+        .sort({ cycle_start_date: -1 })
+        .lean();
+
+        const mapped: CycleStatsData[] = cycles.map(cycle => ({
+            _id: cycle._id.toString(),
+            cycle_start_date: cycle.cycle_start_date,
+            cycle_length: cycle.cycle_length,
+            period_days: Array.isArray(cycle.period_days) ? cycle.period_days.length : cycle.period_days,
+            createdAt: cycle.createdAt
+        }));
+        return mapped;
+    }
+
+    // Lấy dữ liệu kinh nguyệt cho thống kê
+    public static async getPeriodStatsData(user_id: string, months: number = 12): Promise<PeriodStatsData[]> {
+        const monthsAgo = new Date();
+        monthsAgo.setMonth(monthsAgo.getMonth() - months);
+
+        const periods = await MenstrualCycle.find({
+            user_id: new mongoose.Types.ObjectId(user_id),
+            cycle_start_date: { $gte: monthsAgo },
+            period_days: { $exists: true, $gt: 0 }
+        })
+        .select('cycle_start_date period_days notes createdAt')
+        .sort({ cycle_start_date: -1 })
+        .lean();
+
+        const mapped: PeriodStatsData[] = periods.map(p => ({
+            _id: p._id.toString(),
+            cycle_start_date: p.cycle_start_date,
+            period_days: Array.isArray(p.period_days) ? p.period_days.length : p.period_days,
+            notes: p.notes,
+            createdAt: p.createdAt
+        }));
+        return mapped;
+    }
+
+    // Lấy chu kỳ gần nhất để tính xu hướng
+    public static async getRecentCycles(user_id: string, limit: number = 6): Promise<CycleStatsData[]> {
+        const cycles = await MenstrualCycle.find({
+            user_id: new mongoose.Types.ObjectId(user_id),
+            cycle_length: { $exists: true, $gt: 0 }
+        })
+        .select('cycle_start_date cycle_length period_days createdAt')
+        .sort({ cycle_start_date: -1 })
+        .limit(limit)
+        .lean();
+
+        const mapped: CycleStatsData[] = cycles.map(cycle => ({
+            _id: cycle._id.toString(),
+            cycle_start_date: cycle.cycle_start_date,
+            cycle_length: cycle.cycle_length,
+            period_days: Array.isArray(cycle.period_days) ? cycle.period_days.length : cycle.period_days,
+            createdAt: cycle.createdAt
+        }));
+        return mapped;
+    }
+
+    // Đếm tổng số chu kỳ đã theo dõi
+    public static async getTotalCyclesCount(user_id: string): Promise<number> {
+        return await MenstrualCycle.countDocuments({
+            user_id: new mongoose.Types.ObjectId(user_id),
+            cycle_length: { $exists: true, $gt: 0 }
+        });
+    }
+
+    // Lấy ngày bắt đầu theo dõi đầu tiên
+    public static async getFirstTrackingDate(user_id: string): Promise<Date | null> {
+        const firstCycle = await MenstrualCycle.findOne({
+            user_id: new mongoose.Types.ObjectId(user_id)
+        })
+        .select('cycle_start_date')
+        .sort({ cycle_start_date: 1 })
+        .lean();
+
+        return firstCycle?.cycle_start_date || null;
     }
 }
