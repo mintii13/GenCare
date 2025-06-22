@@ -86,4 +86,4 @@ const AutoConfirmStatus: React.FC = () => {
   );
 };
 
-export default AutoConfirmStatus; 
+export default AutoConfirmStatus;

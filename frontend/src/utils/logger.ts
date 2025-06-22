@@ -95,4 +95,4 @@ export const log = {
   apiResponse: (method: string, url: string, status: number, data?: any) => logger.apiResponse(method, url, status, data),
   component: (componentName: string, action: string, data?: any) => logger.component(componentName, action, data),
   userAction: (action: string, data?: any) => logger.userAction(action, data)
-}; 
+};

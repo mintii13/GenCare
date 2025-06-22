@@ -93,4 +93,4 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
   );
 };
 
-export default ConsultantSidebar; 
+export default ConsultantSidebar;

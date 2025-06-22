@@ -93,4 +93,4 @@ const StaffSidebar: React.FC = () => {
   );
 };
 
-export default StaffSidebar; 
+export default StaffSidebar;

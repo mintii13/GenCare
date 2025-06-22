@@ -99,4 +99,4 @@ const CustomerDashboard: React.FC = () => {
   );
 };
 
-export default CustomerDashboard; 
+export default CustomerDashboard;

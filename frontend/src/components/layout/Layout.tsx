@@ -21,4 +21,4 @@ export default function Layout({ children, onLoginClick }: LayoutProps) {
       <Footer />
     </div>
   );
-} 
+}

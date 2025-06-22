@@ -85,7 +85,7 @@ router.get(
         role: user.role
     });
     redisClient.setEx('accessTokenGoogle', 300, accessToken);
-    res.redirect(`http://localhost:5173/oauth-success?token=${accessToken}`);
+    res.redirect(`${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/oauth-success?token=${accessToken}`);
   }
 );
 

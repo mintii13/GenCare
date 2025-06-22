@@ -84,4 +84,4 @@ const RoleTestComponent: React.FC = () => {
   );
 };
 
-export default RoleTestComponent; 
+export default RoleTestComponent;

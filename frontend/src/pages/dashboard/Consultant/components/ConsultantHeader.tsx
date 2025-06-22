@@ -120,4 +120,4 @@ const ConsultantHeader: React.FC<ConsultantHeaderProps> = ({ onMenuClick }) => {
   );
 };
 
-export default ConsultantHeader; 
+export default ConsultantHeader;

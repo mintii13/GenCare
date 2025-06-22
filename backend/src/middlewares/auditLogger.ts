@@ -11,7 +11,7 @@ export const autoAuditLogger = (targetType: TargetType, model: mongoose.Model<an
 
         let before = null;
         if (action !== 'Create' && targetId) {
-            before = await GenericRepository.findByTargetId(targetId);
+            before = await GenericRepository.findByTargetId(model, targetId);
         }
 
         const oldSend = res.send;

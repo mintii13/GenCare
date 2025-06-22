@@ -343,4 +343,4 @@ const BlogFormPage: React.FC = () => {
   );
 };
 
-export default BlogFormPage; 
+export default BlogFormPage;

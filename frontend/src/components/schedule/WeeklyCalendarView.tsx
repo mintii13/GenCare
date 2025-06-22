@@ -367,4 +367,4 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   );
 };
 
-export default WeeklyCalendarView; 
+export default WeeklyCalendarView;

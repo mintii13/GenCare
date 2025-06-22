@@ -212,4 +212,4 @@ export const useToast = () => {
   };
 };
 
-export default Toast; 
+export default Toast;

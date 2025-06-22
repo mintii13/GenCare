@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import axios from 'axios';
 import Icon from '../../../components/icons/IconMapping';
 import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
+import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
 
 interface Appointment {
   _id: string;
@@ -18,10 +19,15 @@ interface Appointment {
   appointment_date: string;
   start_time: string;
   end_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress';
   customer_notes?: string;
   consultant_notes?: string;
   created_date: string;
+  meeting_info?: {
+    meet_url: string;
+    meeting_id: string;
+    meeting_password?: string;
+  } | null;
 }
 
 interface ApiResponse {
@@ -39,6 +45,7 @@ interface AppointmentStats {
   confirmed: number;
   completed: number;
   cancelled: number;
+  in_progress: number;
   today: number;
 }
 
@@ -56,12 +63,14 @@ const AppointmentManagement: React.FC = () => {
     confirmed: 0,
     completed: 0,
     cancelled: 0,
+    in_progress: 0,
     today: 0
   });
 
   const statusLabels = {
     pending: 'Chờ xác nhận',
     confirmed: 'Đã xác nhận',
+    in_progress: 'Đang tư vấn',
     completed: 'Đã hoàn thành',
     cancelled: 'Đã hủy'
   };
@@ -69,7 +78,8 @@ const AppointmentManagement: React.FC = () => {
   const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     confirmed: 'bg-green-100 text-green-800 border-green-200',
-    completed: 'bg-blue-100 text-blue-800 border-blue-200',
+    in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
+    completed: 'bg-green-100 text-green-800 border-green-200',
     cancelled: 'bg-red-100 text-red-800 border-red-200'
   };
 
@@ -77,6 +87,7 @@ const AppointmentManagement: React.FC = () => {
     { value: 'all', label: 'Tất cả', count: stats.total },
     { value: 'pending', label: 'Chờ xác nhận', count: stats.pending },
     { value: 'confirmed', label: 'Đã xác nhận', count: stats.confirmed },
+    { value: 'in_progress', label: 'Đang tư vấn', count: stats.in_progress },
     { value: 'completed', label: 'Đã hoàn thành', count: stats.completed },
     { value: 'cancelled', label: 'Đã hủy', count: stats.cancelled }
   ];
@@ -184,6 +195,7 @@ const AppointmentManagement: React.FC = () => {
       confirmed: 0,
       completed: 0,
       cancelled: 0,
+      in_progress: 0,
       today: 0
     } as AppointmentStats);
 
@@ -206,6 +218,18 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const handleConfirmAppointment = async (appointmentId: string) => {
+    const appointment = appointments.find(apt => apt._id === appointmentId);
+    if (!appointment) {
+      showNotification('error', 'Không tìm thấy lịch hẹn');
+      return;
+    }
+    
+    // Kiểm tra logic chuyển đổi trạng thái
+    if (!canTransitionTo(appointment.status, 'confirmed', 'consultant')) {
+      showNotification('error', `Không thể xác nhận lịch hẹn với trạng thái "${statusLabels[appointment.status]}". Chỉ có thể xác nhận lịch hẹn đang chờ.`);
+      return;
+    }
+
     try {
       setActionLoading(appointmentId);
       const token = localStorage.getItem('gencare_auth_token');
@@ -233,13 +257,59 @@ const AppointmentManagement: React.FC = () => {
     }
   };
 
+  const handleStartMeeting = async (appointmentId: string) => {
+    const appointment = appointments.find(apt => apt._id === appointmentId);
+    if (!appointment) {
+      showNotification('error', 'Không tìm thấy lịch hẹn');
+      return;
+    }
+    
+    // Kiểm tra logic chuyển đổi trạng thái
+    if (!canTransitionTo(appointment.status, 'in_progress', 'consultant')) {
+      showNotification('error', `Không thể bắt đầu tư vấn với trạng thái "${statusLabels[appointment.status]}". Chỉ có thể bắt đầu với lịch hẹn đã xác nhận.`);
+      return;
+    }
+
+    try {
+      setActionLoading(appointmentId);
+      const token = localStorage.getItem('gencare_auth_token');
+      
+      const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/start-meeting`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        showNotification('success', 'Bắt đầu buổi tư vấn thành công');
+        fetchAppointments();
+      } else {
+        showNotification('error', data.message || 'Không thể bắt đầu buổi tư vấn');
+      }
+    } catch (err) {
+      showNotification('error', 'Có lỗi xảy ra khi bắt đầu buổi tư vấn');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
   const handleCompleteAppointment = async () => {
     if (!selectedAppointment) return;
 
-    // Kiểm tra thời gian trước khi hoàn thành
+    // Kiểm tra logic chuyển đổi trạng thái
+    if (!canTransitionTo(selectedAppointment.status, 'completed', 'consultant')) {
+      showNotification('error', `Không thể hoàn thành với trạng thái "${statusLabels[selectedAppointment.status]}". Chỉ có thể hoàn thành lịch hẹn đang tư vấn.`);
+      return;
+    }
+
+    // Kiểm tra điều kiện thời gian và ngày
     if (!canCompleteAppointment(selectedAppointment)) {
-      const remainingTime = getRemainingTimeToComplete(selectedAppointment);
-      showNotification('warning', `Bạn chỉ có thể hoàn thành buổi tư vấn sau 1 giờ từ lúc bắt đầu. Còn lại ${remainingTime} phút.`);
+      const blockedReason = getCompletionBlockedReason(selectedAppointment);
+      showNotification('warning', blockedReason);
       return;
     }
 
@@ -281,6 +351,18 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
+    const appointment = appointments.find(apt => apt._id === appointmentId);
+    if (!appointment) {
+      showNotification('error', 'Không tìm thấy lịch hẹn');
+      return;
+    }
+    
+    // Kiểm tra logic chuyển đổi trạng thái (Consultant chỉ có thể hủy pending)
+    if (!canTransitionTo(appointment.status, 'cancelled', 'consultant')) {
+      showNotification('error', `Chuyên gia chỉ có thể hủy lịch hẹn ở trạng thái "Chờ xác nhận". Lịch hẹn đã xác nhận hoặc đang tư vấn không thể hủy.`);
+      return;
+    }
+
     if (!confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
 
     try {
@@ -335,9 +417,10 @@ const AppointmentManagement: React.FC = () => {
     return 'normal';
   };
 
-  // Kiểm tra xem có thể hoàn thành lịch hẹn không (sau 15 phút từ lúc bắt đầu)
+  // Kiểm tra xem có thể hoàn thành lịch hẹn không (với điều kiện ngày và thời gian)
   const canCompleteAppointment = (appointment: Appointment) => {
-    if (appointment.status !== 'confirmed') return false;
+    // Chỉ appointment có status 'in_progress' mới có thể hoàn thành
+    if (appointment.status !== 'in_progress') return false;
     
     try {
       // Kiểm tra dữ liệu đầu vào
@@ -346,6 +429,8 @@ const AppointmentManagement: React.FC = () => {
         return false;
       }
 
+      const now = new Date();
+      
       // Parse ngày hẹn (format: YYYY-MM-DD)
       const appointmentDate = new Date(appointment.appointment_date);
       
@@ -358,26 +443,59 @@ const AppointmentManagement: React.FC = () => {
         return false;
       }
       
-      // Tạo datetime hoàn chỉnh
+      // === ĐIỀU KIỆN NGÀY ===
+      
+      // 1. Không thể hoàn thành trước ngày hẹn
+      const appointmentDateOnly = new Date(appointmentDate);
+      appointmentDateOnly.setHours(0, 0, 0, 0);
+      
+      const todayOnly = new Date(now);
+      todayOnly.setHours(0, 0, 0, 0);
+      
+      if (todayOnly.getTime() < appointmentDateOnly.getTime()) {
+        console.log('Cannot complete: Current date is before appointment date');
+        return false;
+      }
+      
+      // 2. Không thể hoàn thành quá 1 ngày sau ngày hẹn (tránh hoàn thành muộn)
+      const oneDayAfterAppointment = new Date(appointmentDateOnly);
+      oneDayAfterAppointment.setDate(oneDayAfterAppointment.getDate() + 1);
+      
+      if (todayOnly.getTime() > oneDayAfterAppointment.getTime()) {
+        console.log('Cannot complete: Too late, more than 1 day after appointment');
+        return false;
+      }
+      
+      // === ĐIỀU KIỆN THỜI GIAN ===
+      
+      // Tạo datetime hoàn chỉnh của appointment
       const appointmentDateTime = new Date(appointmentDate);
       appointmentDateTime.setHours(hours, minutes, 0, 0);
       
-      const now = new Date();
+      // 3. Không thể hoàn thành trước giờ bắt đầu appointment
+      if (now.getTime() < appointmentDateTime.getTime()) {
+        console.log('Cannot complete: Current time is before appointment start time');
+        return false;
+      }
       
-      // Tính số phút đã trôi qua kể từ lúc bắt đầu
+      // 4. Phải đợi ít nhất 15 phút từ lúc bắt đầu appointment
       const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
       
-      // Chỉ cho phép hoàn thành sau 15 phút
-      return minutesPassed >= 15;
+      if (minutesPassed < 15) {
+        console.log(`Cannot complete: Only ${Math.floor(minutesPassed)} minutes passed, need at least 15 minutes`);
+        return false;
+      }
+      
+      return true;
     } catch (error) {
       console.error('Error checking completion time:', error, appointment);
       return false;
     }
   };
 
-  // Tính thời gian còn lại để có thể hoàn thành (tính bằng phút)
+  // Tính thời gian còn lại để có thể hoàn thành (tính bằng phút) và lý do chặn
   const getRemainingTimeToComplete = (appointment: Appointment) => {
-    if (appointment.status !== 'confirmed') return 0;
+    if (appointment.status !== 'in_progress') return 0;
     
     try {
       // Kiểm tra dữ liệu đầu vào
@@ -386,6 +504,8 @@ const AppointmentManagement: React.FC = () => {
         return 0;
       }
 
+      const now = new Date();
+      
       // Parse ngày hẹn (format: YYYY-MM-DD)
       const appointmentDate = new Date(appointment.appointment_date);
       
@@ -402,7 +522,6 @@ const AppointmentManagement: React.FC = () => {
       const appointmentDateTime = new Date(appointmentDate);
       appointmentDateTime.setHours(hours, minutes, 0, 0);
       
-      const now = new Date();
       const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
       const remainingMinutes = 15 - minutesPassed;
       
@@ -423,6 +542,143 @@ const AppointmentManagement: React.FC = () => {
     } catch (error) {
       console.error('Error calculating remaining time:', error, appointment);
       return 0;
+    }
+  };
+
+  // Lấy thông báo lý do không thể hoàn thành
+  const getCompletionBlockedReason = (appointment: Appointment) => {
+    if (appointment.status !== 'in_progress') {
+      return 'Chỉ có thể hoàn thành buổi tư vấn đang diễn ra';
+    }
+    
+    try {
+      const now = new Date();
+      const appointmentDate = new Date(appointment.appointment_date);
+      const [hours, minutes] = appointment.start_time.split(':').map(Number);
+      
+      // Kiểm tra ngày
+      const appointmentDateOnly = new Date(appointmentDate);
+      appointmentDateOnly.setHours(0, 0, 0, 0);
+      
+      const todayOnly = new Date(now);
+      todayOnly.setHours(0, 0, 0, 0);
+      
+      if (todayOnly.getTime() < appointmentDateOnly.getTime()) {
+        return 'Không thể hoàn thành trước ngày hẹn';
+      }
+      
+      const oneDayAfterAppointment = new Date(appointmentDateOnly);
+      oneDayAfterAppointment.setDate(oneDayAfterAppointment.getDate() + 1);
+      
+      if (todayOnly.getTime() > oneDayAfterAppointment.getTime()) {
+        return 'Quá hạn hoàn thành (chỉ cho phép trong vòng 1 ngày)';
+      }
+      
+      // Kiểm tra thời gian
+      const appointmentDateTime = new Date(appointmentDate);
+      appointmentDateTime.setHours(hours, minutes, 0, 0);
+      
+      if (now.getTime() < appointmentDateTime.getTime()) {
+        return 'Chưa đến giờ bắt đầu buổi tư vấn';
+      }
+      
+      const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
+      if (minutesPassed < 15) {
+        const remaining = Math.ceil(15 - minutesPassed);
+        return `Cần chờ thêm ${remaining} phút nữa để hoàn thành`;
+      }
+      
+      return '';
+    } catch (error) {
+      return 'Lỗi kiểm tra thời gian';
+    }
+  };
+
+  // Kiểm tra trạng thái chuyển đổi hợp lệ theo role
+  const canTransitionTo = (currentStatus: string, targetStatus: string, userRole: string = 'consultant'): boolean => {
+    // Base transition rules
+    const baseTransitions: Record<string, string[]> = {
+      'pending': ['confirmed'],
+      'confirmed': ['in_progress'], 
+      'in_progress': ['completed'],
+      'completed': [], // Trạng thái cuối
+      'cancelled': []  // Trạng thái cuối
+    };
+    
+         // Cancel permissions by role
+     const cancelPermissions: Record<string, string[]> = {
+       'customer': ['pending', 'confirmed'], // Khách hàng có thể hủy pending và confirmed
+       'consultant': ['pending'], // Chuyên gia chỉ có thể hủy pending
+       'staff': ['pending', 'confirmed', 'in_progress'], // Staff có thể hủy bất cứ lúc nào
+       'admin': ['pending', 'confirmed', 'in_progress'] // Admin có thể hủy bất cứ lúc nào
+     };
+    
+    if (targetStatus === 'cancelled') {
+      return cancelPermissions[userRole]?.includes(currentStatus) || false;
+    }
+    
+    return baseTransitions[currentStatus]?.includes(targetStatus) || false;
+  };
+
+  // Lấy danh sách hành động khả dụng cho appointment theo role
+  const getAvailableActions = (appointment: Appointment, userRole: string = 'consultant') => {
+    const actions = [];
+    
+    // Action "Xem chi tiết" luôn có
+    actions.push('view');
+    
+    // Actions dựa trên trạng thái và role
+    switch (appointment.status) {
+      case 'pending':
+        if (canTransitionTo('pending', 'confirmed', userRole)) {
+          actions.push('confirm');
+        }
+        if (canTransitionTo('pending', 'cancelled', userRole)) {
+          actions.push('cancel');
+        }
+        break;
+      case 'confirmed':
+        if (canTransitionTo('confirmed', 'in_progress', userRole)) {
+          actions.push('start');
+        }
+        if (canTransitionTo('confirmed', 'cancelled', userRole)) {
+          actions.push('cancel');
+        }
+        break;
+      case 'in_progress':
+        if (canTransitionTo('in_progress', 'completed', userRole) && canCompleteAppointment(appointment)) {
+          actions.push('complete');
+        }
+        if (canTransitionTo('in_progress', 'cancelled', userRole)) {
+          actions.push('cancel');
+        }
+        break;
+      case 'completed':
+      case 'cancelled':
+        // Chỉ xem chi tiết
+        break;
+    }
+    
+    return actions;
+  };
+
+  // Lấy thông báo trạng thái cho appointment
+  const getStatusMessage = (appointment: Appointment) => {
+    switch (appointment.status) {
+      case 'pending':
+        return 'Đang chờ chuyên gia xác nhận';
+      case 'confirmed':
+        return 'Đã xác nhận, sẵn sàng bắt đầu tư vấn';
+      case 'in_progress':
+        return canCompleteAppointment(appointment) 
+          ? 'Đang tư vấn, có thể hoàn thành' 
+          : `Đang tư vấn, ${getCompletionBlockedReason(appointment)}`;
+      case 'completed':
+        return 'Buổi tư vấn đã hoàn thành';
+      case 'cancelled':
+        return 'Lịch hẹn đã bị hủy';
+      default:
+        return 'Trạng thái không xác định';
     }
   };
 
@@ -483,13 +739,26 @@ const AppointmentManagement: React.FC = () => {
       name: 'Trạng thái',
       cell: (row) => (
         <div className="py-2">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusColors[row.status]}`}>
+          <span 
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusColors[row.status]} cursor-help`}
+            title={getStatusMessage(row)}
+          >
             {statusLabels[row.status]}
           </span>
+          {row.status === 'in_progress' && !canCompleteAppointment(row) && (
+            <div className="text-xs text-orange-600 mt-1 font-medium">
+              ⏳ Chờ hoàn thành
+            </div>
+          )}
+          {row.status === 'in_progress' && canCompleteAppointment(row) && (
+            <div className="text-xs text-green-600 mt-1 font-medium">
+              ✅ Sẵn sàng
+            </div>
+          )}
         </div>
       ),
       sortable: true,
-      width: '140px',
+      width: '160px',
     },
     {
       name: 'Ghi chú khách hàng',
@@ -547,6 +816,22 @@ const AppointmentManagement: React.FC = () => {
           
           {row.status === 'confirmed' && (
             <button
+              onClick={() => handleStartMeeting(row._id)}
+              disabled={actionLoading === row._id}
+              className="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors whitespace-nowrap flex items-center"
+              title="Bắt đầu buổi tư vấn"
+            >
+              {actionLoading === row._id ? (
+                <Icon name="⏳" className="mr-1" />
+              ) : (
+                <Icon name="▶️" className="mr-1" />
+              )}
+              Bắt đầu
+            </button>
+          )}
+          
+          {row.status === 'in_progress' && (
+            <button
               onClick={() => {
                 setSelectedAppointment(row);
                 setConsultantNotes(row.consultant_notes || '');
@@ -558,11 +843,12 @@ const AppointmentManagement: React.FC = () => {
             </button>
           )}
           
-          {(row.status === 'pending' || row.status === 'confirmed') && (
+          {canTransitionTo(row.status, 'cancelled', 'consultant') && (
             <button
               onClick={() => handleCancelAppointment(row._id)}
               disabled={actionLoading === row._id}
               className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center"
+              title={`Hủy lịch hẹn (Chỉ được phép hủy lúc pending)`}
             >
               {actionLoading === row._id ? (
                 <Icon name="⏳" className="mr-1" />
@@ -674,8 +960,10 @@ const AppointmentManagement: React.FC = () => {
           <AutoConfirmStatus />
         </div>
 
+
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
             <div className="flex items-center">
               <div className="flex-1">
@@ -700,35 +988,45 @@ const AppointmentManagement: React.FC = () => {
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Đã xác nhận</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.confirmed}</p>
+                <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
               </div>
-              <div className="text-blue-500 text-2xl">
+              <div className="text-green-500 text-2xl">
                 <Icon name="✅" size={32} />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-600">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Đã hoàn thành</p>
-                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                <p className="text-sm font-medium text-gray-600">Đang tư vấn</p>
+                <p className="text-2xl font-bold text-blue-700">{stats.in_progress}</p>
               </div>
-              <div className="text-green-500 text-2xl">🎉</div>
+              <div className="text-blue-600 text-2xl">💬</div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-orange-500">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-emerald-500">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">Hôm nay</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.today}</p>
+                <p className="text-sm font-medium text-gray-600">Đã hoàn thành</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
               </div>
-              <div className="text-orange-500 text-2xl">📍</div>
+              <div className="text-emerald-500 text-2xl">🎉</div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-red-500">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600">Đã hủy</p>
+                <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+              </div>
+              <div className="text-red-500 text-2xl">❌</div>
             </div>
           </div>
         </div>
@@ -787,174 +1085,29 @@ const AppointmentManagement: React.FC = () => {
 
         {/* Appointment Detail Modal */}
         {selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Chi tiết Lịch hẹn</h2>
-                  <button
-                    onClick={() => {
-                      setSelectedAppointment(null);
-                      setConsultantNotes('');
-                    }}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Customer Info */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Thông tin Khách hàng</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-gray-600">Họ tên:</label>
-                        <p className="font-medium">
-                          {selectedAppointment.customer_id?.full_name || 'Không có thông tin'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Email:</label>
-                        <p className="font-medium">
-                          {selectedAppointment.customer_id?.email || 'Không có email'}
-                        </p>
-                      </div>
-                      {selectedAppointment.customer_id?.phone && (
-                        <div>
-                          <label className="text-sm text-gray-600">Điện thoại:</label>
-                          <p className="font-medium">{selectedAppointment.customer_id.phone}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Appointment Info */}
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Thông tin Lịch hẹn</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-gray-600">Ngày hẹn:</label>
-                        <p className="font-medium">{formatDate(selectedAppointment.appointment_date)}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Thời gian:</label>
-                        <p className="font-medium">{selectedAppointment.start_time} - {selectedAppointment.end_time}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Trạng thái:</label>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[selectedAppointment.status]}`}>
-                          {statusLabels[selectedAppointment.status]}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Ngày tạo:</label>
-                        <p className="font-medium">{formatDateTime(selectedAppointment.created_date)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Customer Notes */}
-                  {selectedAppointment.customer_notes && (
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Ghi chú từ Khách hàng</h3>
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <p className="text-gray-700">{selectedAppointment.customer_notes}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Completion Time Warning */}
-                  {selectedAppointment.status === 'confirmed' && !canCompleteAppointment(selectedAppointment) && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <Icon name="⏰" className="text-yellow-600 mr-2" />
-                        <div>
-                          <h4 className="font-semibold text-yellow-800">Chờ để hoàn thành</h4>
-                          <p className="text-sm text-yellow-700">
-                            Bạn chỉ có thể hoàn thành buổi tư vấn sau 1 giờ từ lúc bắt đầu. 
-                            Còn lại <strong>{getRemainingTimeToComplete(selectedAppointment)} phút</strong>.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Consultant Notes */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Ghi chú của Chuyên gia</h3>
-                    <textarea
-                      value={consultantNotes}
-                      onChange={(e) => setConsultantNotes(e.target.value)}
-                      placeholder="Nhập ghi chú về buổi tư vấn, kết quả, khuyến nghị..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      rows={4}
-                      disabled={selectedAppointment.status === 'completed' || selectedAppointment.status === 'cancelled'}
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      {consultantNotes.length}/500 ký tự
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3 pt-4 border-t">
-                    <button
-                      onClick={() => {
-                        setSelectedAppointment(null);
-                        setConsultantNotes('');
-                      }}
-                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                    >
-                      Đóng
-                    </button>
-                    
-                    {selectedAppointment.status === 'pending' && (
-                      <button
-                        onClick={() => handleConfirmAppointment(selectedAppointment._id)}
-                        disabled={actionLoading === selectedAppointment._id}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                      >
-                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '✅ Xác nhận'}
-                      </button>
-                    )}
-                    
-                    {selectedAppointment.status === 'confirmed' && (
-                      <button
-                        onClick={handleCompleteAppointment}
-                        disabled={actionLoading === selectedAppointment._id || !canCompleteAppointment(selectedAppointment)}
-                        className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                          canCompleteAppointment(selectedAppointment)
-                            ? 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                        title={
-                          canCompleteAppointment(selectedAppointment)
-                            ? 'Hoàn thành buổi tư vấn'
-                            : `Chỉ có thể hoàn thành sau 1 giờ tư vấn (còn ${getRemainingTimeToComplete(selectedAppointment)} phút)`
-                        }
-                      >
-                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '🎉 Hoàn thành'}
-                      </button>
-                    )}
-                    
-                    {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'confirmed') && (
-                      <button
-                        onClick={() => handleCancelAppointment(selectedAppointment._id)}
-                        disabled={actionLoading === selectedAppointment._id}
-                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                      >
-                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : '❌ Hủy'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <AppointmentDetailModal
+            appointment={selectedAppointment}
+            consultantNotes={consultantNotes}
+            setConsultantNotes={setConsultantNotes}
+            onClose={() => {
+              setSelectedAppointment(null);
+              setConsultantNotes('');
+            }}
+            onConfirm={handleConfirmAppointment}
+            onStart={handleStartMeeting}
+            onComplete={handleCompleteAppointment}
+            onCancel={handleCancelAppointment}
+            canCompleteAppointment={canCompleteAppointment}
+            canTransitionTo={canTransitionTo}
+            getCompletionBlockedReason={getCompletionBlockedReason}
+            formatDate={formatDate}
+            formatDateTime={formatDateTime}
+            actionLoading={actionLoading}
+          />
         )}
       </div>
     </div>
   );
 };
 
-export default AppointmentManagement; 
+export default AppointmentManagement;

@@ -233,4 +233,4 @@ export const LoadingSpinner: React.FC<{
   );
 };
 
-export { Skeleton }; 
+export { Skeleton };

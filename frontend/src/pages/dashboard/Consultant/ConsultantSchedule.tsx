@@ -193,4 +193,4 @@ const ConsultantSchedule: React.FC = () => {
   );
 };
 
-export default ConsultantSchedule; 
+export default ConsultantSchedule;

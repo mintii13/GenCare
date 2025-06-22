@@ -82,4 +82,4 @@ export const EmptyState: React.FC<{
   );
 };
 
-export default ErrorState; 
+export default ErrorState;

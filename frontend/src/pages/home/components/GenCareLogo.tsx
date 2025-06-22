@@ -7,4 +7,4 @@ const GenCareLogo: React.FC<{className?: string}> = ({ className }) => (
   </div>
 );
 
-export default GenCareLogo; 
+export default GenCareLogo;

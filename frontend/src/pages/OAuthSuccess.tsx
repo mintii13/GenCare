@@ -23,12 +23,12 @@ function OAuthSuccess() {
         }
 
         // Lưu token và lấy thông tin user
-        const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || "accessToken";
+        const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY ?? "gencare_auth_token";
         localStorage.setItem(AUTH_TOKEN_KEY, token);
 
         // Gọi API để lấy thông tin user
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/profile`,
+          `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}/auth/getUserProfile`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }
@@ -48,7 +48,7 @@ function OAuthSuccess() {
         setError("Đăng nhập thất bại: " + (error.response?.data?.message || error.message));
         
         // Xóa token lỗi
-        localStorage.removeItem(import.meta.env.VITE_AUTH_TOKEN_KEY || "accessToken");
+        localStorage.removeItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? "gencare_auth_token");
         
         // Redirect về home sau 3 giây
         setTimeout(() => navigate("/"), 3000);
@@ -79,4 +79,4 @@ function OAuthSuccess() {
   );
 }
 
-export default OAuthSuccess; 
+export default OAuthSuccess;

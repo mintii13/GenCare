@@ -820,4 +820,4 @@ const BookAppointment: React.FC = () => {
   );
 };
 
-export default BookAppointment; 
+export default BookAppointment;

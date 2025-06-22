@@ -54,4 +54,4 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
   );
 };
 
-export default WeeklySlotPicker; 
+export default WeeklySlotPicker;

@@ -62,4 +62,4 @@ const ConsultantLayout: React.FC = () => {
   );
 };
 
-export default ConsultantLayout; 
+export default ConsultantLayout;

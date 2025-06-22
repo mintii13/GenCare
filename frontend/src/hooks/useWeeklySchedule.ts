@@ -264,4 +264,4 @@ export const useWeeklySchedule = ({
     // Utilities
     canNavigateToPrevious
   };
-}; 
+};

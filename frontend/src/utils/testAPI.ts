@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 
 export interface APITestResult {
     endpoint: string;
@@ -108,4 +108,4 @@ export const runAllAPITests = async (): Promise<APITestResult[]> => {
     }
     
     return results;
-}; 
+};

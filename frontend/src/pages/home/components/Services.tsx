@@ -30,4 +30,4 @@ const Services: React.FC<ServicesProps> = ({ title, services }) => {
   );
 };
 
-export default Services; 
+export default Services;

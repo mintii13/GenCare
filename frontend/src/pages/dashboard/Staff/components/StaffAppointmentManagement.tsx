@@ -38,7 +38,7 @@ interface Appointment {
   appointment_date: string;
   start_time: string;
   end_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress';
   customer_notes?: string;
   consultant_notes?: string;
   created_date: string;
@@ -48,6 +48,7 @@ interface AppointmentStats {
   total: number;
   pending: number;
   confirmed: number;
+  in_progress: number;
   completed: number;
   cancelled: number;
   today: number;
@@ -113,6 +114,7 @@ const StaffAppointmentManagement: React.FC = () => {
     total: 0,
     pending: 0,
     confirmed: 0,
+    in_progress: 0,
     completed: 0,
     cancelled: 0,
     today: 0
@@ -121,6 +123,7 @@ const StaffAppointmentManagement: React.FC = () => {
   const statusLabels = {
     pending: 'Chờ xác nhận',
     confirmed: 'Đã xác nhận',
+    in_progress: 'Đang tư vấn',
     completed: 'Đã hoàn thành',
     cancelled: 'Đã hủy'
   };
@@ -128,6 +131,7 @@ const StaffAppointmentManagement: React.FC = () => {
   const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     confirmed: 'bg-green-100 text-green-800 border-green-200',
+    in_progress: 'bg-purple-100 text-purple-800 border-purple-200',
     completed: 'bg-blue-100 text-blue-800 border-blue-200',
     cancelled: 'bg-red-100 text-red-800 border-red-200'
   };
@@ -178,6 +182,7 @@ const StaffAppointmentManagement: React.FC = () => {
           total: appointmentsList.length,
           pending: appointmentsList.filter((a: Appointment) => a.status === 'pending').length,
           confirmed: appointmentsList.filter((a: Appointment) => a.status === 'confirmed').length,
+          in_progress: appointmentsList.filter((a: Appointment) => a.status === 'in_progress').length,
           completed: appointmentsList.filter((a: Appointment) => a.status === 'completed').length,
           cancelled: appointmentsList.filter((a: Appointment) => a.status === 'cancelled').length,
           today: appointmentsList.filter((a: Appointment) => isToday(parseISO(a.appointment_date))).length
@@ -189,6 +194,7 @@ const StaffAppointmentManagement: React.FC = () => {
           total: 0,
           pending: 0,
           confirmed: 0,
+          in_progress: 0,
           completed: 0,
           cancelled: 0,
           today: 0
@@ -785,4 +791,4 @@ const StaffAppointmentManagement: React.FC = () => {
   );
 };
 
-export default StaffAppointmentManagement; 
+export default StaffAppointmentManagement;

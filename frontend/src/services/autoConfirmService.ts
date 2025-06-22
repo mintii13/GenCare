@@ -162,4 +162,4 @@ export class AutoConfirmService {
   }
 }
 
-export default AutoConfirmService; 
+export default AutoConfirmService;

@@ -133,4 +133,4 @@ const StiTestDetail: React.FC = () => {
   );
 };
 
-export default StiTestDetail; 
+export default StiTestDetail;

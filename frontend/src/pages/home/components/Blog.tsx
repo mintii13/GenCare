@@ -30,4 +30,4 @@ const Blog: React.FC<BlogProps> = ({ title, blogs }) => {
   );
 };
 
-export default Blog; 
+export default Blog;

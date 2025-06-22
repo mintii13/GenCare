@@ -11,10 +11,7 @@ import api from '../../services/api';
 import { blogService } from '../../services/blogService';
 import { StiTest } from '../../types/sti';
 import { Blog as BlogType } from '../../types/blog';
-import BloodDropIcon from '../../assets/icons/BloodDropIcon';
-import UrineDropIcon from '../../assets/icons/UrineDropIcon';
-import SwabIcon from '../../assets/icons/SwabIcon';
-import TestServiceImage from '../../assets/images/test-service-illustration.png';
+
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -63,19 +60,7 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, [services]);
 
-  // Hàm chọn icon SVG theo loại xét nghiệm
-  const getTestIcon = (type: string) => {
-    switch (type) {
-      case 'blood':
-        return <BloodDropIcon />;
-      case 'urine':
-        return <UrineDropIcon />;
-      case 'swab':
-        return <SwabIcon />;
-      default:
-        return <BloodDropIcon />;
-    }
-  };
+
 
   const serviceCards = [
     {
@@ -153,13 +138,11 @@ const HomePage = () => {
       {/* Blog Section */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-12">
-            <div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-2">Blog Sức Khỏe Sinh Sản</h2>
-              <p className="text-gray-600">
-                Khám phá những kiến thức hữu ích về sức khỏe sinh sản từ các chuyên gia
-              </p>
-            </div>
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-blue-700 mb-4">Blog Sức Khỏe Sinh Sản</h2>
+            <p className="text-lg text-blue-700/80 mb-8 max-w-2xl mx-auto">
+              Khám phá những kiến thức hữu ích về sức khỏe sinh sản từ các chuyên gia
+            </p>
             <Link
               to="/blogs"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -170,7 +153,6 @@ const HomePage = () => {
           
           {blogs.length > 0 ? (
             <div className="relative">
-                             {/* Horizontal Scroll Container */}
                <div className="overflow-x-auto scrollbar-hide">
                  <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
                    {blogs.map((blog) => (
@@ -300,4 +282,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage; 
+export default HomePage;
