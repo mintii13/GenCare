@@ -15,7 +15,7 @@ import consultantController from './controllers/consultantController';
 import profileController from './controllers/profileController';
 import stiController from './controllers/stiController';
 import { ReminderSchedulerService } from './services/reminderSchedulerService';
-
+import menstrualCycleController from './controllers/menstrualCycleController';
 const app = express();
 const PORT = process.env.PORT;
 
@@ -74,6 +74,7 @@ app.use('/api/appointments', appointmentController);
 app.use('/api/consultants', consultantController);
 app.use('/api/profile', profileController);
 app.use('/api/sti', stiController);
+app.use('/api/menstrual-cycle', menstrualCycleController);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
