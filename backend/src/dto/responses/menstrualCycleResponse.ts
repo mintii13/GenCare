@@ -20,6 +20,7 @@ export interface PeriodStatsResponse {
         average_period_length: number;
         shortest_period: number;
         longest_period: number;
+<<<<<<< HEAD
         period_regularity: RegularityStatus;
         last_3_periods: Array<{
             start_date: string;

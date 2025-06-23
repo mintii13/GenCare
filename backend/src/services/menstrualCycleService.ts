@@ -277,6 +277,7 @@ export class MenstrualCycleService {
         try {
             // Lấy dữ liệu chu kỳ
             const cyclesData = await MenstrualCycleRepository.getCycleStatsData(user_id, 6);
+
             
             if (cyclesData.length === 0) {
                 return {
@@ -360,7 +361,7 @@ export class MenstrualCycleService {
 
             return {
                 success: true,
-                message: 'Get Period Statistics successfully',
+                message: 'Lấy thống kê kinh nguyệt thành công',
                 data: {
                     average_period_length: Math.round(averagePeriodLength * 10) / 10,
                     shortest_period: shortestPeriod,
