@@ -2,7 +2,7 @@
 import mongoose from 'mongoose';
 import { IMenstrualCycle } from '../models/MenstrualCycle';
 import {MenstrualCycleRepository} from '../repositories/menstrualCycleRepository';
-import { CycleStatsResponse, PeriodStatsResponse } from '../dto/responses/menstrualCycleResponse';
+import { CycleStatsResponse, PeriodStatsResponse, RegularityStatus, TrendStatus } from '../dto/responses/menstrualCycleResponse';
 
 export class MenstrualCycleService {
     public static async processPeriodDays(user_id: string, period_days: Date[], notes: string){
@@ -233,44 +233,26 @@ export class MenstrualCycleService {
         return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
     }
 
-    private static calculateCycleRegularity(cycleLengths: number[]): 'regular' | 'irregular' | 'very_irregular' {
-        if (cycleLengths.length < 3) return 'irregular';
-        
-        const variance = this.calculateVariance(cycleLengths);
-        
-        if (variance <= 4) return 'regular';
-        if (variance <= 9) return 'irregular';
-        return 'very_irregular';
-    }
-
-    private static calculatePeriodRegularity(periodLengths: number[]): 'regular' | 'irregular' | 'very_irregular' {
-        if (periodLengths.length < 3) return 'irregular';
-        
-        const variance = this.calculateVariance(periodLengths);
-        
-        if (variance <= 1) return 'regular';
-        if (variance <= 4) return 'irregular';
-        return 'very_irregular';
-    }
-
-    private static calculateVariance(numbers: number[]): number {
+    private static calculateStandardDeviation(numbers: number[]): number {
         const mean = this.calculateAverage(numbers);
         const squaredDiffs = numbers.map(num => Math.pow(num - mean, 2));
-        return this.calculateAverage(squaredDiffs);
+        return Math.sqrt(this.calculateAverage(squaredDiffs));
     }
 
-    private static calculateRegularityScore(cycleLengths: number[]): number {
-        if (cycleLengths.length < 2) return 0;
-        
-        const variance = this.calculateVariance(cycleLengths);
-        const maxScore = 100;
-        const score = Math.max(0, maxScore - (variance * 5));
-        
-        return Math.round(score);
+    private static calculateCyclePeriodRegularity(cycleOrPeriodLengths: number[]): RegularityStatus{
+        if (cycleOrPeriodLengths.length < 3) 
+            return 'insufficient_data';
+        const std = Math.sqrt(this.calculateStandardDeviation(cycleOrPeriodLengths));
+
+        // So sánh trực tiếp với chuẩn nghiên cứu
+        if (std <= 3.95) 
+            return 'regular';       
+        return 'irregular';
     }
 
-    private static calculateTrend(recentCycles: number[]): 'stable' | 'lengthening' | 'shortening' {
-        if (recentCycles.length < 3) return 'stable';
+    private static calculateTrend(recentCycles: number[]): TrendStatus {
+        if (recentCycles.length < 3) 
+            return 'stable';
         
         const firstHalf = recentCycles.slice(Math.floor(recentCycles.length / 2));
         const secondHalf = recentCycles.slice(0, Math.floor(recentCycles.length / 2));
@@ -280,8 +262,9 @@ export class MenstrualCycleService {
         
         const difference = firstAvg - secondAvg;
         
-        if (Math.abs(difference) < 1) return 'stable';
-        return difference > 0 ? 'lengthening' : 'shortening';
+        if (Math.abs(difference) < 1) 
+            return 'stable';
+        return difference >= 1 ? 'lengthening' : 'shortening';
     }
 
     private static calculateMonthsDifference(startDate: Date, endDate: Date): number {
@@ -293,12 +276,12 @@ export class MenstrualCycleService {
     public static async getCycleStats(user_id: string): Promise<CycleStatsResponse> {
         try {
             // Lấy dữ liệu chu kỳ
-            const cyclesData = await MenstrualCycleRepository.getCycleStatsData(user_id, 12);
+            const cyclesData = await MenstrualCycleRepository.getCycleStatsData(user_id, 6);
             
             if (cyclesData.length === 0) {
                 return {
                     success: false,
-                    message: 'Không có dữ liệu chu kỳ để thống kê'
+                    message: 'No cycle data found for statistics'
                 };
             }
 
@@ -309,8 +292,7 @@ export class MenstrualCycleService {
             const longestCycle = Math.max(...cycleLengths);
 
             // Tính độ đều đặn
-            const regularity = this.calculateCycleRegularity(cycleLengths);
-            const regularityScore = this.calculateRegularityScore(cycleLengths);
+            const regularity = this.calculateCyclePeriodRegularity(cycleLengths);
 
             // Tính xu hướng
             const recentCycles = await MenstrualCycleRepository.getRecentCycles(user_id, 6);
@@ -321,17 +303,20 @@ export class MenstrualCycleService {
             const firstDate = await MenstrualCycleRepository.getFirstTrackingDate(user_id);
             const trackingMonths = firstDate ? this.calculateMonthsDifference(firstDate, new Date()) : 0;
 
+            const last6Cycles = recentCycles.slice(0, 6).map(c => ({
+                start_date: c.cycle_start_date.toISOString().slice(0, 10),
+                length: c.cycle_length
+            }));
             return {
                 success: true,
-                message: 'Lấy thống kê chu kỳ thành công',
+                message: 'Get Cycle Statistics successfully',
                 data: {
                     average_cycle_length: Math.round(averageCycleLength * 10) / 10,
                     shortest_cycle: shortestCycle,
                     longest_cycle: longestCycle,
                     cycle_regularity: regularity,
-                    regularity_score: regularityScore,
                     trend: trend,
-                    last_6_cycles: recentCycles.map(c => c.cycle_length).slice(0, 6),
+                    last_6_cycles: last6Cycles,
                     total_cycles_tracked: totalCycles,
                     tracking_period_months: trackingMonths
                 }
@@ -341,7 +326,7 @@ export class MenstrualCycleService {
             console.error('Error in getCycleStats:', error);
             return {
                 success: false,
-                message: 'Lỗi khi lấy thống kê chu kỳ'
+                message: 'Error when getting cycle statistics'
             };
         }
     }
@@ -354,7 +339,7 @@ export class MenstrualCycleService {
             if (periodsData.length === 0) {
                 return {
                     success: false,
-                    message: 'Không có dữ liệu kinh nguyệt để thống kê'
+                    message: 'No period data found for statistics'
                 };
             }
 
@@ -365,18 +350,17 @@ export class MenstrualCycleService {
             const longestPeriod = Math.max(...periodLengths);
 
             // Tính độ đều đặn của kinh nguyệt
-            const periodRegularity = this.calculatePeriodRegularity(periodLengths);
+            const periodRegularity = this.calculateCyclePeriodRegularity(periodLengths);
 
             // Lấy 3 kỳ kinh gần nhất
             const last3Periods = periodsData.slice(0, 3).map(period => ({
                 start_date: period.cycle_start_date.toISOString().split('T')[0],
                 length: period.period_days,
-                notes: period.notes
             }));
 
             return {
                 success: true,
-                message: 'Lấy thống kê kinh nguyệt thành công',
+                message: 'Get Period Statistics successfully',
                 data: {
                     average_period_length: Math.round(averagePeriodLength * 10) / 10,
                     shortest_period: shortestPeriod,
@@ -391,7 +375,7 @@ export class MenstrualCycleService {
             console.error('Error in getPeriodStats:', error);
             return {
                 success: false,
-                message: 'Lỗi khi lấy thống kê kinh nguyệt'
+                message: 'Error when getting period statistics'
             };
         }
     }
