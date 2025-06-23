@@ -72,7 +72,7 @@ export class MenstrualCycleRepository {
         }
     }
 
-    public static async getCycleStatsData(user_id: string, months: number = 12): Promise<CycleStatsData[]> {
+    public static async getCycleStatsData(user_id: string, months: number): Promise<CycleStatsData[]> {
         const monthsAgo = new Date();
         monthsAgo.setMonth(monthsAgo.getMonth() - months);
 
@@ -89,14 +89,14 @@ export class MenstrualCycleRepository {
             _id: cycle._id.toString(),
             cycle_start_date: cycle.cycle_start_date,
             cycle_length: cycle.cycle_length,
-            period_days: Array.isArray(cycle.period_days) ? cycle.period_days.length : cycle.period_days,
+            period_days: cycle.period_days.length,
             createdAt: cycle.createdAt
         }));
         return mapped;
     }
 
     // Lấy dữ liệu kinh nguyệt cho thống kê
-    public static async getPeriodStatsData(user_id: string, months: number = 12): Promise<PeriodStatsData[]> {
+    public static async getPeriodStatsData(user_id: string, months: number): Promise<PeriodStatsData[]> {
         const monthsAgo = new Date();
         monthsAgo.setMonth(monthsAgo.getMonth() - months);
 
@@ -112,15 +112,14 @@ export class MenstrualCycleRepository {
         const mapped: PeriodStatsData[] = periods.map(p => ({
             _id: p._id.toString(),
             cycle_start_date: p.cycle_start_date,
-            period_days: Array.isArray(p.period_days) ? p.period_days.length : p.period_days,
-            notes: p.notes,
+            period_days: p.period_days.length,
             createdAt: p.createdAt
         }));
         return mapped;
     }
 
     // Lấy chu kỳ gần nhất để tính xu hướng
-    public static async getRecentCycles(user_id: string, limit: number = 6): Promise<CycleStatsData[]> {
+    public static async getRecentCycles(user_id: string, limit: number): Promise<CycleStatsData[]> {
         const cycles = await MenstrualCycle.find({
             user_id: new mongoose.Types.ObjectId(user_id),
             cycle_length: { $exists: true, $gt: 0 }
