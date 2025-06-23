@@ -2,11 +2,13 @@ import { AppointmentRepository } from '../repositories/appointmentRepository';
 import { WeeklyScheduleRepository } from '../repositories/weeklyScheduleRepository';
 import { User } from '../models/User';
 import { Consultant } from '../models/Consultant';
-import { IAppointment } from '../models/Appointment';
+import { IAppointment, Appointment } from '../models/Appointment'; // ← Add this import
 import mongoose from 'mongoose';
 import { AppointmentHistoryService } from './appointmentHistoryService';
 import { GoogleMeetService } from './googleMeetService';
 import { EmailNotificationService } from './emailNotificationService';
+import { FeedbackResponse, FeedbackStatsResponse } from '../dto/responses/FeedbackResponse'; // ← Add this
+import { CreateFeedbackRequest } from '../dto/requests/FeedbackRequest'; // ← Add this
 
 interface AppointmentResponse {
     success: boolean;
@@ -1381,5 +1383,431 @@ export class AppointmentService {
         }
 
         return true;
+    }
+    /**
+     * Submit feedback for a completed appointment
+     */
+    public static async submitFeedback(
+        appointmentId: string,
+        customerId: string,
+        feedbackData: CreateFeedbackRequest
+    ): Promise<FeedbackResponse> {
+        try {
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return {
+                    success: false,
+                    message: 'Appointment not found'
+                };
+            }
+
+            // Business rule 1: Only customer can feedback their own appointment
+            if (appointment.customer_id._id.toString() !== customerId) {
+                return {
+                    success: false,
+                    message: 'You can only provide feedback for your own appointments'
+                };
+            }
+
+            // Business rule 2: Only completed appointments can receive feedback
+            if (appointment.status !== 'completed') {
+                return {
+                    success: false,
+                    message: 'Feedback can only be submitted for completed appointments'
+                };
+            }
+
+            // Business rule 3: Feedback can only be submitted once
+            if (appointment.feedback) {
+                return {
+                    success: false,
+                    message: 'Feedback has already been submitted for this appointment'
+                };
+            }
+
+            // Create feedback object
+            const feedbackObject = {
+                rating: feedbackData.rating,
+                comment: feedbackData.comment?.trim() || undefined,
+                feedback_date: new Date(),
+            };
+
+            // Update appointment with feedback
+            const updatedAppointment = await AppointmentRepository.updateById(appointmentId, {
+                feedback: feedbackObject
+            });
+
+            if (!updatedAppointment) {
+                return {
+                    success: false,
+                    message: 'Failed to save feedback'
+                };
+            }
+
+            // Get consultant info for response
+            const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name');
+            const consultantName = consultant ? (consultant.user_id as any).full_name : 'Unknown';
+
+            // Log feedback submission in appointment history
+            try {
+                await AppointmentHistoryService.createHistory({
+                    appointment_id: appointmentId,
+                    action: 'updated',
+                    performed_by_user_id: customerId,
+                    performed_by_role: 'customer',
+                    old_data: { feedback: null },
+                    new_data: { feedback: feedbackObject }
+                });
+            } catch (historyError) {
+                console.error('Failed to log feedback in history:', historyError);
+            }
+
+            return {
+                success: true,
+                message: 'Feedback submitted successfully',
+                data: {
+                    appointment_id: appointmentId,
+                    feedback: {
+                        rating: feedbackObject.rating,
+                        comment: feedbackObject.comment,
+                        feedback_date: feedbackObject.feedback_date.toISOString(),
+                    },
+                    appointment_info: {
+                        consultant_name: consultantName,
+                        appointment_date: appointment.appointment_date.toLocaleDateString('vi-VN'),
+                        start_time: appointment.start_time,
+                        end_time: appointment.end_time
+                    }
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Submit feedback service error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when submitting feedback'
+            };
+        }
+    }
+
+    /**
+     * Get feedback for a specific appointment
+     */
+    public static async getAppointmentFeedback(
+        appointmentId: string,
+        requestUserId: string,
+        requestUserRole: string
+    ): Promise<FeedbackResponse> {
+        try {
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return {
+                    success: false,
+                    message: 'Appointment not found'
+                };
+            }
+
+            // Check permission - only customer, consultant, staff, admin can view feedback
+            const canView = await this.canUserViewAppointment(appointment, requestUserId, requestUserRole);
+            if (!canView) {
+                return {
+                    success: false,
+                    message: 'You do not have permission to view this feedback'
+                };
+            }
+
+            if (!appointment.feedback) {
+                return {
+                    success: false,
+                    message: 'No feedback available for this appointment'
+                };
+            }
+
+            // Get consultant info
+            const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name');
+            const consultantName = consultant ? (consultant.user_id as any).full_name : 'Unknown';
+
+            return {
+                success: true,
+                message: 'Feedback retrieved successfully',
+                data: {
+                    appointment_id: appointmentId,
+                    feedback: {
+                        rating: appointment.feedback.rating,
+                        comment: appointment.feedback.comment,
+                        feedback_date: appointment.feedback.feedback_date.toISOString(),
+                    },
+                    appointment_info: {
+                        consultant_name: consultantName,
+                        appointment_date: appointment.appointment_date.toLocaleDateString('vi-VN'),
+                        start_time: appointment.start_time,
+                        end_time: appointment.end_time
+                    }
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Get appointment feedback service error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when retrieving feedback'
+            };
+        }
+    }
+
+    /**
+ * Get feedback statistics for a consultant
+ */
+    public static async getConsultantFeedbackStats(
+        consultantId: string,
+        requestUserId: string,
+        requestUserRole: string
+    ): Promise<FeedbackStatsResponse> {
+        try {
+            // Get consultant info
+            const consultant = await Consultant.findById(consultantId).populate('user_id', 'full_name');
+            if (!consultant) {
+                return {
+                    success: false,
+                    message: 'Consultant not found'
+                };
+            }
+
+            // Check permission - only consultant themselves, staff, or admin can view stats
+            if (requestUserRole === 'consultant') {
+                const requestingConsultant = await Consultant.findOne({ user_id: requestUserId });
+                if (!requestingConsultant || requestingConsultant._id.toString() !== consultantId) {
+                    return {
+                        success: false,
+                        message: 'You can only view your own feedback statistics'
+                    };
+                }
+            } else if (!['staff', 'admin'].includes(requestUserRole)) {
+                return {
+                    success: false,
+                    message: 'You do not have permission to view feedback statistics'
+                };
+            }
+
+            // Get all completed appointments with feedback for this consultant
+            const appointmentsWithFeedback = await AppointmentRepository.findByConsultantId(
+                consultantId,
+                'completed'
+            );
+
+            const feedbacks = appointmentsWithFeedback.filter(apt => apt.feedback);
+
+            if (feedbacks.length === 0) {
+                return {
+                    success: true,
+                    message: 'No feedback data available',
+                    data: {
+                        consultant_id: consultantId,
+                        consultant_name: (consultant.user_id as any).full_name,
+                        total_feedbacks: 0,
+                        average_rating: 0,
+                        rating_distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+                        recent_feedbacks: []
+                    },
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            // Calculate statistics
+            const totalFeedbacks = feedbacks.length;
+            const totalRating = feedbacks.reduce((sum, apt) => sum + apt.feedback!.rating, 0);
+            const averageRating = Math.round((totalRating / totalFeedbacks) * 10) / 10;
+
+            // Rating distribution
+            const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            feedbacks.forEach(apt => {
+                const rating = apt.feedback!.rating as keyof typeof ratingDistribution;
+                ratingDistribution[rating]++;
+            });
+
+            // Recent feedbacks (last 10)
+            const recentFeedbacks = feedbacks
+                .sort((a, b) => new Date(b.feedback!.feedback_date).getTime() - new Date(a.feedback!.feedback_date).getTime())
+                .slice(0, 10)
+                .map(apt => {
+                    // Get customer name
+                    let customerName = 'Unknown';
+                    if (apt.customer_id && typeof apt.customer_id === 'object' && 'full_name' in apt.customer_id) {
+                        customerName = (apt.customer_id as any).full_name;
+                    }
+
+                    return {
+                        appointment_id: apt._id.toString(),
+                        rating: apt.feedback!.rating,
+                        comment: apt.feedback!.comment,
+                        feedback_date: apt.feedback!.feedback_date.toISOString(),
+                        customer_name: customerName
+                    };
+                });
+
+            return {
+                success: true,
+                message: 'Feedback statistics retrieved successfully',
+                data: {
+                    consultant_id: consultantId,
+                    consultant_name: (consultant.user_id as any).full_name,
+                    total_feedbacks: totalFeedbacks,
+                    average_rating: averageRating,
+                    rating_distribution: ratingDistribution,
+                    recent_feedbacks: recentFeedbacks
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Get consultant feedback stats error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when retrieving feedback statistics'
+            };
+        }
+    }
+
+    /**
+     * Get all feedback for admin/staff (with pagination)
+     */
+    public static async getAllFeedback(
+        page: number = 1,
+        limit: number = 20,
+        consultantId?: string,
+        minRating?: number,
+        maxRating?: number
+    ): Promise<{
+        success: boolean;
+        message: string;
+        data?: {
+            feedbacks: any[];
+            pagination: {
+                current_page: number;
+                total_pages: number;
+                total_items: number;
+                items_per_page: number;
+            };
+        };
+        timestamp?: string;
+    }> {
+        try {
+            // Build query
+            const query: any = {
+                status: 'completed',
+                feedback: { $exists: true }
+            };
+
+            if (consultantId) {
+                query.consultant_id = consultantId;
+            }
+
+            if (minRating !== undefined || maxRating !== undefined) {
+                query['feedback.rating'] = {};
+                if (minRating !== undefined) query['feedback.rating'].$gte = minRating;
+                if (maxRating !== undefined) query['feedback.rating'].$lte = maxRating;
+            }
+
+            // Get total count
+            const totalItems = await Appointment.countDocuments(query);
+            const totalPages = Math.ceil(totalItems / limit);
+
+            // Get paginated results
+            const appointments = await Appointment.find(query)
+                .populate('customer_id', 'full_name email')
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id specialization',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name email'
+                    }
+                })
+                .sort({ 'feedback.feedback_date': -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+
+            const feedbacks = appointments.map(apt => {
+                const customer = apt.customer_id as any;
+                const consultant = apt.consultant_id as any;
+
+                return {
+                    appointment_id: apt._id,
+                    feedback: {
+                        rating: apt.feedback!.rating,
+                        comment: apt.feedback!.comment,
+                        feedback_date: apt.feedback!.feedback_date,
+                    },
+                    appointment_info: {
+                        appointment_date: apt.appointment_date,
+                        start_time: apt.start_time,
+                        end_time: apt.end_time
+                    },
+                    customer_info: {
+                        customer_id: customer._id,
+                        customer_name: customer.full_name,
+                        customer_email: customer.email
+                    },
+                    consultant_info: {
+                        consultant_id: consultant._id,
+                        consultant_name: consultant.user_id.full_name,
+                        specialization: consultant.specialization
+                    }
+                };
+            });
+
+            return {
+                success: true,
+                message: 'All feedback retrieved successfully',
+                data: {
+                    feedbacks,
+                    pagination: {
+                        current_page: page,
+                        total_pages: totalPages,
+                        total_items: totalItems,
+                        items_per_page: limit
+                    }
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Get all feedback service error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when retrieving all feedback'
+            };
+        }
+    }
+
+    /**
+     * Helper: Check if user can view appointment
+     */
+    private static async canUserViewAppointment(
+        appointment: any,
+        userId: string,
+        userRole: string
+    ): Promise<boolean> {
+        try {
+            // Customer can view their own appointments
+            if (appointment.customer_id._id.toString() === userId) {
+                return true;
+            }
+
+            // Consultant can view appointments assigned to them
+            const consultant = await Consultant.findById(appointment.consultant_id).lean();
+            if (consultant && consultant.user_id.toString() === userId) {
+                return true;
+            }
+
+            // Staff and admin can view any appointment
+            if (['staff', 'admin'].includes(userRole)) {
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error checking user view permission:', error);
+            return false;
+        }
     }
 }

@@ -6,6 +6,11 @@ interface IServiceResponse {
     message?: string;
 }
 
+// Add these methods to your existing ConsultantService class
+// services/consultantService.ts (Additional methods)
+
+import { AppointmentRepository } from '../repositories/appointmentRepository';
+
 export class ConsultantService {
     /**
      * Lấy danh sách tất cả các chuyên gia và thông tin user liên quan, có hỗ trợ phân trang.
@@ -89,6 +94,9 @@ export class ConsultantService {
      * @param {string} consultantId - ID của chuyên gia
      * @returns {Promise<IServiceResponse>}
      */
+    /**
+     * Updated getConsultantById with feedback rating
+     */
     public static async getConsultantById(consultantId: string): Promise<IServiceResponse> {
         try {
             console.log(`[DEBUG] ConsultantService: Starting getConsultantById with id=${consultantId}`);
@@ -97,7 +105,7 @@ export class ConsultantService {
             const consultant = await Consultant.findById(consultantId)
                 .populate({
                     path: 'user_id',
-                    select: '_id full_name email avatar phone' // Lấy các trường cần thiết
+                    select: '_id full_name email avatar phone'
                 });
 
             if (!consultant) {
@@ -108,8 +116,11 @@ export class ConsultantService {
                 };
             }
 
+            // Get feedback stats for this consultant
+            const feedbackStats = await AppointmentRepository.getConsultantFeedbackStats(consultantId);
+
             // Chuyển đổi cấu trúc dữ liệu
-            const user = consultant.user_id as any; // Type assertion
+            const user = consultant.user_id as any;
             const formattedConsultant = {
                 consultant_id: consultant._id,
                 user_id: user._id,
@@ -120,8 +131,8 @@ export class ConsultantService {
                 specialization: consultant.specialization,
                 qualifications: consultant.qualifications,
                 experience_years: consultant.experience_years,
-                consultation_rating: consultant.consultation_rating,
-                total_consultations: consultant.total_consultations
+                consultation_rating: feedbackStats.averageRating, // Real feedback rating
+                total_consultations: feedbackStats.totalFeedbacks // Real feedback count
             };
 
             console.log(`[DEBUG] ConsultantService: Successfully formatted consultant ${consultant._id}`);
@@ -134,6 +145,148 @@ export class ConsultantService {
             };
         } catch (error: any) {
             console.error(`[DEBUG] ConsultantService: Error occurred: ${error.message}`);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+
+    /**
+     * Get feedback statistics for multiple consultants
+     */
+    private static async getBulkFeedbackStats(consultantIds: string[]): Promise<{
+        [consultantId: string]: {
+            averageRating: number;
+            totalFeedbacks: number;
+        }
+    }> {
+        try {
+            const stats: { [key: string]: { averageRating: number; totalFeedbacks: number } } = {};
+
+            // Initialize all consultants with 0 ratings
+            consultantIds.forEach(id => {
+                stats[id] = { averageRating: 0, totalFeedbacks: 0 };
+            });
+
+            // Get actual ratings from appointments
+            const ratingsData = await AppointmentRepository.getAverageRatingByConsultant();
+
+            ratingsData.forEach(data => {
+                const consultantIdStr = data.consultant_id.toString();
+                if (stats[consultantIdStr]) {
+                    stats[consultantIdStr] = {
+                        averageRating: data.averageRating,
+                        totalFeedbacks: data.totalFeedbacks
+                    };
+                }
+            });
+
+            return stats;
+        } catch (error) {
+            console.error('Error getting bulk feedback stats:', error);
+            // Return empty stats if error
+            const emptyStats: { [key: string]: { averageRating: number; totalFeedbacks: number } } = {};
+            consultantIds.forEach(id => {
+                emptyStats[id] = { averageRating: 0, totalFeedbacks: 0 };
+            });
+            return emptyStats;
+        }
+    }
+
+    /**
+     * Get top rated consultants
+     */
+    public static async getTopRatedConsultants(limit: number = 5): Promise<IServiceResponse> {
+        try {
+            const topRated = await AppointmentRepository.getAverageRatingByConsultant();
+
+            // Take only the top rated ones
+            const topConsultants = topRated
+                .filter(consultant => consultant.totalFeedbacks >= 3) // Minimum 3 feedbacks
+                .slice(0, limit);
+
+            return {
+                success: true,
+                data: {
+                    consultants: topConsultants,
+                    total: topConsultants.length
+                },
+                message: 'Top rated consultants retrieved successfully'
+            };
+        } catch (error: any) {
+            console.error('Error getting top rated consultants:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+
+    /**
+ * Get consultant performance summary including feedback stats
+ */
+    public static async getConsultantPerformanceSummary(consultantId: string): Promise<IServiceResponse> {
+        try {
+            // Get consultant info
+            const consultant = await Consultant.findById(consultantId).populate('user_id', 'full_name');
+            if (!consultant) {
+                return {
+                    success: false,
+                    message: 'Consultant not found'
+                };
+            }
+
+            // Get feedback statistics
+            const feedbackStats = await AppointmentRepository.getConsultantFeedbackStats(consultantId);
+
+            // Get appointment counts
+            const appointmentCounts = await AppointmentRepository.countByStatus(consultantId);
+            const totalBooked = Object.values(appointmentCounts).reduce((sum, count) => sum + count, 0);
+            const totalCompleted = appointmentCounts['completed'] || 0;
+            const totalCancelled = appointmentCounts['cancelled'] || 0;
+
+            // Calculate completion rate
+            const completionRate = totalBooked > 0 ?
+                Math.round((totalCompleted / totalBooked) * 100) : 0;
+
+            // Get recent feedback
+            const recentFeedback = await AppointmentRepository.findAppointmentsWithFeedback(consultantId, 5);
+
+            const performanceSummary = {
+                consultant_info: {
+                    consultant_id: consultantId,
+                    name: (consultant.user_id as any).full_name,
+                    specialization: consultant.specialization,
+                    experience_years: consultant.experience_years
+                },
+                feedback_stats: {
+                    total_feedbacks: feedbackStats.totalFeedbacks,
+                    average_rating: feedbackStats.averageRating,
+                    rating_distribution: feedbackStats.ratingDistribution
+                },
+                appointment_stats: {
+                    total_appointments: totalBooked,
+                    completed_appointments: totalCompleted,
+                    cancelled_appointments: totalCancelled,
+                    completion_rate: completionRate
+                },
+                recent_feedback: recentFeedback.map(apt => ({
+                    appointment_id: apt._id,
+                    rating: apt.feedback!.rating,
+                    comment: apt.feedback!.comment,
+                    feedback_date: apt.feedback!.feedback_date,
+                    customer_name: (apt.customer_id as any)?.full_name || 'Unknown'
+                }))
+            };
+
+            return {
+                success: true,
+                data: performanceSummary,
+                message: 'Consultant performance summary retrieved successfully'
+            };
+        } catch (error: any) {
+            console.error('Error getting consultant performance summary:', error);
             return {
                 success: false,
                 message: error.message
