@@ -40,6 +40,9 @@ Rating System: Chỉ cho đánh giá sau khi completed
 Time Zone: Xử lý múi giờ cho online consultation
 30p trước khi lịch hẹn bắt đầu, thì hệ thống sẽ tự động nhận lịch
 Consultant chỉ có thể hoàn thành buổi tư vấn sau 15p kh bắt đầu 
+Customer chỉ có thể feedback khi appointment đã completed
+Feedback không được vượt quá 1000 kí tự và rating 1-5 sao
+Feedback chỉ có thể thay đổi trong vòng 24 sau khi feedback lần đầu
 
 PROFILE SERVICE
 Avatar Upload Filter: Dung lượng của ảnh chân dung phải ≤ 5MB và chỉ được upload file dạng ảnh
