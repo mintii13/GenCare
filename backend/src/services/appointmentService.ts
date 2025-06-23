@@ -210,25 +210,38 @@ export class AppointmentService {
             // Get customer info để gửi email
             const customer = await User.findById(appointment.customer_id);
 
-            // Generate Google Meet link
+            // Calculate meeting times
+            const appointmentDate = new Date(appointment.appointment_date);
+            const [startHours, startMinutes] = appointment.start_time.split(':');
+            const [endHours, endMinutes] = appointment.end_time.split(':');
+
+            const startTime = new Date(appointmentDate);
+            startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0, 0);
+
+            const endTime = new Date(appointmentDate);
+            endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
             const meetingDetails = await GoogleMeetService.generateRealMeetLink(
                 `Tư vấn với ${(consultant.user_id as any).full_name}`,
-                new Date(appointment.appointment_date),
-                new Date(appointment.appointment_date),
+                startTime,
+                endTime,
                 customer ? [customer.email] : []
             );
 
-            // Update appointment với meeting info
-            const updateData = {
-                status: 'confirmed' as const,
-                meeting_info: {
-                    meet_url: meetingDetails.meet_url,
-                    meeting_id: meetingDetails.meeting_id,
-                    meeting_password: meetingDetails.meeting_password,
-                    created_at: new Date(),
-                    reminder_sent: false
+            // Delete Google Calendar event if exists
+            if (appointment.meeting_info?.meeting_id) {
+                try {
+                    const deleted = await GoogleMeetService.deleteCalendarEvent(appointment.meeting_info.calendar_event_id);
+                    if (deleted) {
+                        console.log('✅ Google Calendar event deleted successfully');
+                    } else {
+                        console.warn('⚠️ Failed to delete Google Calendar event');
+                    }
+                } catch (calendarError) {
+                    console.error('❌ Error deleting calendar event:', calendarError);
+                    // Continue with cancellation even if calendar deletion fails
                 }
-            };
+            }
 
             const confirmedAppointment = await AppointmentRepository.updateById(appointmentId, updateData);
 

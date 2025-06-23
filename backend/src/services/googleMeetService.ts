@@ -1,3 +1,5 @@
+import { google } from 'googleapis';
+import { JWT } from 'google-auth-library';
 import { RandomUtils } from '../utils/randomUtils';
 
 interface MeetingDetails {
@@ -7,10 +9,48 @@ interface MeetingDetails {
     calendar_event_id?: string;
 }
 
+interface CalendarEvent {
+    summary: string;
+    start: {
+        dateTime: string;
+        timeZone: string;
+    };
+    end: {
+        dateTime: string;
+        timeZone: string;
+    };
+    attendees?: { email: string }[];
+    conferenceData: {
+        createRequest: {
+            requestId: string;
+            conferenceSolutionKey: {
+                type: string;
+            };
+        };
+    };
+}
+
 export class GoogleMeetService {
+    private static getAuth(): JWT {
+        const credentials = {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        };
+
+        return new google.auth.JWT(
+            credentials.client_email,
+            undefined,
+            credentials.private_key,
+            [
+                'https://www.googleapis.com/auth/calendar',
+                'https://www.googleapis.com/auth/calendar.events'
+            ]
+        );
+    }
+
     /**
-     * Generate Google Meet link using Google Calendar API
-     * This creates a real Google Meet room
+     * Generate real Google Meet link using Google Calendar API
+     * This creates an actual Google Meet room with conference data
      */
     public static async generateRealMeetLink(
         title: string,
@@ -19,17 +59,14 @@ export class GoogleMeetService {
         attendees?: string[]
     ): Promise<MeetingDetails> {
         try {
-            // For now, we'll use a hybrid approach:
-            // 1. Generate a real Google Meet link using Google Calendar API (if configured)
-            // 2. Fallback to manual Meet link creation
-
             // Check if Google Calendar API is configured
-            if (process.env.GOOGLE_CALENDAR_API_KEY && process.env.GOOGLE_CALENDAR_ID) {
-                return await this.createGoogleCalendarEvent(title, startTime, endTime, attendees);
-            } else {
-                // Fallback: Create manual Meet link
+            if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+                console.warn('Google Calendar API not configured, using manual Meet link');
                 return this.createManualMeetLink(title, startTime, endTime);
             }
+
+            // Create calendar event with Google Meet
+            return await this.createGoogleCalendarEvent(title, startTime, endTime, attendees);
         } catch (error) {
             console.error('Error generating real Meet link:', error);
             // Fallback to manual Meet link
@@ -38,8 +75,7 @@ export class GoogleMeetService {
     }
 
     /**
-     * Create Google Calendar event with Meet link
-     * Requires Google Calendar API setup
+     * Create Google Calendar event with real Google Meet link
      */
     private static async createGoogleCalendarEvent(
         title: string,
@@ -47,24 +83,73 @@ export class GoogleMeetService {
         endTime: Date,
         attendees?: string[]
     ): Promise<MeetingDetails> {
-        // This would require googleapis package and proper OAuth2 setup
-        // For now, we'll return a placeholder
-        console.log('Google Calendar API integration not fully implemented yet');
+        try {
+            const auth = this.getAuth();
+            const calendar = google.calendar({ version: 'v3', auth });
 
-        // Generate a real Meet link format
-        const meetingId = this.generateRealMeetingId();
-        const meetUrl = `https://meet.google.com/${meetingId}`;
+            // Generate unique request ID for conference
+            const requestId = `meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        return {
-            meet_url: meetUrl,
-            meeting_id: meetingId,
-            calendar_event_id: `event_${Date.now()}`
-        };
+            const event: CalendarEvent = {
+                summary: title,
+                start: {
+                    dateTime: startTime.toISOString(),
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                },
+                end: {
+                    dateTime: endTime.toISOString(),
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                },
+                attendees: attendees ? attendees.map(email => ({ email })) : undefined,
+                conferenceData: {
+                    createRequest: {
+                        requestId: requestId,
+                        conferenceSolutionKey: {
+                            type: 'hangoutsMeet'
+                        }
+                    }
+                }
+            };
+
+            const response = await calendar.events.insert({
+                calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+                resource: event,
+                conferenceDataVersion: 1, // Required for creating Meet links
+                sendUpdates: 'all' // Send invitations to attendees
+            });
+
+            const createdEvent = response.data;
+
+            if (createdEvent.conferenceData && createdEvent.conferenceData.entryPoints) {
+                const meetEntry = createdEvent.conferenceData.entryPoints.find(
+                    entry => entry.entryPointType === 'video'
+                );
+
+                if (meetEntry && meetEntry.uri) {
+                    // Extract meeting ID from the URI
+                    const meetingId = this.extractMeetingId(meetEntry.uri) || this.generateRealMeetingId();
+
+                    return {
+                        meet_url: meetEntry.uri,
+                        meeting_id: meetingId,
+                        calendar_event_id: createdEvent.id || undefined
+                    };
+                }
+            }
+
+            // If no conference data, fallback to manual link
+            console.warn('No conference data in calendar event, using manual Meet link');
+            return this.createManualMeetLink(title, startTime, endTime);
+
+        } catch (error) {
+            console.error('Error creating Google Calendar event:', error);
+            throw error;
+        }
     }
 
     /**
-     * Create manual Meet link with instructions
-     * This is a fallback method when Google Calendar API is not available
+     * Create manual Meet link with valid format
+     * This creates a valid Google Meet URL format but doesn't guarantee the room exists
      */
     private static createManualMeetLink(
         title: string,
@@ -95,15 +180,6 @@ export class GoogleMeetService {
     }
 
     /**
-     * Legacy method - kept for backward compatibility
-     * @deprecated Use generateRealMeetLink instead
-     */
-    public static generateMeetLink(): MeetingDetails {
-        console.warn('generateMeetLink is deprecated. Use generateRealMeetLink instead.');
-        return this.createManualMeetLink('Appointment', new Date(), new Date());
-    }
-
-    /**
      * Generate random string for meeting ID
      * Uses lowercase letters only (Google Meet format)
      */
@@ -121,6 +197,93 @@ export class GoogleMeetService {
      */
     private static generateMeetingPassword(): string {
         return RandomUtils.generateRandomOTP(100000, 999999);
+    }
+
+    /**
+     * Delete Google Calendar event (when appointment is cancelled)
+     */
+    public static async deleteCalendarEvent(calendarEventId: string): Promise<boolean> {
+        try {
+            if (!calendarEventId || !process.env.GOOGLE_CLIENT_EMAIL) {
+                return false;
+            }
+
+            const auth = this.getAuth();
+            const calendar = google.calendar({ version: 'v3', auth });
+
+            await calendar.events.delete({
+                calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+                eventId: calendarEventId
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error deleting calendar event:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Update Google Calendar event (when appointment is rescheduled)
+     */
+    public static async updateCalendarEvent(
+        calendarEventId: string,
+        title: string,
+        startTime: Date,
+        endTime: Date,
+        attendees?: string[]
+    ): Promise<MeetingDetails | null> {
+        try {
+            if (!calendarEventId || !process.env.GOOGLE_CLIENT_EMAIL) {
+                return null;
+            }
+
+            const auth = this.getAuth();
+            const calendar = google.calendar({ version: 'v3', auth });
+
+            const event = {
+                summary: title,
+                start: {
+                    dateTime: startTime.toISOString(),
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                },
+                end: {
+                    dateTime: endTime.toISOString(),
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                },
+                attendees: attendees ? attendees.map(email => ({ email })) : undefined,
+            };
+
+            const response = await calendar.events.update({
+                calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+                eventId: calendarEventId,
+                resource: event,
+                sendUpdates: 'all'
+            });
+
+            const updatedEvent = response.data;
+
+            if (updatedEvent.conferenceData && updatedEvent.conferenceData.entryPoints) {
+                const meetEntry = updatedEvent.conferenceData.entryPoints.find(
+                    entry => entry.entryPointType === 'video'
+                );
+
+                if (meetEntry && meetEntry.uri) {
+                    const meetingId = this.extractMeetingId(meetEntry.uri) || this.generateRealMeetingId();
+
+                    return {
+                        meet_url: meetEntry.uri,
+                        meeting_id: meetingId,
+                        calendar_event_id: updatedEvent.id || undefined
+                    };
+                }
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Error updating calendar event:', error);
+            return null;
+        }
     }
 
     /**
@@ -221,5 +384,13 @@ Vui lòng chuẩn bị:
                 message: `Error testing Meet link: ${error}`
             };
         }
+    }
+
+    /**
+     * Legacy method - now removed as we only use real Meet links
+     */
+    public static generateMeetLink(): MeetingDetails {
+        console.warn('generateMeetLink is deprecated. Use generateRealMeetLink instead.');
+        throw new Error('generateMeetLink is deprecated. Use generateRealMeetLink instead.');
     }
 }

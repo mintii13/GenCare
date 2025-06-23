@@ -15,6 +15,7 @@ import consultantController from './controllers/consultantController';
 import profileController from './controllers/profileController';
 import stiController from './controllers/stiController';
 import { ReminderSchedulerService } from './services/reminderSchedulerService';
+import { GoogleAuthHelper } from './utils/googleAuthHelper';
 
 const app = express();
 const PORT = process.env.PORT;
@@ -76,14 +77,22 @@ app.use('/api/profile', profileController);
 app.use('/api/sti', stiController);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Test Google API connection
+  let googleApiStatus = 'Not Configured';
+  if (GoogleAuthHelper.isConfigured()) {
+    const googleTest = await GoogleAuthHelper.testConnection();
+    googleApiStatus = googleTest.success ? 'Connected' : `Error: ${googleTest.message}`;
+  }
+
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     services: {
       database: 'Connected',
       redis: redisClient.isOpen ? 'Connected' : 'Disconnected',
-      reminderScheduler: ReminderSchedulerService.getStatus().isRunning ? 'Running' : 'Stopped'
+      reminderScheduler: ReminderSchedulerService.getStatus().isRunning ? 'Running' : 'Stopped',
+      googleApi: googleApiStatus
     }
   });
 });
@@ -105,14 +114,33 @@ const startServer = async () => {
     await connectDatabase();
     console.log('✅ Connected to MongoDB!');
 
-    // 3. Start Express server
+    // 3. Test Google API connection
+    console.log('🔗 Testing Google API connection...');
+    if (GoogleAuthHelper.isConfigured()) {
+      const googleTest = await GoogleAuthHelper.testConnection();
+      if (googleTest.success) {
+        console.log('✅ Google Calendar API connected successfully!');
+        console.log('🎯 Real Google Meet links will be generated');
+      } else {
+        console.log('⚠️ Google Calendar API connection failed:', googleTest.message);
+        console.log('🔄 Will fallback to manual Meet link generation');
+      }
+    } else {
+      console.log('⚠️ Google API not configured - using manual Meet links');
+      console.log('💡 To enable real Google Meet links, configure:');
+      console.log('   - GOOGLE_CLIENT_EMAIL');
+      console.log('   - GOOGLE_PRIVATE_KEY');
+      console.log('   - GOOGLE_PROJECT_ID');
+    }
+
+    // 4. Start Express server
     console.log(`🌐 Starting Express server on port ${PORT}...`);
     app.listen(PORT, () => {
       console.log(`✅ Server is running on http://localhost:${PORT}`);
       console.log(`🏥 Health check: http://localhost:${PORT}/health`);
     });
 
-    // 4. Start reminder scheduler
+    // 5. Start reminder scheduler
     console.log('⏰ Starting reminder scheduler...');
     ReminderSchedulerService.startScheduler();
     console.log('✅ Reminder scheduler started!');
