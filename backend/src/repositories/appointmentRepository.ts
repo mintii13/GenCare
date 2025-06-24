@@ -401,4 +401,397 @@ export class AppointmentRepository {
             throw error;
         }
     }
+    /**
+ * Find appointments with feedback for consultant
+ */
+    public static async findAppointmentsWithFeedback(
+        consultantId: string,
+        limit?: number
+    ): Promise<IAppointment[]> {
+        try {
+            const query = Appointment.find({
+                consultant_id: consultantId,
+                status: 'completed',
+                feedback: { $exists: true, $ne: null }
+            })
+                .populate('customer_id', 'full_name email')
+                .sort({ 'feedback.feedback_date': -1 });
+
+            if (limit) {
+                query.limit(limit);
+            }
+
+            return await query.lean();
+        } catch (error) {
+            console.error('Error finding appointments with feedback:', error);
+            throw error;
+        }
+    }
+
+    /**
+ * Get consultant feedback statistics
+ */
+    public static async getConsultantFeedbackStats(
+        consultantId: string
+    ): Promise<{
+        totalFeedbacks: number;
+        averageRating: number;
+        ratingDistribution: { [key: number]: number };
+    }> {
+        try {
+            const result = await Appointment.aggregate([
+                {
+                    $match: {
+                        consultant_id: new mongoose.Types.ObjectId(consultantId),
+                        status: 'completed',
+                        feedback: { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalFeedbacks: { $sum: 1 },
+                        averageRating: { $avg: '$feedback.rating' },
+                        ratings: { $push: '$feedback.rating' }
+                    }
+                }
+            ]);
+
+            if (!result || result.length === 0) {
+                return {
+                    totalFeedbacks: 0,
+                    averageRating: 0,
+                    ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+                };
+            }
+
+            const data = result[0];
+            const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+            // Count rating distribution
+            data.ratings.forEach((rating: number) => {
+                if (rating >= 1 && rating <= 5) {
+                    ratingDistribution[rating as keyof typeof ratingDistribution]++;
+                }
+            });
+
+            return {
+                totalFeedbacks: data.totalFeedbacks,
+                averageRating: Math.round(data.averageRating * 10) / 10,
+                ratingDistribution
+            };
+        } catch (error) {
+            console.error('Error getting consultant feedback stats:', error);
+            return {
+                totalFeedbacks: 0,
+                averageRating: 0,
+                ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+            };
+        }
+    }
+
+    /**
+     * Find all appointments with feedback (for admin queries)
+     */
+    public static async findAllAppointmentsWithFeedback(
+        filters: {
+            consultantId?: string;
+            minRating?: number;
+            maxRating?: number;
+            startDate?: Date;
+            endDate?: Date;
+        } = {},
+        page: number = 1,
+        limit: number = 20
+    ): Promise<{
+        appointments: IAppointment[];
+        total: number;
+    }> {
+        try {
+            const query: any = {
+                status: 'completed',
+                feedback: { $exists: true }
+            };
+
+            // Apply filters
+            if (filters.consultantId) {
+                query.consultant_id = filters.consultantId;
+            }
+
+            if (filters.minRating !== undefined || filters.maxRating !== undefined) {
+                query['feedback.rating'] = {};
+                if (filters.minRating !== undefined) {
+                    query['feedback.rating'].$gte = filters.minRating;
+                }
+                if (filters.maxRating !== undefined) {
+                    query['feedback.rating'].$lte = filters.maxRating;
+                }
+            }
+
+            if (filters.startDate || filters.endDate) {
+                query['feedback.feedback_date'] = {};
+                if (filters.startDate) {
+                    query['feedback.feedback_date'].$gte = filters.startDate;
+                }
+                if (filters.endDate) {
+                    query['feedback.feedback_date'].$lte = filters.endDate;
+                }
+            }
+
+            // Get total count
+            const total = await Appointment.countDocuments(query);
+
+            // Get paginated results
+            const appointments = await Appointment.find(query)
+                .populate('customer_id', 'full_name email')
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id specialization',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name email'
+                    }
+                })
+                .sort({ 'feedback.feedback_date': -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+
+            return { appointments, total };
+        } catch (error) {
+            console.error('Error finding all appointments with feedback:', error);
+            throw error;
+        }
+    }
+
+    /**
+ * Update feedback for appointment
+ */
+    public static async updateFeedback(
+        appointmentId: string,
+        feedbackData: {
+            rating: number;
+            comment?: string;
+        }
+    ): Promise<IAppointment | null> {
+        try {
+            return await Appointment.findByIdAndUpdate(
+                appointmentId,
+                {
+                    'feedback.rating': feedbackData.rating,
+                    'feedback.comment': feedbackData.comment,
+                    updated_date: new Date()
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            ).lean();
+        } catch (error) {
+            console.error('Error updating feedback:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Remove feedback from appointment
+     */
+    public static async removeFeedback(appointmentId: string): Promise<IAppointment | null> {
+        try {
+            return await Appointment.findByIdAndUpdate(
+                appointmentId,
+                {
+                    $unset: { feedback: "" },
+                    updated_date: new Date()
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            ).lean();
+        } catch (error) {
+            console.error('Error removing feedback:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Count appointments by feedback rating for a consultant
+     */
+    public static async countByFeedbackRating(
+        consultantId: string
+    ): Promise<{ [key: number]: number }> {
+        try {
+            const result = await Appointment.aggregate([
+                {
+                    $match: {
+                        consultant_id: new mongoose.Types.ObjectId(consultantId),
+                        status: 'completed',
+                        feedback: { $exists: true }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$feedback.rating',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            const ratingCounts: { [key: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            result.forEach(item => {
+                ratingCounts[item._id] = item.count;
+            });
+
+            return ratingCounts;
+        } catch (error) {
+            console.error('Error counting by feedback rating:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Find appointments that can receive feedback (completed but no feedback yet)
+     */
+    public static async findAppointmentsEligibleForFeedback(
+        customerId: string
+    ): Promise<IAppointment[]> {
+        try {
+            return await Appointment.find({
+                customer_id: customerId,
+                status: 'completed',
+                feedback: { $exists: false }
+            })
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id specialization',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name'
+                    }
+                })
+                .sort({ appointment_date: -1 })
+                .lean();
+        } catch (error) {
+            console.error('Error finding appointments eligible for feedback:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get average rating for all consultants
+     */
+    public static async getAverageRatingByConsultant(): Promise<Array<{
+        consultant_id: string;
+        averageRating: number;
+        totalFeedbacks: number;
+    }>> {
+        try {
+            const result = await Appointment.aggregate([
+                {
+                    $match: {
+                        status: 'completed',
+                        feedback: { $exists: true }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$consultant_id',
+                        averageRating: { $avg: '$feedback.rating' },
+                        totalFeedbacks: { $sum: 1 }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'consultants',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'consultant'
+                    }
+                },
+                {
+                    $unwind: '$consultant'
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'consultant.user_id',
+                        foreignField: '_id',
+                        as: 'user'
+                    }
+                },
+                {
+                    $unwind: '$user'
+                },
+                {
+                    $project: {
+                        consultant_id: '$_id',
+                        averageRating: { $round: ['$averageRating', 1] },
+                        totalFeedbacks: 1,
+                        consultantName: '$user.full_name',
+                        specialization: '$consultant.specialization'
+                    }
+                },
+                {
+                    $sort: { averageRating: -1 }
+                }
+            ]);
+
+            return result;
+        } catch (error) {
+            console.error('Error getting average rating by consultant:', error);
+            throw error;
+        }
+    }
+    /**
+ * Get feedback history for a customer
+ */
+    public static async getCustomerFeedbackHistory(
+        customerId: string,
+        page: number = 1,
+        limit: number = 10
+    ): Promise<{
+        feedbacks: IAppointment[];
+        total: number;
+        totalPages: number;
+    }> {
+        try {
+            const skip = (page - 1) * limit;
+
+            const feedbacks = await Appointment.find({
+                customer_id: customerId,
+                status: 'completed',
+                feedback: { $exists: true, $ne: null }
+            })
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id specialization',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name'
+                    }
+                })
+                .sort({ 'feedback.feedback_date': -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            const total = await Appointment.countDocuments({
+                customer_id: customerId,
+                status: 'completed',
+                feedback: { $exists: true, $ne: null }
+            });
+
+            const totalPages = Math.ceil(total / limit);
+
+            return {
+                feedbacks,
+                total,
+                totalPages
+            };
+        } catch (error) {
+            console.error('Error getting customer feedback history:', error);
+            throw error;
+        }
+    }
 }

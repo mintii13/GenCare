@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { AppointmentService } from '../services/appointmentService';
 import { AppointmentHistoryService } from '../services/appointmentHistoryService';
 import { ReminderSchedulerService } from '../services/reminderSchedulerService';
+import { AppointmentRepository } from '../repositories/appointmentRepository';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
-import { validateBookAppointment, validateUpdateAppointment } from '../middlewares/appointmentValidation';
+import { validateBookAppointment, validateUpdateAppointment, validateFeedback } from '../middlewares/appointmentValidation';
 import { JWTPayload } from '../utils/jwtUtils';
 import { Consultant } from '../models/Consultant';
 
@@ -75,6 +76,62 @@ router.get(
                 success: false,
                 message: error.message
             });
+        }
+    }
+);
+
+// Get customer's feedback history
+router.get(
+    '/my-feedback',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const result = await AppointmentRepository.getCustomerFeedbackHistory(user.userId, 1, 1000);
+            const feedbackHistory = result.feedbacks.map(apt => ({
+                appointment_id: apt._id,
+                consultant_name: (apt.consultant_id as any).user_id?.full_name || 'Unknown',
+                appointment_date: apt.appointment_date.toISOString(),
+                start_time: apt.start_time,
+                end_time: apt.end_time,
+                feedback: {
+                    rating: apt.feedback!.rating,
+                    comment: apt.feedback!.comment,
+                    feedback_date: apt.feedback!.feedback_date.toISOString()
+                }
+            }));
+            res.json({ success: true, data: feedbackHistory });
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+);
+
+// Get customer's feedback history
+router.get(
+    '/my-feedbacks',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const result = await AppointmentRepository.getCustomerFeedbackHistory(user.userId, 1, 1000);
+            const feedbackHistory = result.feedbacks.map(apt => ({
+                appointment_id: apt._id,
+                consultant_name: (apt.consultant_id as any).user_id?.full_name || 'Unknown',
+                appointment_date: apt.appointment_date.toISOString(),
+                start_time: apt.start_time,
+                end_time: apt.end_time,
+                feedback: {
+                    rating: apt.feedback!.rating,
+                    comment: apt.feedback!.comment,
+                    feedback_date: apt.feedback!.feedback_date.toISOString()
+                }
+            }));
+            res.json({ success: true, data: feedbackHistory });
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 );
@@ -771,6 +828,446 @@ router.post(
                 data: {
                     action: 'scheduler_restarted',
                     status: ReminderSchedulerService.getStatus()
+                },
+                timestamp: new Date().toISOString()
+            });
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// ================== FEEDBACK ROUTES ==================
+
+// Submit feedback for completed appointment (customer only)
+router.post(
+    '/:appointmentId/feedback',
+    authenticateToken,
+    authorizeRoles('customer'),
+    validateFeedback,
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+            const feedbackData = req.body;
+
+            const result = await AppointmentService.submitFeedback(
+                appointmentId,
+                user.userId,
+                feedbackData
+            );
+
+            if (result.success) {
+                res.status(201).json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get feedback for appointment
+router.get(
+    '/:appointmentId/feedback',
+    authenticateToken,
+    authorizeRoles('customer', 'consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const result = await AppointmentService.getAppointmentFeedback(
+                appointmentId,
+                user.userId,
+                user.role
+            );
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(result.success === false && result.message.includes('not found') ? 404 : 400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get consultant feedback statistics
+router.get(
+    '/consultant/:consultantId/feedback-stats',
+    authenticateToken,
+    authorizeRoles('consultant', 'staff', 'admin'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const consultantId = req.params.consultantId;
+
+            const result = await AppointmentService.getConsultantFeedbackStats(
+                consultantId,
+                user.userId,
+                user.role
+            );
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get own feedback statistics (for consultant)
+router.get(
+    '/my-feedback-stats',
+    authenticateToken,
+    authorizeRoles('consultant'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+
+            // Find consultant profile
+            const consultant = await Consultant.findOne({ user_id: user.userId });
+            if (!consultant) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Consultant profile not found'
+                });
+            }
+
+            const result = await AppointmentService.getConsultantFeedbackStats(
+                consultant._id.toString(),
+                user.userId,
+                user.role
+            );
+
+            res.json(result);
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Get all feedback (admin/staff only) with pagination and filters
+router.get(
+    '/admin/all-feedback',
+    authenticateToken,
+    authorizeRoles('staff', 'admin'),
+    async (req, res) => {
+        try {
+            const page = parseInt(req.query.page as string) || 1;
+            const limit = parseInt(req.query.limit as string) || 20;
+            const consultantId = req.query.consultant_id as string;
+            const minRating = req.query.min_rating ? parseInt(req.query.min_rating as string) : undefined;
+            const maxRating = req.query.max_rating ? parseInt(req.query.max_rating as string) : undefined;
+
+            // Validate pagination parameters
+            if (page < 1 || limit < 1 || limit > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid pagination parameters. Page must be >= 1, limit must be 1-100'
+                });
+            }
+
+            // Validate rating parameters
+            if ((minRating && (minRating < 1 || minRating > 5)) ||
+                (maxRating && (maxRating < 1 || maxRating > 5))) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Rating parameters must be between 1 and 5'
+                });
+            }
+
+            const result = await AppointmentService.getAllFeedback(
+                page,
+                limit,
+                consultantId,
+                minRating,
+                maxRating
+            );
+
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Check if appointment can be feedback (customer only)
+router.get(
+    '/:appointmentId/can-feedback',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Appointment not found'
+                });
+            }
+
+            // Check if customer owns this appointment
+            if (appointment.customer_id._id.toString() !== user.userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only check feedback status for your own appointments'
+                });
+            }
+
+            const canFeedback = appointment.status === 'completed' && !appointment.feedback;
+            const reason = !canFeedback
+                ? appointment.status !== 'completed'
+                    ? 'Appointment must be completed to provide feedback'
+                    : 'Feedback has already been submitted'
+                : null;
+
+            res.json({
+                success: true,
+                message: 'Feedback status checked successfully',
+                data: {
+                    appointment_id: appointmentId,
+                    can_feedback: canFeedback,
+                    reason: reason,
+                    appointment_status: appointment.status,
+                    has_feedback: !!appointment.feedback
+                },
+                timestamp: new Date().toISOString()
+            });
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Update feedback (customer only, within 24 hours)
+router.put(
+    '/:appointmentId/feedback',
+    authenticateToken,
+    authorizeRoles('customer'),
+    validateFeedback,
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+            const updateData = req.body;
+
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Appointment not found'
+                });
+            }
+
+            // Check ownership
+            if (appointment.customer_id._id.toString() !== user.userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only update feedback for your own appointments'
+                });
+            }
+
+            // Check if feedback exists
+            if (!appointment.feedback) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No feedback found to update. Please submit feedback first.'
+                });
+            }
+
+            // Check if feedback is within 24 hours (business rule)
+            const feedbackDate = new Date(appointment.feedback.feedback_date);
+            const now = new Date();
+            const hoursDiff = (now.getTime() - feedbackDate.getTime()) / (1000 * 60 * 60);
+
+            if (hoursDiff > 24) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Feedback can only be updated within 24 hours of submission'
+                });
+            }
+
+            // Store old feedback for history
+            const oldFeedback = { ...appointment.feedback };
+
+            // Update feedback
+            const updatedFeedback = {
+                rating: updateData.rating,
+                comment: updateData.comment?.trim() || undefined,
+                feedback_date: feedbackDate // Keep original feedback date
+            };
+
+            const updatedAppointment = await AppointmentRepository.updateById(appointmentId, {
+                feedback: updatedFeedback
+            });
+
+            if (!updatedAppointment) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update feedback'
+                });
+            }
+
+            // Log feedback update in history
+            try {
+                await AppointmentHistoryService.createHistory({
+                    appointment_id: appointmentId,
+                    action: 'updated',
+                    performed_by_user_id: user.userId,
+                    performed_by_role: 'customer',
+                    old_data: { feedback: oldFeedback },
+                    new_data: { feedback: updatedFeedback }
+                });
+            } catch (historyError) {
+                console.error('Failed to log feedback update in history:', historyError);
+            }
+
+            // Get consultant info for response
+            const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name');
+            const consultantName = consultant ? (consultant.user_id as any).full_name : 'Unknown';
+
+            res.json({
+                success: true,
+                message: 'Feedback updated successfully',
+                data: {
+                    appointment_id: appointmentId,
+                    feedback: {
+                        rating: updatedFeedback.rating,
+                        comment: updatedFeedback.comment,
+                        feedback_date: updatedFeedback.feedback_date.toISOString()
+                    },
+                    appointment_info: {
+                        consultant_name: consultantName,
+                        appointment_date: appointment.appointment_date.toLocaleDateString('vi-VN'),
+                        start_time: appointment.start_time,
+                        end_time: appointment.end_time
+                    }
+                },
+                timestamp: new Date().toISOString()
+            });
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+// Delete feedback (customer only, within 24 hours)
+router.delete(
+    '/:appointmentId/feedback',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const appointmentId = req.params.appointmentId;
+
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Appointment not found'
+                });
+            }
+
+            // Check ownership
+            if (appointment.customer_id._id.toString() !== user.userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only delete feedback for your own appointments'
+                });
+            }
+
+            // Check if feedback exists
+            if (!appointment.feedback) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No feedback found to delete'
+                });
+            }
+
+            // Check if feedback is within 24 hours (business rule)
+            const feedbackDate = new Date(appointment.feedback.feedback_date);
+            const now = new Date();
+            const hoursDiff = (now.getTime() - feedbackDate.getTime()) / (1000 * 60 * 60);
+
+            if (hoursDiff > 24) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Feedback can only be deleted within 24 hours of submission'
+                });
+            }
+
+            // Store old feedback for history
+            const oldFeedback = { ...appointment.feedback };
+
+            // Remove feedback using the dedicated repository method
+            const updatedAppointment = await AppointmentRepository.removeFeedback(appointmentId);
+
+            if (!updatedAppointment) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to delete feedback'
+                });
+            }
+
+            // Log feedback deletion in history
+            try {
+                await AppointmentHistoryService.createHistory({
+                    appointment_id: appointmentId,
+                    action: 'updated',
+                    performed_by_user_id: user.userId,
+                    performed_by_role: 'customer',
+                    old_data: { feedback: oldFeedback },
+                    new_data: { feedback: null }
+                });
+            } catch (historyError) {
+                console.error('Failed to log feedback deletion in history:', historyError);
+            }
+
+            res.json({
+                success: true,
+                message: 'Feedback deleted successfully',
+                data: {
+                    appointment_id: appointmentId,
+                    action: 'feedback_deleted'
                 },
                 timestamp: new Date().toISOString()
             });

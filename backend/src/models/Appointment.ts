@@ -8,6 +8,12 @@ interface MeetingInfo {
     meeting_password?: string;
 }
 
+interface AppointmentFeedback {
+    rating: number; // 1-5 stars
+    comment?: string;
+    feedback_date: Date;
+}
+
 export interface IAppointment extends Document {
     customer_id: mongoose.Types.ObjectId;
     consultant_id: mongoose.Types.ObjectId;
@@ -19,9 +25,34 @@ export interface IAppointment extends Document {
     consultant_notes?: string;
     meeting_info?: MeetingInfo;
     video_call_status?: 'not_started' | 'in_progress' | 'ended';
+    feedback?: AppointmentFeedback;
     created_date: Date;
     updated_date: Date;
 }
+
+const appointmentFeedbackSchema = new Schema<AppointmentFeedback>({
+    rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5,
+        validate: {
+            validator: function (v: number) {
+                return Number.isInteger(v) && v >= 1 && v <= 5;
+            },
+            message: 'Rating must be an integer between 1 and 5'
+        }
+    },
+    comment: {
+        type: String,
+        maxlength: 1000,
+        trim: true
+    },
+    feedback_date: {
+        type: Date,
+        default: Date.now
+    }
+});
 
 const meetingInfoSchema = new Schema<MeetingInfo>({
     meet_url: {
@@ -98,6 +129,7 @@ const appointmentSchema = new Schema<IAppointment>({
         enum: ['not_started', 'in_progress', 'ended'],
         default: 'not_started'
     },
+    feedback: appointmentFeedbackSchema,
     created_date: {
         type: Date,
         default: Date.now
@@ -139,5 +171,6 @@ appointmentSchema.index({ consultant_id: 1 });
 appointmentSchema.index({ appointment_date: 1 });
 appointmentSchema.index({ status: 1 });
 appointmentSchema.index({ 'meeting_info.meeting_id': 1 });
+appointmentSchema.index({ 'feedback.rating': 1 });
 
 export const Appointment = mongoose.model<IAppointment>('Appointment', appointmentSchema);
