@@ -1,2 +1,0 @@
-INFO - Navigating to blog list: http://localhost:5173/blogs
-INFO - WebDriver quit successfully

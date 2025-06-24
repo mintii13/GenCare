@@ -1,8 +1,0 @@
-INFO - ====== WebDriver manager ======
-INFO - Get LATEST edgedriver version for Edge 137.0.3296
-INFO - Get LATEST edgedriver version for Edge 137.0.3296
-INFO - Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
-INFO - Edge WebDriver created successfully
-INFO - Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
-INFO - Navigating to home: http://localhost:5173
-INFO - WebDriver quit successfully

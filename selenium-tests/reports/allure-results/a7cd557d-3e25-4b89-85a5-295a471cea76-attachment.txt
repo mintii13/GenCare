@@ -1,6 +1,0 @@
-INFO - Navigating to: http://localhost:5173/
-INFO - Navigating to: http://localhost:5173/
-INFO - Clicked element: ('xpath', "//button[contains(text(), 'Đăng nhập')]")
-INFO - Login modal opened successfully
-INFO - Clicked element: ('css selector', '.fixed.inset-0.bg-black, .modal-overlay')
-INFO - WebDriver quit successfully

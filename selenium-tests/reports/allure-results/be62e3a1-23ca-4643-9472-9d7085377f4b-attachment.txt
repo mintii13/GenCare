@@ -1,9 +1,0 @@
-INFO - Navigating to home: http://localhost:5173
-INFO - Navigating to blog create: http://localhost:5173/blogs/create
-ERROR - Element not visible within 3s: ('css selector', "form[data-testid='blog-form'], .blog-form")
-ERROR - Element not visible: ('css selector', "form[data-testid='blog-form'], .blog-form")
-ERROR - Element not visible within 2s: ('css selector', ".access-denied, .unauthorized, [data-testid='access-denied']")
-ERROR - Element not visible: ('css selector', ".access-denied, .unauthorized, [data-testid='access-denied']")
-ERROR - Element not visible within 2s: ('css selector', "button[data-testid='create-blog'], a[href*='create']")
-ERROR - Element not visible: ('css selector', "button[data-testid='create-blog'], a[href*='create']")
-INFO - WebDriver quit successfully

@@ -1,2 +1,0 @@
-Testing with fake email: daviderickson_1750604525@example.com
-✅ Invalid credentials test PASSED!
