@@ -15,7 +15,6 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import ConsultantBlogList from './pages/dashboard/Consultant/components/ConsultantBlogList';
 import WeeklyScheduleManager from './pages/dashboard/Consultant/WeeklyScheduleManager';
 import AppointmentManagement from './pages/dashboard/Consultant/AppointmentManagement';
-import CustomerDashboard from './pages/dashboard/Customer';
 import MyAppointments from './pages/dashboard/Customer/MyAppointments';
 import ConsultantList from './pages/dashboard/Customer/ConsultantList';
 import BookAppointment from './pages/consultation/BookAppointment';
@@ -23,6 +22,13 @@ import ApiTest from './components/common/ApiTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AutoConfirmService from './services/autoConfirmService';
 import AutoConfirmNotification from './components/notifications/AutoConfirmNotification';
+import RoleGuard from './components/guards/RoleGuard';
+import DashboardRedirect from './components/common/DashboardRedirect';
+import ConsultationStats from './pages/dashboard/Consultant/ConsultationStats';
+
+// Lazy load Feedback pages
+const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
+const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
 
 // Lazy load Admin Dashboard
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
@@ -81,8 +87,26 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             <Route path="/test-packages/sti" element={<STITestPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/about" element={<AboutUs />} />
-            <Route path="/user/profile" element={<UserProfilePage />} />
+            <Route path="/user/profile" element={
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+                <UserProfilePage />
+              </RoleGuard>
+            } />
             <Route path="/oauth-success" element={<OAuthSuccess />} />
+            
+            {/* Generic dashboard route - redirect to role-specific dashboard */}
+            <Route path="/dashboard" element={
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+                <DashboardRedirect />
+              </RoleGuard>
+            } />
+            
+            {/* Profile route accessible to all authenticated users */}
+            <Route path="/profile" element={
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+                <UserProfilePage />
+              </RoleGuard>
+            } />
             
 
             <Route path="/blogs" element={<BlogListPage />} />
@@ -104,21 +128,42 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="blogs" element={<ConsultantBlogList />} />
               <Route path="documents" element={<div>Tài liệu chuyên môn</div>} />
               <Route path="training" element={<div>Đào tạo & Cập nhật</div>} />
-              <Route path="consultation-stats" element={<div>Thống kê tư vấn</div>} />
-              <Route path="feedback" element={<div>Đánh giá & Phản hồi</div>} />
+              <Route path="consultation-stats" element={<ConsultationStats />} />
+              <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
               <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
             </Route>
 
-            {/* Customer Dashboard routes */}
-            <Route path="/dashboard/customer" element={<CustomerDashboard />} />
-            <Route path="/dashboard/customer/appointments" element={<MyAppointments />} />
-            <Route path="/dashboard/customer/book-appointment" element={<BookAppointment />} />
-            <Route path="/dashboard/customer/consultants" element={<ConsultantList />} />
-            <Route path="/dashboard/customer/history" element={<div>Lịch sử tư vấn</div>} />
-
-            {/* Consultation routes */}
+                        {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}
+            <Route path="/my-appointments" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <MyAppointments />
+              </RoleGuard>
+            } />
+            <Route path="/consultants" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <ConsultantList />
+              </RoleGuard>
+            } />
+            <Route path="/my-feedback" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <CustomerFeedbackPage />
+              </RoleGuard>
+            } />
+            
+            {/* Appointment routes - Bảo vệ bằng RoleGuard */}
+            <Route path="/appointment" element={
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+                <Navigate to="/my-appointments" replace />
+              </RoleGuard>
+            } />
+            
+            {/* Consultation routes - Bảo vệ bằng RoleGuard */}
             <Route path="/consultation/book" element={<Navigate to="/consultation/book-appointment" replace />} />
-            <Route path="/consultation/book-appointment" element={<BookAppointment />} />
+            <Route path="/consultation/book-appointment" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <BookAppointment />
+              </RoleGuard>
+            } />
             
             {/* Admin Dashboard routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -141,6 +186,10 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="blogs" element={<div>Quản lý bài viết</div>} />
               <Route path="settings" element={<div>Cài đặt</div>} />
             </Route>
+
+            {/* Catch deprecated customer dashboard routes and redirect */}
+            <Route path="/dashboard/customer" element={<Navigate to="/my-appointments" replace />} />
+            <Route path="/dashboard/customer/*" element={<Navigate to="/my-appointments" replace />} />
           </Routes>
         </Suspense>
         <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
