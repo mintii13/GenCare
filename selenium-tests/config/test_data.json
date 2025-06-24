@@ -1,0 +1,133 @@
+{
+  "users": {
+    "guest": {
+      "username": "",
+      "password": "",
+      "role": "guest",
+      "permissions": ["view_public_content", "view_blog"]
+    },
+    "customer": {
+      "username": "customer1@gencare.com",
+      "password": "password",
+      "role": "customer",
+      "permissions": ["book_appointment", "view_health_records", "view_blog", "view_public_content", "comment_on_blog"]
+    },
+    "consultant": {
+      "username": "consultant1@gencare.com",
+      "password": "password",
+      "role": "consultant",
+      "permissions": [
+        "manage_appointments", 
+        "create_blog", 
+        "view_patient_records", 
+        "view_public_content", 
+        "comment_on_blog", 
+        "view_blog", 
+        "view_consultant_dashboard", 
+        "view_consultant_profile", 
+        "view_consultant_appointments", 
+        "view_consultant_history"
+      ]
+    },
+    "staff": {
+      "username": "staff1@gencare.com",
+      "password": "password",
+      "role": "staff",
+      "permissions": ["manage_appointments", "manage_users", "view_reports", "view_public_content", "view_blog", "comment_on_blog"]
+    },
+    "admin": {
+      "username": "admin1@gencare.com",
+      "password": "password",
+      "role": "admin",
+      "permissions": ["full_access", "system_config", "user_management", "view_public_content", "view_blog", "comment_on_blog", "create_blog", "manage_all"]
+    }
+  },
+  "sti_tests": {
+    "individual_tests": [
+      {
+        "name": "HIV Test",
+        "code": "HIV",
+        "price": 500000,
+        "sample_type": "máu",
+        "duration": "1-2 ngày"
+      },
+      {
+        "name": "Chlamydia Test",
+        "code": "CHLAMYDIA",
+        "price": 300000,
+        "sample_type": "nước tiểu",
+        "duration": "1-3 ngày"
+      },
+      {
+        "name": "Hepatitis B",
+        "code": "HEPB",
+        "price": 400000,
+        "sample_type": "máu",
+        "duration": "1-2 ngày"
+      },
+      {
+        "name": "Hepatitis C",
+        "code": "HEPC",
+        "price": 450000,
+        "sample_type": "máu",
+        "duration": "1-2 ngày"
+      },
+      {
+        "name": "Syphilis Test",
+        "code": "SYPHILIS",
+        "price": 350000,
+        "sample_type": "máu",
+        "duration": "1-2 ngày"
+      },
+      {
+        "name": "HPV Test",
+        "code": "HPV",
+        "price": 600000,
+        "sample_type": "dịch ngoáy",
+        "duration": "3-5 ngày"
+      },
+      {
+        "name": "HSV Test",
+        "code": "HSV",
+        "price": 550000,
+        "sample_type": "dịch ngoáy",
+        "duration": "2-3 ngày"
+      }
+    ],
+    "packages": [
+      {
+        "name": "STI Basic Package",
+        "tests": ["HIV", "SYPHILIS"],
+        "price": 800000,
+        "discount": 50000
+      },
+      {
+        "name": "STI Complete Package",
+        "tests": ["HIV", "CHLAMYDIA", "HEPB", "HEPC", "SYPHILIS"],
+        "price": 1800000,
+        "discount": 200000
+      }
+    ]
+  },
+  "appointments": {
+    "consultation_types": [
+      "Tư vấn sức khỏe sinh sản",
+      "Tư vấn kế hoạch hóa gia đình",
+      "Tư vấn STI/STD",
+      "Tư vấn thai kỳ",
+      "Tư vấn sức khỏe nam giới"
+    ],
+    "time_slots": [
+      "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+      "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"
+    ]
+  },
+  "test_messages": {
+    "success_login": "Đăng nhập thành công",
+    "invalid_credentials": "Tên đăng nhập hoặc mật khẩu không đúng",
+    "appointment_booked": "Đặt lịch hẹn thành công",
+    "test_ordered": "Đặt xét nghiệm thành công",
+    "access_denied": "Bạn không có quyền truy cập",
+    "unauthorized_access": "Bạn không có quyền truy cập trang này"
+  }
+} 

@@ -1,0 +1,5 @@
+
+🚀 Starting GenCare Test Suite - 2025-06-22 23:02:30.770563
+📍 Base URL: http://localhost:5173
+🌐 Browser: edge
+📱 Headless: False

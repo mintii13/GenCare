@@ -1,0 +1,35 @@
+{
+  "base_url": "http://localhost:5173",
+  "backend_url": "http://localhost:3000",
+  "browser": {
+    "type": "edge",
+    "headless": false,
+    "window_size": {
+      "width": 1920,
+      "height": 1080
+    },
+    "implicit_wait": 3,
+    "explicit_wait": 8,
+    "page_load_timeout": 10
+  },
+  "test_environment": "local",
+  "database": {
+    "host": "localhost",
+    "port": 27017,
+    "name": "gencare_test"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "tests.log",
+    "console": true
+  },
+  "reporting": {
+    "html_report": true,
+    "screenshot_on_failure": true,
+    "allure_report": false
+  },
+  "parallel_execution": {
+    "enabled": false,
+    "workers": 2
+  }
+} 

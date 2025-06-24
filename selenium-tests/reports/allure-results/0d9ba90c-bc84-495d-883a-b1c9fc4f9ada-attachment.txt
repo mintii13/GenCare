@@ -1,0 +1,4 @@
+INFO - Navigating to: http://localhost:5173/
+INFO - Navigating to: http://localhost:5173/blogs
+INFO - Navigated to blog list page
+INFO - WebDriver quit successfully

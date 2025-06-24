@@ -1,0 +1,22 @@
+INFO - 
+🧪 Starting test: test_authenticated_users_can_read_blogs
+INFO - ====== WebDriver manager ======
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
+INFO - Edge WebDriver created successfully
+INFO - Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
+INFO - Attempting login with email: staff1@gencare.com
+INFO - Navigating to: http://localhost:5173/
+INFO - Clicked element: ('xpath', "//button[contains(text(), 'Đăng nhập')]")
+INFO - Login modal opened successfully
+INFO - Typed text into ('name', 'email'): staff1@gencare.com
+INFO - Typed text into ('name', 'password'): password
+INFO - Clicked element: ('xpath', "//button[@type='submit' and contains(text(), 'Đăng nhập')]")
+ERROR - Login failed: 
+INFO - WebDriver quit successfully
+WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001B001B78470>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/ac7d9a0e718cf715542ffe439a42fb8d/element
+WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001B001B7AF60>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/ac7d9a0e718cf715542ffe439a42fb8d/element
+WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001B001B7B590>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/ac7d9a0e718cf715542ffe439a42fb8d/element
+ERROR - Exception during logout: HTTPConnectionPool(host='localhost', port=52505): Max retries exceeded with url: /session/ac7d9a0e718cf715542ffe439a42fb8d/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001B001B7B860>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+INFO - ✅ Test completed: test_authenticated_users_can_read_blogs

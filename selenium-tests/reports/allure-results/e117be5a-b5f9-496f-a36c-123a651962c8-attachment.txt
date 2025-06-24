@@ -1,0 +1,2 @@
+Testing customer login with email: customer1@gencare.com
+⚠️ Customer login failed - this may be expected if backend is not running

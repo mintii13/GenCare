@@ -1,0 +1,30 @@
+INFO - === Blog Detail Debug Test Suite Started ===
+INFO - 
+🔍 Starting debug test: test_debug_blog_list_to_detail_flow
+INFO - ====== WebDriver manager ======
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
+INFO - Edge WebDriver created successfully
+INFO - Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
+INFO - Step 1: Navigate to blog list
+INFO - Navigating to blog list: http://localhost:5173/blogs
+INFO - Step 2: Check if blog list loads
+ERROR - Element not visible within 8s: ('css selector', ".blog-list, .blogs-container, [data-testid='blog-list']")
+ERROR - Element not visible: ('css selector', ".blog-list, .blogs-container, [data-testid='blog-list']")
+WARNING - Blog list container not found
+INFO - Blog list loaded: False
+INFO - Screenshot saved: reports/screenshots/blog_list_not_loaded_20250622_225545.png
+INFO - Current URL: http://localhost:5173/blogs
+INFO - Page title: SWP Group 3
+INFO - Blogs visible (alternative check): False
+WARNING - Blog list did not load properly - may be app issue
+INFO - Step 3: Look for available blogs
+WARNING - No blogs visible on the page
+INFO - Screenshot saved: reports/screenshots/no_blogs_visible_20250622_225606.png
+INFO - WebDriver quit successfully
+WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000297BEE95E80>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/886f583d610c34a9e2579827cbc82342/element
+WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000297BEE969C0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/886f583d610c34a9e2579827cbc82342/element
+WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000297BEE96BD0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/886f583d610c34a9e2579827cbc82342/element
+ERROR - Exception during logout: HTTPConnectionPool(host='localhost', port=52725): Max retries exceeded with url: /session/886f583d610c34a9e2579827cbc82342/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000297BEE96DE0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+INFO - ✅ Debug test completed: test_debug_blog_list_to_detail_flow

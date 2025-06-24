@@ -1,0 +1,21 @@
+INFO - === Blog CRUD Test Suite Started ===
+INFO - 
+🧪 Starting test: test_guest_can_read_blogs
+INFO - ====== WebDriver manager ======
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
+INFO - Edge WebDriver created successfully
+INFO - Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
+INFO - Navigating to blog list: http://localhost:5173/blogs
+INFO - Blog list page loaded successfully
+INFO - Guest can see blogs: True
+ERROR - Element not visible within 3s: ('css selector', "button[data-testid='create-blog'], a[href*='create']")
+ERROR - Element not visible: ('css selector', "button[data-testid='create-blog'], a[href*='create']")
+INFO - ✅ Guest read access verified
+INFO - WebDriver quit successfully
+WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C9861328D0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/dd038e490a11a79323710d83d9da1dbc/element
+WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C986132C30>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/dd038e490a11a79323710d83d9da1dbc/element
+WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C986132E40>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/dd038e490a11a79323710d83d9da1dbc/element
+ERROR - Exception during logout: HTTPConnectionPool(host='localhost', port=53577): Max retries exceeded with url: /session/dd038e490a11a79323710d83d9da1dbc/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001C986133050>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+INFO - ✅ Test completed: test_guest_can_read_blogs

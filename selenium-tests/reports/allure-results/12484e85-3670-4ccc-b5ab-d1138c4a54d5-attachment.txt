@@ -1,0 +1,7 @@
+[32mINFO    [0m WDM:logger.py:11 ====== WebDriver manager ======
+[32mINFO    [0m WDM:logger.py:11 Get LATEST edgedriver version for Edge 137.0.3296
+[32mINFO    [0m WDM:logger.py:11 Get LATEST edgedriver version for Edge 137.0.3296
+[32mINFO    [0m WDM:logger.py:11 Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
+[32mINFO    [0m utils.driver_manager:driver_manager.py:93 Edge WebDriver created successfully
+[32mINFO    [0m utils.driver_manager:driver_manager.py:110 Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
+[32mINFO    [0m utils.driver_manager:driver_manager.py:190 WebDriver quit successfully

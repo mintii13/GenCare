@@ -1,0 +1,23 @@
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:51 Step 1: Navigate to homepage
+[32mINFO    [0m BasePage:base_page.py:66 Navigating to: http://localhost:5173/
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:57 Homepage URL: http://localhost:5173/
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:58 Homepage title: SWP Group 3
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:61 Step 2: Look for login button
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:74 Found login button: ('xpath', "//button[contains(text(), 'Đăng nhập')]")
+[32mINFO    [0m BasePage:base_page.py:134 Clicked element: ('xpath', "//button[contains(text(), 'Đăng nhập')]")
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:88 Step 3: Wait for login form
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:103 Found login form: ('css selector', 'form')
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:116 Step 4: Fill email field
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:128 Found email field: ('name', 'email')
+[33mWARNING [0m TestAdminManual:test_admin_manual.py:133 Could not fill email with ('name', 'email'): 'BasePage' object has no attribute 'clear_and_type'
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:128 Found email field: ('css selector', "input[type='email']")
+[33mWARNING [0m TestAdminManual:test_admin_manual.py:133 Could not fill email with ('css selector', "input[type='email']"): 'BasePage' object has no attribute 'clear_and_type'
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:128 Found email field: ('xpath', "//input[@placeholder='email' or @placeholder='Email']")
+[33mWARNING [0m TestAdminManual:test_admin_manual.py:133 Could not fill email with ('xpath', "//input[@placeholder='email' or @placeholder='Email']"): 'BasePage' object has no attribute 'clear_and_type'
+[31m[1mERROR   [0m TestAdminManual:test_admin_manual.py:137 ❌ Could not fill email field
+[32mINFO    [0m utils.driver_manager:driver_manager.py:190 WebDriver quit successfully
+[33mWARNING [0m urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002158D1F77A0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/46ad104ccd1d7d927c4acd5ac566a75d/element
+[33mWARNING [0m urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002158D1F7AD0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/46ad104ccd1d7d927c4acd5ac566a75d/element
+[33mWARNING [0m urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002158D1F7CE0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/46ad104ccd1d7d927c4acd5ac566a75d/element
+[31m[1mERROR   [0m LoginPage:login_page.py:414 Exception during logout: HTTPConnectionPool(host='localhost', port=53458): Max retries exceeded with url: /session/46ad104ccd1d7d927c4acd5ac566a75d/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002158D1F7EF0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+[32mINFO    [0m TestAdminManual:test_admin_manual.py:34 ✅ Manual test completed: test_manual_admin_login_debug

@@ -1,0 +1,20 @@
+INFO - === Blog Detail Debug Test Suite Started ===
+INFO - 
+🔍 Starting debug test: test_debug_frontend_backend_connection
+INFO - ====== WebDriver manager ======
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
+INFO - Edge WebDriver created successfully
+INFO - Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
+INFO - Navigating to: http://localhost:5173/
+INFO - Homepage title: SWP Group 3
+INFO - Navigating to: http://localhost:5173/blogs
+ERROR - Browser error: http://localhost:5173/favicon.ico - Failed to load resource: the server responded with a status of 404 (Not Found)
+INFO - ✅ Frontend-backend connection test completed
+INFO - WebDriver quit successfully
+WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001F2C26F6270>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/2b945bbe2cbb9e43045ba50a45c4b38d/element
+WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001F2C26F66C0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/2b945bbe2cbb9e43045ba50a45c4b38d/element
+WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001F2C26F68D0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/2b945bbe2cbb9e43045ba50a45c4b38d/element
+ERROR - Exception during logout: HTTPConnectionPool(host='localhost', port=52675): Max retries exceeded with url: /session/2b945bbe2cbb9e43045ba50a45c4b38d/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001F2C26F6AE0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+INFO - ✅ Debug test completed: test_debug_frontend_backend_connection

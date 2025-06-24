@@ -1,0 +1,12 @@
+INFO - ====== WebDriver manager ======
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Get LATEST edgedriver version for Edge 137.0.3296
+INFO - Driver [C:\Users\Dell\.wdm\drivers\edgedriver\win64\137.0.3296.93\msedgedriver.exe] found in cache
+INFO - Edge WebDriver created successfully
+INFO - Driver configured with timeouts - Implicit: 3s, Page load: 10s, Explicit: 8s
+INFO - Navigating to: http://localhost:5173/
+INFO - Navigating to: http://localhost:5173/
+INFO - Clicked element: ('xpath', "//button[contains(text(), 'Đăng nhập')]")
+INFO - Login modal opened successfully
+INFO - Clicked element: ('css selector', '.fixed.inset-0.bg-black, .modal-overlay')
+INFO - WebDriver quit successfully

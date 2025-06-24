@@ -1,0 +1,3 @@
+INFO - Navigating to home: http://localhost:5173
+INFO - Navigating to blog create: http://localhost:5173/blogs/create
+INFO - WebDriver quit successfully

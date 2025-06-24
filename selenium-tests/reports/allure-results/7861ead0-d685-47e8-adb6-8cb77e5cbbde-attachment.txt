@@ -1,0 +1,2 @@
+Modal title visible: True
+✅ Page title test PASSED!
