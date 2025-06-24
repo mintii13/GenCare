@@ -80,6 +80,62 @@ router.get(
     }
 );
 
+// Get customer's feedback history
+router.get(
+    '/my-feedback',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const result = await AppointmentRepository.getCustomerFeedbackHistory(user.userId, 1, 1000);
+            const feedbackHistory = result.feedbacks.map(apt => ({
+                appointment_id: apt._id,
+                consultant_name: (apt.consultant_id as any).user_id?.full_name || 'Unknown',
+                appointment_date: apt.appointment_date.toISOString(),
+                start_time: apt.start_time,
+                end_time: apt.end_time,
+                feedback: {
+                    rating: apt.feedback!.rating,
+                    comment: apt.feedback!.comment,
+                    feedback_date: apt.feedback!.feedback_date.toISOString()
+                }
+            }));
+            res.json({ success: true, data: feedbackHistory });
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+);
+
+// Get customer's feedback history
+router.get(
+    '/my-feedbacks',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req, res) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const result = await AppointmentRepository.getCustomerFeedbackHistory(user.userId, 1, 1000);
+            const feedbackHistory = result.feedbacks.map(apt => ({
+                appointment_id: apt._id,
+                consultant_name: (apt.consultant_id as any).user_id?.full_name || 'Unknown',
+                appointment_date: apt.appointment_date.toISOString(),
+                start_time: apt.start_time,
+                end_time: apt.end_time,
+                feedback: {
+                    rating: apt.feedback!.rating,
+                    comment: apt.feedback!.comment,
+                    feedback_date: apt.feedback!.feedback_date.toISOString()
+                }
+            }));
+            res.json({ success: true, data: feedbackHistory });
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+);
+
 // Get consultant's appointments
 router.get(
     '/consultant-appointments',
@@ -964,79 +1020,6 @@ router.get(
     }
 );
 
-// Get customer's own feedback history
-router.get(
-    '/my-feedback',
-    authenticateToken,
-    authorizeRoles('customer'),
-    async (req, res) => {
-        try {
-            const user = req.jwtUser as JWTPayload;
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 10;
-
-            // Get customer's appointments with feedback
-            const appointments = await AppointmentRepository.findByCustomerId(
-                user.userId,
-                'completed'
-            );
-
-            const appointmentsWithFeedback = appointments.filter(apt => apt.feedback);
-
-            // Pagination
-            const totalItems = appointmentsWithFeedback.length;
-            const totalPages = Math.ceil(totalItems / limit);
-            const startIndex = (page - 1) * limit;
-            const endIndex = startIndex + limit;
-            const paginatedAppointments = appointmentsWithFeedback.slice(startIndex, endIndex);
-
-            const feedbackHistory = paginatedAppointments.map(apt => {
-                // Safe access to consultant name
-                let consultantName = 'Unknown';
-                if (apt.consultant_id && typeof apt.consultant_id === 'object') {
-                    const consultant = apt.consultant_id as any;
-                    if (consultant.user_id && typeof consultant.user_id === 'object' && 'full_name' in consultant.user_id) {
-                        consultantName = consultant.user_id.full_name;
-                    }
-                }
-
-                return {
-                    appointment_id: apt._id,
-                    appointment_date: apt.appointment_date.toLocaleDateString('vi-VN'),
-                    start_time: apt.start_time,
-                    end_time: apt.end_time,
-                    consultant_name: consultantName,
-                    feedback: {
-                        rating: apt.feedback!.rating,
-                        comment: apt.feedback!.comment,
-                        feedback_date: apt.feedback!.feedback_date.toISOString(),
-                    }
-                };
-            });
-
-            res.json({
-                success: true,
-                message: 'Feedback history retrieved successfully',
-                data: {
-                    feedbacks: feedbackHistory,
-                    pagination: {
-                        current_page: page,
-                        total_pages: totalPages,
-                        total_items: totalItems,
-                        items_per_page: limit
-                    }
-                },
-                timestamp: new Date().toISOString()
-            });
-        } catch (error: any) {
-            res.status(500).json({
-                success: false,
-                message: error.message
-            });
-        }
-    }
-);
-
 // Check if appointment can be feedback (customer only)
 router.get(
     '/:appointmentId/can-feedback',
@@ -1296,6 +1279,5 @@ router.delete(
         }
     }
 );
-
 
 export default router;

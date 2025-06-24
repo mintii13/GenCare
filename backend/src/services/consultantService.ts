@@ -224,8 +224,8 @@ export class ConsultantService {
     }
 
     /**
- * Get consultant performance summary including feedback stats
- */
+     * Get consultant performance summary including feedback stats
+     */
     public static async getConsultantPerformanceSummary(consultantId: string): Promise<IServiceResponse> {
         try {
             // Get consultant info
