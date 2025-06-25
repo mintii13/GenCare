@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from "axios";
-import { config } from "../config/constants";
+import { config } from "../config/constants.js";  
 
 const AUTH_TOKEN_KEY = config.auth.tokenKey;
 
 interface User {
-  phone: string;
+  phone: string;  
   avatar: string;
   status: boolean;
   id: string;

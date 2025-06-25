@@ -293,4 +293,25 @@ export class ConsultantService {
             };
         }
     }
+
+    /**
+     * Get list of consultants with their average rating & total feedbacks (for booking page)
+     */
+    public static async getConsultantsWithRatings(): Promise<IServiceResponse> {
+        try {
+            // Get aggregated rating data
+            const ratingData = await AppointmentRepository.getAverageRatingByConsultant();
+            return {
+                success: true,
+                data: ratingData,
+                message: 'Consultants with ratings retrieved successfully'
+            };
+        } catch (error: any) {
+            console.error('Error getting consultants with ratings:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Icon from '../icons/IconMapping';
+import { FaInfoCircle, FaTimes } from 'react-icons/fa';
 
 interface AutoConfirmNotificationProps {
   onClose?: () => void;
@@ -59,7 +59,7 @@ const AutoConfirmNotification: React.FC<AutoConfirmNotificationProps> = ({ onClo
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Icon name="info" color="#3b82f6" size={16} />
+                <FaInfoCircle color="#3b82f6" size={16} />
               </div>
             </div>
             
@@ -86,7 +86,7 @@ const AutoConfirmNotification: React.FC<AutoConfirmNotificationProps> = ({ onClo
               onClick={() => removeNotification(notificationData)}
               className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <Icon name="close" size={16} />
+              <FaTimes size={16} />
             </button>
           </div>
           

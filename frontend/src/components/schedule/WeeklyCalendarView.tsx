@@ -3,6 +3,7 @@ import { addDays, format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { DAY_NAMES, DAY_LABELS, DayName, DaySchedule, WorkingDay } from '../../types/schedule';
 import { formatDateDisplay, getCurrentWeekLabel, canNavigateToPreviousWeek } from '../../utils/dateUtils';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 interface WeeklyCalendarViewProps {
   currentWeek: Date;
@@ -43,8 +44,19 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   onRetry
 }) => {
   
-  // State để quản lý ngày được chọn
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  // State để quản lý ngày được chọn - mặc định chọn ngày hôm nay
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    // Tìm index của ngày hôm nay trong tuần
+    const today = format(new Date(), 'yyyy-MM-dd');
+    for (let i = 0; i < 7; i++) {
+      const dayDate = addDays(currentWeek, i);
+      const dayDateString = format(dayDate, 'yyyy-MM-dd');
+      if (dayDateString === today) {
+        return i;
+      }
+    }
+    return 0; // Fallback về ngày đầu tiên nếu không tìm thấy hôm nay
+  });
   
   const handleSlotClick = (date: string, startTime: string, endTime: string) => {
     if (mode !== 'slot-picker' || !onSlotSelect) return;
@@ -86,7 +98,9 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       <div className="bg-white rounded-lg shadow-sm p-8">
         <div className="text-center">
           <div className="text-red-600 mb-4">
-            <div className="text-6xl mb-4">⚠️</div>
+            <div className="text-6xl mb-4">
+              <FaExclamationTriangle />
+            </div>
             <p className="text-lg">{error}</p>
           </div>
           {onRetry && (

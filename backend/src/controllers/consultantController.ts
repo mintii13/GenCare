@@ -349,4 +349,21 @@ router.get(
     }
 );
 
+// Get consultants with ratings (public)
+router.get(
+    '/with-ratings',
+    async (req, res) => {
+        try {
+            const result = await ConsultantService.getConsultantsWithRatings();
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+);
+
 export default router;

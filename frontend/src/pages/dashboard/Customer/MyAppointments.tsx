@@ -4,7 +4,10 @@ import { vi } from 'date-fns/locale';
 import { appointmentService, Appointment, AppointmentResponse } from '../../../services/appointmentService';
 import { consultantService } from '../../../services/consultantService';
 import WeeklySlotPicker from '../../consultation/WeeklySlotPicker';
-import Icon from '../../../components/icons/IconMapping';
+
+import FeedbackModal from '../../../components/feedback/FeedbackModal';
+import FeedbackService from '../../../services/feedbackService';
+import { FaCalendarAlt, FaSpinner, FaTimes } from 'react-icons/fa';
 
 // Remove duplicate interface since we're importing from service
 
@@ -22,6 +25,8 @@ const MyAppointments: React.FC = () => {
   });
   const [selectedNewSlot, setSelectedNewSlot] = useState<{date: string, startTime: string, endTime: string} | null>(null);
   const [consultantDetails, setConsultantDetails] = useState<{[key: string]: any}>({});
+  const [canFeedback, setCanFeedback] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const statusLabels = {
     pending: 'Chờ xác nhận',
@@ -50,6 +55,16 @@ const MyAppointments: React.FC = () => {
       setAppointments(prev => [...prev]);
     }
   }, [consultantDetails]);
+
+  useEffect(() => {
+    if (selectedAppointment && selectedAppointment.status === 'completed') {
+      FeedbackService.canSubmitFeedback(selectedAppointment._id as any)
+        .then(res => setCanFeedback(res.can_submit))
+        .catch(() => setCanFeedback(false));
+    } else {
+      setCanFeedback(false);
+    }
+  }, [selectedAppointment]);
 
   const fetchAppointments = async () => {
     try {
@@ -201,8 +216,8 @@ const MyAppointments: React.FC = () => {
       const response = await consultantService.getConsultantById(consultantId);
       console.log('Consultant API response:', response);
       
-      if (response.success) {
-        const consultantData = response.data;
+      if (response) {
+        const consultantData = response;
         console.log('Consultant data:', consultantData);
         
         setConsultantDetails(prev => ({
@@ -234,7 +249,7 @@ const MyAppointments: React.FC = () => {
     // Fetch thông tin chuyên gia nếu chưa có
     if (consultantId && !consultantDetails[consultantId]) {
       fetchConsultantDetails(consultantId);
-      return '⏳ Đang tải...'; // Hiển thị loading thay vì ID
+                      return <span className="flex items-center"><FaSpinner className="animate-spin mr-1" /> Đang tải...</span>;
     }
     
     // Fallback cuối cùng
@@ -315,7 +330,7 @@ const MyAppointments: React.FC = () => {
           {appointments.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
               <div className="text-gray-400 text-6xl mb-4">
-                <Icon name="📅" size={64} className="mx-auto" />
+                <div className="mx-auto text-6xl text-gray-300"><FaCalendarAlt /></div>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Không có lịch hẹn nào</h3>
               <p className="text-gray-600">Bạn chưa có lịch hẹn nào. Hãy đặt lịch tư vấn mới!</p>
@@ -378,7 +393,7 @@ const MyAppointments: React.FC = () => {
                         onClick={() => handleEditAppointment(appointment)}
                         className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
                       >
-                        <Icon name="📅" className="mr-2" /> Đổi lịch
+                        Đổi lịch
                       </button>
                     )}
                     
@@ -414,14 +429,14 @@ const MyAppointments: React.FC = () => {
                     }}
                     className="text-gray-400 hover:text-gray-600 p-2"
                   >
-                    <Icon name="✕" />
+                    <FaTimes />
                   </button>
                 </div>
 
                 {/* Current appointment info */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                   <h3 className="font-medium text-blue-900 mb-2">
-                    <Icon name="📅" className="mr-2" />
+          
                     Lịch hẹn hiện tại
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
@@ -444,7 +459,6 @@ const MyAppointments: React.FC = () => {
                 {selectedNewSlot && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                     <h3 className="font-medium text-green-900 mb-2">
-                      <Icon name="✅" className="mr-2" />
                       Lịch hẹn mới
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
@@ -514,10 +528,7 @@ const MyAppointments: React.FC = () => {
                     }`}
                   >
                     {selectedNewSlot ? (
-                      <>
-                        <Icon name="✅" className="mr-2" />
-                        Xác nhận đổi lịch
-                      </>
+                      'Xác nhận đổi lịch'
                     ) : (
                       'Vui lòng chọn thời gian mới'
                     )}
@@ -539,7 +550,7 @@ const MyAppointments: React.FC = () => {
                     onClick={() => setSelectedAppointment(null)}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <Icon name="✕" />
+                    ✕
                   </button>
                 </div>
 
@@ -613,10 +624,37 @@ const MyAppointments: React.FC = () => {
                       Hủy lịch hẹn
                     </button>
                   )}
+                  {canFeedback && (
+                    <button
+                      onClick={() => setShowFeedbackModal(true)}
+                      className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Đánh giá
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+        )}
+
+        {showFeedbackModal && selectedAppointment && (
+          <FeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            appointmentInfo={{
+              consultant_name: getConsultantNameWithFetch(selectedAppointment),
+              appointment_date: formatDate(selectedAppointment.appointment_date),
+              start_time: formatTime(selectedAppointment.start_time),
+              end_time: formatTime(selectedAppointment.end_time)
+            }}
+            onSubmit={async (formData) => {
+              await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
+              setShowFeedbackModal(false);
+              setSelectedAppointment(null);
+              fetchAppointments();
+            }}
+          />
         )}
       </div>
     </div>

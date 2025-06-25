@@ -26,6 +26,9 @@ import RoleGuard from './components/guards/RoleGuard';
 import DashboardRedirect from './components/common/DashboardRedirect';
 import ConsultationStats from './pages/dashboard/Consultant/ConsultationStats';
 
+// Lazy load Menstrual Cycle page
+const MenstrualCyclePage = lazy(() => import('./pages/menstrual-cycle/MenstrualCyclePage'));
+
 // Lazy load Feedback pages
 const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
 const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
@@ -147,6 +150,11 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             <Route path="/my-feedback" element={
               <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
                 <CustomerFeedbackPage />
+              </RoleGuard>
+            } />
+            <Route path="/menstrual-cycle" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <MenstrualCyclePage />
               </RoleGuard>
             } />
             

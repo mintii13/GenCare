@@ -43,7 +43,7 @@ const HomePage = () => {
         }
       } catch (err) {
         setError('Lỗi khi tải dữ liệu');
-        console.error(err);
+  
       } finally {
         setLoading(false);
       }

@@ -25,7 +25,7 @@ export const extractFirstImageFromContent = (htmlContent: string): string | null
     
     return null;
   } catch (error) {
-    console.error('Error extracting image from content:', error);
+
     return null;
   }
 };

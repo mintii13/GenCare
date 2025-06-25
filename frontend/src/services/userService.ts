@@ -77,7 +77,7 @@ export const userService = {
     try {
       await api.post('/auth/logout');
     } catch (error) {
-      console.error('Logout error:', error);
+  
     } finally {
       // Clear local storage regardless of API call result
         localStorage.removeItem('gencare_auth_token');
