@@ -28,7 +28,6 @@ import ConsultationStats from './pages/dashboard/Consultant/ConsultationStats';
 
 // Lazy load Menstrual Cycle page
 const MenstrualCyclePage = lazy(() => import('./pages/menstrual-cycle/MenstrualCyclePage'));
-
 // Lazy load Feedback pages
 const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
 const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
