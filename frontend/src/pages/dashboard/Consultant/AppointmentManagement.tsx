@@ -4,9 +4,24 @@ import { vi } from 'date-fns/locale';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { useAuth } from '../../../contexts/AuthContext';
 import axios from 'axios';
-import Icon from '../../../components/icons/IconMapping';
 import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
 import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
+import { 
+  FaCalendarAlt, 
+  FaCheckCircle, 
+  FaTimesCircle, 
+  FaHourglassHalf, 
+  FaPlay, 
+  FaEye, 
+  FaComments, 
+  FaTrophy,
+  FaExclamationTriangle,
+  FaClock,
+  FaSpinner,
+  FaCheck,
+  FaTimes,
+  FaLink
+} from 'react-icons/fa';
 
 interface Appointment {
   _id: string;
@@ -126,7 +141,7 @@ const AppointmentManagement: React.FC = () => {
         return;
       }
       
-      console.log('🔍 Fetching appointments for consultant:', user.full_name, 'Role:', user.role);
+
       
       const queryParams = new URLSearchParams();
       if (filter !== 'all') {
@@ -135,35 +150,30 @@ const AppointmentManagement: React.FC = () => {
 
       const response = await axios.get(`http://localhost:3000/api/appointments/consultant-appointments?${queryParams}`);
 
-      console.log('📡 API Response status:', response.status);
+
       
       if (response.data.success) {
-        console.log('✅ Successfully loaded', response.data.data.appointments.length, 'appointments');
+
         
-        // Log tất cả các lịch hẹn để kiểm tra
-        console.log('📋 All appointments:', response.data.data.appointments);
+
         
         // Filter out appointments with null customer_id
         const validAppointments = response.data.data.appointments.filter((appointment: Appointment) => {
           const isValid = appointment && appointment.customer_id && appointment.customer_id.full_name;
-          if (!isValid) {
-            console.log('❌ Invalid appointment:', appointment);
-          }
+          // Skip invalid appointments
           return isValid;
         });
         
-        if (validAppointments.length !== response.data.data.appointments.length) {
-          console.warn('⚠️ Filtered out', response.data.data.appointments.length - validAppointments.length, 'invalid appointments');
-        }
+
         
         setAppointments(validAppointments);
         calculateStats(validAppointments);
       } else {
-        console.error('❌ API Error:', response.data.message);
+
         showNotification('error', response.data.message || 'Không thể tải danh sách lịch hẹn');
       }
     } catch (err: any) {
-      console.error('💥 Network Error:', err);
+
       if (err.response?.status === 401) {
         showNotification('error', 'Token đã hết hạn. Vui lòng đăng nhập lại');
         window.location.href = '/auth/login';
@@ -719,13 +729,13 @@ const AppointmentManagement: React.FC = () => {
             <div className="text-sm whitespace-nowrap">{row.start_time} - {row.end_time}</div>
             {priority === 'urgent' && (
               <div className="text-xs text-red-500 font-semibold whitespace-nowrap">
-                <Icon name="⚠️" className="mr-1" />
+                <FaExclamationTriangle className="inline mr-1" />
                 Sắp diễn ra
               </div>
             )}
             {priority === 'soon' && (
               <div className="text-xs text-orange-500 whitespace-nowrap">
-                <Icon name="⏰" className="mr-1" />
+                <FaClock className="inline mr-1" />
                 Trong 24h
               </div>
             )}
@@ -747,12 +757,14 @@ const AppointmentManagement: React.FC = () => {
           </span>
           {row.status === 'in_progress' && !canCompleteAppointment(row) && (
             <div className="text-xs text-orange-600 mt-1 font-medium">
-              ⏳ Chờ hoàn thành
+              <FaHourglassHalf className="inline mr-1" />
+              Chờ hoàn thành
             </div>
           )}
           {row.status === 'in_progress' && canCompleteAppointment(row) && (
             <div className="text-xs text-green-600 mt-1 font-medium">
-              ✅ Sẵn sàng
+              <FaCheckCircle className="inline mr-1" />
+              Sẵn sàng
             </div>
           )}
         </div>
@@ -795,7 +807,8 @@ const AppointmentManagement: React.FC = () => {
             className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors whitespace-nowrap"
             title="Xem chi tiết"
           >
-            👁️ Chi tiết
+            <FaEye className="inline mr-1" />
+            Chi tiết
           </button>
           
           {row.status === 'pending' && (
@@ -806,9 +819,9 @@ const AppointmentManagement: React.FC = () => {
               title="Xác nhận lịch hẹn"
             >
               {actionLoading === row._id ? (
-                <Icon name="⏳" className="mr-1" />
+                <FaSpinner className="animate-spin inline mr-1" />
               ) : (
-                <Icon name="✅" className="mr-1" />
+                <FaCheck className="inline mr-1" />
               )}
               Xác nhận
             </button>
@@ -822,9 +835,9 @@ const AppointmentManagement: React.FC = () => {
               title="Bắt đầu buổi tư vấn"
             >
               {actionLoading === row._id ? (
-                <Icon name="⏳" className="mr-1" />
+                <FaSpinner className="animate-spin inline mr-1" />
               ) : (
-                <Icon name="▶️" className="mr-1" />
+                <FaPlay className="inline mr-1" />
               )}
               Bắt đầu
             </button>
@@ -839,7 +852,8 @@ const AppointmentManagement: React.FC = () => {
               className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors whitespace-nowrap"
               title="Hoàn thành buổi tư vấn"
             >
-              ✅ Hoàn thành
+              <FaCheckCircle className="inline mr-1" />
+              Hoàn thành
             </button>
           )}
           
@@ -851,9 +865,9 @@ const AppointmentManagement: React.FC = () => {
               title={`Hủy lịch hẹn (Chỉ được phép hủy lúc pending)`}
             >
               {actionLoading === row._id ? (
-                <Icon name="⏳" className="mr-1" />
+                <FaSpinner className="animate-spin inline mr-1" />
               ) : (
-                <Icon name="❌" className="mr-1" />
+                <FaTimes className="inline mr-1" />
               )}
               Hủy
             </button>
@@ -948,7 +962,6 @@ const AppointmentManagement: React.FC = () => {
                 onClick={fetchAppointments}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               >
-                <Icon name="🔄" className="mr-2" />
                 Làm mới
               </button>
             </div>
@@ -971,7 +984,7 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
               <div className="text-blue-500 text-2xl">
-                <Icon name="📅" size={32} />
+                <FaCalendarAlt />
               </div>
             </div>
           </div>
@@ -983,7 +996,7 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
               </div>
               <div className="text-yellow-500 text-2xl">
-                <Icon name="⏳" size={32} />
+                <FaHourglassHalf />
               </div>
             </div>
           </div>
@@ -995,7 +1008,7 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
               </div>
               <div className="text-green-500 text-2xl">
-                <Icon name="✅" size={32} />
+                <FaCheckCircle />
               </div>
             </div>
           </div>
@@ -1006,7 +1019,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Đang tư vấn</p>
                 <p className="text-2xl font-bold text-blue-700">{stats.in_progress}</p>
               </div>
-              <div className="text-blue-600 text-2xl">💬</div>
+              <div className="text-blue-600 text-2xl">
+                <FaComments />
+              </div>
             </div>
           </div>
           
@@ -1016,7 +1031,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Đã hoàn thành</p>
                 <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
               </div>
-              <div className="text-emerald-500 text-2xl">🎉</div>
+                              <div className="text-emerald-500 text-2xl">
+                  <FaTrophy />
+                </div>
             </div>
           </div>
           
@@ -1026,7 +1043,9 @@ const AppointmentManagement: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">Đã hủy</p>
                 <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
               </div>
-              <div className="text-red-500 text-2xl">❌</div>
+              <div className="text-red-500 text-2xl">
+                <FaTimes />
+              </div>
             </div>
           </div>
         </div>
@@ -1068,7 +1087,7 @@ const AppointmentManagement: React.FC = () => {
               noDataComponent={
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">
-                    <Icon name="📅" size={64} className="mx-auto" />
+                    <FaCalendarAlt />
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Không có lịch hẹn nào</h3>
                   <p className="text-gray-500">

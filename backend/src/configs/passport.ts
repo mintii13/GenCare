@@ -3,13 +3,27 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { User } from '../models/User';
 import { AuthService } from '../services/authService';
-require('dotenv').config();
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Validate Google OAuth environment variables
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  console.error('Missing Google OAuth configuration:');
+  console.error('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID ? 'Set' : 'Missing');
+  console.error('GOOGLE_CLIENT_SECRET:', GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing');
+  throw new Error('Google OAuth configuration is incomplete. Please check your .env file.');
+}
 
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+      clientID: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
       callbackURL: '/api/auth/google/callback',
     },
     async (accessToken: string, _unused: any, profile: any, done: any) => {

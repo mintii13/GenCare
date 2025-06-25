@@ -6,6 +6,7 @@ export * from './appointmentService';
 export * from './weeklyScheduleService';
 export * from './consultantService';
 export * from './userService';
+export { default as FeedbackService } from './feedbackService';
 
 // Re-export commonly used types
 export type {

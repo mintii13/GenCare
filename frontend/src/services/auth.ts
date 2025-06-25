@@ -57,7 +57,7 @@ export const authService = {
         });
       }
     } catch (error) {
-      console.error('Logout API error:', error);
+  
     } finally {
       // Xóa tất cả token
       localStorage.removeItem(AUTH_TOKEN_KEY);

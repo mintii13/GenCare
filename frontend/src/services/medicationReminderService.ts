@@ -24,16 +24,12 @@ export interface MedicationReminder {
   
     async deleteReminder(id: string): Promise<void> {
       // Simulate API call
-      console.log(`Deleting reminder ${id}`)
+  
     },
   
     async getUserReminders(userId: string): Promise<MedicationReminder[]> {
       // Simulate API call
       return []
     },
-<<<<<<< HEAD
-  }
-=======
   }
   
->>>>>>> 6a5e8ced6369211448e3f8988081b82b3fce476b

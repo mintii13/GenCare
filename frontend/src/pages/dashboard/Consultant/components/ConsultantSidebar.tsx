@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../../contexts/AuthContext';
-import Icon from '../../../../components/icons/IconMapping';
+import { 
+  FaCalendarAlt, 
+  FaEdit, 
+  FaChartBar, 
+  FaClock, 
+  FaClipboard,
+  FaCog,
+  FaUser,
+  FaFile
+} from 'react-icons/fa';
 
 interface ConsultantSidebarProps {
   isOpen: boolean;
@@ -19,24 +28,24 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
 
   const menuItems = [
     // Main features
-    { name: 'Lịch làm việc hàng tuần', path: '/consultant/weekly-schedule', icon: 'calendar' },
-    { name: 'Quản lý lịch hẹn', path: '/consultant/appointments', icon: 'calendar' },
-    { name: 'Lịch tư vấn của tôi', path: '/consultant/schedule', icon: 'calendar' },
-    { name: 'Khách hàng của tôi', path: '/consultant/customers', icon: 'user' },
-    { name: 'Hồ sơ tư vấn', path: '/consultant/records', icon: 'clipboard' },
+    { name: 'Lịch làm việc hàng tuần', path: '/consultant/weekly-schedule', icon: FaCalendarAlt },
+    // { name: 'Quản lý lịch hẹn', path: '/consultant/appointments', icon: FaCalendarAlt },
+    { name: 'Lịch tư vấn của tôi', path: '/consultant/schedule', icon: FaCalendarAlt },
+    // { name: 'Khách hàng của tôi', path: '/consultant/customers', icon: FaUser },
+    // { name: 'Hồ sơ tư vấn', path: '/consultant/records', icon: FaClipboard },
     
     // Schedule management
-    { name: 'Thiết lập lịch mặc định', path: '/consultant/default-schedule', icon: 'settings' },
-    { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: 'clock' },
-    { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: 'not-available' },
+    // { name: 'Thiết lập lịch mặc định', path: '/consultant/default-schedule', icon: FaSettings },
+    // { name: 'Điều chỉnh lịch đặc biệt', path: '/consultant/special-schedule', icon: FaClock },
+    // { name: 'Ngày nghỉ / Không khả dụng', path: '/consultant/unavailable', icon: FaClock },
     
     // Content management
-    { name: 'Quản lý Blog', path: '/consultant/blogs', icon: 'edit' },
-    { name: 'Thư viện tài liệu', path: '/consultant/documents', icon: 'file' },
+    { name: 'Quản lý Blog', path: '/consultant/blogs', icon: FaEdit },
+    // { name: 'Thư viện tài liệu', path: '/consultant/documents', icon: FaFile },
     
     // Analytics and reports
-    { name: 'Thống kê tư vấn', path: '/consultant/consultation-stats', icon: 'stats' },
-    { name: 'Báo cáo hiệu suất', path: '/consultant/performance', icon: 'chart' }
+    { name: 'Thống kê tư vấn', path: '/consultant/consultation-stats', icon: FaChartBar },
+    // { name: 'Báo cáo hiệu suất', path: '/consultant/performance', icon: FaChartBar }
   ];
 
   const toggleSection = (index: number) => {
@@ -57,7 +66,7 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <Icon name="user" color="white" size={20} />
+              <img src={user?.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
             </div>
             <div className="ml-3">
               <h2 className="text-lg font-semibold text-gray-900">Chuyên gia</h2>
@@ -71,6 +80,7 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
           <div className="px-3">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
+              const IconComponent = item.icon;
               return (
                 <Link
                   key={item.path}
@@ -81,7 +91,7 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Icon name={item.icon} className="mr-3" size={18} />
+                  <IconComponent className="mr-3" size={18} />
                   {item.name}
                 </Link>
               );

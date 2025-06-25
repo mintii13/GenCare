@@ -4,7 +4,8 @@ import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
 import { appointmentService } from '../../../services/appointmentService';
-import Icon from '../../../components/icons/IconMapping';
+import { FaChevronLeft, FaChevronRight, FaLink } from 'react-icons/fa';
+
 
 interface WorkingDay {
   start_time: string;
@@ -161,7 +162,6 @@ const WeeklyScheduleManager: React.FC = () => {
   const canEdit = user?.role === 'staff' || user?.role === 'admin';
 
   useEffect(() => {
-    console.log(' Fetching schedule for week:', format(currentWeek, 'yyyy-MM-dd (EEEE)', { locale: vi }));
     fetchWeekData();
   }, [currentWeek]);
 
@@ -182,7 +182,7 @@ const WeeklyScheduleManager: React.FC = () => {
         fetchAppointmentsForWeek()
       ]);
     } catch (error) {
-      console.error('Error fetching week data:', error);
+      // Error handled by individual fetch functions
     } finally {
       setLoading(false);
     }
@@ -195,8 +195,6 @@ const WeeklyScheduleManager: React.FC = () => {
       // Sử dụng weeklyScheduleService thay vì fetch trực tiếp
       const response = await weeklyScheduleService.getMySchedules(weekStartDate, weekStartDate);
       
-      console.log(' Backend response for my-schedules:', response);
-      
       if (response.success && response.data && response.data.schedules && response.data.schedules.length > 0) {
         // Filter schedules for the exact week we're looking for
         const targetWeekStart = format(currentWeek, 'yyyy-MM-dd');
@@ -206,7 +204,6 @@ const WeeklyScheduleManager: React.FC = () => {
         });
 
         if (matchingSchedule) {
-          console.log('📅 Schedule found for this week:', matchingSchedule);
           setExistingSchedule(matchingSchedule);
           setScheduleData({
             working_days: matchingSchedule.working_days || {},
@@ -214,7 +211,6 @@ const WeeklyScheduleManager: React.FC = () => {
             notes: matchingSchedule.notes || ''
           });
         } else {
-          console.log('📅 No schedule found for this specific week');
           setExistingSchedule(null);
           setScheduleData({
             working_days: {},
@@ -223,7 +219,6 @@ const WeeklyScheduleManager: React.FC = () => {
           });
         }
       } else {
-        console.log('📅 No schedules data from backend');
         // Reset to default if no schedule exists
         setExistingSchedule(null);
         setScheduleData({
@@ -233,7 +228,6 @@ const WeeklyScheduleManager: React.FC = () => {
         });
       }
     } catch (err) {
-      console.error('Error fetching schedule:', err);
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi tải lịch làm việc' });
     }
   };
@@ -243,28 +237,20 @@ const WeeklyScheduleManager: React.FC = () => {
       const weekStart = format(currentWeek, 'yyyy-MM-dd');
       const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
       
-      console.log('📅 Fetching appointments for week:', weekStart, 'to', weekEnd);
-      
-      const data = await appointmentService.getConsultantAppointments(undefined, weekStart, weekEnd);
-      console.log('📊 Appointments Response data:', data);
+      const data = await appointmentService.getConsultantAppointments();
       
       if (data.success && data.data) {
-        console.log('✅ Found appointments:', data.data.appointments?.length || 0);
-        
-        // Debug: log each appointment to check structure
-        data.data.appointments?.forEach((appointment: Appointment, index: number) => {
-          console.log(`📄 Appointment ${index + 1}:`, appointment);
-          console.log(`👤 Customer ID:`, appointment.customer_id);
-          console.log(`📛 Customer Name:`, appointment.customer_id?.full_name);
+        // Filter appointments for current week
+        const weekAppointments = (data.data.appointments || []).filter((appointment: Appointment) => {
+          const appointmentDate = appointment.appointment_date;
+          return appointmentDate >= weekStart && appointmentDate <= weekEnd;
         });
         
-        setAppointments(data.data.appointments || []);
+        setAppointments(weekAppointments);
       } else {
-        console.log('ℹ️ No appointments found for this week');
         setAppointments([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching appointments:', error);
       setAppointments([]);
     }
   };
@@ -330,9 +316,7 @@ const WeeklyScheduleManager: React.FC = () => {
         notes: scheduleData.notes
       };
 
-      console.log('📤 Sending request data:', requestData);
-      console.log('🗓️ Current week (should be Monday):', format(currentWeek, 'yyyy-MM-dd (EEEE)', { locale: vi }));
-      console.log('📅 Calculated Monday:', format(monday, 'yyyy-MM-dd (EEEE)', { locale: vi }));
+
 
       let response;
       if (existingSchedule) {
@@ -343,7 +327,7 @@ const WeeklyScheduleManager: React.FC = () => {
         response = await weeklyScheduleService.createSchedule(requestData);
       }
 
-      console.log('📨 Save response:', response);
+
       
       if (response.success) {
         setMessage({ type: 'success', text: existingSchedule ? 'Cập nhật lịch thành công!' : 'Tạo lịch thành công!' });
@@ -352,7 +336,6 @@ const WeeklyScheduleManager: React.FC = () => {
         setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi lưu lịch' });
       }
     } catch (err) {
-      console.error('Error saving schedule:', err);
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi lưu lịch' });
     } finally {
       setSaving(false);
@@ -375,7 +358,6 @@ const WeeklyScheduleManager: React.FC = () => {
         setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi sao chép lịch' });
       }
     } catch (err) {
-      console.error('Error copying schedule:', err);
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi sao chép lịch' });
     } finally {
       setSaving(false);
@@ -395,7 +377,6 @@ const WeeklyScheduleManager: React.FC = () => {
     action: 'confirm' | 'cancel' | 'start' | 'complete'
   ) => {
     try {
-      console.log(`${action} appointment:`, appointmentId);
 
       let response;
       switch (action) {
@@ -428,12 +409,10 @@ const WeeklyScheduleManager: React.FC = () => {
         // Refresh appointments
         fetchAppointmentsForWeek();
         setHoveredAppointment(null);
-      } else {
+            } else {
         setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
       }
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
+    } catch (error) {       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
     }
   };
 
@@ -585,7 +564,7 @@ const WeeklyScheduleManager: React.FC = () => {
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
                   disabled={loading}
                 >
-                  <Icon name="←" className="mr-2" />
+                  <FaChevronLeft className="mr-2" />
                   Tuần trước
                 </button>
                 
@@ -612,7 +591,7 @@ const WeeklyScheduleManager: React.FC = () => {
                   disabled={loading}
                 >
                   Tuần sau
-                  <Icon name="→" className="ml-2" />
+                  <FaChevronRight className="ml-2" />
                 </button>
               </div>
             </div>
@@ -900,7 +879,7 @@ const WeeklyScheduleManager: React.FC = () => {
                   {/* Google Meet Link */}
                   {hoveredAppointment.status === 'in_progress' && hoveredAppointment.meeting_info?.meet_url && (
                     <div className="flex items-center space-x-2 mt-2">
-                      <Icon name="🔗" className="text-green-600" />
+                      <FaLink className="text-green-600" />
                       <a
                         href={hoveredAppointment.meeting_info.meet_url}
                         target="_blank"

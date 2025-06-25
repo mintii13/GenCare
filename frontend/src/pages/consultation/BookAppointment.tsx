@@ -10,16 +10,20 @@ import toast from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
 import { log } from '../../utils/logger';
 import { CardSkeleton, LoadingSpinner } from '../../components/common/LoadingSkeleton';
+import { FaCalendarAlt, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 
 interface Consultant {
-  consultant_id: string;
-  user_id: string;
-  full_name: string;
+  _id: string;
+  name: string;
   email: string;
-  avatar?: string;
   specialization: string;
-  qualifications: string;
-  experience_years: number;
+  bio: string;
+  consultationRate: number;
+  availableSlots: any[];
+  rating: number;
+  totalConsultations: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SelectedSlot {
@@ -70,11 +74,11 @@ const BookAppointment: React.FC = () => {
       const response = await consultantService.getAllConsultants();
       log.apiResponse('GET', '/consultants/public', 200, response);
       
-      if (response.success && response.data) {
+      if (response.data && response.data.consultants) {
         log.component('BookAppointment', 'Consultants loaded successfully', { count: response.data.consultants?.length });
-        setConsultants(response.data.consultants || []);
+        setConsultants(response.data.consultants || []);  
       } else {
-        log.error('BookAppointment', 'Failed to fetch consultants', response.message);
+        log.error('BookAppointment', 'Failed to fetch consultants', 'No consultants data');
         setErrors({ consultant: 'Không thể tải danh sách chuyên gia. Vui lòng thử lại.' });
       }
     } catch (error) {
@@ -266,7 +270,8 @@ const BookAppointment: React.FC = () => {
                         }}
                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200"
                       >
-                        📅 Xem lịch hẹn
+                        <FaCalendarAlt className="inline mr-2" />
+                        Xem lịch hẹn
                       </button>
                       <button
                         onClick={() => toast.dismiss(t.id)}
@@ -321,7 +326,8 @@ const BookAppointment: React.FC = () => {
                         }}
                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200"
                       >
-                        🔄 Tải lại trang
+                        <FaSpinner className="inline mr-2" />
+              Tải lại trang
                       </button>
                     </div>
                   </div>
@@ -427,7 +433,7 @@ const BookAppointment: React.FC = () => {
   };
 
   const getSelectedConsultantInfo = () => {
-    return consultants.find(c => c.consultant_id === selectedConsultant);
+    return consultants.find(c => c._id === selectedConsultant);
   };
 
   const getTotalSteps = () => {
@@ -451,7 +457,7 @@ const BookAppointment: React.FC = () => {
   const columns: TableColumn<Consultant>[] = [
     {
       name: 'Tên chuyên gia',
-      selector: row => row.full_name,
+      selector: row => row.name,
       sortable: true,
       width: '250px',
     },
@@ -463,7 +469,7 @@ const BookAppointment: React.FC = () => {
     },
     {
       name: 'Trình độ',
-      selector: row => row.qualifications,
+      selector: row => row.bio,
       sortable: true,
       width: '200px',
     },
@@ -471,7 +477,7 @@ const BookAppointment: React.FC = () => {
       name: 'Hành động',
       cell: (row) => (
         <button
-          onClick={() => handleConsultantSelect(row.consultant_id)}
+          onClick={() => handleConsultantSelect(row._id)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={consultantsLoading}
         >
@@ -495,7 +501,7 @@ const BookAppointment: React.FC = () => {
           <div className="space-y-3 mb-6">
             <div>
               <span className="text-gray-600">Chuyên gia:</span>
-              <p className="font-medium">{getSelectedConsultantInfo()?.full_name}</p>
+              <p className="font-medium">{getSelectedConsultantInfo()?.name}</p>
             </div>
             <div>
               <span className="text-gray-600">Thời gian:</span>
@@ -556,7 +562,8 @@ const BookAppointment: React.FC = () => {
               href="/dashboard/customer/appointments"
               className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
             >
-              📅 Xem lịch hẹn của tôi
+              <FaCalendarAlt className="inline mr-2" />
+            Xem lịch hẹn của tôi
             </a>
           </div>
           
@@ -686,13 +693,14 @@ const BookAppointment: React.FC = () => {
                   }}
                   className="text-blue-600 hover:text-blue-700 text-sm"
                 >
-                  ← Thay đổi chuyên gia
+                  <FaArrowLeft className="inline mr-2" />
+            Thay đổi chuyên gia
                 </button>
               </div>
               
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Chuyên gia đã chọn:</strong> {getSelectedConsultantInfo()?.full_name} 
+                  <strong>Chuyên gia đã chọn:</strong> {getSelectedConsultantInfo()?.name} 
                   - {getSelectedConsultantInfo()?.specialization}
                 </p>
               </div>
@@ -721,7 +729,8 @@ const BookAppointment: React.FC = () => {
                 onClick={() => setStep(2)}
                 className="text-blue-600 hover:text-blue-700 text-sm"
               >
-                ← Thay đổi thời gian
+                <FaArrowLeft className="inline mr-2" />
+          Thay đổi thời gian
               </button>
             </div>
 
@@ -732,7 +741,7 @@ const BookAppointment: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">Chuyên gia:</span>
-                    <p className="font-medium">{getSelectedConsultantInfo()?.full_name}</p>
+                    <p className="font-medium">{getSelectedConsultantInfo()?.name}</p>
                   </div>
                   <div>
                     <span className="text-gray-600">Chuyên khoa:</span>

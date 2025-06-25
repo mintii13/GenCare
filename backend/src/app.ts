@@ -1,3 +1,6 @@
+// Load environment variables FIRST
+require('dotenv').config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,7 +10,6 @@ import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
 import redisClient from './configs/redis';
-require('dotenv').config();
 import blogController from './controllers/blogController';
 import weeklyScheduleController from './controllers/weeklyScheduleController';
 import appointmentController from './controllers/appointmentController';

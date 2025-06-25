@@ -95,20 +95,25 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                 <div 
                   className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
                 >
-                  <Link to="/period-tracking" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                  <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
                   </Link>
-                  <Link to="/consultation/book" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                  <Link to="/consultation/book-appointment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Đặt lịch tư vấn
                   </Link>
                   <Link to="/test-packages" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Dịch vụ xét nghiệm
                   </Link>
-                  {/* {isAuthenticated && user?.role === 'customer' && (
-                    <Link to="/dashboard/customer" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Dashboard khách hàng
-                    </Link>
-                  )} */}
+                  {isAuthenticated && user?.role === 'customer' && (
+                    <>
+                      <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch hẹn của tôi
+                      </Link>
+                      <Link to="/consultants" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Danh sách chuyên gia
+                      </Link>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -118,9 +123,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
             <Link to="/about" className="text-gray-600 hover:text-primary-700">
               Về chúng tôi
             </Link>
-            <Link to="/contact" className="text-gray-600 hover:text-primary-700">
-              Liên hệ
-            </Link>
+
             {isAuthenticated && user?.role === 'consultant' && (
               <Link to="/consultant" className="text-gray-600 hover:text-primary-700">
                 Dashboard
@@ -164,9 +167,19 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     <Link to="/user/test-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử xét nghiệm
                     </Link>
-                    <Link to="/user/consultation-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                    <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử tư vấn
                     </Link>
+                    {user?.role === 'customer' && (
+                      <>
+                        <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          Chu kì kinh nguyệt
+                        </Link>
+                        <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          Đánh giá của tôi
+                        </Link>
+                      </>
+                    )}
                     <button
                       onClick={() => { logout(); setIsUserMenuOpen(false); }}
                       className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-red-600"
@@ -263,11 +276,11 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     </Link>
                     {isAuthenticated && user?.role === 'customer' && (
                       <Link 
-                        to="/dashboard/customer" 
+                        to="/my-appointments" 
                         className="block text-gray-600 hover:text-primary-700"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        Dashboard khách hàng
+                        Lịch hẹn của tôi
                       </Link>
                     )}
                   </div>
@@ -305,6 +318,11 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/user/consultation-history" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử tư vấn
                   </Link>
+                  {user?.role === 'customer' && (
+                    <Link to="/my-feedback" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                      Đánh giá của tôi
+                    </Link>
+                  )}
                   <button
                     className="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition mb-2"
                     onClick={() => { setIsMenuOpen(false); logout(); }}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AutoConfirmService from '../../services/autoConfirmService';
-import Icon from '../icons/IconMapping';
+import { FaBan, FaRocket, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 
 const AutoConfirmStatus: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -58,12 +58,12 @@ const AutoConfirmStatus: React.FC = () => {
         >
           {isRunning ? (
             <>
-              <Icon name="ban" className="mr-1" size={12} />
+              <FaBan className="mr-1" size={12} />
               Dừng
             </>
           ) : (
             <>
-              <Icon name="rocket" className="mr-1" size={12} />
+              <FaRocket className="mr-1" size={12} />
               Khởi động
             </>
           )}
@@ -73,11 +73,11 @@ const AutoConfirmStatus: React.FC = () => {
       <div className="mt-3 text-xs text-gray-600">
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
-            <Icon name="clock" className="mr-1" size={12} />
+            <FaClock className="mr-1" size={12} />
             <span>Kiểm tra mỗi 5 phút</span>
           </div>
           <div className="flex items-center">
-            <Icon name="warning" className="mr-1" size={12} />
+            <FaExclamationTriangle className="mr-1" size={12} />
             <span>Tự động xác nhận trước 30 phút</span>
           </div>
         </div>

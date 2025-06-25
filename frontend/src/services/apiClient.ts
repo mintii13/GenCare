@@ -22,7 +22,7 @@ class ApiClient {
     backoff: true
   };
 
-  constructor(baseURL: string = 'http://localhost:3000/api') {
+  constructor(baseURL: string = '/api') {
     this.instance = axios.create({
       baseURL,
       timeout: 30000, // 30 seconds
@@ -41,7 +41,9 @@ class ApiClient {
         // Add auth token if available
         const token = localStorage.getItem('gencare_auth_token');
         if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+          // ensure header object exists and add Authorization
+          (config.headers = (config.headers || {}) as any);
+          (config.headers as any)['Authorization'] = `Bearer ${token}`;
         }
 
         log.api(config.method?.toUpperCase() || 'REQUEST', config.url || '', {

@@ -1,6 +1,16 @@
 import api from './api';
 import { BlogsResponse, CommentsResponse, BlogFilters, Comment } from '../types/blog';
 
+export interface Blog {
+  _id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const blogService = {
   // Lấy danh sách blog với filter
   getBlogs: async (filters?: BlogFilters): Promise<BlogsResponse> => {
@@ -14,7 +24,6 @@ export const blogService = {
       const response = await api.get(`/blogs?${params.toString()}`);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -31,7 +40,6 @@ export const blogService = {
       }
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -42,7 +50,6 @@ export const blogService = {
       const response = await api.get(`/blogs/${blogId}/comments`);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -57,7 +64,6 @@ export const blogService = {
       });
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -71,7 +77,6 @@ export const blogService = {
       });
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -85,7 +90,6 @@ export const blogService = {
       });
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -96,7 +100,6 @@ export const blogService = {
       const response = await api.delete(`/blogs/${blogId}`);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -116,7 +119,6 @@ export const blogService = {
       });
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
       throw error;
     }
   },
@@ -127,7 +129,50 @@ export const blogService = {
       const response = await api.delete(`/blogs/${blogId}/comments/${commentId}`);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);
+      throw error;
+    }
+  },
+
+  async getAllBlogs(): Promise<Blog[]> {
+    try {
+      const response = await api.get('/blogs');
+      return response.data.data.blogs || [];
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getBlogsByAuthor(authorId: string): Promise<Blog[]> {
+    try {
+      const response = await api.get(`/blogs/author/${authorId}`);
+      return response.data.data.blogs || [];
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async searchBlogs(query: string): Promise<Blog[]> {
+    try {
+      const response = await api.get(`/blogs/search?q=${encodeURIComponent(query)}`);
+      return response.data.data.blogs || [];
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getBlogsByTag(tag: string): Promise<Blog[]> {
+    try {
+      const response = await api.get(`/blogs/tag/${encodeURIComponent(tag)}`);
+      return response.data.data.blogs || [];
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async likeBlog(id: string): Promise<void> {
+    try {
+      await api.post(`/blogs/${id}/like`);
+    } catch (error) {
       throw error;
     }
   }
