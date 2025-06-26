@@ -18,4 +18,4 @@ const consultantSchema = new Schema<IConsultant>({
     total_consultations: { type: Number, default: 0 }
 });
 
-export const Consultant = mongoose.model<IConsultant>('Consultant', consultantSchema);
+export const Consultant = mongoose.model<IConsultant>('Consultant', consultantSchema, 'consultants');

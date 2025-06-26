@@ -1,7 +1,7 @@
 # Node.js
 /node_modules/
 /dist/
-.history
+.history/
 
 # TypeScript
 *.js
@@ -24,4 +24,4 @@ package-lock.json
 
 #Redis server
 *.rdb
-/redis-docker/
+.package-lock.json

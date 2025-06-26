@@ -1,8 +1,16 @@
 import axios from 'axios';
+import { config } from '../config/constants';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 5000;
-const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'accessToken';
+const API_URL = config.api.url;
+const API_TIMEOUT = config.api.timeout;
+const AUTH_TOKEN_KEY = config.auth.tokenKey;
+
+export const API_CONFIG = {
+  BASE_URL: API_URL,
+  TIMEOUT: API_TIMEOUT,
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000
+};
 
 // Tạo instance axios với base URL của backend
 const api = axios.create({
@@ -13,12 +21,7 @@ const api = axios.create({
   }
 });
 
-// Debug log để kiểm tra cấu hình
-console.log('🔧 API Configuration:', {
-  API_URL,
-  API_TIMEOUT,
-  AUTH_TOKEN_KEY
-});
+
 
 // Thêm interceptor để tự động thêm token vào header
 api.interceptors.request.use(
@@ -48,4 +51,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
+export default api;

@@ -5,14 +5,9 @@ import { JWTUtils, JWTPayload } from '../utils/jwtUtils';
 declare global {
     namespace Express {
         interface Request {
-            User?: JWTPayload;
+            jwtUser?: JWTPayload;
         }
     }
-}
-
-// Cách khác để extend Request type
-interface AuthenticatedRequest extends Request {
-    user: JWTPayload;
 }
 
 /**
@@ -40,7 +35,9 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return;
     }
 
-    // Đảm bảo req.user được gán đúng cách
+    // Đảm bảo req.jwtUser được gán đúng cách
+    req.jwtUser = decoded;
+    // Compatibility: cũng set req.user cho các code cũ
     (req as any).user = decoded;
     next();
 };
@@ -50,7 +47,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
  */
 export const authorizeRoles = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
-        const user = (req as any).user;
+        const user = req.jwtUser;
 
         if (!user) {
             res.status(401).json({

@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuillEditor from '../../components/common/QuillEditor';
-
+import LoginModal from '../../components/auth/LoginModal';
+    
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ const BlogDetailPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);  
 
   const fetchBlogDetail = useCallback(async () => {
     if (!blogId) return;
@@ -124,11 +126,12 @@ const BlogDetailPage: React.FC = () => {
       if (updated.success) {
         setBlog({ ...blog, title: editTitle, content: editContent });
         setIsEditing(false);
+        toast.success('Cập nhật bài viết thành công');
       } else {
-        alert(updated.message || 'Cập nhật thất bại');
+        toast.error(updated.message || 'Cập nhật thất bại');
       }
     } catch (error) {
-      alert('Có lỗi khi cập nhật blog');
+      toast.error('Có lỗi khi cập nhật blog');
     }
   };
 
@@ -137,35 +140,14 @@ const BlogDetailPage: React.FC = () => {
     try {
       const response = await blogService.deleteBlog(blog.blog_id);
       if (response.success) {
-        toast.success('Xóa bài viết thành công!', {
-          duration: 3000,
-          icon: '✅',
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        });
+        toast.success('Xóa bài viết thành công!', { duration: 3000 });
         navigate('/blogs');
       } else {
-        toast.error(response.message || 'Có lỗi xảy ra khi xóa bài viết', {
-          duration: 4000,
-          icon: '❌',
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        });
+        toast.error(response.message || 'Có lỗi xảy ra khi xóa bài viết', { duration: 4000 });
       }
     } catch (error) {
       console.error('Error deleting blog:', error);
-      toast.error('Có lỗi xảy ra khi xóa bài viết', {
-        duration: 4000,
-        icon: '❌',
-        style: {
-          background: '#363636',
-          color: '#fff',
-        },
-      });
+      toast.error('Có lỗi xảy ra khi xóa bài viết', { duration: 4000 });
     } finally {
       setShowDeleteConfirm(false);
     }
@@ -362,6 +344,7 @@ const BlogDetailPage: React.FC = () => {
             blogId={blog?.blog_id || ''}
             comments={comments}
             onCommentsUpdate={handleCommentsUpdate}
+            onLoginRequired={() => setShowLoginModal(true)}
           />
         </div>
       </div>
@@ -403,4 +386,4 @@ const BlogDetailPage: React.FC = () => {
   );
 };
 
-export default BlogDetailPage; 
+export default BlogDetailPage;

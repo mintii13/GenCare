@@ -1,6 +1,5 @@
 import { BlogComment, IBlogComment } from '../models/BlogComment';
 import { User } from '../models/User';
-import { Customer } from '../models/Customer';
 
 export class BlogCommentRepository {
     public static async findByBlogIdWithCustomer(blogId: string): Promise<any[]> {
@@ -43,9 +42,9 @@ export class BlogCommentRepository {
 
             console.log('Final comments after sort:', comments.length);
 
-            const commentsWithCustomer = await Promise.all(
+            const commentsWithUser = await Promise.all(
                 comments.map(async (comment) => {
-                    // Nếu comment ẩn danh, không trả về customer info và customer_id
+                    // Nếu comment ẩn danh, không trả về user info và user_id
                     if (comment.is_anonymous) {
                         return {
                             _id: comment._id,
@@ -58,7 +57,7 @@ export class BlogCommentRepository {
                             is_anonymous: comment.is_anonymous,
                             __v: comment.__v,
                             comment_id: comment._id,
-                            customer: null
+                            user: null
                         };
                     }
 
@@ -75,11 +74,11 @@ export class BlogCommentRepository {
                             is_anonymous: comment.is_anonymous,
                             __v: comment.__v,
                             comment_id: comment._id,
-                            customer: null
+                            user: null
                         };
                     }
 
-                    // Tìm user (customer)
+                    // Tìm user
                     const user = await User.findById(comment.customer_id).lean();
                     if (!user) {
                         console.log('User not found for customer_id:', comment.customer_id);
@@ -94,28 +93,18 @@ export class BlogCommentRepository {
                             is_anonymous: comment.is_anonymous,
                             __v: comment.__v,
                             comment_id: comment._id,
-                            customer: null
+                            user: null
                         };
                     }
 
-                    // Tìm customer info
-                    const customerInfo = await Customer.findOne({
-                        user_id: comment.customer_id
-                    }).lean();
-
-                    // Kết hợp thông tin customer
-                    const customer = {
-                        customer_id: user._id,
+                    // Trả về thông tin user
+                    const userInfo = {
+                        user_id: user._id,
                         full_name: user.full_name,
                         email: user.email,
                         phone: user.phone,
                         role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
+                        avatar: user.avatar
                     };
 
                     return {
@@ -129,17 +118,17 @@ export class BlogCommentRepository {
                         is_anonymous: comment.is_anonymous,
                         __v: comment.__v,
                         comment_id: comment._id,
-                        customer
+                        user: userInfo
                     };
                 })
             );
 
-            console.log('Final result with customer info:', commentsWithCustomer.length);
+            console.log('Final result with user info:', commentsWithUser.length);
             console.log('=== END DEBUG ===');
 
-            return commentsWithCustomer;
+            return commentsWithUser;
         } catch (error) {
-            console.error('Error finding comments with customer:', error);
+            console.error('Error finding comments with user:', error);
             throw error;
         }
     }

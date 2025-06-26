@@ -57,7 +57,15 @@ export class AuthService {
                     full_name: user.full_name,
                     role: user.role,
                     status: user.status,
-                    avatar: user.avatar // Thêm avatar
+                    avatar: user.avatar, // Thêm avatar
+                    phone: user.phone || null,
+                    date_of_birth: user.date_of_birth || null,
+                    gender: user.gender || null,
+                    registration_date: user.registration_date,
+                    updated_date: user.updated_date,
+                    last_login: user.last_login || null,
+                    email_verified: user.email_verified,
+                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -92,7 +100,15 @@ export class AuthService {
                     full_name: user.full_name,
                     role: user.role,
                     status: user.status,
-                    avatar: user.avatar // Thêm avatar
+                    avatar: user.avatar,
+                    phone: user.phone || null,
+                    date_of_birth: user.date_of_birth || null,
+                    gender: user.gender || null,
+                    registration_date: user.registration_date,
+                    updated_date: user.updated_date,
+                    last_login: user.last_login || null,
+                    email_verified: user.email_verified,
+                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -110,13 +126,13 @@ export class AuthService {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_FOR_VERIFY || '',
-                pass: process.env.EMAIL_APP_PASSWORD || ''
+                user: process.env.EMAIL_FOR_VERIFY ?? '',
+                pass: process.env.EMAIL_APP_PASSWORD ?? ''
             }
         })
 
         const mailContent = {
-            from: `"Mật khẩu đăng nhập GenCare" <${process.env.EMAIL_FOR_VERIFY || null}>`,
+            from: `"Mật khẩu đăng nhập GenCare" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
             to: emailSendTo,
             subject: `Mật khẩu hiện tại của email ${emailSendTo} là:`,
             html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
@@ -125,7 +141,7 @@ export class AuthService {
                             <p>Mật khẩu này sẽ được sử dụng để đăng nhập trong hệ thống GenCare của chúng tôi</p>
                             <p>Đường dẫn đến trang web là: http://localhost:5173</p>
                             <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME || 'GenCare'}</h4>
+                            <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>
                         </div>
                     </body>`
         }
@@ -143,7 +159,7 @@ export class AuthService {
     }
 
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
-        const email = profile.emails[0]?.value || null;
+        const email = profile.emails[0]?.value ?? null;
         const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
         const registration_date = new Date();
         const updated_date = new Date();
@@ -189,15 +205,15 @@ export class AuthService {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_FOR_VERIFY || '',
-                pass: process.env.EMAIL_APP_PASSWORD || ''
+                user: process.env.EMAIL_FOR_VERIFY ?? '',
+                pass: process.env.EMAIL_APP_PASSWORD ?? ''
             }
         })
 
         const otpGenerator = RandomUtils.generateRandomOTP(100000,999999);
 
         const mailContent = {
-            from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY || null}>`,
+            from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
             to: emailSendTo,
             subject: "Mã xác thực OTP của bạn là: ",
             html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
@@ -205,7 +221,7 @@ export class AuthService {
                             <h2>Mã OTP của bạn là: <strong style="color:#2a9d8f;">${otpGenerator}</strong></h2>
                             <p>OTP sẽ hết hạn trong 5 phút.</p>
                             <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME || 'GenCare'}</h4>
+                            <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>
                         </div>
                     </body>`
         }
@@ -308,7 +324,7 @@ export class AuthService {
      */
     public static async verifyOldPassword(userId: ObjectId, oldPassword: string): Promise<boolean> {
         try {
-            const user = await UserRepository.findById(userId);
+            const user = await UserRepository.findById(userId.toString());
             if (!user) {
                 throw new Error('User not found');
             }
@@ -359,7 +375,7 @@ export class AuthService {
                 };
             }
 
-            const user = await UserRepository.findById(userId);
+            const user = await UserRepository.findById(userId.toString());
             
             if (!user) {
                 return {

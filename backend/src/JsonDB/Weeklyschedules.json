@@ -1,0 +1,450 @@
+[
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b8001"
+        },
+        "consultant_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+        },
+        "week_start_date": {
+            "$date": "2025-06-16T00:00:00.000Z"
+        },
+        "week_end_date": {
+            "$date": "2025-06-22T23:59:59.999Z"
+        },
+        "working_days": {
+            "monday": {
+                "start_time": "08:00",
+                "end_time": "18:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849832cd646587d4d281d8e"
+                }
+            },
+            "tuesday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d6a"
+                }
+            },
+            "wednesday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d69"
+                }
+            },
+            "thursday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d68"
+                }
+            },
+            "friday": {
+                "start_time": "08:00",
+                "end_time": "16:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d67"
+                }
+            },
+            "saturday": {
+                "start_time": "08:00",
+                "end_time": "12:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d66"
+                }
+            },
+            "sunday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d65"
+                }
+            }
+        },
+        "default_slot_duration": 60,
+        "notes": "Cập nhật giờ làm việc",
+        "created_by": {
+            "user_id": {
+                "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
+            },
+            "role": "consultant",
+            "name": "BS. Nguyễn Thị Lan"
+        },
+        "created_date": {
+            "$date": "2025-06-10T10:00:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2025-06-11T13:22:52.473Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b8002"
+        },
+        "consultant_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+        },
+        "week_start_date": {
+            "$date": "2025-06-23T00:00:00.000Z"
+        },
+        "week_end_date": {
+            "$date": "2025-06-29T23:59:59.999Z"
+        },
+        "working_days": {
+            "monday": {
+                "start_time": "09:00",
+                "end_time": "18:00",
+                "break_start": "12:30",
+                "break_end": "13:30",
+                "is_available": true
+            },
+            "tuesday": {
+                "start_time": "09:00",
+                "end_time": "18:00",
+                "break_start": "12:30",
+                "break_end": "13:30",
+                "is_available": true
+            },
+            "wednesday": {
+                "start_time": "09:00",
+                "end_time": "18:00",
+                "break_start": "12:30",
+                "break_end": "13:30",
+                "is_available": true
+            },
+            "thursday": {
+                "start_time": "09:00",
+                "end_time": "18:00",
+                "break_start": "12:30",
+                "break_end": "13:30",
+                "is_available": true
+            },
+            "friday": {
+                "start_time": "09:00",
+                "end_time": "17:00",
+                "is_available": true
+            },
+            "saturday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false
+            },
+            "sunday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false
+            }
+        },
+        "default_slot_duration": 60,
+        "notes": "Lịch làm việc tuần 23-29/06/2025 - Điều chỉnh giờ làm việc",
+        "created_by": {
+            "user_id": {
+                "$oid": "675e1a2b3c4d5e6f7a8b9c11"
+            },
+            "role": "admin",
+            "name": "Nguyễn Văn Admin"
+        },
+        "created_date": {
+            "$date": "2025-06-10T11:00:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2025-06-10T11:00:00.000Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b8003"
+        },
+        "consultant_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9d02"
+        },
+        "week_start_date": {
+            "$date": "2025-06-16T00:00:00.000Z"
+        },
+        "week_end_date": {
+            "$date": "2025-06-22T23:59:59.999Z"
+        },
+        "working_days": {
+            "monday": {
+                "start_time": "08:00",
+                "end_time": "18:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d7f"
+                }
+            },
+            "tuesday": {
+                "start_time": "07:30",
+                "end_time": "16:30",
+                "break_start": "11:30",
+                "break_end": "12:30",
+                "is_available": true,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d7e"
+                }
+            },
+            "wednesday": {
+                "start_time": "07:30",
+                "end_time": "16:30",
+                "break_start": "11:30",
+                "break_end": "12:30",
+                "is_available": true,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d7d"
+                }
+            },
+            "thursday": {
+                "start_time": "07:30",
+                "end_time": "16:30",
+                "break_start": "11:30",
+                "break_end": "12:30",
+                "is_available": true,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d7c"
+                }
+            },
+            "friday": {
+                "start_time": "07:30",
+                "end_time": "15:30",
+                "is_available": true,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d7b"
+                }
+            },
+            "saturday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d7a"
+                }
+            },
+            "sunday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false,
+                "_id": {
+                    "$oid": "684982f1d646587d4d281d79"
+                }
+            }
+        },
+        "default_slot_duration": 60,
+        "notes": "Cập nhật giờ làm việc",
+        "created_by": {
+            "user_id": {
+                "$oid": "675e1a2b3c4d5e6f7a8b9c0e"
+            },
+            "role": "consultant",
+            "name": "ThS. Trần Văn Minh"
+        },
+        "created_date": {
+            "$date": "2025-06-10T12:00:00.000Z"
+        },
+        "updated_date": {
+            "$date": "2025-06-11T13:21:53.111Z"
+        }
+    },
+    {
+        "_id": {
+            "$oid": "6849896522737e511ed1bf29"
+        },
+        "consultant_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+        },
+        "week_start_date": {
+            "$date": "2025-06-30T00:00:00.000Z"
+        },
+        "week_end_date": {
+            "$date": "2025-07-06T16:59:59.999Z"
+        },
+        "working_days": {
+            "monday": {
+                "start_time": "08:00",
+                "end_time": "18:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849832cd646587d4d281d8e"
+                }
+            },
+            "tuesday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d6a"
+                }
+            },
+            "wednesday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d69"
+                }
+            },
+            "thursday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d68"
+                }
+            },
+            "friday": {
+                "start_time": "08:00",
+                "end_time": "16:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d67"
+                }
+            },
+            "saturday": {
+                "start_time": "08:00",
+                "end_time": "12:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d66"
+                }
+            },
+            "sunday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d65"
+                }
+            }
+        },
+        "default_slot_duration": 60,
+        "notes": "Copied from week 2025-06-16",
+        "created_by": {
+            "user_id": {
+                "$oid": "675e1a2b3c4d5e6f7a8b9c11"
+            },
+            "role": "admin",
+            "name": "Nguyễn Văn Admin"
+        },
+        "created_date": {
+            "$date": "2025-06-11T13:49:25.163Z"
+        },
+        "updated_date": {
+            "$date": "2025-06-11T13:49:25.179Z"
+        },
+        "__v": 0
+    },
+    {
+        "_id": {
+            "$oid": "68498aa80c7ce1301f8d0179"
+        },
+        "consultant_id": {
+            "$oid": "675e1a2b3c4d5e6f7a8b9d01"
+        },
+        "week_start_date": {
+            "$date": "2025-07-07T00:00:00.000Z"
+        },
+        "week_end_date": {
+            "$date": "2025-07-13T16:59:59.999Z"
+        },
+        "working_days": {
+            "monday": {
+                "start_time": "08:00",
+                "end_time": "18:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849832cd646587d4d281d8e"
+                }
+            },
+            "tuesday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d6a"
+                }
+            },
+            "wednesday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d69"
+                }
+            },
+            "thursday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d68"
+                }
+            },
+            "friday": {
+                "start_time": "08:00",
+                "end_time": "16:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d67"
+                }
+            },
+            "saturday": {
+                "start_time": "08:00",
+                "end_time": "12:00",
+                "is_available": true,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d66"
+                }
+            },
+            "sunday": {
+                "start_time": "08:00",
+                "end_time": "17:00",
+                "is_available": false,
+                "_id": {
+                    "$oid": "6849817ed646587d4d281d65"
+                }
+            }
+        },
+        "default_slot_duration": 60,
+        "notes": "Copied from week 2025-06-16",
+        "created_by": {
+            "user_id": {
+                "$oid": "675e1a2b3c4d5e6f7a8b9c11"
+            },
+            "role": "admin",
+            "name": "Nguyễn Văn Admin"
+        },
+        "created_date": {
+            "$date": "2025-06-11T13:54:48.572Z"
+        },
+        "updated_date": {
+            "$date": "2025-06-11T13:54:48.586Z"
+        },
+        "__v": 0
+    }
+]

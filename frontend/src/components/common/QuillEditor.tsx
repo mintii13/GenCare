@@ -7,6 +7,7 @@ interface QuillEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   readOnly?: boolean;
+  height?: number;
 }
 
 const QuillEditor: React.FC<QuillEditorProps> = ({
@@ -14,6 +15,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
   onChange,
   placeholder = 'Nhập nội dung...',
   readOnly = false,
+  height = 400,
 }) => {
   const quillRef = useRef<ReactQuill>(null);
 
@@ -50,7 +52,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
   ];
 
   return (
-    <div className="quill-editor">
+    <div className="quill-editor-wrapper">
       <ReactQuill
         ref={quillRef}
         value={value}
@@ -61,13 +63,34 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
         modules={modules}
         formats={formats}
         style={{ 
-          minHeight: 200, 
+          height: height,
           background: readOnly ? '#f9fafb' : '#fff',
-          marginBottom: 50 // Space for toolbar
         }}
       />
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .quill-editor-wrapper .ql-editor {
+            min-height: ${height - 42}px !important;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 16px;
+          }
+          .quill-editor-wrapper .ql-container {
+            font-size: 16px;
+            border: none !important;
+          }
+          .quill-editor-wrapper .ql-toolbar {
+            border: none !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            background: #f9fafb;
+          }
+          .quill-editor-wrapper .ql-snow {
+            border: none !important;
+          }
+        `
+      }} />
     </div>
   );
 };
 
-export default QuillEditor; 
+export default QuillEditor;

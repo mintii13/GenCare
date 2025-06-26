@@ -288,28 +288,19 @@ export class BlogService {
             if (!newComment.is_anonymous && newComment.customer_id) {
                 const user = await User.findById(newComment.customer_id).lean();
                 if (user) {
-                    const customerInfo = await Customer.findOne({
-                        user_id: newComment.customer_id
-                    }).lean();
-
-                    responseComment.customer = {
-                        customer_id: user._id,
+                    responseComment.user = {
+                        user_id: user._id,
                         full_name: user.full_name,
                         email: user.email,
                         phone: user.phone,
                         role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
+                        avatar: user.avatar
                     };
                 } else {
-                    responseComment.customer = null;
+                    responseComment.user = null;
                 }
             } else {
-                responseComment.customer = null;
+                responseComment.user = null;
             }
 
             return {
@@ -387,28 +378,19 @@ export class BlogService {
             if (!updatedComment.is_anonymous && updatedComment.customer_id) {
                 const user = await User.findById(updatedComment.customer_id).lean();
                 if (user) {
-                    const customerInfo = await Customer.findOne({
-                        user_id: updatedComment.customer_id
-                    }).lean();
-
-                    responseComment.customer = {
-                        customer_id: user._id,
+                    responseComment.user = {
+                        user_id: user._id,
                         full_name: user.full_name,
                         email: user.email,
                         phone: user.phone,
                         role: user.role,
-                        avatar: user.avatar,
-                        ...(customerInfo && {
-                            medical_history: customerInfo.medical_history,
-                            custom_avatar: customerInfo.custom_avatar,
-                            last_updated: customerInfo.last_updated
-                        })
+                        avatar: user.avatar
                     };
                 } else {
-                    responseComment.customer = null;
+                    responseComment.user = null;
                 }
             } else {
-                responseComment.customer = null;
+                responseComment.user = null;
             }
 
             return {
@@ -457,9 +439,9 @@ export class BlogService {
             const blog = await BlogRepository.findByIdIncludingDeleted(comment.blog_id.toString());
             const isBlogAuthor = blog && blog.author_id.toString() === requestUserId;
 
-            const isStaff = requestUserRole === 'staff' || requestUserRole === 'admin';
+            const isStaffOrAdmin = requestUserRole === 'staff' || requestUserRole === 'admin';
 
-            if (!isCommentAuthor && !isBlogAuthor && !isStaff) {
+            if (!isCommentAuthor && !isBlogAuthor && !isStaffOrAdmin) {
                 return {
                     success: false,
                     message: 'You do not have permission to delete this comment'

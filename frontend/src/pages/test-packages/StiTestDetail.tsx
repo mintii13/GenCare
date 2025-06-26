@@ -112,9 +112,6 @@ const StiTestDetail: React.FC = () => {
           <Descriptions.Item label="Giá">
             {formatPrice(test.price)}
           </Descriptions.Item>
-          <Descriptions.Item label="Thời gian">
-            {test.duration}
-          </Descriptions.Item>
           <Descriptions.Item label="Trạng thái">
             <Tag color={test.isActive ? 'success' : 'error'}>
               {test.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
@@ -136,4 +133,4 @@ const StiTestDetail: React.FC = () => {
   );
 };
 
-export default StiTestDetail; 
+export default StiTestDetail;

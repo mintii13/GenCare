@@ -22,8 +22,12 @@ const StiTestList: React.FC = () => {
       const response = await api.get('/sti/getAllStiTest');
       console.log('API response:', response.data);
       if (response.data.success && Array.isArray(response.data.stitest)) {
-        setTests(response.data.stitest);
-        console.log('Set tests:', response.data.stitest);
+        const mapped = response.data.stitest.map((item: any) => ({
+          ...item,
+          isActive: item.is_active
+        }));
+        setTests(mapped);
+        console.log('Set tests:', mapped);
       } else {
         setTests([]);
         console.log('Set tests: []');
@@ -82,43 +86,67 @@ const StiTestList: React.FC = () => {
           {Array.isArray(tests) && tests
             .filter(test => test.isActive)
             .map((test) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={test._id}>
+              <Col 
+                xs={24} 
+                sm={24} 
+                md={12} 
+                lg={8} 
+                xl={6}
+                key={test._id}
+                style={{ display: 'flex' }}
+              >
                 <Card
                   hoverable
-                  title={test.sti_test_name}
+                  title={
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-word',
+                      lineHeight: '1.4',
+                      minHeight: '48px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      {test.sti_test_name}
+                    </div>
+                  }
                   extra={
                     <Tag color={test.isActive ? 'success' : 'error'}>
                       {test.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
                     </Tag>
                   }
+                  style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                  bodyStyle={{ flex: 1 }}
                 >
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Text type="secondary">Mã: {test.sti_test_code}</Text>
-                    <Text>{test.description}</Text>
+                    <Text style={{ display: 'block', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      {test.description}
+                    </Text>
                     <Text strong>Giá: {formatPrice(test.price)}</Text>
-                    <Text>Thời gian: {test.duration}</Text>
-                    <Space>
+                    <Space wrap>
                       <Tag color={getCategoryColor(test.category)}>
                         {test.category}
                       </Tag>
                       <Tag>{test.sti_test_type}</Tag>
                     </Space>
                     {(user?.role === 'staff' || user?.role === 'admin') && (
-                      <>
+                      <Space>
                         <Button 
                           type="link"
+                          size="small"
                           onClick={() => navigate(`/test-packages/edit/${test._id}`)}
                         >
                           Sửa
                         </Button>
                         <Button 
                           type="link"
+                          size="small"
                           danger
                           onClick={() => handleDelete(test._id)}
                         >
                           Xóa
                         </Button>
-                      </>
+                      </Space>
                     )}
                   </Space>
                 </Card>
@@ -130,4 +158,4 @@ const StiTestList: React.FC = () => {
   );
 };
 
-export default StiTestList; 
+export default StiTestList;

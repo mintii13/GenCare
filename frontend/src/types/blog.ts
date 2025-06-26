@@ -38,13 +38,13 @@ export interface Blog {
 export interface Comment {
   comment_id: string;
   blog_id: string;
-  user_id: string ;
+  user_id: string;
   content: string;
   comment_date: string;
   parent_comment_id: string | null;
   status: boolean;
   is_anonymous: boolean;
-  customer: Customer | null;
+  user: Customer | null;
 }
 
 export interface BlogsResponse {
@@ -70,4 +70,4 @@ export interface BlogFilters {
   specialization?: string;
   sortBy?: 'publish_date' | 'updated_date' | 'title';
   sortOrder?: 'asc' | 'desc';
-} 
+}

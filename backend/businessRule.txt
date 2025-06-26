@@ -1,0 +1,67 @@
+AUTH SERVICE
+Email Uniqueness: Mỗi email chỉ 1 account
+Password Strength: Tối thiểu 6 ký tự
+Email Verification: xác nhận OTP qua gmail
+JWT TokenExpire: sau 1 ngày
+Password Security: Mật khẩu phải được mã hóa
+Soft Delete Display: Người dùng bị xóa mềm sẽ không được đăng nhập bằng tài khoản đó nữa.
+Password Changing Criteria: 
+- Mật khẩu cũ mới phải khác nhau
+- Khi đổi mật khẩu, cần nhập lại mật khẩu cũ để xác thực
+
+
+BLOG SERVICE
+Author Permission: Chỉ consultant tạo blog
+Edit Permission: Chỉ author edit blog của mình
+Delete Permission: Author hoặc Staff/Admin (soft delete)
+Comment Ownership: Chỉ edit comment của mình
+Hierachy Comment Limited: Chỉ cho phép comment sâu 3 level
+Anonymous Comments: Hỗ trợ comment ẩn danh
+
+
+WEEKLY SCHEDULE SERVICE
+Week Uniqueness: 1 consultant chỉ 1 schedule/tuần
+Monday Start: Week phải bắt đầu từ thứ 2
+Working Hours Logic: Start < End time
+Break Time Logic: Break trong working hours
+Staff Admin Access: Xem/edit tất cả schedules
+Appointment Conflict: Không xóa schedule có appointments
+
+
+APPOINTMENT SERVICE
+Consultant Ownership: Chỉ xem schedule của mình
+Conflict Prevention: Không cho phép đặt trùng giờ
+Break Time Validation: Không đặt trong giờ nghỉ
+One Pending Rule: Customer chỉ được có 1 pending appointment tại 1 thời điểm
+Lead Time: Phải đặt trước ít nhất 2 giờ
+Cancellation: Phải hủy lịch trước ít nhất 4 giờ
+Reminder System: Gửi reminder tự động
+Rating System: Chỉ cho đánh giá sau khi completed
+Time Zone: Xử lý múi giờ cho online consultation
+30p trước khi lịch hẹn bắt đầu, thì hệ thống sẽ tự động nhận lịch
+Consultant chỉ có thể hoàn thành buổi tư vấn sau 15p kh bắt đầu 
+Customer chỉ có thể feedback khi appointment đã completed
+Feedback không được vượt quá 1000 kí tự và rating 1-5 sao
+Feedback chỉ có thể thay đổi trong vòng 24 sau khi feedback lần đầu
+
+PROFILE SERVICE
+Avatar Upload Filter: Dung lượng của ảnh chân dung phải ≤ 5MB và chỉ được upload file dạng ảnh
+Compulsory User Information with Constraints:
+- Ngày sinh không được vượt quá ngày hiện tại
+- Cách thông tin cơ bản phải có: Họ tên, ngày sinh, số điện thoại, giới tính, email
+Unique Profile Accessibility and Update: Chỉ người dùng được phép xem và cập nhật một vài thuộc tính (Họ tên, Số điện thoại, Ngày sinh, Giới tính và ảnh) trong trang cá nhân
+Administrator Control: Admin có thể xem trang cá nhân của mọi người dùng và xóa tài khoản người dùng trong một số trường hợp
+Soft Delete Display: User bị xóa mềm sẽ không được hiển thị thông tin
+Constant Fields of Profile: Email không được thay đổi
+
+STI SERVICE
+Patient Identification and Data Confidentiality Rule: Mỗi xét nghiệm phải gắn liền với một bệnh nhân có danh tính rõ ràng và được bảo mật thông tin theo quy định. (Nghị định 117/2020/NĐ-CP tại Việt Nam).
+Authorized Test Initiation Rule: Mỗi xét nghiệm chỉ được thực hiện nếu có đơn yêu cầu hợp lệ từ bác sĩ hoặc từ quy trình tự đăng ký đã xác minh. (Thông tư 49/2018/TT/BYT tại Việt Nam).
+Sample Collection with User Identification: Trước khi lấy mẫu, cần xác minh danh tính bệnh nhân và loại mẫu cần lấy.
+Banned Update Result: Không được thay đổi thông tin mẫu hoặc kết quả sau khi đã xác nhận.
+Final Verification from Consultant: Kết quả xét nghiệm phải được ký xác nhận bởi người có chứng chỉ hành nghề phù hợp.
+Pre-Test Consent for STI Examinations: Đối với xét nghiệm STI, bệnh nhân phải ký cam kết hoặc đồng ý trước khi thực hiện.
+Children in STI Test: Trẻ vị thành niên cần được sự chấp nhận từ người giám hộ.
+Processing in Order: Pending -> (Accepted, Canceled), Accepted -> (Processing, Canceled), Processing -> SpecimenCollected -> Testing -> Completed, Canceled và Completed là trạng thái cuối cùng, nên không được thay đổi status sau đó.
+History and Audit Log mechanism for Admin: Cần có cơ chế để ghi lại lịch sử các thao tác để đảm bảo tính pháp lý, và truy vết minh bạch
+Canceled Order Rule: Đơn đã ở trạng thái Canceled thì không được sử dụng lại ở bất kỳ trường hợp nào

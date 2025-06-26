@@ -261,7 +261,7 @@ router.put('/:blogId/comments/:commentId', authenticateToken, validateCreateBlog
     }
 });
 
-// DELETE /api/blogs/:blogId/comments/:commentId - Staff và consultant được xóa mọi comment
+// DELETE /api/blogs/:blogId/comments/:commentId - Xóa comment (tác giả comment, tác giả blog, staff, consultant hoặc admin)
 router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { blogId, commentId } = req.params;
@@ -280,14 +280,6 @@ router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Req
             return res.status(400).json({
                 success: false,
                 message: 'Comment ID không hợp lệ'
-            });
-        }
-
-        // Chỉ cho phép staff và consultant xóa mọi comment
-        if (!['staff', 'consultant'].includes(userRole)) {
-            return res.status(403).json({
-                success: false,
-                message: 'Chỉ staff hoặc consultant được xóa bình luận'
             });
         }
 
@@ -312,8 +304,8 @@ router.delete('/:blogId/comments/:commentId', authenticateToken, async (req: Req
     }
 });
 
-// GET /api/blogs/:blogId - Lấy chi tiết blog theo ID (cần đăng nhập)
-router.get('/:blogId', authenticateToken, async (req: Request, res: Response) => {
+// GET /api/blogs/:blogId - Lấy chi tiết blog theo ID
+router.get('/:blogId', async (req: Request, res: Response) => {
     try {
         const { blogId } = req.params;
 

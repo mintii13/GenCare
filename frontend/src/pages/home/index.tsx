@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Banner from "./components/Banner";
 import About from "./components/About";
 import Services from "./components/Services";
 import Blog from "./components/Blog";
+import BlogCard from '../../components/blog/BlogCard';
 import api from '../../services/api';
 import { blogService } from '../../services/blogService';
 import { StiTest } from '../../types/sti';
 import { Blog as BlogType } from '../../types/blog';
-import BloodDropIcon from '../../assets/icons/BloodDropIcon';
-import UrineDropIcon from '../../assets/icons/UrineDropIcon';
-import SwabIcon from '../../assets/icons/SwabIcon';
-import TestServiceImage from '../../assets/images/test-service-illustration.png';
+
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const [services, setServices] = useState<StiTest[]>([]);
   const [blogs, setBlogs] = useState<BlogType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,13 +36,14 @@ const HomePage = () => {
           setServices([]);
         }
         if (blogResponse.success && Array.isArray(blogResponse.data.blogs)) {
-          setBlogs(blogResponse.data.blogs.filter((blog: BlogType) => blog.status).slice(0, 2));
+          // Load tất cả blog thay vì chỉ 2 bài
+          setBlogs(blogResponse.data.blogs.filter((blog: BlogType) => blog.status));
         } else {
           setBlogs([]);
         }
       } catch (err) {
         setError('Lỗi khi tải dữ liệu');
-        console.error(err);
+  
       } finally {
         setLoading(false);
       }
@@ -60,19 +60,7 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, [services]);
 
-  // Hàm chọn icon SVG theo loại xét nghiệm
-  const getTestIcon = (type: string) => {
-    switch (type) {
-      case 'blood':
-        return <BloodDropIcon />;
-      case 'urine':
-        return <UrineDropIcon />;
-      case 'swab':
-        return <SwabIcon />;
-      default:
-        return <BloodDropIcon />;
-    }
-  };
+
 
   const serviceCards = [
     {
@@ -117,30 +105,10 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary/90 to-primary text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Chăm sóc sức khỏe của bạn với GenCare
-            </h1>
-            <p className="text-lg md:text-xl mb-8">
-              Dịch vụ xét nghiệm y tế chất lượng cao, nhanh chóng và chính xác
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" href="/test-packages">
-                Xem các gói xét nghiệm
-              </Button>
-              <Button variant="outline" size="lg" href="/about">
-                Tìm hiểu thêm
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Banner />
 
       {/* Services Section - 3 dịch vụ cứng */}
-      <section className="py-20 bg-white">
+      <section id="services-section" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center text-blue-700 mb-4">Dịch vụ của chúng tôi</h2>
           <p className="text-lg text-center text-blue-700/80 mb-12 max-w-2xl mx-auto">
@@ -168,30 +136,132 @@ const HomePage = () => {
       </section>
 
       {/* Blog Section */}
-      <section className="py-20">
+      <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Bài viết mới nhất</h2>
-          <div className="overflow-x-auto">
-            <div className="flex space-x-4 pb-4">
-              {blogs.map((blog, index) => (
-                <Card key={index} className="overflow-hidden min-w-[300px]">
-                  <img
-                    src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80"
-                    alt={blog.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <CardHeader>
-                    <CardTitle>{blog.title}</CardTitle>
-                    <CardDescription>{blog.content.substring(0, 100)}...</CardDescription>
-                  </CardHeader>
-                  <CardFooter>
-                    <Button variant="link">Đọc thêm</Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-blue-700 mb-4">Blog Sức Khỏe Sinh Sản</h2>
+            <p className="text-lg text-blue-700/80 mb-8 max-w-2xl mx-auto">
+              Khám phá những kiến thức hữu ích về sức khỏe sinh sản từ các chuyên gia
+            </p>
+            <Link
+              to="/blogs"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Xem tất cả
+            </Link>
           </div>
+          
+          {blogs.length > 0 ? (
+            <div className="relative">
+               <div className="overflow-x-auto scrollbar-hide">
+                 <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                   {blogs.map((blog) => (
+                     <div key={blog.blog_id} className="w-96 flex-shrink-0">
+                       <div className="h-full">
+                         <BlogCard
+                           blog={blog}
+                           onClick={(blogId) => navigate(`/blogs/${blogId}`)}
+                         />
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+              
+              {/* Scroll Indicators */}
+              <div className="flex justify-center mt-4 space-x-2">
+                {Array.from({ length: Math.ceil(blogs.length / 3) }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="w-2 h-2 rounded-full bg-gray-300"
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">
+                <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-medium text-gray-900 mb-2">Chưa có bài viết nào</h3>
+              <p className="text-gray-600">Các bài viết sẽ xuất hiện ở đây khi có nội dung mới.</p>
+            </div>
+          )}
         </div>
+        
+                 {/* Custom Scrollbar Styles */}
+         <style>{`
+           .scrollbar-hide {
+             -ms-overflow-style: none;
+             scrollbar-width: none;
+           }
+           .scrollbar-hide::-webkit-scrollbar {
+             display: none;
+           }
+           
+           /* Smooth scroll for horizontal container */
+           .overflow-x-auto {
+             scroll-behavior: smooth;
+           }
+           
+           /* Blog card consistent height and title display */
+           .scrollbar-hide .w-96 > div > div {
+             height: 420px;
+             display: flex;
+             flex-direction: column;
+           }
+           
+           .scrollbar-hide .w-96 > div > div > div {
+             flex: 1;
+             display: flex;
+             flex-direction: column;
+           }
+           
+           /* Override title line-clamp to show full title */
+           .scrollbar-hide .w-96 h3 {
+             line-height: 1.4;
+             height: auto;
+             overflow: visible;
+             display: block;
+             -webkit-line-clamp: unset;
+             -webkit-box-orient: unset;
+             margin-bottom: 1rem;
+           }
+           
+           /* Content area should take remaining space */
+           .scrollbar-hide .w-96 p {
+             flex: 1;
+             overflow: hidden;
+             display: -webkit-box;
+             -webkit-line-clamp: 4;
+             -webkit-box-orient: vertical;
+           }
+           
+           /* Custom scrollbar for desktop */
+           @media (min-width: 768px) {
+             .scrollbar-hide {
+               scrollbar-width: thin;
+               scrollbar-color: #cbd5e0 #f7fafc;
+             }
+             .scrollbar-hide::-webkit-scrollbar {
+               display: block;
+               height: 8px;
+             }
+             .scrollbar-hide::-webkit-scrollbar-track {
+               background: #f7fafc;
+               border-radius: 4px;
+             }
+             .scrollbar-hide::-webkit-scrollbar-thumb {
+               background: #cbd5e0;
+               border-radius: 4px;
+             }
+             .scrollbar-hide::-webkit-scrollbar-thumb:hover {
+               background: #a0aec0;
+             }
+           }
+         `}</style>
       </section>
 
       {/* CTA Section */}
@@ -212,4 +282,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage; 
+export default HomePage;
