@@ -130,86 +130,35 @@ router.get('/getUserProfile', authenticateToken, async (req, res) => {
     });
   }
 });
-
-//register by my app
-router.post('/register', validateRegister, async (req: Request, res: Response) => {
-    try {
+// POST /startRegister - Gửi toàn bộ info + gửi OTP, lưu info tạm vào Redis
+router.post('/register', async (req: Request, res: Response) => {
+    try{
         const registerRequest: RegisterRequest = req.body;
-        console.log('Request body:', req.body);
         const result = await AuthService.register(registerRequest);
-        if (result.success) {
+        if (result.success){
             res.status(200).json(result);
-            // res.redirect(`/api/auth/otpForm?email=${registerRequest.email}`);
-        } else {
-            res.status(401).json(result);
         }
+        else res.status(400).json(result);
     } catch (error) {
-        console.error('Login controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi hệ thống'
-        });
+        console.error('Start register error:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
     }
 });
 
-router.get('/otpForm', async (req: Request, res: Response) => {
-    try {
-        const email = req.query.email as string;
-        if (!email) {
-            return res.status(400).send("Thiếu email.");
-        }
-        const otp = await AuthService.sendOTP(email);
-        await redisClient.setEx(`otp:${email}`, 300, otp);
-        return res.status(200).send("Send OTP thành công");
-    } catch (error) {
-        console.error('Controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi hệ thống'
-        });
-    }
-});
-
+// POST /verifyOTP - Xác thực OTP và insert vào DB nếu đúng
 router.post('/verifyOTP', async (req: Request, res: Response) => {
-    try {
-        const {email, otp} = req.body;
-        const storedOtp = await redisClient.get(`otp:${email}`);
-        if (!storedOtp)
-            return res.status(400).json({
-                success: false,
-                message: 'OTP expired or not found.' 
-            }
-        );
-        if (otp !== storedOtp)
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid OTP' 
-            })
-
-        await redisClient.del(`otp:${email}`);
-        const user = (await redisClient.get(`user:${email}`));
-        await AuthService.insertByMyApp(user.toString());
-        await redisClient.del(`user:${email}`);
-        const password = (await redisClient.get(`pass:${email}`)).toString();
-        if (!password) 
-            return res.status(400).json({ success: false, message: "Không tìm thấy mật khẩu." });
-        const loginRequest: LoginRequest = {email, password};
-        const result = await AuthService.login(loginRequest);
-        console.log("Login thành công");
-        if (result.success) {
-            res.status(200).json(result);
-        } else {
-            res.status(401).json(result);
-        }
-        
+    try{
+        const { email, otp } = req.body;
+        const result = await AuthService.verifyOTP(email, otp);
+        if (result.success)
+            return res.status(200).json(result);
+        return res.status(400).json(result);
     } catch (error) {
-        console.error('Login controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi hệ thống'
-        });
+        console.error('Verify OTP error:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
     }
 });
+
 
 router.put('/changePassword', authenticateToken, validateChangePassword, async (req: Request, res: Response): Promise<void> => {
     try {

@@ -3,7 +3,7 @@ import { LoginRequest } from '../dto/requests/LoginRequest';
 import { LoginResponse } from '../dto/responses/LoginResponse';
 import { UserRepository } from '../repositories/userRepository';
 import { RegisterRequest } from '../dto/requests/RegisterRequest';
-import { RegisterResponse } from '../dto/responses/RegisterResponse';
+import { RegisterResponse, VerificationResponse } from '../dto/responses/RegisterResponse';
 import { JWTUtils } from '../utils/jwtUtils';
 import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
@@ -201,53 +201,6 @@ export class AuthService {
         return user;
     }
 
-    public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
-        try {
-            const { email, password, full_name, phone, date_of_birth, gender } = registerRequest;
-
-            await redisClient.setEx(`pass:${email}`, 300, password);
-
-            const existedUser = await UserRepository.findByEmail(email);
-
-            const user = {
-                email: email,
-                password: await bcrypt.hash(password, 10),
-                full_name: full_name.trim(),
-                phone: phone?.trim() ?? null,
-                date_of_birth: date_of_birth ?? null,
-                gender: gender ?? null,
-                registration_date: new Date(),
-                updated_date: new Date(),
-                last_login: null,
-                status: true,
-                email_verified: true,
-                role: 'customer',
-                googleId: null,
-                avatar: null // Mặc định null, user có thể upload sau
-            };
-
-            if (existedUser) {
-                return {
-                    success: false,
-                    message: 'Email này đã tồn tại. Hãy đăng nhập',
-                };
-            }
-            await redisClient.setEx(`user:${email}`, 300, JSON.stringify(user));
-            return {
-                success: true,
-                message: 'Đăng ký thành công',
-                user_email: email
-            };
-
-        } catch (error) {
-            console.error('Register error:', error);
-            return {
-                success: false,
-                message: 'Lỗi hệ thống'
-            };
-        }
-    }
-
     public static async sendOTP(emailSendTo: string) {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -280,8 +233,90 @@ export class AuthService {
 
     }
 
-    public static async insertByMyApp(user: string): Promise<void> {
-        await UserRepository.insertUser(JSON.parse(user));
+    // Đăng ký
+    public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
+        try {
+            const {email, full_name, phone, date_of_birth, gender} = registerRequest;
+            if (!email) return { success: false, message: 'Email is invalid' };      
+            const existedUser = await UserRepository.findByEmail(email);
+            if (existedUser) {
+                if (existedUser.status === true)
+                    return { success: false, message: 'Email is existed. Login please' };
+                else return { success: false, message: 'This email is banned'};
+            }
+            await redisClient.setEx(`user:${email}`, 600, JSON.stringify(registerRequest));
+            const otp = await AuthService.sendOTP(email);
+            await redisClient.setEx(`otp:${email}`, 300, otp);
+            return{
+                success: true, 
+                message: 'Send OTP successfully',
+                user_email: email
+            }
+        } catch (error) {
+            console.error('Register error:', error);
+            return { success: false, message: 'Lỗi hệ thống' };
+        }
+    }
+
+    // Kiểm tra OTP
+    public static async verifyOTP(email: string, otp: string): Promise<VerificationResponse> {
+        try {
+            if (!email || !otp) 
+                return { 
+                    success: false, message: 'Email or otp is not found' 
+                };
+            const storedOtp = await redisClient.get(`otp:${email}`);
+            if (!storedOtp || storedOtp !== otp) 
+                return { 
+                    success: false, 
+                    message: 'OTP is invalid or expired' 
+                };
+            const tempUser = await redisClient.get(`user:${email}`);
+            if (!tempUser) {
+                return { 
+                    success: false, 
+                    message: 'Cannot find registered data' 
+                };
+            }
+
+            const { password, full_name, phone, date_of_birth, gender } = JSON.parse(tempUser.toString());
+            const user: Partial<IUser> = {
+                email,
+                password: await bcrypt.hash(password, 10),
+                full_name: full_name.trim(),
+                phone: phone?.trim() || null,
+                date_of_birth: date_of_birth || null,
+                gender: gender || null,
+                registration_date: new Date(),
+                updated_date: new Date(),
+                last_login: null,
+                status: true,
+                email_verified: true,
+                role: 'customer',
+                googleId: null,
+                avatar: null
+            };
+
+            const insertedUser = await UserRepository.insertUser(user);
+            await redisClient.del(`user:${email}`);
+            await redisClient.del(`otp:${email}`);
+            return { 
+                success: true, 
+                message: 'Register successfully',
+                user:{
+                    id: insertedUser._id.toString(),
+                    email: insertedUser.email,
+                    full_name: insertedUser.full_name,
+                    role: insertedUser.role,
+                    status: insertedUser.status
+                }
+            };
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error'
+            };
+        }
     }
 
     /**

@@ -3,11 +3,11 @@ import { User, IUser } from '../models/User';
 import mongoose from 'mongoose'
 
 export class UserRepository {
-    public static async findById(userId: string): Promise<IUser | null> {
+    public static async findById(userId: ObjectId): Promise<IUser | null> {
         try {
             return await User.findById(userId);
         } catch (error) {
-            console.error('Error finding user by email:', error);
+            console.error('Error finding user by id:', error);
             throw error;
         }
     }
