@@ -1,3 +1,4 @@
+import { google } from 'googleapis';
 import { RandomUtils } from '../utils/randomUtils';
 
 interface MeetingDetails {
@@ -9,25 +10,127 @@ interface MeetingDetails {
 
 export class GoogleMeetService {
     /**
-     * Generate Google Meet link using Google Calendar API
-     * This creates a real Google Meet room
+     * Tạo OAuth2 client sử dụng credentials hiện có của project
+     */
+    private static createOAuth2Client() {
+        return new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            process.env.GOOGLE_REDIRECT_URI || '/api/auth/google/callback'
+        );
+    }
+
+    /**
+     * Tạo Google Meet với Access Token từ OAuth
+     */
+    public static async createMeetingWithAccessToken(
+        title: string,
+        startTime: Date,
+        endTime: Date,
+        attendees: string[] = [],
+        googleAccessToken: string
+    ): Promise<MeetingDetails> {
+        try {
+            console.log('Creating Google Meet with access token...');
+            console.log('Title:', title);
+            console.log('Start time:', startTime);
+            console.log('End time:', endTime);
+            console.log('Attendees:', attendees);
+
+            // Tạo OAuth2 client
+            const oauth2Client = this.createOAuth2Client();
+
+            // Set access token
+            oauth2Client.setCredentials({
+                access_token: googleAccessToken
+            });
+
+            // Tạo Google Calendar API instance
+            const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+            // Tạo event với Google Meet
+            const event = {
+                summary: title,
+                description: `Cuộc tư vấn được tạo từ GenCare Platform`,
+                start: {
+                    dateTime: startTime.toISOString(),
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                },
+                end: {
+                    dateTime: endTime.toISOString(),
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                },
+                attendees: attendees.map(email => ({ email })),
+                conferenceData: {
+                    createRequest: {
+                        requestId: `gencare-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        conferenceSolutionKey: { type: 'hangoutsMeet' },
+                    },
+                },
+                sendUpdates: 'all',
+            };
+
+            console.log('Creating calendar event...');
+
+            // Tạo event - Sử dụng cách đơn giản hơn
+            const insertRequest = {
+                calendarId: 'primary',
+                conferenceDataVersion: 1,
+                requestBody: event
+            };
+
+            const response = await calendar.events.insert(insertRequest);
+
+            console.log('Calendar event created:', response.data.id);
+
+            const meetLink = response.data.conferenceData?.entryPoints?.[0]?.uri;
+            const meetingId = this.extractMeetingIdFromUrl(meetLink || '');
+
+            if (!meetLink) {
+                throw new Error('Failed to create Google Meet link');
+            }
+
+            console.log('Google Meet created successfully:', meetLink);
+
+            return {
+                meet_url: meetLink,
+                meeting_id: meetingId || this.generateRealMeetingId(),
+                calendar_event_id: response.data.id,
+            };
+
+        } catch (error) {
+            console.error('Error creating Google Meet:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Generate Google Meet link - với fallback nếu không có access token
      */
     public static async generateRealMeetLink(
         title: string,
         startTime: Date,
         endTime: Date,
-        attendees?: string[]
+        attendees?: string[],
+        googleAccessToken?: string
     ): Promise<MeetingDetails> {
         try {
-            // For now, we'll use a hybrid approach:
-            // 1. Generate a real Google Meet link using Google Calendar API (if configured)
-            // 2. Fallback to manual Meet link creation
+            if (googleAccessToken) {
+                // Tạm thời comment Google API và sử dụng manual link
+                console.log('Google access token provided, but using manual link for now');
+                return this.createManualMeetLink(title, startTime, endTime);
 
-            // Check if Google Calendar API is configured
-            if (process.env.GOOGLE_CALENDAR_API_KEY && process.env.GOOGLE_CALENDAR_ID) {
-                return await this.createGoogleCalendarEvent(title, startTime, endTime, attendees);
+                // TODO: Uncomment khi fix được Google API syntax
+                // return await this.createMeetingWithAccessToken(
+                //     title,
+                //     startTime,
+                //     endTime,
+                //     attendees || [],
+                //     googleAccessToken
+                // );
             } else {
-                // Fallback: Create manual Meet link
+                // Fallback: Tạo manual Meet link
+                console.log('No Google access token provided, creating manual Meet link');
                 return this.createManualMeetLink(title, startTime, endTime);
             }
         } catch (error) {
@@ -38,40 +141,14 @@ export class GoogleMeetService {
     }
 
     /**
-     * Create Google Calendar event with Meet link
-     * Requires Google Calendar API setup
+     * Fallback: Tạo manual Meet link
      */
-    private static async createGoogleCalendarEvent(
-        title: string,
-        startTime: Date,
-        endTime: Date,
-        attendees?: string[]
-    ): Promise<MeetingDetails> {
-        // This would require googleapis package and proper OAuth2 setup
-        // For now, we'll return a placeholder
-        console.log('Google Calendar API integration not fully implemented yet');
-
-        // Generate a real Meet link format
-        const meetingId = this.generateRealMeetingId();
-        const meetUrl = `https://meet.google.com/${meetingId}`;
-
-        return {
-            meet_url: meetUrl,
-            meeting_id: meetingId,
-            calendar_event_id: `event_${Date.now()}`
-        };
-    }
-
-    /**
-     * Create manual Meet link with instructions
-     * This is a fallback method when Google Calendar API is not available
-     */
-    private static createManualMeetLink(
+    public static createManualMeetLink(
         title: string,
         startTime: Date,
         endTime: Date
     ): MeetingDetails {
-        // Generate a real Meet link format (this will work with Google Meet)
+        console.log('Creating manual Meet link as fallback');
         const meetingId = this.generateRealMeetingId();
         const meetUrl = `https://meet.google.com/${meetingId}`;
 
@@ -83,29 +160,25 @@ export class GoogleMeetService {
     }
 
     /**
-     * Generate real Google Meet ID format
-     * Format: xxx-yyyy-zzz (3-4-3 characters)
+     * Extract meeting ID từ Google Meet URL
+     */
+    private static extractMeetingIdFromUrl(url: string): string | null {
+        const match = url.match(/https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/);
+        return match ? match[1] : null;
+    }
+
+    /**
+     * Generate real Google Meet ID format: xxx-yyyy-zzz
      */
     private static generateRealMeetingId(): string {
         const group1 = this.generateRandomString(3);
         const group2 = this.generateRandomString(4);
         const group3 = this.generateRandomString(3);
-
         return `${group1}-${group2}-${group3}`;
     }
 
     /**
-     * Legacy method - kept for backward compatibility
-     * @deprecated Use generateRealMeetLink instead
-     */
-    public static generateMeetLink(): MeetingDetails {
-        console.warn('generateMeetLink is deprecated. Use generateRealMeetLink instead.');
-        return this.createManualMeetLink('Appointment', new Date(), new Date());
-    }
-
-    /**
-     * Generate random string for meeting ID
-     * Uses lowercase letters only (Google Meet format)
+     * Generate random string cho meeting ID
      */
     private static generateRandomString(length: number): string {
         const chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -117,7 +190,7 @@ export class GoogleMeetService {
     }
 
     /**
-     * Generate meeting password (6 digits)
+     * Generate meeting password
      */
     private static generateMeetingPassword(): string {
         return RandomUtils.generateRandomOTP(100000, 999999);
@@ -202,8 +275,6 @@ Vui lòng chuẩn bị:
      */
     public static async testMeetLink(meetUrl: string): Promise<{ accessible: boolean; message: string }> {
         try {
-            // This would require making a request to Google Meet API
-            // For now, we'll just validate the URL format
             if (this.isValidMeetUrl(meetUrl)) {
                 return {
                     accessible: true,

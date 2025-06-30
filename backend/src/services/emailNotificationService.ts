@@ -38,7 +38,6 @@ export class EmailNotificationService {
             }
 
             const transporter = this.getTransporter();
-            const meetingInstructions = GoogleMeetService.generateMeetingInstructions(emailData.meetingInfo);
 
             const mailContent = {
                 from: `"GenCare - Xác nhận lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
@@ -77,7 +76,8 @@ export class EmailNotificationService {
                             <ol style="color: #0c5460;">
                                 <li>Nhấp vào link tham gia ở trên 5-10 phút trước giờ hẹn</li>
                                 <li>Hoặc mở Google Meet và nhập Meeting ID</li>
-                                <li>${emailData.meetingInfo.meeting_password ? 'Nhập mật khẩu khi được yêu cầu' : 'Chờ chuyên gia chấp nhận bạn vào phòng'}</li>
+                                <li>${emailData.meetingInfo.meeting_password ?
+                        'Nhập mật khẩu khi được yêu cầu' : 'Chờ chuyên gia chấp nhận bạn vào phòng'}</li>
                                 <li>Đảm bảo camera và microphone hoạt động tốt</li>
                             </ol>
                         </div>
@@ -136,7 +136,6 @@ export class EmailNotificationService {
             }
 
             const transporter = this.getTransporter();
-            const reminderText = GoogleMeetService.generateReminderText(minutesBefore);
 
             const mailContent = {
                 from: `"GenCare - Nhắc nhở cuộc hẹn" <${process.env.EMAIL_FOR_VERIFY}>`,
@@ -209,43 +208,42 @@ export class EmailNotificationService {
             const transporter = this.getTransporter();
 
             const mailContent = {
-                from: `"GenCare - Hủy lịch hẹn" <${process.env.EMAIL_FOR_VERIFY}>`,
+                from: `"GenCare - Hủy lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
                 to: emailData.customerEmail,
-                subject: `❌ Lịch tư vấn đã được hủy - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
+                subject: `❌ Lịch tư vấn đã bị hủy - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
                 html: `
                 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
                     <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                        <h2 style="color: #dc3545; text-align: center;">❌ LỊCH HẸN ĐÃ ĐƯỢC HỦY</h2>
+                        <h2 style="color: #dc3545; text-align: center;">❌ Lịch tư vấn đã bị hủy</h2>
                         
-                        <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="color: #721c24; margin-top: 0;">📅 THÔNG TIN CUỘC HẸN ĐÃ HỦY</h3>
-                            <p><strong>👩‍⚕️ Chuyên gia:</strong> ${emailData.consultantName}</p>
+                        <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+                            <h3 style="color: #721c24; margin-top: 0;">📅 THÔNG TIN CUỘC HẸN BỊ HỦY</h3>
+                            <p><strong>👩‍⚕️ Chuyên gia tư vấn:</strong> ${emailData.consultantName}</p>
                             <p><strong>📅 Ngày:</strong> ${emailData.appointmentDate}</p>
                             <p><strong>⏰ Thời gian:</strong> ${emailData.startTime} - ${emailData.endTime}</p>
-                            <p><strong>🙋‍♂️ Hủy bởi:</strong> ${cancelledBy}</p>
+                            <p><strong>🔄 Hủy bởi:</strong> ${cancelledBy}</p>
                             ${reason ? `<p><strong>📝 Lý do:</strong> ${reason}</p>` : ''}
                         </div>
 
                         <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="color: #0c5460; margin-top: 0;">💡 BƯỚC TIẾP THEO</h3>
-                            <p style="color: #0c5460;">
-                                Bạn có thể đặt lịch tư vấn mới bất cứ lúc nào thông qua hệ thống của chúng tôi. 
-                                Chúng tôi luôn sẵn sàng hỗ trợ bạn trong việc chăm sóc sức khỏe sinh sản.
-                            </p>
+                            <h3 style="color: #0c5460; margin-top: 0;">💡 BẠN CÓ THỂ LÀM GÌ TIẾP THEO?</h3>
+                            <ul style="color: #0c5460;">
+                                <li>Đặt lịch tư vấn mới với cùng chuyên gia</li>
+                                <li>Chọn chuyên gia khác phù hợp với lịch của bạn</li>
+                                <li>Liên hệ với chúng tôi nếu bạn có thắc mắc</li>
+                            </ul>
                         </div>
 
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="http://localhost:5173/appointments/book" style="background-color: #2a9d8f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">📅 ĐẶT LỊCH MỚI</a>
-                        </div>
-
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                        
                         <p style="text-align: center; color: #666; font-size: 14px;">
                             Mã cuộc hẹn: <strong>${emailData.appointmentId}</strong><br>
-                            Nếu bạn có thắc mắc, vui lòng liên hệ với chúng tôi.
+                            Chúng tôi xin lỗi vì sự bất tiện này và mong được phục vụ bạn trong tương lai.
                         </p>
                         
                         <p style="text-align: center; margin-top: 30px;">
                             <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong><br>
-                            <em>Rất tiếc vì sự bất tiện này</em>
+                            <em>Chăm sóc sức khỏe sinh sản toàn diện</em>
                         </p>
                     </div>
                 </body>`
@@ -255,10 +253,10 @@ export class EmailNotificationService {
 
             return {
                 success: true,
-                message: 'Cancellation email sent successfully'
+                message: 'Appointment cancellation email sent successfully'
             };
         } catch (error) {
-            console.error('Error sending cancellation email:', error);
+            console.error('Error sending appointment cancellation email:', error);
             return {
                 success: false,
                 message: `Failed to send cancellation email: ${error.message}`
