@@ -14,7 +14,7 @@ export class UserRepository {
 
     public static async findByEmail(email: string): Promise<IUser | null> {
         try {
-            return await User.findOne({ email }).lean<IUser>();
+            return await User.findOne({ email });
         } catch (error) {
             console.error('Error finding user by email:', error);
             throw error;
@@ -58,6 +58,15 @@ export class UserRepository {
             console.error('Error insert user:', error);
             throw error;
         }  
+    }
+
+    public static async saveUser(user: IUser){
+        try {
+            return await user.save();
+        } catch (error) {
+            console.error('Error insert user:', error);
+            throw error;
+        }
     }
     
 }

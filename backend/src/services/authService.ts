@@ -176,7 +176,7 @@ export class AuthService {
                 if (!user.avatar && avatar) {
                     user.avatar = avatar; // Cập nhật avatar nếu chưa có
                 }
-                await user.save();
+                await UserRepository.saveUser(user);
             }
             return user;
         }
