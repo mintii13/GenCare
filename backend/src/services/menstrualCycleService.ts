@@ -29,6 +29,7 @@ export class MenstrualCycleService {
         groups.push(current);
 
         const cycles: IMenstrualCycle[] = [];
+        const cycle_lengths: number[] = []
         for (let i = 0; i < groups.length; i++) {
             const period = groups[i];
             const start = period[0];
@@ -47,18 +48,31 @@ export class MenstrualCycleService {
                 const prevStart = groups[i - 1][0];
                 const len = Math.round((start.getTime() - prevStart.getTime()) / 86400000);
                 cycle.cycle_length = len;
+                cycle_lengths.push(len);
             }
-
-            if (cycle.cycle_length) {
-                const len = cycle.cycle_length;
-                const ov = len - 14;
-                cycle.predicted_cycle_end = new Date(start.getTime() + len * 86400000);
-                cycle.predicted_ovulation_date = new Date(start.getTime() + ov * 86400000);
-                cycle.predicted_fertile_start = new Date(start.getTime() + (ov - 5) * 86400000);
-                cycle.predicted_fertile_end = new Date(start.getTime() + ov * 86400000);
-            }
-
             cycles.push(cycle as IMenstrualCycle);
+        }
+        const regularity = this.calculateCyclePeriodRegularity(cycle_lengths);
+
+        for (let i = 0; i < cycles.length; i++) {
+            const cycle = cycles[i];
+            if (!cycle.cycle_length) 
+                continue;
+            const len = cycle.cycle_length;
+            if (len >= 21 && len <= 35 && regularity == 'regular'){
+                const ov = len - 14;
+                const start = cycle.cycle_start_date.getTime();
+                cycle.predicted_cycle_end = new Date(start + len * 86400000);
+                cycle.predicted_ovulation_date = new Date(start + ov * 86400000);
+                cycle.predicted_fertile_start = new Date(start + (ov - 5) * 86400000);
+                cycle.predicted_fertile_end = new Date(start + ov * 86400000);
+            }
+            else{
+                cycle.predicted_cycle_end = null;
+                cycle.predicted_ovulation_date = null;
+                cycle.predicted_fertile_start = null;
+                cycle.predicted_fertile_end = null;
+            }
         }
 
         if (cycles.length === 0) {

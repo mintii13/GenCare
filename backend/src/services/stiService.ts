@@ -11,6 +11,8 @@ import { IStiTestSchedule, StiTestSchedule } from '../models/StiTestSchedule';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
 import { validTransitions } from '../middlewares/stiValidation';
 import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
+import { MailUtils } from '../utils/mailUtils';
+import { UserRepository } from '../repositories/userRepository';
 
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
@@ -63,7 +65,7 @@ export class StiService{
                     message: 'Fail in getting Sti Test'
                 }
             }
-            const activeTests = allOfTest.filter(test => test.is_active === true || test.isActive === true);
+            const activeTests = allOfTest.filter(test => test.is_active === true);
             return{
                 success: true,
                 message: 'Get STI tests successfully',
@@ -432,6 +434,10 @@ export class StiService{
                 schedule.is_locked = true;
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
+            const customer = await UserRepository.findById(customer_id)
+            const stiPackage = await StiPackageRepository.findPackageById(sti_package_id)
+
+            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, stiPackage.sti_package_name, sti_test_items)
             return {
                 success: true,
                 message: 'StiOrder is inserted successfully',
@@ -681,6 +687,42 @@ export class StiService{
 
             if (Array.isArray(updates.sti_test_items)) {
                 order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
+            }
+
+            if (updates.order_date && updates.order_date.toString() !== order.order_date.toString()) {
+                let newSchedule = await StiTestScheduleRepository.findOrderDate(updates.order_date);
+                const oldSchedule = await StiTestScheduleRepository.findById(order.sti_schedule_id);
+
+                if (!newSchedule) {
+                    newSchedule = new StiTestSchedule({
+                        order_date: updates.order_date,
+                        number_current_orders: 1,
+                        is_locked: false,
+                        is_holiday: false
+                    });
+                    await newSchedule.save();
+                } else {
+                    if (newSchedule.is_locked || newSchedule.is_holiday) {
+                        return {
+                            success: false,
+                            message: 'Cannot get schedule on locked date and holiday'
+                        };
+                    }
+
+                    if (!oldSchedule || oldSchedule._id.toString() !== newSchedule._id.toString()) {
+                        newSchedule.number_current_orders += 1;
+                        await newSchedule.save();
+                    }
+                }
+
+                if (oldSchedule && oldSchedule._id.toString() !== newSchedule._id.toString()) {
+                    oldSchedule.number_current_orders = Math.max(0, oldSchedule.number_current_orders - 1);
+                    oldSchedule.is_locked = false;
+                    await oldSchedule.save();
+                }
+
+                order.order_date = updates.order_date;
+                order.sti_schedule_id = newSchedule._id;
             }
 
             const validFields = Object.keys(order.toObject());

@@ -3,25 +3,6 @@ import { IStiTestSchedule } from '../models/StiTestSchedule';
 import mongoose from 'mongoose';
 
 export class StiOrderRepository{
-    public static async findByOrderCode(order_code: string): Promise<IStiOrder | null> {
-        try {
-            return await StiOrder.findOne({ order_code }).lean<IStiOrder>();
-        } catch (error) {
-            console.error('Error finding user by email:', error);
-            throw error;
-        }
-    }
-
-    public static async checkExistOrderCode(order_code: string): Promise<boolean> {
-        try {
-            const exist =  await StiOrder.exists({ order_code });
-            return !!exist;
-        } catch (error) {
-            console.error('Error finding user by email:', error);
-            throw error;
-        }
-    }
-
     public static async insertStiOrder(stiOrder: IStiOrder): Promise<IStiOrder | null>{
         try {
             return await StiOrder.create(stiOrder);
