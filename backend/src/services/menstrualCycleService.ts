@@ -256,7 +256,7 @@ export class MenstrualCycleService {
     private static calculateCyclePeriodRegularity(cycleOrPeriodLengths: number[]): RegularityStatus{
         if (cycleOrPeriodLengths.length < 3) 
             return 'insufficient_data';
-        const std = Math.sqrt(this.calculateStandardDeviation(cycleOrPeriodLengths));
+        const std = this.calculateStandardDeviation(cycleOrPeriodLengths);
 
         // So sánh trực tiếp với chuẩn nghiên cứu
         if (std <= 3.95) 
