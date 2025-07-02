@@ -38,11 +38,17 @@ export const consultantService = {
   /**
    * Lấy danh sách tất cả consultants (public endpoint)
    */
-  async getAllConsultants(): Promise<{ data: { consultants: Consultant[] } }> {
+  async getAllConsultants(page: number = 1, limit: number = 10): Promise<{ data: { consultants: Consultant[] } }> {
     try {
       // Sử dụng API_URL từ config
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const url = `${API_URL}/consultants/public`;
+      
+      // Build URL with query parameters
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      const url = `${API_URL}/consultants/public?${params}`;
       
       const publicResponse = await fetch(url, {
         method: 'GET',

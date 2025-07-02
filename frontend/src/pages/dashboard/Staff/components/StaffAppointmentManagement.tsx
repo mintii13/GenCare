@@ -155,8 +155,8 @@ const StaffAppointmentManagement: React.FC = () => {
   const fetchConsultants = async () => {
     try {
       const response = await consultantService.getAllConsultants();
-      if (response.success) {
-        setConsultants(response.data.consultants || []);
+      if (response.data.consultants) {
+        setConsultants(response.data.consultants as unknown as Consultant[]);
       }
     } catch (error) {
       console.error('Error fetching consultants:', error);
@@ -230,8 +230,6 @@ const StaffAppointmentManagement: React.FC = () => {
     }
   };
 
-
-
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
 
@@ -285,7 +283,7 @@ const StaffAppointmentManagement: React.FC = () => {
       name: 'Khách hàng',
       selector: (row) => row.customer_id?.full_name || 'Không có thông tin',
       sortable: true,
-      minWidth: '180px',
+      style: { minWidth: '180px' },
       cell: (row) => (
         <div className="py-2">
           <div className="font-medium text-gray-900">
@@ -307,7 +305,7 @@ const StaffAppointmentManagement: React.FC = () => {
       name: 'Chuyên gia',
       selector: (row) => row.consultant_id?.user_id?.full_name || 'Chưa phân công',
       sortable: true,
-      minWidth: '180px',
+      style: { minWidth: '180px' },
       cell: (row) => (
         <div className="py-2">
           <div className="font-medium text-gray-900">
@@ -323,7 +321,7 @@ const StaffAppointmentManagement: React.FC = () => {
       name: 'Ngày & Giờ',
       selector: (row) => row.appointment_date,
       sortable: true,
-      minWidth: '200px',
+      style: { minWidth: '200px' },
       cell: (row) => (
         <div className="py-2">
           <div className="font-medium text-gray-900">
@@ -340,7 +338,7 @@ const StaffAppointmentManagement: React.FC = () => {
       name: 'Trạng thái',
       selector: (row) => row.status,
       sortable: true,
-      minWidth: '120px',
+      style: { minWidth: '120px' },
       cell: (row) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[row.status]}`}>
           {statusLabels[row.status]}
@@ -350,7 +348,7 @@ const StaffAppointmentManagement: React.FC = () => {
     {
       name: 'Ghi chú khách hàng',
       selector: (row) => row.customer_notes || '',
-      minWidth: '200px',
+      style: { minWidth: '200px' },
       cell: (row) => (
         <div className="py-2 max-w-xs">
           <div className="text-sm text-gray-600 truncate" title={row.customer_notes}>
@@ -423,8 +421,7 @@ const StaffAppointmentManagement: React.FC = () => {
           )}
         </div>
       ),
-      minWidth: '250px',
-      allowOverflow: true,
+      style: { minWidth: '250px', allowOverflow: 'true' },
     },
   ];
 

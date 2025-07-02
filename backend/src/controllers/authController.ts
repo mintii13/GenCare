@@ -148,7 +148,17 @@ router.post('/register', async (req: Request, res: Response) => {
 // POST /verifyOTP - Xác thực OTP và insert vào DB nếu đúng
 router.post('/verifyOTP', async (req: Request, res: Response) => {
     try{
+        console.log('VerifyOTP endpoint called with body:', req.body);
         const { email, otp } = req.body;
+        
+        if (!email || !otp) {
+            console.log('Missing email or otp in request');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email và OTP là bắt buộc' 
+            });
+        }
+        
         const result = await AuthService.verifyOTP(email, otp);
         if (result.success)
             return res.status(200).json(result);
@@ -156,6 +166,46 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Verify OTP error:', error);
         return res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
+    }
+});
+
+// GET /otpForm - Resend OTP
+router.get('/otpForm', async (req: Request, res: Response) => {
+    try {
+        const { email } = req.query;
+        
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email là bắt buộc' 
+            });
+        }
+        
+        console.log('Resending OTP for email:', email);
+        
+        // Kiểm tra xem email có data tạm trong Redis không
+        const tempUser = await redisClient.get(`user:${email}`);
+        if (!tempUser) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Không tìm thấy thông tin đăng ký. Vui lòng đăng ký lại.' 
+            });
+        }
+        
+        // Gửi OTP mới
+        const otp = await AuthService.sendOTP(email);
+        await redisClient.setEx(`otp:${email}`, 300, otp); // 5 phút
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Đã gửi lại mã OTP' 
+        });
+    } catch (error) {
+        console.error('Resend OTP error:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Lỗi hệ thống' 
+        });
     }
 });
 
