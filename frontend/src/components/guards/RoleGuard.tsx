@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
 import { FaExclamationTriangle, FaHome } from 'react-icons/fa';
+import LoginModal from '../auth/LoginModal';
+import toast from 'react-hot-toast';
 
 interface RoleGuardProps {
   allowedRoles: string[];
@@ -10,15 +11,35 @@ interface RoleGuardProps {
   showError?: boolean;
 }
 
-const RoleGuard: React.FC<RoleGuardProps> = ({ 
-  allowedRoles, 
-  children, 
+const RoleGuard: React.FC<RoleGuardProps> = ({
+  allowedRoles,
+  children,
   redirectTo = '/',
-  showError = false 
+  showError = false
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [toastShown, setToastShown] = useState(false);
 
-  // Đang loading
+  useEffect(() => {
+    if (!isAuthenticated && !toastShown && !isLoading) {
+      setShowLoginModal(true);
+      toast.dismiss();
+      toast.error('Bạn cần đăng nhập để sử dụng chức năng này!');
+      setToastShown(true);
+    }
+  }, [isAuthenticated, toastShown, isLoading]);
+
+  // Reset toastShown khi modal đóng hoặc đăng nhập thành công
+  const handleCloseModal = () => {
+    setShowLoginModal(false);
+    setToastShown(false);
+  };
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    setToastShown(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -27,12 +48,14 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
     );
   }
 
-  // Chưa đăng nhập
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return (
+      <>
+        <LoginModal isOpen={showLoginModal} onClose={handleCloseModal} onSuccess={handleLoginSuccess} />
+      </>
+    );
   }
 
-  // Không có quyền truy cập
   if (!user?.role || !allowedRoles.includes(user.role)) {
     if (showError) {
       return (
@@ -57,8 +80,7 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
         </div>
       );
     }
-    
-    return <Navigate to={redirectTo} />;
+    return null;
   }
 
   return <>{children}</>;
