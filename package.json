@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "framer-motion": "^12.23.0",
     "googleapis": "^150.0.1"
   }
 }
