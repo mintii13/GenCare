@@ -3,6 +3,11 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/home";
 import TestPackagesPage from "./pages/test-packages";
 import STITestPage from "./pages/test-packages/sti";
+
+// STI Booking imports
+const BookSTIPage = lazy(() => import('./pages/sti-booking/BookSTIPage'));
+const OrdersPage = lazy(() => import('./pages/sti-booking/OrdersPage'));
+const MultipleTestBooking = lazy(() => import('./pages/sti-booking/MultipleTestBooking'));
 import Register from './pages/auth/register';
 import AboutUs from './pages/about/AboutUs';
 import Layout from './components/layout/Layout';
@@ -156,7 +161,22 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
                 <MenstrualCyclePage />
               </RoleGuard>
             } />
-            
+              {/* STI Booking routes */}
+              <Route path="/sti-booking/book" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <BookSTIPage />
+              </RoleGuard>
+            } />
+            <Route path="/sti-booking/orders" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <OrdersPage />
+              </RoleGuard>
+            } />
+            <Route path="/sti-booking/multiple" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <MultipleTestBooking />
+              </RoleGuard>
+            } />
             {/* Appointment routes - Bảo vệ bằng RoleGuard */}
             <Route path="/appointment" element={
               <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>

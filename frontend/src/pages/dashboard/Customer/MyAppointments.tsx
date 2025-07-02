@@ -71,7 +71,11 @@ const MyAppointments: React.FC = () => {
       setLoading(true);
       setError('');
       
-      const data = await appointmentService.getMyAppointments(filter);
+      // Convert 'all' filter to undefined for API call
+      const statusFilter = filter === 'all' ? undefined : filter;
+      console.log('Fetching appointments with filter:', statusFilter);
+      
+      const data = await appointmentService.getMyAppointments(statusFilter);
       
       if (data.success) {
         console.log('Appointments data:', data.data.appointments);

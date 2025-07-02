@@ -51,11 +51,17 @@ const ConsultantList: React.FC = () => {
       setError('');
       
       console.log('Fetching consultants with specialization:', filterSpecialization);
-      const response = await consultantService.getAllConsultants(
-        1, 
-        100, // Get more consultants
-        filterSpecialization === 'all' ? undefined : filterSpecialization
-      );
+      let response;
+      
+      if (filterSpecialization === 'all') {
+        // Get all consultants
+        response = await consultantService.getAllConsultants(1, 100);
+      } else {
+        // Use search endpoint with specialization filter
+        response = await consultantService.searchConsultants('', {
+          specialization: filterSpecialization
+        });
+      }
       
       console.log('API Response:', response);
       
@@ -130,7 +136,7 @@ const ConsultantList: React.FC = () => {
           </div>
         </div>
       ),
-      minWidth: '200px',
+      style: { minWidth: '200px' },
       sortable: true,
       selector: row => row.full_name,
     },
@@ -138,14 +144,14 @@ const ConsultantList: React.FC = () => {
       name: 'Chuyên khoa',
       selector: row => row.specialization,
       sortable: true,
-      minWidth: '150px',
+      style: { minWidth: '150px' },
     },
     {
       name: 'Kinh nghiệm',
       selector: row => row.experience_years || 0,
       format: row => `${row.experience_years || 0} năm`,
       sortable: true,
-      minWidth: '100px',
+      style: { minWidth: '100px' },
     },
     {
       name: 'Đánh giá',
@@ -161,14 +167,14 @@ const ConsultantList: React.FC = () => {
       ),
       sortable: true,
       selector: row => row.rating || 0,
-      minWidth: '140px',
+      style: { minWidth: '140px' },
     },
     {
       name: 'Tư vấn',
       selector: row => row.total_consultations || 0,
       format: row => `${row.total_consultations || 0} buổi`,
       sortable: true,
-      minWidth: '100px',
+      style: { minWidth: '100px' },
     },
     {
       name: 'Trạng thái',
@@ -183,7 +189,7 @@ const ConsultantList: React.FC = () => {
       ),
       sortable: true,
       selector: row => row.is_available ? 1 : 0,
-      minWidth: '120px',
+      style: { minWidth: '120px' },
     },
     {
       name: 'Hành động',
@@ -206,7 +212,7 @@ const ConsultantList: React.FC = () => {
         </div>
       ),
       ignoreRowClick: true,
-      minWidth: '150px',
+      style: { minWidth: '150px' },
     },
   ];
 

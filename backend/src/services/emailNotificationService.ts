@@ -11,7 +11,7 @@ interface AppointmentEmailData {
     meetingInfo?: {
         meet_url: string;
         meeting_id: string;
-        meeting_password?: string;
+        meeting_password?: string; // Optional - chỉ dành cho backward compatibility
     };
     appointmentId: string;
     customerNotes?: string;
@@ -29,7 +29,7 @@ export class EmailNotificationService {
     }
 
     /**
-     * Send appointment confirmation email with meeting link
+     * Send appointment confirmation email with REAL Google Meet link
      */
     public static async sendAppointmentConfirmation(emailData: AppointmentEmailData): Promise<{ success: boolean; message: string }> {
         try {
@@ -38,7 +38,6 @@ export class EmailNotificationService {
             }
 
             const transporter = this.getTransporter();
-            const meetingInstructions = GoogleMeetService.generateMeetingInstructions(emailData.meetingInfo);
 
             const mailContent = {
                 from: `"GenCare - Xác nhận lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
@@ -58,54 +57,46 @@ export class EmailNotificationService {
                         </div>
 
                         <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                            <h3 style="color: #856404; margin-top: 0;">🎥 THÔNG TIN CUỘC HỌP ONLINE</h3>
-                            <div style="background-color: white; padding: 15px; border-radius: 5px; font-family: monospace;">
-                                <p style="margin: 5px 0;"><strong>🔗 Link tham gia:</strong></p>
-                                <a href="${emailData.meetingInfo.meet_url}" style="color: #1a73e8; text-decoration: none; font-size: 16px; background-color: #f8f9fa; padding: 8px; border-radius: 4px; display: inline-block;">${emailData.meetingInfo.meet_url}</a>
-                                
-                                <p style="margin: 15px 0 5px 0;"><strong>🆔 Meeting ID:</strong> <span style="background-color: #f8f9fa; padding: 4px 8px; border-radius: 3px;">${emailData.meetingInfo.meeting_id}</span></p>
-                                
-                                ${emailData.meetingInfo.meeting_password ?
-                        `<p style="margin: 5px 0;"><strong>🔐 Mật khẩu:</strong> <span style="background-color: #f8f9fa; padding: 4px 8px; border-radius: 3px;">${emailData.meetingInfo.meeting_password}</span></p>`
-                        : ''
-                    }
-                            </div>
+                            <h3 style="color: #856404; margin-top: 0;">📹 THÔNG TIN GOOGLE MEET</h3>
+                            <p style="margin: 10px 0;">
+                                <strong>🔗 Link tham gia:</strong><br>
+                                <a href="${emailData.meetingInfo.meet_url}" style="color: #007bff; text-decoration: none; word-break: break-all;">
+                                    ${emailData.meetingInfo.meet_url}
+                                </a>
+                            </p>
+                            <p style="margin: 10px 0;">
+                                <strong>🆔 Meeting ID:</strong> <code style="background-color: #f8f9fa; padding: 2px 4px; border-radius: 3px;">${emailData.meetingInfo.meeting_id}</code>
+                            </p>
                         </div>
 
-                        <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="color: #0c5460; margin-top: 0;">📱 HƯỚNG DẪN THAM GIA</h3>
-                            <ol style="color: #0c5460;">
-                                <li>Nhấp vào link tham gia ở trên 5-10 phút trước giờ hẹn</li>
-                                <li>Hoặc mở Google Meet và nhập Meeting ID</li>
-                                <li>${emailData.meetingInfo.meeting_password ? 'Nhập mật khẩu khi được yêu cầu' : 'Chờ chuyên gia chấp nhận bạn vào phòng'}</li>
-                                <li>Đảm bảo camera và microphone hoạt động tốt</li>
-                            </ol>
-                        </div>
+                        ${GoogleMeetService.generateMeetingInstructions(emailData.meetingInfo)}
 
-                        <div style="background-color: #f8d7da; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <h4 style="color: #721c24; margin-top: 0;">⚠️ LƯU Ý QUAN TRỌNG</h4>
-                            <ul style="color: #721c24; margin: 0;">
-                                <li>Vui lòng tham gia đúng giờ để tối ưu thời gian tư vấn</li>
-                                <li>Chuẩn bị sẵn các câu hỏi bạn muốn tư vấn</li>
-                                <li>Tìm nơi yên tĩnh, tránh tiếng ồn</li>
-                                <li>Nếu cần hủy/thay đổi lịch, vui lòng thông báo trước ít nhất 4 tiếng</li>
+                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <h4 style="color: #495057; margin-top: 0;">✅ CHECKLIST TRƯỚC KHI THAM GIA</h4>
+                            <ul style="color: #495057;">
+                                <li>✅ Kiểm tra kết nối internet</li>
+                                <li>✅ Test camera và microphone</li>
+                                <li>✅ Tìm nơi yên tĩnh</li>
+                                <li>✅ Chuẩn bị các câu hỏi cần tư vấn</li>
+                                <li>✅ Đóng các ứng dụng không cần thiết</li>
+                                <li>✅ Đảm bảo đã đăng nhập tài khoản Google</li>
                             </ul>
                         </div>
 
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="${emailData.meetingInfo.meet_url}" style="background-color: #2a9d8f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">🎥 THAM GIA CUỘC HỌP</a>
+                        <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #bee5eb;">
+                            <h4 style="color: #0c5460; margin-top: 0;">💡 QUAN TRỌNG</h4>
+                            <p style="color: #0c5460; margin: 0;">
+                                Đây là cuộc họp Google Meet thực tế được tạo tự động. 
+                                Bạn sẽ được thêm vào lịch Google Calendar và có thể tham gia trực tiếp từ link trên.
+                            </p>
                         </div>
 
-                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                        
-                        <p style="text-align: center; color: #666; font-size: 14px;">
-                            Mã cuộc hẹn: <strong>${emailData.appointmentId}</strong><br>
-                            Nếu bạn có thắc mắc, vui lòng liên hệ với chúng tôi qua email này.
+                        <p style="text-align: center; color: #666; font-style: italic;">
+                            Nếu bạn gặp khó khăn khi tham gia, vui lòng liên hệ ngay với chúng tôi.
                         </p>
                         
                         <p style="text-align: center; margin-top: 30px;">
-                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong><br>
-                            <em>Chăm sóc sức khỏe sinh sản toàn diện</em>
+                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong>
                         </p>
                     </div>
                 </body>`
@@ -115,7 +106,7 @@ export class EmailNotificationService {
 
             return {
                 success: true,
-                message: 'Appointment confirmation email sent successfully'
+                message: 'Appointment confirmation email with real Google Meet sent successfully'
             };
         } catch (error) {
             console.error('Error sending appointment confirmation email:', error);
@@ -127,58 +118,46 @@ export class EmailNotificationService {
     }
 
     /**
-     * Send meeting reminder email
+     * Send meeting reminder email - Updated for real Google Meet
      */
-    public static async sendMeetingReminder(emailData: AppointmentEmailData, minutesBefore: number = 15): Promise<{ success: boolean; message: string }> {
+    public static async sendMeetingReminder(emailData: AppointmentEmailData, minutesBefore: number): Promise<{ success: boolean; message: string }> {
         try {
             if (!emailData.meetingInfo) {
                 throw new Error('Meeting information is required for reminder');
             }
 
             const transporter = this.getTransporter();
-            const reminderText = GoogleMeetService.generateReminderText(minutesBefore);
 
             const mailContent = {
-                from: `"GenCare - Nhắc nhở cuộc hẹn" <${process.env.EMAIL_FOR_VERIFY}>`,
+                from: `"GenCare - Nhắc lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
                 to: emailData.customerEmail,
-                subject: `⏰ Nhắc nhở: Cuộc tư vấn bắt đầu trong ${minutesBefore} phút - ${emailData.appointmentDate}`,
+                subject: `⏰ Nhắc nhở: Cuộc tư vấn sắp bắt đầu trong ${minutesBefore} phút`,
                 html: `
                 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
                     <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                        <h2 style="color: #ff6b35; text-align: center;">⏰ NHẮC NHỞ CUỘC HẸN</h2>
+                        <h2 style="color: #ff6b35; text-align: center;">⏰ Nhắc nhở cuộc tư vấn</h2>
                         
-                        <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; border: 2px solid #ffc107;">
-                            <h3 style="color: #856404; margin-top: 0;">Cuộc tư vấn của bạn sẽ bắt đầu trong <strong>${minutesBefore} phút</strong>!</h3>
-                            <p style="color: #856404; font-size: 18px;"><strong>${emailData.appointmentDate} lúc ${emailData.startTime}</strong></p>
-                            <p style="color: #856404;">với chuyên gia <strong>${emailData.consultantName}</strong></p>
+                        <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                            <h3 style="color: #856404; margin-top: 0;">Cuộc tư vấn sẽ bắt đầu trong ${minutesBefore} phút!</h3>
+                            <p><strong>Chuyên gia:</strong> ${emailData.consultantName}</p>
+                            <p><strong>Thời gian:</strong> ${emailData.startTime} - ${emailData.endTime}</p>
                         </div>
 
-                        <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="color: #155724; margin-top: 0;">🎥 THAM GIA NGAY</h3>
-                            <div style="text-align: center; margin: 15px 0;">
-                                <a href="${emailData.meetingInfo.meet_url}" style="background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold;">🚀 THAM GIA CUỘC HỌP</a>
-                            </div>
-                            <p style="text-align: center; color: #155724;">
-                                <strong>Meeting ID:</strong> ${emailData.meetingInfo.meeting_id}<br>
-                                ${emailData.meetingInfo.meeting_password ? `<strong>Mật khẩu:</strong> ${emailData.meetingInfo.meeting_password}` : ''}
+                        <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                            <h3 style="color: #155724; margin-top: 0;">📹 THAM GIA NGAY</h3>
+                            <p style="margin: 15px 0;">
+                                <a href="${emailData.meetingInfo.meet_url}" 
+                                   style="background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                                    🚀 THAM GIA GOOGLE MEET
+                                </a>
+                            </p>
+                            <p style="margin: 10px 0; font-size: 14px;">
+                                <strong>Meeting ID:</strong> <code style="background-color: #f8f9fa; padding: 2px 4px; border-radius: 3px;">${emailData.meetingInfo.meeting_id}</code>
                             </p>
                         </div>
 
-                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <h4 style="color: #495057; margin-top: 0;">✅ CHECKLIST TRƯỚC KHI THAM GIA</h4>
-                            <ul style="color: #495057;">
-                                <li>✅ Kiểm tra kết nối internet</li>
-                                <li>✅ Test camera và microphone</li>
-                                <li>✅ Tìm nơi yên tĩnh</li>
-                                <li>✅ Chuẩn bị các câu hỏi cần tư vấn</li>
-                                <li>✅ Đóng các ứng dụng không cần thiết</li>
-                            </ul>
-                        </div>
+                        ${GoogleMeetService.generateReminderText(minutesBefore)}
 
-                        <p style="text-align: center; color: #666; font-style: italic;">
-                            Nếu bạn gặp khó khăn khi tham gia, vui lòng liên hệ ngay với chúng tôi.
-                        </p>
-                        
                         <p style="text-align: center; margin-top: 30px;">
                             <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong>
                         </p>
@@ -209,43 +188,31 @@ export class EmailNotificationService {
             const transporter = this.getTransporter();
 
             const mailContent = {
-                from: `"GenCare - Hủy lịch hẹn" <${process.env.EMAIL_FOR_VERIFY}>`,
+                from: `"GenCare - Hủy lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
                 to: emailData.customerEmail,
                 subject: `❌ Lịch tư vấn đã được hủy - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
                 html: `
                 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
                     <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                        <h2 style="color: #dc3545; text-align: center;">❌ LỊCH HẸN ĐÃ ĐƯỢC HỦY</h2>
+                        <h2 style="color: #dc3545; text-align: center;">❌ Lịch tư vấn đã được hủy</h2>
                         
                         <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
                             <h3 style="color: #721c24; margin-top: 0;">📅 THÔNG TIN CUỘC HẸN ĐÃ HỦY</h3>
-                            <p><strong>👩‍⚕️ Chuyên gia:</strong> ${emailData.consultantName}</p>
+                            <p><strong>👩‍⚕️ Chuyên gia tư vấn:</strong> ${emailData.consultantName}</p>
                             <p><strong>📅 Ngày:</strong> ${emailData.appointmentDate}</p>
                             <p><strong>⏰ Thời gian:</strong> ${emailData.startTime} - ${emailData.endTime}</p>
-                            <p><strong>🙋‍♂️ Hủy bởi:</strong> ${cancelledBy}</p>
+                            <p><strong>🙋‍♂️ Người hủy:</strong> ${cancelledBy}</p>
                             ${reason ? `<p><strong>📝 Lý do:</strong> ${reason}</p>` : ''}
                         </div>
 
-                        <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="color: #0c5460; margin-top: 0;">💡 BƯỚC TIẾP THEO</h3>
-                            <p style="color: #0c5460;">
-                                Bạn có thể đặt lịch tư vấn mới bất cứ lúc nào thông qua hệ thống của chúng tôi. 
-                                Chúng tôi luôn sẵn sàng hỗ trợ bạn trong việc chăm sóc sức khỏe sinh sản.
+                        <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="color: #0c5460; margin: 0; text-align: center;">
+                                Chúng tôi xin lỗi vì sự bất tiện này. Bạn có thể đặt lịch tư vấn mới bất cứ lúc nào.
                             </p>
                         </div>
 
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="http://localhost:5173/appointments/book" style="background-color: #2a9d8f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">📅 ĐẶT LỊCH MỚI</a>
-                        </div>
-
-                        <p style="text-align: center; color: #666; font-size: 14px;">
-                            Mã cuộc hẹn: <strong>${emailData.appointmentId}</strong><br>
-                            Nếu bạn có thắc mắc, vui lòng liên hệ với chúng tôi.
-                        </p>
-                        
                         <p style="text-align: center; margin-top: 30px;">
-                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong><br>
-                            <em>Rất tiếc vì sự bất tiện này</em>
+                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong>
                         </p>
                     </div>
                 </body>`
@@ -255,14 +222,15 @@ export class EmailNotificationService {
 
             return {
                 success: true,
-                message: 'Cancellation email sent successfully'
+                message: 'Appointment cancellation email sent successfully'
             };
         } catch (error) {
-            console.error('Error sending cancellation email:', error);
+            console.error('Error sending appointment cancellation email:', error);
             return {
                 success: false,
                 message: `Failed to send cancellation email: ${error.message}`
             };
         }
     }
+
 }

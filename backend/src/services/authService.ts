@@ -34,6 +34,20 @@ export class AuthService {
                 };
             }
 
+            if (!user.email_verified) {
+                return {
+                    success: false,
+                    message: 'Tài khoản chưa được xác thực email. Vui lòng xác thực OTP trước khi đăng nhập.'
+                };
+            }
+
+            if (!user.password) {
+                return {
+                    success: false,
+                    message: 'Tài khoản này được tạo bằng Google. Vui lòng đăng nhập bằng Google.'
+                };
+            }
+
             const isValidPassword = await bcrypt.compare(password, user.password);
             if (!isValidPassword) {
                 return {
@@ -85,13 +99,13 @@ export class AuthService {
             // Update last login
             await UserRepository.updateLastLogin(user._id);
             console.log(user);
-            
+
             // Generate JWT access token
             const accessToken = JWTUtils.generateAccessToken({
                 userId: user._id.toString(),
                 role: user.role
             });
-            
+
             return {
                 success: true,
                 message: 'Đăng nhập thành công',
@@ -124,27 +138,82 @@ export class AuthService {
     }
 
 
-    public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
-        const email = profile.emails[0]?.value ?? null;
-        const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
-        const registration_date = new Date();
-        const updated_date = new Date();
-        const status = true;
-        const email_verified = true;
-        const role = 'customer';
-        const googleId = profile.id;
-        const avatar = profile.photos?.[0]?.value || null; // Lấy avatar từ Google
+    public static async insertGoogle(profile: any): Promise<IUser> {
+        try {
+            console.log('Processing Google profile:', profile.emails[0]?.value);
 
-        let user = await UserRepository.findByEmail(email);
-        if (user) {
-            if (!user.googleId) {
-                user.googleId = googleId;
+            const email = profile.emails[0]?.value ?? null;
+            const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
+            const googleId = profile.id;
+            const avatar = profile.photos?.[0]?.value || null;
+
+            // Tìm user bằng email - SỬA: Không dùng lean() để có full mongoose document
+            let user = await User.findOne({ email });
+
+            if (user) {
+                console.log('Existing user found:', user.email);
+                // User đã tồn tại - cập nhật googleId và avatar nếu chưa có
+                let needUpdate = false;
+                const updateData: any = {
+                    updated_date: new Date(),
+                    last_login: new Date()
+                };
+
+                if (!user.googleId) {
+                    updateData.googleId = googleId;
+                    needUpdate = true;
+                }
+
                 if (!user.avatar && avatar) {
-                    user.avatar = avatar; // Cập nhật avatar nếu chưa có
+                    updateData.avatar = avatar;
+                    needUpdate = true;
+                }
+
+                if (needUpdate) {
+                    await User.findByIdAndUpdate(user._id, updateData);
+                    // Refresh user object
+                    user = await User.findById(user._id);
+                } else {
+                    // Chỉ cập nhật last_login
+                    await User.findByIdAndUpdate(user._id, { last_login: new Date() });
                 }
                 await UserRepository.saveUser(user);
             }
-            return user;
+
+            // User chưa tồn tại - tạo mới
+            console.log('Creating new user for:', email);
+            const password = RandomUtils.generateRandomPassword();
+
+            // Gửi password qua email (non-blocking)
+            this.sendPassword(email, password).catch(error => {
+                console.error('Error sending password email:', error);
+            });
+
+            const newUserData = {
+                email,
+                password: await bcrypt.hash(password, 10),
+                full_name,
+                registration_date: new Date(),
+                updated_date: new Date(),
+                status: true,
+                email_verified: true,
+                role: 'customer' as const,
+                googleId,
+                phone: null,
+                date_of_birth: null,
+                last_login: new Date(),
+                avatar: avatar
+            };
+
+            const newUser = new User(newUserData);
+            const savedUser = await newUser.save();
+
+            console.log('New user created successfully:', savedUser.email);
+            return savedUser;
+
+        } catch (error) {
+            console.error('insertGoogle error:', error);
+            throw error;
         }
         const password = RandomUtils.generateRandomString(8, true);
         await MailUtils.sendPasswordForGoogle(email, password);
@@ -170,19 +239,19 @@ export class AuthService {
     // Đăng ký
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
-            const {email, full_name, phone, date_of_birth, gender} = registerRequest;
-            if (!email) return { success: false, message: 'Email is invalid' };      
+            const { email, full_name, phone, date_of_birth, gender } = registerRequest;
+            if (!email) return { success: false, message: 'Email is invalid' };
             const existedUser = await UserRepository.findByEmail(email);
             if (existedUser) {
                 if (existedUser.status === true)
                     return { success: false, message: 'Email is existed. Login please' };
-                else return { success: false, message: 'This email is banned'};
+                else return { success: false, message: 'This email is banned' };
             }
             await redisClient.setEx(`user:${email}`, 600, JSON.stringify(registerRequest));
             const otp = await MailUtils.sendOtpForRegister(email);
             await redisClient.setEx(`otp:${email}`, 300, otp);
-            return{
-                success: true, 
+            return {
+                success: true,
                 message: 'Send OTP successfully',
                 user_email: email
             }
@@ -198,21 +267,21 @@ export class AuthService {
     // Kiểm tra OTP
     public static async verifyOTP(email: string, otp: string): Promise<VerificationResponse> {
         try {
-            if (!email || !otp) 
-                return { 
-                    success: false, message: 'Email or otp is not found' 
+            if (!email || !otp)
+                return {
+                    success: false, message: 'Email or otp is not found'
                 };
             const storedOtp = await redisClient.get(`otp:${email}`);
-            if (!storedOtp || storedOtp !== otp) 
-                return { 
-                    success: false, 
-                    message: 'OTP is invalid or expired' 
+            if (!storedOtp || storedOtp !== otp)
+                return {
+                    success: false,
+                    message: 'OTP is invalid or expired'
                 };
             const tempUser = await redisClient.get(`user:${email}`);
             if (!tempUser) {
-                return { 
-                    success: false, 
-                    message: 'Cannot find registered data' 
+                return {
+                    success: false,
+                    message: 'Cannot find registered data'
                 };
             }
 
@@ -226,7 +295,7 @@ export class AuthService {
                 gender: gender || null,
                 registration_date: new Date(),
                 updated_date: new Date(),
-                last_login: null,
+                last_login: new Date(), // Set last_login ngay lập tức
                 status: true,
                 email_verified: true,
                 role: 'customer',
@@ -237,19 +306,39 @@ export class AuthService {
             const insertedUser = await UserRepository.insertUser(user);
             await redisClient.del(`user:${email}`);
             await redisClient.del(`otp:${email}`);
+
+            
+            // Tạo access token luôn để tự động đăng nhập
+            const accessToken = JWTUtils.generateAccessToken({
+                userId: insertedUser._id.toString(),
+                role: insertedUser.role
+            });
+
             return { 
-                success: true, 
+                success: true,
                 message: 'Register successfully',
-                user:{
+                user: {
                     id: insertedUser._id.toString(),
                     email: insertedUser.email,
                     full_name: insertedUser.full_name,
                     role: insertedUser.role,
-                    status: insertedUser.status
-                }
+                    status: insertedUser.status,
+                    avatar: insertedUser.avatar,
+                    phone: insertedUser.phone,
+                    date_of_birth: insertedUser.date_of_birth,
+                    gender: insertedUser.gender,
+                    registration_date: insertedUser.registration_date,
+                    updated_date: insertedUser.updated_date,
+                    last_login: insertedUser.last_login,
+                    email_verified: insertedUser.email_verified,
+                    googleId: insertedUser.googleId
+                },
+                accessToken: accessToken // Thêm access token
             };
         } catch (error) {
-            return{
+
+            return {
+
                 success: false,
                 message: 'Server error'
             };
@@ -314,7 +403,7 @@ export class AuthService {
             }
 
             const user = await UserRepository.findById(userId);
-            
+
             if (!user) {
                 return {
                     success: false,
@@ -345,8 +434,8 @@ export class AuthService {
         } catch (error) {
             console.error('changePasswordForUsers error:', error);
             return {
-                    success: false,
-                    message: 'System error',
+                success: false,
+                message: 'System error',
             };
         }
     }
