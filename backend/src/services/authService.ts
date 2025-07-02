@@ -33,6 +33,20 @@ export class AuthService {
                 };
             }
 
+            if (!user.email_verified) {
+                return {
+                    success: false,
+                    message: 'Tài khoản chưa được xác thực email. Vui lòng xác thực OTP trước khi đăng nhập.'
+                };
+            }
+
+            if (!user.password) {
+                return {
+                    success: false,
+                    message: 'Tài khoản này được tạo bằng Google. Vui lòng đăng nhập bằng Google.'
+                };
+            }
+
             const isValidPassword = await bcrypt.compare(password, user.password);
             if (!isValidPassword) {
                 return {
@@ -326,7 +340,7 @@ export class AuthService {
                 gender: gender || null,
                 registration_date: new Date(),
                 updated_date: new Date(),
-                last_login: null,
+                last_login: new Date(), // Set last_login ngay lập tức
                 status: true,
                 email_verified: true,
                 role: 'customer',
@@ -337,7 +351,15 @@ export class AuthService {
             const insertedUser = await UserRepository.insertUser(user);
             await redisClient.del(`user:${email}`);
             await redisClient.del(`otp:${email}`);
-            return {
+
+            
+            // Tạo access token luôn để tự động đăng nhập
+            const accessToken = JWTUtils.generateAccessToken({
+                userId: insertedUser._id.toString(),
+                role: insertedUser.role
+            });
+
+            return { 
                 success: true,
                 message: 'Register successfully',
                 user: {
@@ -345,11 +367,23 @@ export class AuthService {
                     email: insertedUser.email,
                     full_name: insertedUser.full_name,
                     role: insertedUser.role,
-                    status: insertedUser.status
-                }
+                    status: insertedUser.status,
+                    avatar: insertedUser.avatar,
+                    phone: insertedUser.phone,
+                    date_of_birth: insertedUser.date_of_birth,
+                    gender: insertedUser.gender,
+                    registration_date: insertedUser.registration_date,
+                    updated_date: insertedUser.updated_date,
+                    last_login: insertedUser.last_login,
+                    email_verified: insertedUser.email_verified,
+                    googleId: insertedUser.googleId
+                },
+                accessToken: accessToken // Thêm access token
             };
         } catch (error) {
+
             return {
+
                 success: false,
                 message: 'Server error'
             };

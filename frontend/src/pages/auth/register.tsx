@@ -200,22 +200,29 @@ const Register = () => {
         otp
       });
       if (res.data.success) {
-        // Tự động đăng nhập
-        const loginRes = await axios.post('http://localhost:3000/api/auth/login', {
-          email: registerEmail,
-          password: registerPassword
-        });
-        if (loginRes.data.success) {
-          login(loginRes.data.accessToken, loginRes.data.user);
+        // Tự động đăng nhập với accessToken từ verifyOTP response
+        if (res.data.accessToken && res.data.user) {
+          login(res.data.accessToken, res.data.user);
           navigate('/');
         } else {
-          setRegisterSuccess(true); // fallback: chỉ báo thành công nếu login lỗi
+          // Fallback: gọi login API nếu không có accessToken
+          const loginRes = await axios.post('http://localhost:3000/api/auth/login', {
+            email: registerEmail,
+            password: registerPassword
+          });
+          if (loginRes.data.success) {
+            login(loginRes.data.accessToken, loginRes.data.user);
+            navigate('/');
+          } else {
+            setRegisterSuccess(true); // fallback: chỉ báo thành công nếu login lỗi
+          }
         }
       } else {
         setOTPError(res.data.message || 'Xác thực OTP thất bại');
       }
     } catch (error: any) {
-      setOTPError(error.response?.data?.details || 'Xác thực OTP thất bại');
+      console.error('VerifyOTP error:', error);
+      setOTPError(error.response?.data?.message || error.response?.data?.details || 'Xác thực OTP thất bại');
     }
   };
 

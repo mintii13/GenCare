@@ -25,3 +25,4 @@ package-lock.json
 #Redis server
 *.rdb
 .package-lock.json
+._test

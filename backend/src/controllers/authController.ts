@@ -216,16 +216,20 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
     }
 });
 
-router.post('/verify-otp', async (req: Request, res: Response) => {
-    try {
+// POST /verifyOTP - Xác thực OTP và insert vào DB nếu đúng
+router.post('/verifyOTP', async (req: Request, res: Response) => {
+    try{
+        console.log('VerifyOTP endpoint called with body:', req.body);
         const { email, otp } = req.body;
+        
         if (!email || !otp) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email và OTP là bắt buộc'
+            console.log('Missing email or otp in request');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email và OTP là bắt buộc' 
             });
         }
-
+        
         const result = await AuthService.verifyOTP(email, otp);
         if (result.success) {
             res.status(200).json(result);
@@ -241,8 +245,6 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
     }
 });
 
-// Xóa route change-password mới và sử dụng route cũ đã có sẵn
-// router.post('/change-password', ...) - XÓA ROUTE NÀY
 
 // Route cũ đã có sẵn sử dụng PUT method:
 // router.put('/changePassword', authenticateToken, validateChangePassword, ...)
