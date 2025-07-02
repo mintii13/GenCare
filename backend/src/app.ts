@@ -19,6 +19,7 @@ import stiController from './controllers/stiController';
 import { ReminderSchedulerService } from './services/reminderSchedulerService';
 import menstrualCycleController from './controllers/menstrualCycleController';
 import pillTrackingController from './controllers/pillTrackingController'
+import { PillTrackingReminderService } from './services/pillTrackingService';
 const app = express();
 const PORT = process.env.PORT;
 
@@ -121,6 +122,8 @@ const startServer = async () => {
     console.log('⏰ Starting reminder scheduler...');
     ReminderSchedulerService.startScheduler();
     console.log('✅ Reminder scheduler started!');
+    PillTrackingReminderService.startPillReminder();
+    console.log('✅ Pill reminder scheduler started!');
 
     console.log('🎉 All services started successfully!');
     console.log('📋 Available services:');
@@ -148,6 +151,8 @@ process.on('SIGINT', async () => {
     ReminderSchedulerService.stopScheduler();
     console.log('✅ Reminder scheduler stopped');
 
+    PillTrackingReminderService.stopPillReminder();
+    console.log('✅ Pill reminder scheduler stopped');
     // Close Redis connection
     await redisClient.quit();
     console.log('✅ Redis connection closed');

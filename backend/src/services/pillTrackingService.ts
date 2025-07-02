@@ -3,11 +3,14 @@ import { PillScheduleResponse } from "../dto/responses/PillTrackingResponse";
 import { IPillTracking, PillTypes } from "../models/PillTracking";
 import { PillTrackingRepository } from "../repositories/pillTrackingRepository";
 import mongoose from 'mongoose';
-
+import { MailUtils } from "../utils/mailUtils";
+import { UserRepository } from "../repositories/userRepository";
+import * as cron from 'node-cron'
+import { DateTime } from 'luxon';
 export class PillTrackingService{
     private static calculatePillSchedule(pillTracking: SetupPillTrackingRequest): Partial<IPillTracking>[] {
         const schedules: Partial<IPillTracking>[] = [];
-        const {userId, pill_type, pill_start_date, reminder_time, reminder_enabled} = pillTracking;
+        const {userId, pill_type, pill_start_date, reminder_time, reminder_enabled, max_reminder_times, reminder_interval} = pillTracking;
         let totalDays: number;
         let activeDays: number;
         
@@ -32,7 +35,9 @@ export class PillTrackingService{
                 pill_status: isActivePill ? 'active' : 'placebo',
                 reminder_enabled: reminder_enabled,
                 reminder_time: reminder_time,
-                reminder_sent: false
+                max_reminder_times: reminder_enabled ? max_reminder_times ?? 1 : undefined,
+                reminder_interval: reminder_enabled ? reminder_interval ?? 15 : undefined,
+                reminder_sent_timestamps: []
             });
         }
         return schedules;
@@ -174,7 +179,7 @@ export class PillTrackingService{
                 const lastTaken = existingSchedules
                     .filter(pillTaken => pillTaken.is_taken === true)
                     .sort((a, b) => new Date(b.pill_start_date).getTime() - new Date(a.pill_start_date).getTime())[0];
-                if (currentSchedule.pill_type === '21+7' && lastTaken && lastTaken.is_taken === true && lastTaken.pill_number > 21 && lastTaken.pill_number <28){
+                if (currentSchedule.pill_type === '21+7' && lastTaken && lastTaken.is_taken === true && lastTaken.pill_number > 21 && lastTaken.pill_number < 28){
                     return{
                         success: false,
                         message: 'Do not change medicine after stopping pill or drinking pill placebo'
@@ -193,7 +198,9 @@ export class PillTrackingService{
                     pill_type: pillSchedule.pill_type,
                     pill_start_date: newStartDate.toISOString(),
                     reminder_time: pillSchedule.reminder_time ?? currentSchedule.reminder_time,
-                    reminder_enabled: pillSchedule.reminder_enabled ?? currentSchedule.reminder_enabled
+                    reminder_enabled: pillSchedule.reminder_enabled ?? currentSchedule.reminder_enabled,
+                    max_reminder_times: pillSchedule.max_reminder_times ?? currentSchedule.max_reminder_times,
+                    reminder_interval: pillSchedule.reminder_interval ?? currentSchedule.reminder_interval
                 });
 
                 const inserted = await PillTrackingRepository.createPillSchedule(newSchedules);
@@ -211,9 +218,24 @@ export class PillTrackingService{
                 updateFields.is_taken = pillSchedule.is_taken;
                 updateFields.taken_time = new Date();
             }
-            if (pillSchedule.is_active !== undefined) updateFields.is_active = pillSchedule.is_active;
-            if (pillSchedule.reminder_enabled !== undefined) updateFields.reminder_enabled = pillSchedule.reminder_enabled;
-            if (pillSchedule.reminder_time) updateFields.reminder_time = pillSchedule.reminder_time;
+            if (pillSchedule.is_active !== undefined) 
+                updateFields.is_active = pillSchedule.is_active;
+            if (pillSchedule.reminder_enabled !== undefined) 
+                updateFields.reminder_enabled = pillSchedule.reminder_enabled;
+            if (pillSchedule.reminder_time) 
+                updateFields.reminder_time = pillSchedule.reminder_time;
+            if (pillSchedule.max_reminder_times !== undefined)
+                updateFields.max_reminder_times = pillSchedule.max_reminder_times;
+            if (pillSchedule.reminder_interval !== undefined)
+                updateFields.reminder_interval = pillSchedule.reminder_interval;
+            if (
+                (pillSchedule.reminder_enabled === true && currentSchedule.reminder_enabled === false) ||
+                (pillSchedule.reminder_time !== undefined && pillSchedule.reminder_time !== currentSchedule.reminder_time) ||
+                (pillSchedule.max_reminder_times !== undefined && pillSchedule.max_reminder_times !== currentSchedule.max_reminder_times) ||
+                (pillSchedule.reminder_interval !== undefined && pillSchedule.reminder_interval !== currentSchedule.reminder_interval)
+            ) {
+            updateFields.reminder_sent_timestamps = [];
+            }
 
             const result = await PillTrackingRepository.updatePillSchedule(userId, updateFields);
             if (result == 0)
@@ -230,6 +252,72 @@ export class PillTrackingService{
                 success: false,
                 message: `Error updating pill schedule: ${error}`,
             };
+        } 
+    }
+}
+
+export class PillTrackingReminderService{
+    public static async runReminderJob() {
+        const now = DateTime.now().setZone('Asia/Ho_Chi_Minh');
+        console.log(`[CronJob] runReminderJob() executed at ${now.toISO()}`);
+        console.log("Giờ hiện tại:", now.toFormat('HH:mm'));
+
+        const schedules = await PillTrackingRepository.findReminderPill();
+        console.log(`Found ${schedules.length} schedules needing reminders`);
+
+        for (const schedule of schedules) {
+            const userId = schedule.user_id.toString();
+            const sentCount = schedule.reminder_sent_timestamps?.length ?? 0;
+
+            if (schedule.max_reminder_times !== undefined && sentCount >= schedule.max_reminder_times) continue;
+
+            if (sentCount > 0) {
+                const lastSent = DateTime.fromJSDate(schedule.reminder_sent_timestamps![sentCount - 1]).setZone('Asia/Ho_Chi_Minh');
+                const diffMins = now.diff(lastSent, 'minutes').minutes;
+                if (diffMins < (schedule.reminder_interval ?? 15)) continue;
+            }
+
+            const user = await UserRepository.findById(userId);
+            if (!user) {
+                console.warn(`User ${userId} not found`);
+                continue;
+            }
+
+            try {
+                await MailUtils.sendReminderEmail(user.email, schedule.pill_number, schedule.pill_type, schedule.reminder_time);
+                schedule.reminder_sent_timestamps = schedule.reminder_sent_timestamps ?? [];
+                schedule.reminder_sent_timestamps.push(now.toJSDate());
+                await schedule.save();
+                console.log(`Reminder email sent to user ${user.email} for pill ${schedule.pill_number}`);
+            } catch (err) {
+                console.error('Failed to send reminder email', err);
+            }
+        }
+    }
+
+    private static task: cron.ScheduledTask | null = null;
+
+    public static startPillReminder() {
+        if (this.task) {
+            console.log('Pill reminder scheduler already running');
+            return;
+        }
+        console.log('Starting pill reminder scheduler...')
+        this.task = cron.schedule('* * * * *', async () => {
+            try {
+                await PillTrackingReminderService.runReminderJob();
+            } catch (error) {
+                console.error('Error in pill reminder scheduler:', error);
+            }
+        });
+
+        console.log('Pill reminder scheduler started');
+    }
+
+    public static stopPillReminder() {
+        if (this.task) {
+            this.task.stop();
+            this.task = null;
         }
     }
 }

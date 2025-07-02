@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { PillTracking, IPillTracking } from '../models/PillTracking';
-
+import {DateTime} from 'luxon';
 export class PillTrackingRepository {
     public static async checkNextActivePillSchedule(userId: string): Promise<boolean> {
         try {
@@ -143,5 +143,23 @@ export class PillTrackingRepository {
             console.error(error);
             throw error;
         }
+    }
+
+    public static async findReminderPill(): Promise<IPillTracking[]> {
+        const now = DateTime.now().setZone('Asia/Ho_Chi_Minh');
+        const todayStart = now.startOf('day').toJSDate();
+        const todayEnd = now.endOf('day').toJSDate();
+        const currentTime = now.toFormat('HH:mm');
+        console.log(`[CronJob] runReminderJob() executed at ${now.toISO()}`);
+        return PillTracking.find({
+            is_taken: false,
+            is_active: true,
+            reminder_enabled: true,
+            pill_start_date: {
+                $gte: todayStart,
+                $lte: todayEnd
+            },
+            reminder_time: currentTime
+        }).exec();
     }
 }

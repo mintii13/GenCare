@@ -58,8 +58,9 @@ router.get('/getPillTrackingByUser/:userId', async (req: Request, res: Response)
 router.patch('/updatePillTrackingByUser/:userId', async (req: Request, res: Response): Promise<void> => {
         try {
             const user_id = req.params.userId;
-            const {is_taken, reminder_enabled, reminder_time, is_active, pill_type} = req.body;
-            if (is_taken === undefined && is_active === undefined && reminder_enabled === undefined && !reminder_time && !pill_type) {
+            const {is_taken, reminder_enabled, reminder_time, is_active, pill_type, max_reminder_times, reminder_interval} = req.body;
+            if (is_taken === undefined && is_active === undefined && reminder_enabled === undefined && !reminder_time && 
+                !pill_type && max_reminder_times === undefined && reminder_interval === undefined) {
                 res.status(400).json({
                     success: false,
                     message: 'No updatable fields provided'
@@ -80,6 +81,10 @@ router.patch('/updatePillTrackingByUser/:userId', async (req: Request, res: Resp
                 updateRequest.reminder_time = reminder_time;
             if (pill_type) 
                 updateRequest.pill_type = pill_type;
+            if (max_reminder_times !== undefined) 
+                updateRequest.max_reminder_times = max_reminder_times;
+            if (reminder_interval !== undefined) 
+                updateRequest.reminder_interval = reminder_interval;
             const result = await PillTrackingService.updatePillSchedule(updateRequest);
 
             if (result.success) {

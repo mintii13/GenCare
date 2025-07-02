@@ -3,8 +3,9 @@ import { User, IUser } from '../models/User';
 import mongoose from 'mongoose'
 
 export class UserRepository {
-    public static async findById(userId: ObjectId): Promise<IUser | null> {
+    public static async findById(user_id: string): Promise<IUser | null> {
         try {
+            const userId = new mongoose.Types.ObjectId(user_id);
             return await User.findById(userId);
         } catch (error) {
             console.error('Error finding user by id:', error);

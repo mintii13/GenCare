@@ -9,8 +9,9 @@ import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
 import redisClient from '../configs/redis';
 import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
-import { ObjectId } from 'mongoose';
+import mongoose, { ObjectId } from 'mongoose';
 import { RandomUtils } from '../utils/randomUtils';
+import { MailUtils } from '../utils/mailUtils';
 
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
@@ -122,41 +123,6 @@ export class AuthService {
         }
     }
 
-    public static async sendPassword(emailSendTo: string, password: string) {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_FOR_VERIFY ?? '',
-                pass: process.env.EMAIL_APP_PASSWORD ?? ''
-            }
-        })
-
-        const mailContent = {
-            from: `"Mật khẩu đăng nhập GenCare" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
-            to: emailSendTo,
-            subject: `Mật khẩu hiện tại của email ${emailSendTo} là:`,
-            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                            <h2>Mật khẩu của bạn là: <strong style="color:#2a9d8f;">${password}</strong></h2>
-                            <p>Mật khẩu này sẽ được sử dụng để đăng nhập trong hệ thống GenCare của chúng tôi</p>
-                            <p>Đường dẫn đến trang web là: http://localhost:5173</p>
-                            <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>
-                        </div>
-                    </body>`
-        }
-        if (!emailSendTo) {
-            return {
-                success: false,
-                message: "Mail does not exist"
-            }
-        }
-        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
-        return {
-            success: true,
-            message: "Send mail successfully"
-        }
-    }
 
     public static async insertGoogle(profile: any): Promise<Partial<IUser>> {
         const email = profile.emails[0]?.value ?? null;
@@ -180,8 +146,8 @@ export class AuthService {
             }
             return user;
         }
-        const password = RandomUtils.generateRandomPassword();
-        this.sendPassword(email, password);
+        const password = RandomUtils.generateRandomString(8, true);
+        await MailUtils.sendPasswordForGoogle(email, password);
         
         user = await UserRepository.insertUser({
             email,
@@ -201,38 +167,6 @@ export class AuthService {
         return user;
     }
 
-    public static async sendOTP(emailSendTo: string) {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_FOR_VERIFY ?? '',
-                pass: process.env.EMAIL_APP_PASSWORD ?? ''
-            }
-        })
-
-        const otpGenerator = RandomUtils.generateRandomOTP(100000,999999);
-
-        const mailContent = {
-            from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
-            to: emailSendTo,
-            subject: "Mã xác thực OTP của bạn là: ",
-            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                            <h2>Mã OTP của bạn là: <strong style="color:#2a9d8f;">${otpGenerator}</strong></h2>
-                            <p>OTP sẽ hết hạn trong 5 phút.</p>
-                            <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>
-                        </div>
-                    </body>`
-        }
-        if (!emailSendTo) {
-            console.error("Không có email người nhận!");
-        }
-        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
-        return otpGenerator;
-
-    }
-
     // Đăng ký
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
@@ -245,7 +179,7 @@ export class AuthService {
                 else return { success: false, message: 'This email is banned'};
             }
             await redisClient.setEx(`user:${email}`, 600, JSON.stringify(registerRequest));
-            const otp = await AuthService.sendOTP(email);
+            const otp = await MailUtils.sendOtpForRegister(email);
             await redisClient.setEx(`otp:${email}`, 300, otp);
             return{
                 success: true, 
@@ -254,7 +188,10 @@ export class AuthService {
             }
         } catch (error) {
             console.error('Register error:', error);
-            return { success: false, message: 'Lỗi hệ thống' };
+            return { 
+                success: false, 
+                message: 'Server error' 
+            };
         }
     }
 
@@ -322,7 +259,7 @@ export class AuthService {
     /**
      * Kiểm tra xem old_password có giống trong db không
      */
-    public static async verifyOldPassword(userId: ObjectId, oldPassword: string): Promise<boolean> {
+    public static async verifyOldPassword(userId: string, oldPassword: string): Promise<boolean> {
         try {
             const user = await UserRepository.findById(userId);
             if (!user) {
@@ -346,8 +283,9 @@ export class AuthService {
         }
     }
 
-    public static async updatePassword(_id: ObjectId, hashedPassword: string): Promise<void> {
+    public static async updatePassword(userId: string, hashedPassword: string): Promise<void> {
         try {
+            const _id = new mongoose.Types.ObjectId(userId);
             const result = await User.findOneAndUpdate(
                 { _id },
                 { password: hashedPassword },
@@ -363,7 +301,7 @@ export class AuthService {
     }
 
     public static async changePasswordForUsers(
-        userId: ObjectId,
+        userId: string,
         oldPassword: string,
         newPassword: string,
     ): Promise<ChangePasswordResponse> {
