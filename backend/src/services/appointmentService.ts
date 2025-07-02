@@ -9,19 +9,7 @@ import { GoogleMeetService } from './googleMeetService';
 import { EmailNotificationService } from './emailNotificationService';
 import { FeedbackResponse, FeedbackStatsResponse } from '../dto/responses/FeedbackResponse';
 import { CreateFeedbackRequest } from '../dto/requests/FeedbackRequest';
-
-interface AppointmentResponse {
-    success: boolean;
-    message: string;
-    data?: {
-        appointment?: any;
-        appointments?: any[];
-        total?: number;
-        stats?: any;
-        meetingDetails?: any;
-    };
-    timestamp?: string;
-}
+import { AppointmentResponse } from '../dto/responses/AppointmentResponse';
 
 export class AppointmentService {
     /**
@@ -159,7 +147,7 @@ export class AppointmentService {
     }
 
     /**
-     * ENHANCED: Confirm appointment với meeting link generation và appointment history logging
+     * ENHANCED: Confirm appointment với REAL Google Meet generation
      */
     public static async confirmAppointment(
         appointmentId: string,
@@ -197,6 +185,15 @@ export class AppointmentService {
             // Get customer info để gửi email
             const customer = await User.findById(appointment.customer_id);
 
+            // KIỂM TRA GOOGLE ACCESS TOKEN
+            if (!googleAccessToken) {
+                return {
+                    success: false,
+                    message: 'Google Access Token is required to create Google Meet link. Please authenticate with Google first.',
+                    requiresGoogleAuth: true
+                };
+            }
+
             // Tạo datetime cho cuộc hẹn
             const appointmentDate = new Date(appointment.appointment_date);
             const [startHours, startMinutes] = appointment.start_time.split(':').map(Number);
@@ -208,24 +205,34 @@ export class AppointmentService {
             const endDateTime = new Date(appointmentDate);
             endDateTime.setHours(endHours, endMinutes, 0, 0);
 
-            // Generate Google Meet link với hoặc không có access token
-            const meetingDetails = await GoogleMeetService.generateRealMeetLink(
-                `Tư vấn với ${(consultant.user_id as any).full_name}`,
-                startDateTime,
-                endDateTime,
-                customer ? [customer.email, (consultant.user_id as any).email] : [(consultant.user_id as any).email],
-                googleAccessToken
-            );
+            let meetingDetails;
+            try {
+                // Generate REAL Google Meet link - bắt buộc có access token
+                meetingDetails = await GoogleMeetService.generateRealMeetLink(
+                    `Tư vấn với ${(consultant.user_id as any).full_name}`,
+                    startDateTime,
+                    endDateTime,
+                    customer ? [customer.email, (consultant.user_id as any).email] : [(consultant.user_id as any).email],
+                    googleAccessToken
+                );
 
-            console.log('Meeting details created:', meetingDetails);
+                console.log('Real Google Meet created successfully:', meetingDetails);
+            } catch (error) {
+                console.error('Failed to create Google Meet:', error);
+                return {
+                    success: false,
+                    message: `Failed to create Google Meet: ${error.message}. Please ensure your Google account has permission to create meetings.`,
+                    requiresGoogleAuth: true
+                };
+            }
 
-            // Update appointment với meeting info - đúng cấu trúc MeetingInfo
+            // Update appointment với real meeting info
             const updateData = {
                 status: 'confirmed' as const,
                 meeting_info: {
                     meet_url: meetingDetails.meet_url,
                     meeting_id: meetingDetails.meeting_id,
-                    meeting_password: meetingDetails.meeting_password,
+                    calendar_event_id: meetingDetails.calendar_event_id,
                     created_at: new Date(),
                     reminder_sent: false
                 }
@@ -254,7 +261,7 @@ export class AppointmentService {
             }
 
             if (customer) {
-                // Prepare email data
+                // Prepare email data với real meeting info
                 const emailData = {
                     customerName: customer.full_name,
                     customerEmail: customer.email,
@@ -265,17 +272,17 @@ export class AppointmentService {
                     meetingInfo: {
                         meet_url: meetingDetails.meet_url,
                         meeting_id: meetingDetails.meeting_id,
-                        meeting_password: meetingDetails.meeting_password
+                        // Không có password vì đây là real Google Meet
                     },
                     appointmentId: appointmentId,
                     customerNotes: appointment.customer_notes
                 };
 
-                // Send confirmation email (non-blocking)
+                // Send confirmation email với real Google Meet link (non-blocking)
                 EmailNotificationService.sendAppointmentConfirmation(emailData)
                     .then(result => {
                         if (result.success) {
-                            console.log('Confirmation email sent successfully');
+                            console.log('Confirmation email with real Google Meet sent successfully');
                         } else {
                             console.error('Failed to send confirmation email:', result.message);
                         }
@@ -287,7 +294,7 @@ export class AppointmentService {
 
             return {
                 success: true,
-                message: 'Appointment confirmed successfully and meeting link has been sent to customer',
+                message: 'Appointment confirmed successfully and real Google Meet link has been sent to customer',
                 data: {
                     appointment: confirmedAppointment,
                     meetingDetails: meetingDetails
@@ -411,7 +418,7 @@ export class AppointmentService {
     }
 
     /**
-     * Update appointment với enhanced validation và notification
+     * UPDATE: Update appointment method - handle Google Meet creation for confirmed appointments
      */
     public static async updateAppointment(
         appointmentId: string,
@@ -448,8 +455,16 @@ export class AppointmentService {
                 }
             }
 
-            // Generate meeting info nếu được confirmed và chưa có meeting info
+            // Generate real meeting info nếu được confirmed và chưa có meeting info
             if (explicitAction === 'confirmed' && !appointment.meeting_info) {
+                if (!googleAccessToken) {
+                    return {
+                        success: false,
+                        message: 'Google Access Token is required to create Google Meet link for confirmed appointments.',
+                        requiresGoogleAuth: true
+                    };
+                }
+
                 const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name email');
                 const customer = await User.findById(appointment.customer_id);
 
@@ -468,32 +483,36 @@ export class AppointmentService {
                     const endDateTime = new Date(appointmentDate);
                     endDateTime.setHours(endHours, endMinutes, 0, 0);
 
-                    const meetingDetails = await GoogleMeetService.generateRealMeetLink(
-                        `Tư vấn với ${(consultant.user_id as any).full_name}`,
-                        startDateTime,
-                        endDateTime,
-                        customer ? [customer.email, (consultant.user_id as any).email] : [(consultant.user_id as any).email],
-                        googleAccessToken
-                    );
+                    try {
+                        const meetingDetails = await GoogleMeetService.generateRealMeetLink(
+                            `Tư vấn với ${(consultant.user_id as any).full_name}`,
+                            startDateTime,
+                            endDateTime,
+                            customer ? [customer.email, (consultant.user_id as any).email] : [(consultant.user_id as any).email],
+                            googleAccessToken
+                        );
 
-                    updateData.meeting_info = {
-                        meet_url: meetingDetails.meet_url,
-                        meeting_id: meetingDetails.meeting_id,
-                        meeting_password: meetingDetails.meeting_password,
-                        created_at: new Date(),
-                        reminder_sent: false
-                    };
+                        updateData.meeting_info = {
+                            meet_url: meetingDetails.meet_url,
+                            meeting_id: meetingDetails.meeting_id,
+                            created_at: new Date(),
+                            reminder_sent: false
+                        };
+                    } catch (error) {
+                        return {
+                            success: false,
+                            message: `Failed to create Google Meet: ${error.message}`,
+                            requiresGoogleAuth: true
+                        };
+                    }
                 }
             }
 
-            // Store old data for history
+            // Store old data for history logging
             const oldData = { ...appointment };
 
-            // Perform update
-            const updatedAppointment = await AppointmentRepository.updateById(
-                appointmentId,
-                updateData
-            );
+            // Perform the update
+            const updatedAppointment = await AppointmentRepository.updateById(appointmentId, updateData);
 
             if (!updatedAppointment) {
                 return {
@@ -502,62 +521,25 @@ export class AppointmentService {
                 };
             }
 
-            // Send email notification for confirmation
-            if (explicitAction === 'confirmed' && updateData.meeting_info) {
+            // Log appointment history if there was an explicit action
+            if (explicitAction) {
                 try {
-                    const customer = await User.findById(appointment.customer_id);
-                    const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name');
-
-                    if (customer && consultant) {
-                        const emailData = {
-                            customerName: customer.full_name,
-                            customerEmail: customer.email,
-                            consultantName: (consultant.user_id as any).full_name,
-                            appointmentDate: (updateData.appointment_date || appointment.appointment_date).toLocaleDateString('vi-VN'),
-                            startTime: updateData.start_time || appointment.start_time,
-                            endTime: updateData.end_time || appointment.end_time,
-                            meetingInfo: updateData.meeting_info,
-                            appointmentId: appointmentId,
-                            customerNotes: appointment.customer_notes
-                        };
-
-                        EmailNotificationService.sendAppointmentConfirmation(emailData)
-                            .catch(error => console.error('Error sending confirmation email:', error));
-                    }
-                } catch (error) {
-                    console.error('Error preparing confirmation email:', error);
+                    await AppointmentHistoryService.logAppointmentUpdated(
+                        appointmentId,
+                        oldData,
+                        updatedAppointment,
+                        requestUserId,
+                        requestUserRole || 'system',
+                        explicitAction
+                    );
+                } catch (historyError) {
+                    console.error('History logging error:', historyError);
                 }
-            }
-
-            // Log history
-            try {
-                await AppointmentHistoryService.logAppointmentUpdated(
-                    appointmentId,
-                    oldData,
-                    updatedAppointment,
-                    requestUserId,
-                    requestUserRole,
-                    explicitAction
-                );
-            } catch (historyError) {
-                console.error('History logging error:', historyError);
-            }
-
-            // Determine success message
-            let message = 'Appointment updated successfully';
-            if (explicitAction === 'rescheduled') {
-                message = 'Appointment rescheduled successfully';
-            } else if (explicitAction === 'confirmed') {
-                message = 'Appointment confirmed successfully and meeting link has been sent to customer';
-            } else if (explicitAction === 'cancelled') {
-                message = 'Appointment cancelled successfully';
-            } else if (explicitAction === 'completed') {
-                message = 'Appointment completed successfully';
             }
 
             return {
                 success: true,
-                message,
+                message: `Appointment ${explicitAction || 'updated'} successfully`,
                 data: {
                     appointment: updatedAppointment
                 },
@@ -567,7 +549,7 @@ export class AppointmentService {
             console.error('Update appointment service error:', error);
             return {
                 success: false,
-                message: `Internal server error when updating appointment: ${error.message}`
+                message: 'Internal server error when updating appointment'
             };
         }
     }

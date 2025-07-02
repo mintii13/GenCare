@@ -4,21 +4,27 @@ export interface AppointmentResponse {
     success: boolean;
     message: string;
     data?: {
-        appointment: Partial<IAppointment> & {
-            customer_id: {
-                _id: string;
-                full_name: string;
-                email: string;
-                phone?: string;
-            };
-            consultant_id: {
-                _id: string;
-                user_id: string;
-                specialization: string;
-                qualifications?: string;
-            };
+        appointment?: any; // ✅ SỬA: Flexible hơn
+        appointments?: any[]; // ✅ THÊM: Support multiple appointments
+        appointmentId?: string;
+        meetingDetails?: {
+            meet_url: string;
+            meeting_id: string;
+            meeting_password?: string;
+            calendar_event_id?: string;
         };
+        pagination?: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+        };
+        total?: number; // ✅ THÊM: Support total count
+        summary?: any;
+        stats?: any;
     };
+    requiresGoogleAuth?: boolean;
+    googleAuthUrl?: string;
     timestamp?: string;
 }
 

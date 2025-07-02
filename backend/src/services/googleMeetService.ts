@@ -72,7 +72,7 @@ export class GoogleMeetService {
 
             console.log('Creating calendar event...');
 
-            // Tạo event - Sử dụng cách đơn giản hơn
+            // Tạo event
             const insertRequest = {
                 calendarId: 'primary',
                 conferenceDataVersion: 1,
@@ -94,7 +94,7 @@ export class GoogleMeetService {
 
             return {
                 meet_url: meetLink,
-                meeting_id: meetingId || this.generateRealMeetingId(),
+                meeting_id: meetingId || this.extractMeetingIdFromUrl(meetLink),
                 calendar_event_id: response.data.id,
             };
 
@@ -105,7 +105,7 @@ export class GoogleMeetService {
     }
 
     /**
-     * Generate Google Meet link - với fallback nếu không có access token
+     * Generate Google Meet link - UPDATED: Ưu tiên sử dụng Real Google API
      */
     public static async generateRealMeetLink(
         title: string,
@@ -116,47 +116,24 @@ export class GoogleMeetService {
     ): Promise<MeetingDetails> {
         try {
             if (googleAccessToken) {
-                // Tạm thời comment Google API và sử dụng manual link
-                console.log('Google access token provided, but using manual link for now');
-                return this.createManualMeetLink(title, startTime, endTime);
+                console.log('Creating real Google Meet with provided access token');
 
-                // TODO: Uncomment khi fix được Google API syntax
-                // return await this.createMeetingWithAccessToken(
-                //     title,
-                //     startTime,
-                //     endTime,
-                //     attendees || [],
-                //     googleAccessToken
-                // );
+                // Sử dụng Google API để tạo real meeting
+                return await this.createMeetingWithAccessToken(
+                    title,
+                    startTime,
+                    endTime,
+                    attendees || [],
+                    googleAccessToken
+                );
             } else {
-                // Fallback: Tạo manual Meet link
-                console.log('No Google access token provided, creating manual Meet link');
-                return this.createManualMeetLink(title, startTime, endTime);
+                console.log('No Google access token provided - cannot create real Google Meet');
+                throw new Error('Google Access Token is required to create real Google Meet link. Please authenticate with Google first.');
             }
         } catch (error) {
             console.error('Error generating real Meet link:', error);
-            // Fallback to manual Meet link
-            return this.createManualMeetLink(title, startTime, endTime);
+            throw new Error(`Failed to create Google Meet: ${error.message}`);
         }
-    }
-
-    /**
-     * Fallback: Tạo manual Meet link
-     */
-    public static createManualMeetLink(
-        title: string,
-        startTime: Date,
-        endTime: Date
-    ): MeetingDetails {
-        console.log('Creating manual Meet link as fallback');
-        const meetingId = this.generateRealMeetingId();
-        const meetUrl = `https://meet.google.com/${meetingId}`;
-
-        return {
-            meet_url: meetUrl,
-            meeting_id: meetingId,
-            meeting_password: this.generateMeetingPassword()
-        };
     }
 
     /**
@@ -165,35 +142,6 @@ export class GoogleMeetService {
     private static extractMeetingIdFromUrl(url: string): string | null {
         const match = url.match(/https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/);
         return match ? match[1] : null;
-    }
-
-    /**
-     * Generate real Google Meet ID format: xxx-yyyy-zzz
-     */
-    private static generateRealMeetingId(): string {
-        const group1 = this.generateRandomString(3);
-        const group2 = this.generateRandomString(4);
-        const group3 = this.generateRandomString(3);
-        return `${group1}-${group2}-${group3}`;
-    }
-
-    /**
-     * Generate random string cho meeting ID
-     */
-    private static generateRandomString(length: number): string {
-        const chars = 'abcdefghijklmnopqrstuvwxyz';
-        let result = '';
-        for (let i = 0; i < length; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    }
-
-    /**
-     * Generate meeting password
-     */
-    private static generateMeetingPassword(): string {
-        return RandomUtils.generateRandomOTP(100000, 999999);
     }
 
     /**
@@ -232,12 +180,11 @@ HƯỚNG DẪN THAM GIA CUỘC HỌP:
 
 🔗 Link tham gia: ${meetingDetails.meet_url}
 🆔 Meeting ID: ${meetingDetails.meeting_id}
-${meetingDetails.meeting_password ? `🔐 Mật khẩu: ${meetingDetails.meeting_password}` : ''}
 
 📱 CÁCH THAM GIA:
 1. Nhấp vào link tham gia ở trên
 2. Hoặc mở Google Meet và nhập Meeting ID: ${meetingDetails.meeting_id}
-3. ${meetingDetails.meeting_password ? `Nhập mật khẩu: ${meetingDetails.meeting_password}` : 'Chờ chuyên gia chấp nhận bạn vào phòng'}
+3. Chờ chuyên gia chấp nhận bạn vào phòng
 
 ⏰ Vui lòng tham gia đúng giờ hẹn để có trải nghiệm tư vấn tốt nhất.
 

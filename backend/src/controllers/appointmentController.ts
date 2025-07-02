@@ -374,12 +374,12 @@ router.get('/consultant/:consultantId/feedback-stats', authenticateToken, author
 
 // ================== APPOINTMENT ACTIONS WITH ID PARAMETERS ==================
 
-// Confirm appointment - Consultant only, có thể có Google Access Token
+// Confirm appointment - Consultant only, BẮT BUỘC có Google Access Token
 router.put('/:id/confirm', authenticateToken, authorizeRoles('consultant'), async (req: Request, res: Response) => {
     try {
         const appointmentId = req.params.id;
         const consultantUserId = req.jwtUser?.userId;
-        const { googleAccessToken } = req.body; // Optional Google Access Token
+        const { googleAccessToken } = req.body;
 
         if (!consultantUserId) {
             return res.status(401).json({
@@ -388,22 +388,41 @@ router.put('/:id/confirm', authenticateToken, authorizeRoles('consultant'), asyn
             });
         }
 
+        // ✅ THÊM: Kiểm tra Google Access Token BẮT BUỘC
+        if (!googleAccessToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Google Access Token is required to create Google Meet link. Please authenticate with Google first.',
+                requiresGoogleAuth: true,
+                googleAuthUrl: `/api/auth/google`
+            });
+        }
+
         const result = await AppointmentService.confirmAppointment(
             appointmentId,
             consultantUserId,
-            googleAccessToken // Có thể undefined
+            googleAccessToken
         );
 
         if (result.success) {
             res.status(200).json(result);
         } else {
-            res.status(400).json(result);
+            // ✅ THÊM: Handle requiresGoogleAuth response
+            if (result.requiresGoogleAuth) {
+                res.status(403).json({
+                    ...result,
+                    googleAuthUrl: `/api/auth/google`
+                });
+            } else {
+                res.status(400).json(result);
+            }
         }
-    } catch (error) {
-        console.error('Confirm appointment controller error:', error);
+    } catch (error: any) {
+        console.error('Confirm appointment error:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error when confirming appointment',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
@@ -457,25 +476,44 @@ router.put('/:id', authenticateToken, authorizeRoles('staff', 'admin'), validate
             });
         }
 
+        // ✅ THÊM: Kiểm tra nếu explicitAction là 'confirmed' thì cần Google Access Token
+        if (explicitAction === 'confirmed' && !googleAccessToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Google Access Token is required when confirming appointments.',
+                requiresGoogleAuth: true,
+                googleAuthUrl: `/api/auth/google`
+            });
+        }
+
+        // ✅ SỬA: Đúng thứ tự parameters
         const result = await AppointmentService.updateAppointment(
             appointmentId,
             updateData,
             requestUserId,
             requestUserRole,
             explicitAction,
-            googleAccessToken // Optional Google Access Token
+            googleAccessToken
         );
 
         if (result.success) {
             res.status(200).json(result);
         } else {
-            res.status(400).json(result);
+            // ✅ THÊM: Handle requiresGoogleAuth response
+            if (result.requiresGoogleAuth) {
+                res.status(403).json({
+                    ...result,
+                    googleAuthUrl: `/api/auth/google`
+                });
+            } else {
+                res.status(400).json(result);
+            }
         }
-    } catch (error) {
-        console.error('Update appointment controller error:', error);
+    } catch (error: any) {
+        console.error('Update appointment error:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error when updating appointment'
         });
     }
 });
