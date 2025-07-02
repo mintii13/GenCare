@@ -65,7 +65,7 @@ export class StiService{
                     message: 'Fail in getting Sti Test'
                 }
             }
-            const activeTests = allOfTest.filter(test => test.is_active);
+            const activeTests = allOfTest.filter(test => test.is_active === true);
             return{
                 success: true,
                 message: 'Get STI tests successfully',
