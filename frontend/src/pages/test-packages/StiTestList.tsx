@@ -80,6 +80,22 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
     } catch (error) {}
   };
 
+  const handleBookSTITest = (test: StiTest) => {
+    if (user?.role === 'customer') {
+      navigate(`/sti-booking/book?testId=${test._id}`);
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleBookSTIPackage = (pkg: any) => {
+    if (user?.role === 'customer') {
+      navigate(`/sti-booking/book?packageId=${pkg._id}`);
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -91,7 +107,21 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
             <Row gutter={[16, 16]}>
               {Array.isArray(packages) && packages.map((pkg) => (
                 <Col xs={24} sm={24} md={12} lg={8} xl={6} key={pkg._id} style={{ display: 'flex' }}>
-                  <Card hoverable title={pkg.sti_package_name} onClick={onSelectPackage ? () => onSelectPackage(pkg) : undefined}>
+                  <Card 
+                    hoverable 
+                    title={pkg.sti_package_name}
+                                          style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                      styles={{ body: { flex: 1 } }}
+                    actions={[
+                      <Button 
+                        type="primary" 
+                        onClick={() => handleBookSTIPackage(pkg)}
+                        disabled={!pkg.is_active}
+                      >
+                        Đặt lịch xét nghiệm
+                      </Button>
+                    ]}
+                  >
                     <div>Mã: {pkg.sti_package_code}</div>
                     <div>Giá: {pkg.price?.toLocaleString('vi-VN')} VND</div>
                     <div>{pkg.description}</div>
@@ -108,15 +138,25 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Title level={2}>Danh sách xét nghiệm STI lẻ</Title>
-              {(user?.role === 'staff' || user?.role === 'admin') && (
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />}
-                  onClick={() => navigate('/test-packages/create')}
-                >
-                  Thêm xét nghiệm mới
-                </Button>
-              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {user?.role === 'customer' && (
+                  <Button 
+                    type="dashed"
+                    onClick={() => navigate('/sti-booking/multiple')}
+                  >
+                    Chọn nhiều xét nghiệm
+                  </Button>
+                )}
+                {(user?.role === 'staff' || user?.role === 'admin') && (
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />}
+                    onClick={() => navigate('/test-packages/create')}
+                  >
+                    Thêm xét nghiệm mới
+                  </Button>
+                )}
+              </div>
             </div>
             <Row gutter={[16, 16]}>
               {Array.isArray(tests) && tests
@@ -151,8 +191,16 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         </Tag>
                       }
                       style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
-                      bodyStyle={{ flex: 1 }}
-                      onClick={onSelectTest ? () => onSelectTest(test) : undefined}
+                      styles={{ body: { flex: 1 } }}
+                      actions={user?.role === 'customer' ? [
+                        <Button 
+                          type="primary" 
+                          onClick={() => handleBookSTITest(test)}
+                          disabled={!test.isActive}
+                        >
+                          Đặt lịch xét nghiệm
+                        </Button>
+                      ] : undefined}
                     >
                       <Space direction="vertical" style={{ width: '100%' }}>
                         <Text type="secondary">Mã: {test.sti_test_code}</Text>

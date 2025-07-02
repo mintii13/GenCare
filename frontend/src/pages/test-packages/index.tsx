@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import StiTestList from './StiTestList';
 import StiTestForm from './StiTestForm';
@@ -6,10 +6,12 @@ import StiTestDetail from './StiTestDetail';
 import SelectStiTestPage from './SelectStiTestPage';
 import PageTransition from '../../components/PageTransition';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { StiTest } from '../../types/sti';
 
 const TestPackages: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [selectedTests, setSelectedTests] = useState<string[]>([]); // Lưu _id các xét nghiệm đã chọn
   // Xác định tab đang active dựa vào pathname
   const activeTab = location.pathname.endsWith('/select') ? 'sti' : 'package';
 
@@ -22,8 +24,12 @@ const TestPackages: React.FC = () => {
     alert('Bạn đã chọn gói: ' + pkg.sti_package_name);
   };
 
-  const handleSelectTest = (test: any) => {
-    alert('Bạn đã chọn xét nghiệm: ' + test.sti_test_name);
+  const handleToggleTestSelect = (test: StiTest) => {
+    setSelectedTests((prev) =>
+      prev.includes(test._id)
+        ? prev.filter((id) => id !== test._id)
+        : [...prev, test._id]
+    );
   };
 
   return (
@@ -39,7 +45,13 @@ const TestPackages: React.FC = () => {
         </TabsList>
       </Tabs>
       {activeTab === 'package' && <StiTestList mode="package" onSelectPackage={handleSelectPackage} />}
-      {activeTab === 'sti' && <StiTestList mode="single" onSelectTest={handleSelectTest} />}
+      {activeTab === 'sti' && (
+        <StiTestList
+          mode="single"
+          selectedTests={selectedTests}
+          onToggleTestSelect={handleToggleTestSelect}
+        />
+      )}
       <Routes>
         <Route path="create" element={<StiTestForm />} />
         <Route path="edit/:id" element={<StiTestForm />} />
