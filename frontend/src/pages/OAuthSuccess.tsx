@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import { Loading } from "../components/ui";
 import { navigateAfterLogin } from "../utils/navigationUtils";
+import { setGoogleAccessToken, clearAllTokens } from "../utils/authUtils";
 
 function OAuthSuccess() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ function OAuthSuccess() {
       try {
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
+        const googleToken = params.get("googleToken");
         
         if (!token) {
           setError("Không tìm thấy token xác thực");
@@ -25,6 +27,12 @@ function OAuthSuccess() {
         // Lưu token và lấy thông tin user
         const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY ?? "gencare_auth_token";
         localStorage.setItem(AUTH_TOKEN_KEY, token);
+        
+        // Lưu Google access token nếu có
+        if (googleToken) {
+          setGoogleAccessToken(googleToken);
+          console.log("Google access token đã được lưu vào localStorage");
+        }
 
         // Gọi API để lấy thông tin user
         const response = await axios.get(
@@ -48,7 +56,7 @@ function OAuthSuccess() {
         setError("Đăng nhập thất bại: " + (error.response?.data?.message || error.message));
         
         // Xóa token lỗi
-        localStorage.removeItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? "gencare_auth_token");
+        clearAllTokens();
         
         // Redirect về home sau 3 giây
         setTimeout(() => navigate("/"), 3000);

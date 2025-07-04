@@ -183,7 +183,7 @@ router.get('/getAllStiPackage', async (req: Request, res: Response): Promise<voi
 });
 
 //get sti-package by id API
-router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
+router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
         const id = req.params.id;
         const result = await StiService.getStiPackageById(id);

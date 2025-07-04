@@ -2,8 +2,21 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { FaTimes, FaCheck, FaHeart, FaSadTear, FaSmile, FaMeh, FaAngry, FaTired, FaGrinHearts } from 'react-icons/fa';
-import { HiSparkles } from 'react-icons/hi';
+import { 
+  FaSmile, 
+  FaGrin, 
+  FaMeh,
+  FaFrown,
+  FaAngry,
+  FaStar,
+  FaBolt,
+  FaBatteryHalf,
+  FaBatteryEmpty,
+  FaStethoscope,
+  FaHeart,
+  FaTimes,
+  FaCheck
+} from 'react-icons/fa';
 
 interface MoodModalProps {
   isOpen: boolean;
@@ -22,7 +35,7 @@ interface MoodData {
 interface MoodOption {
   id: string;
   label: string;
-  icon: React.ReactNode;
+  icon: React.ComponentType<any>;
   color: string;
   bgColor: string;
 }
@@ -34,19 +47,19 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
   const [notes, setNotes] = useState('');
 
   const moodOptions: MoodOption[] = [
-    { id: 'happy', label: 'Vui vẻ', icon: <FaSmile />, color: 'text-blue-600', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
-    { id: 'excited', label: 'Hưng phấn', icon: <FaGrinHearts />, color: 'text-indigo-600', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
-    { id: 'calm', label: 'Bình tĩnh', icon: <FaHeart />, color: 'text-blue-700', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
-    { id: 'neutral', label: 'Bình thường', icon: <FaMeh />, color: 'text-gray-600', bgColor: 'bg-gray-50 hover:bg-gray-100 border-gray-200' },
-    { id: 'tired', label: 'Mệt mỏi', icon: <FaTired />, color: 'text-indigo-700', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
-    { id: 'sad', label: 'Buồn', icon: <FaSadTear />, color: 'text-blue-500', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
-    { id: 'angry', label: 'Tức giận', icon: <FaAngry />, color: 'text-indigo-500', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
+    { id: 'happy', label: 'Vui vẻ', icon: FaSmile, color: 'text-blue-600', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
+    { id: 'excited', label: 'Hưng phấn', icon: FaGrin, color: 'text-indigo-600', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
+    { id: 'calm', label: 'Bình tĩnh', icon: FaStar, color: 'text-blue-700', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
+    { id: 'neutral', label: 'Bình thường', icon: FaMeh, color: 'text-gray-600', bgColor: 'bg-gray-50 hover:bg-gray-100 border-gray-200' },
+    { id: 'tired', label: 'Mệt mỏi', icon: FaBatteryEmpty, color: 'text-indigo-700', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
+    { id: 'sad', label: 'Buồn', icon: FaFrown, color: 'text-blue-500', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
+    { id: 'angry', label: 'Tức giận', icon: FaAngry, color: 'text-indigo-500', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
   ];
 
   const energyOptions: MoodOption[] = [
-    { id: 'high', label: 'Cao', icon: <HiSparkles />, color: 'text-blue-600', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
-    { id: 'medium', label: 'Trung bình', icon: <FaHeart />, color: 'text-indigo-600', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
-    { id: 'low', label: 'Thấp', icon: <FaTired />, color: 'text-blue-700', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
+    { id: 'high', label: 'Cao', icon: FaBolt, color: 'text-blue-600', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
+    { id: 'medium', label: 'Trung bình', icon: FaBatteryHalf, color: 'text-indigo-600', bgColor: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
+    { id: 'low', label: 'Thấp', icon: FaBatteryEmpty, color: 'text-blue-700', bgColor: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
   ];
 
   const symptomOptions = [
@@ -66,8 +79,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
   };
 
   const handleSave = () => {
-    
-    
     const moodData: MoodData = {
       mood: selectedMood,
       energy: selectedEnergy,
@@ -75,10 +86,9 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
       notes: notes.trim() || undefined
     };
     
+
     
     onSave(moodData);
-    // KHÔNG gọi handleClose() ở đây! Để CycleCalendar tự xử lý việc đóng modal
-    
   };
 
   const handleClose = () => {
@@ -91,8 +101,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
 
   if (!isOpen) return null;
 
-
-
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
@@ -102,7 +110,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur">
-                  <HiSparkles className="h-5 w-5" />
+                  <FaHeart className="text-white" />
                 </div>
                 Ghi nhận tâm trạng
               </h2>
@@ -120,7 +128,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
               onClick={handleClose}
               className="text-white hover:bg-white/20 rounded-lg p-2 transition-all duration-200 hover:scale-110"
             >
-              <FaTimes className="h-4 w-4" />
+              <FaTimes />
             </Button>
           </div>
         </div>
@@ -133,7 +141,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
               {/* Mood Selection */}
               <div>
                 <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <FaHeart className="h-5 w-5 text-blue-500" />
+                  <FaHeart className="text-blue-500" />
                   Tâm trạng hôm nay của bạn?
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -141,17 +149,17 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
                     <button
                       key={mood.id}
                       onClick={() => setSelectedMood(mood.id)}
-                      className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${
+                      className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group relative ${
                         selectedMood === mood.id 
                           ? 'border-pink-400 bg-gradient-to-br from-pink-50 to-purple-50 scale-105 shadow-lg ring-2 ring-pink-200 animate-in zoom-in duration-200' 
                           : `border-gray-200 ${mood.bgColor} hover:border-pink-300 hover:shadow-md hover:scale-102 active:scale-98`
                       }`}
                     >
-                      <div className={`text-3xl transition-all duration-300 ${mood.color} ${
+                      <div className={`text-3xl transition-all duration-300 ${
                         selectedMood === mood.id ? 'scale-110' : 'group-hover:scale-110'
                       }`}>
-                        {mood.icon}
-                      </div>
+                        <mood.icon className="text-3xl" />
+                          </div>
                       <span className={`text-sm font-medium transition-colors duration-200 ${
                         selectedMood === mood.id ? 'text-pink-800' : 'text-gray-700 group-hover:text-pink-700'
                       }`}>
@@ -159,7 +167,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
                       </span>
                       {selectedMood === mood.id && (
                         <div className="absolute top-2 right-2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center animate-in zoom-in duration-200">
-                          <FaCheck className="h-3 w-3 text-white" />
+                          <FaCheck className="text-white text-xs" />
                         </div>
                       )}
                     </button>
@@ -170,7 +178,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
               {/* Energy Level */}
               <div>
                 <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <HiSparkles className="h-5 w-5 text-indigo-500" />
+                  <FaBolt className="text-indigo-500" />
                   Mức năng lượng?
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
@@ -184,8 +192,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
                           : `border-gray-200 ${energy.bgColor}`
                       }`}
                     >
-                      <div className={`text-2xl ${energy.color}`}>
-                        {energy.icon}
+                      <div className="text-2xl">
+                        <energy.icon className="text-2xl" />
                       </div>
                       <span className="text-sm font-medium text-gray-700">
                         {energy.label}
@@ -201,7 +209,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
               {/* Symptoms */}
               <div>
                 <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <FaHeart className="h-5 w-5 text-indigo-500" />
+                  <FaStethoscope className="text-indigo-500" />
                   Triệu chứng (có thể chọn nhiều)
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -217,7 +225,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
                     >
                       {symptom}
                       {selectedSymptoms.includes(symptom) && (
-                        <FaCheck className="inline ml-1 h-3 w-3" />
+                        <FaCheck className="inline ml-1 text-xs" />
                       )}
                     </button>
                   ))}
@@ -245,27 +253,27 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
             {(selectedMood || selectedEnergy || selectedSymptoms.length > 0) && (
               <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-6 rounded-xl border border-blue-200">
                 <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <HiSparkles className="h-5 w-5 text-blue-500" />
+                  <FaStar className="text-blue-500" />
                   Tóm tắt lựa chọn:
                 </h4>
                 <div className="grid md:grid-cols-3 gap-4">
                   {selectedMood && (
                     <div className="flex items-center gap-2">
                       <Badge className="bg-blue-100 text-blue-800 border border-blue-200">
-                        🎭 {moodOptions.find(m => m.id === selectedMood)?.label}
+                        Tâm trạng: {moodOptions.find(m => m.id === selectedMood)?.label}
                       </Badge>
                     </div>
                   )}
                   {selectedEnergy && (
                     <div className="flex items-center gap-2">
                       <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-200">
-                        ⚡ {energyOptions.find(e => e.id === selectedEnergy)?.label}
+                        Năng lượng: {energyOptions.find(e => e.id === selectedEnergy)?.label}
                       </Badge>
                     </div>
                   )}
                   {selectedSymptoms.length > 0 && (
                     <div className="col-span-full">
-                      <p className="text-sm font-medium text-gray-700 mb-2">🩺 Triệu chứng:</p>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Triệu chứng:</p>
                       <div className="flex flex-wrap gap-2">
                         {selectedSymptoms.map((symptom, index) => (
                           <Badge key={index} className="bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs">
@@ -289,14 +297,12 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, selectedDate, onClose, on
                 Hủy
               </Button>
               
-
-              
               <Button
                 onClick={handleSave}
                 disabled={false}
                 className="px-8 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 hover:from-blue-600 hover:via-indigo-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FaCheck className="h-4 w-4 mr-2" />
+                <FaCheck className="mr-2" />
                 Lưu thông tin
               </Button>
             </div>

@@ -16,14 +16,12 @@ import OAuthSuccess from "./pages/OAuthSuccess";
 // Blog imports
 import { BlogListPage, BlogDetailPage, BlogFormPage } from './pages/blog';
 import { Toaster } from 'react-hot-toast';
-import ErrorBoundary from './components/common/ErrorBoundary';
 import ConsultantBlogList from './pages/dashboard/Consultant/components/ConsultantBlogList';
 import WeeklyScheduleManager from './pages/dashboard/Consultant/WeeklyScheduleManager';
 import AppointmentManagement from './pages/dashboard/Consultant/AppointmentManagement';
 import MyAppointments from './pages/dashboard/Customer/MyAppointments';
 import ConsultantList from './pages/dashboard/Customer/ConsultantList';
 import BookAppointment from './pages/consultation/BookAppointment';
-import ApiTest from './components/common/ApiTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AutoConfirmService from './services/autoConfirmService';
 import AutoConfirmNotification from './components/notifications/AutoConfirmNotification';
@@ -89,7 +87,6 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
         <Suspense fallback={<div className="flex justify-center items-center h-screen"><div>Đang tải trang...</div></div>}>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/api-test" element={<ApiTest />} />
             <Route path="/test-packages/*" element={<TestPackagesPage />} />
             <Route path="/test-packages/sti" element={<STITestPage />} />
             <Route path="/register" element={<Register />} />

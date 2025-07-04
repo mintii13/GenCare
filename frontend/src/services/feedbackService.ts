@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { API } from '../config/apiEndpoints';
 import {
   CreateFeedbackRequest,
   FeedbackResponse,
@@ -15,7 +16,7 @@ export class FeedbackService {
     feedbackData: CreateFeedbackRequest
   ): Promise<FeedbackResponse> {
     const response = await apiClient.post(
-      `/appointments/${appointmentId}/feedback`,
+      `${API.Appointment.BASE}/${appointmentId}/feedback`,
       feedbackData
     );
     return response.data as FeedbackResponse;
@@ -25,7 +26,7 @@ export class FeedbackService {
    * Get feedback for a specific appointment
    */
   static async getAppointmentFeedback(appointmentId: string): Promise<FeedbackResponse> {
-    const response = await apiClient.get(`/appointments/${appointmentId}/feedback`);
+    const response = await apiClient.get(`${API.Appointment.BASE}/${appointmentId}/feedback`);
     return response.data as FeedbackResponse;
   }
 
@@ -37,7 +38,7 @@ export class FeedbackService {
     feedbackData: CreateFeedbackRequest
   ): Promise<FeedbackResponse> {
     const response = await apiClient.put(
-      `/appointments/${appointmentId}/feedback`,
+      `${API.Appointment.BASE}/${appointmentId}/feedback`,
       feedbackData
     );
     return response.data as FeedbackResponse;
@@ -47,7 +48,7 @@ export class FeedbackService {
    * Delete feedback for an appointment (within 24 hours)
    */
   static async deleteFeedback(appointmentId: string): Promise<{ success: boolean; message: string }> {
-    const response = await apiClient.delete(`/appointments/${appointmentId}/feedback`);
+    const response = await apiClient.delete(`${API.Appointment.BASE}/${appointmentId}/feedback`);
     return response.data as { success: boolean; message: string };
   }
 
@@ -55,7 +56,7 @@ export class FeedbackService {
    * Get feedback statistics for a consultant
    */
   static async getConsultantFeedbackStats(consultantId: string): Promise<FeedbackStatsResponse> {
-    const response = await apiClient.get(`/appointments/consultant/${consultantId}/feedback-stats`);
+    const response = await apiClient.get(`${API.Appointment.BASE}/consultant/${consultantId}/feedback-stats`);
     return response.data as FeedbackStatsResponse;
   }
 
@@ -66,7 +67,7 @@ export class FeedbackService {
     success: boolean;
     data: ConsultantWithRating[];
   }> {
-    const response = await apiClient.get('/consultants/with-ratings');
+    const response = await apiClient.get(API.Consultant.WITH_RATINGS);
     return response.data as { success: boolean; data: ConsultantWithRating[] };
   }
 
@@ -86,7 +87,7 @@ export class FeedbackService {
       };
     }>;
   }> {
-    const response = await apiClient.get('/appointments/my-feedback');
+    const response = await apiClient.get(`${API.Appointment.MY_APPOINTMENTS.replace('my-appointments','my-feedback')}`);
     return response.data as any;
   }
 

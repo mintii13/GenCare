@@ -158,4 +158,17 @@ export class MenstrualCycleRepository {
 
         return firstCycle?.cycle_start_date || null;
     }
+
+    public static async updateCycle(cycleId: string, updateData: Partial<IMenstrualCycle>) {
+        try {
+            return await MenstrualCycle.findByIdAndUpdate(
+                cycleId, 
+                { ...updateData, updatedAt: new Date() },
+                { new: true }
+            );
+        } catch (error) {
+            console.error('Error updating cycle:', error);
+            throw error;
+        }
+    }
 }

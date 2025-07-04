@@ -18,8 +18,8 @@ const CircularProgress: React.FC<{
   totalDays: number;
   phase: string;
 }> = ({ progress, cycleDay, totalDays, phase }) => {
-  const radius = 200;
-  const strokeWidth = 20;
+  const radius = 180;
+  const strokeWidth = 18;
   const normalizedRadius = radius - strokeWidth * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDasharray = `${circumference} ${circumference}`;
@@ -77,9 +77,9 @@ const CircularProgress: React.FC<{
       
       {/* Center Content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${getPhaseGradient(phase)} flex items-center justify-center shadow-xl`}>
+        <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${getPhaseGradient(phase)} flex items-center justify-center shadow-lg`}>
           <div className="text-center text-white">
-            <div className="text-3xl font-bold">{cycleDay}</div>
+            <div className="text-2xl font-bold">{cycleDay}</div>
             <div className="text-sm opacity-90">ngày</div>
           </div>
         </div>
@@ -257,12 +257,13 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
   const phaseInfo = getPhaseInfo(currentPhase);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Main Cycle Display - Flo Style */}
-      <Card className="overflow-hidden shadow-inner border-2 border-gray-100">
-        <div className={`bg-gradient-to-br from-gray-50 to-gray-100 ${phaseInfo.bgColor} p-6 shadow-inner`}>
-          <div className="flex flex-col xl:flex-row items-start gap-8 rounded-lg bg-card text-card-foreground overflow-hidden border-0 shadow-lg">
-            {/* Left Side - Circular Progress */}
+      <Card className="overflow-hidden shadow-sm border border-gray-200/50 hover:shadow-md transition-shadow duration-300">
+        <div className={`bg-gradient-to-br from-white via-gray-50/30 to-white ${phaseInfo.bgColor}/20 p-4 sm:p-6`}>
+          {/* Mobile Layout */}
+          <div className="flex flex-col items-center gap-6 xl:hidden">
+            {/* Circular Progress for Mobile */}
             <div className="flex-shrink-0">
               <CircularProgress
                 progress={cycleProgress}
@@ -271,10 +272,10 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
                 phase={currentPhase}
               />
             </div>
-
-            {/* Center - Phase Info */}
-            <div className="flex-1 text-center xl:text-left min-w-0">
-              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${phaseInfo.bgColor} ${phaseInfo.borderColor} border mb-3`}>
+            
+            {/* Phase Info for Mobile */}
+            <div className="text-center w-full">
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${phaseInfo.bgColor} ${phaseInfo.borderColor} border mb-3`}>
                 <span className={phaseInfo.color}>{phaseInfo.icon}</span>
                 <span className={`text-sm font-medium ${phaseInfo.color}`}>
                   {phaseInfo.name}
@@ -290,8 +291,8 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
               </p>
 
               {todayStatus && (
-                <div className="flex flex-wrap gap-2 justify-center xl:justify-start">
-                  <Badge className={`${phaseInfo.bgColor} ${phaseInfo.color} border-0`}>
+                <div className="flex justify-center mb-4">
+                  <Badge className={`${phaseInfo.bgColor} ${phaseInfo.color} border-0 text-sm px-3 py-1`}>
                     {todayStatus.pregnancy_chance === 'high' ? 'Khả năng thụ thai cao' :
                      todayStatus.pregnancy_chance === 'medium' ? 'Khả năng thụ thai trung bình' :
                      'Khả năng thụ thai thấp'}
@@ -300,11 +301,11 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
               )}
             </div>
 
-            {/* Right Side - Quick Stats */}
-            <div className="flex flex-col gap-3 w-full xl:w-80">
+            {/* Stats for Mobile */}
+            <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
               {/* Next Ovulation */}
               {currentCycle.predicted_ovulation_date && (
-                <div className="bg-gray-50/90 backdrop-blur rounded-lg p-4 border border-gray-200/50 shadow-inner">
+                <div className="bg-white/70 backdrop-blur rounded-lg p-4 border border-gray-200/30 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-lg flex items-center justify-center text-white">
                       <FaBullseye className="h-4 w-4" />
@@ -327,7 +328,7 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
 
               {/* Fertile Window */}
               {currentCycle.predicted_fertile_start && currentCycle.predicted_fertile_end && (
-                <div className="bg-gray-50/90 backdrop-blur rounded-lg p-4 border border-gray-200/50 shadow-inner">
+                <div className="bg-white/70 backdrop-blur rounded-lg p-4 border border-gray-200/30 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center text-white">
                       <FaHeart className="h-4 w-4" />
@@ -349,7 +350,119 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
 
               {/* Next Period */}
               {currentCycle.predicted_cycle_end && (
-                <div className="bg-gray-50/90 backdrop-blur rounded-lg p-4 border border-gray-200/50 shadow-inner">
+                <div className="bg-white/70 backdrop-blur rounded-lg p-4 border border-gray-200/30 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-lg flex items-center justify-center text-white">
+                      <FaTint className="h-4 w-4" />    
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm">Kì kinh tiếp theo</h3>
+                      <p className="text-lg font-bold text-indigo-600">
+                        {getDaysUntil(currentCycle.predicted_cycle_end) === 0 ? 'Hôm nay' :
+                         getDaysUntil(currentCycle.predicted_cycle_end) > 0 ? 
+                         `${getDaysUntil(currentCycle.predicted_cycle_end)} ngày` : 
+                         'Trễ'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(currentCycle.predicted_cycle_end)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden xl:grid xl:grid-cols-12 xl:gap-8 xl:items-center">
+            {/* Left - Circular Progress */}
+            <div className="xl:col-span-4 flex justify-center">
+              <CircularProgress
+                progress={cycleProgress}
+                cycleDay={cycleDay}
+                totalDays={currentCycle.cycle_length || 28}
+                phase={currentPhase}
+              />
+            </div>
+
+            {/* Center - Phase Info */}
+            <div className="xl:col-span-4 text-center">
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${phaseInfo.bgColor} ${phaseInfo.borderColor} border mb-3`}>
+                <span className={phaseInfo.color}>{phaseInfo.icon}</span>
+                <span className={`text-sm font-medium ${phaseInfo.color}`}>
+                  {phaseInfo.name}
+                </span>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Ngày {cycleDay} của chu kì
+              </h2>
+              
+              <p className="text-gray-600 mb-4">
+                {phaseInfo.description}
+              </p>
+
+              {todayStatus && (
+                <div className="flex justify-center">
+                  <Badge className={`${phaseInfo.bgColor} ${phaseInfo.color} border-0 text-sm px-3 py-1`}>
+                    {todayStatus.pregnancy_chance === 'high' ? 'Khả năng thụ thai cao' :
+                     todayStatus.pregnancy_chance === 'medium' ? 'Khả năng thụ thai trung bình' :
+                     'Khả năng thụ thai thấp'}
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            {/* Right - Stats */}
+            <div className="xl:col-span-4 flex flex-col gap-3">
+              {/* Next Ovulation */}
+              {currentCycle.predicted_ovulation_date && (
+                <div className="bg-white/70 backdrop-blur rounded-lg p-4 border border-gray-200/30 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-lg flex items-center justify-center text-white">
+                      <FaBullseye className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm">Rụng trứng</h3>
+                      <p className="text-lg font-bold text-indigo-600">
+                        {getDaysUntil(currentCycle.predicted_ovulation_date) === 0 ? 'Hôm nay' :
+                         getDaysUntil(currentCycle.predicted_ovulation_date) > 0 ? 
+                         `${getDaysUntil(currentCycle.predicted_ovulation_date)} ngày` : 
+                         'Đã qua'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(currentCycle.predicted_ovulation_date)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Fertile Window */}
+              {currentCycle.predicted_fertile_start && currentCycle.predicted_fertile_end && (
+                <div className="bg-white/70 backdrop-blur rounded-lg p-4 border border-gray-200/30 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center text-white">
+                      <FaHeart className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm">Cửa sổ sinh sản</h3>
+                      <p className="text-sm text-blue-600 font-medium">
+                        {formatDate(currentCycle.predicted_fertile_start)} - {formatDate(currentCycle.predicted_fertile_end)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Còn {getDaysUntil(currentCycle.predicted_fertile_start) > 0 ? 
+                         `${getDaysUntil(currentCycle.predicted_fertile_start)} ngày` : 
+                         todayStatus?.is_fertile_day ? 'Hiện tại' : 'Đã qua'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Next Period */}
+              {currentCycle.predicted_cycle_end && (
+                <div className="bg-white/70 backdrop-blur rounded-lg p-4 border border-gray-200/30 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-lg flex items-center justify-center text-white">
                       <FaTint className="h-4 w-4" />    

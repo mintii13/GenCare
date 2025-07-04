@@ -1,4 +1,5 @@
 import api from './api';
+import { API } from '../config/apiEndpoints';
 
 export interface User {
   _id: string;
@@ -34,7 +35,6 @@ export interface AuthResponse {
   data: {
     user: User;
     accessToken: string;
-    refreshToken: string;
   };
 }
 
@@ -55,13 +55,12 @@ export interface ChangePasswordRequest {
 export const userService = {
   // Authentication
   async login(credentials: LoginRequest) {
-    const response = await api.post('/auth/login', credentials);
+    const response = await api.post(API.Auth.LOGIN_PUBLIC, credentials);
     
     // Store tokens and user info
     if (response.data.success) {
-      const { accessToken, refreshToken, user } = response.data.data;
-        localStorage.setItem('gencare_auth_token', accessToken);
-  localStorage.setItem('refreshToken', refreshToken);
+      const { accessToken, user } = response.data.data;
+      localStorage.setItem('gencare_auth_token', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
     }
     
@@ -69,49 +68,30 @@ export const userService = {
   },
 
   async register(userData: RegisterRequest) {
-    const response = await api.post('/auth/register', userData);
+    const response = await api.post(API.Auth.REGISTER_PUBLIC, userData);
     return response.data;
   },
 
   async logout() {
     try {
-      await api.post('/auth/logout');
+      await api.post(API.Auth.LOGOUT);
     } catch (error) {
   
     } finally {
       // Clear local storage regardless of API call result
         localStorage.removeItem('gencare_auth_token');
-  localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
     }
   },
 
-  async refreshToken() {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    const response = await api.post('/auth/refresh-token', {
-      refreshToken
-    });
-
-    if (response.data.success) {
-      const { accessToken } = response.data.data;
-      localStorage.setItem('gencare_auth_token', accessToken);
-    }
-
-    return response.data;
-  },
-
   // Profile management
   async getProfile() {
-    const response = await api.get('/profile/getUserProfile');
+    const response = await api.get(API.Profile.GET);
     return response.data;
   },
 
   async updateProfile(data: UpdateProfileRequest) {
-    const response = await api.put('/profile/updateUserProfile', data);
+    const response = await api.put(API.Profile.UPDATE, data);
     
     // Update local storage if successful
     if (response.data.success) {
@@ -124,12 +104,12 @@ export const userService = {
   },
 
   async changePassword(data: ChangePasswordRequest) {
-    const response = await api.put('/auth/changePassword', data);
+    const response = await api.put(API.Auth.CHANGE_PASSWORD, data);
     return response.data;
   },
 
   async uploadAvatar(formData: FormData) {
-    const response = await api.post('/profile/updateUserProfile', formData, {
+    const response = await api.post(API.Profile.UPDATE, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -147,22 +127,22 @@ export const userService = {
 
   // Verification
   async sendVerificationEmail() {
-    const response = await api.post('/auth/send-verification');
+    const response = await api.post(API.Auth.SEND_VERIFICATION);
     return response.data;
   },
 
   async verifyEmail(token: string) {
-    const response = await api.post('/auth/verify-email', { token });
+    const response = await api.post(API.Auth.VERIFY_EMAIL, { token });
     return response.data;
   },
 
   async requestPasswordReset(email: string) {
-    const response = await api.post('/auth/forgot-password', { email });
+    const response = await api.post(API.Auth.FORGOT_PASSWORD, { email });
     return response.data;
   },
 
   async resetPassword(token: string, newPassword: string) {
-    const response = await api.post('/auth/reset-password', {
+    const response = await api.post(API.Auth.RESET_PASSWORD, {
       token,
       new_password: newPassword
     });

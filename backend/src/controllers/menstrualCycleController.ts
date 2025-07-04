@@ -145,4 +145,45 @@ router.get('/getPeriodStatistics', authenticateToken, async (req: Request, res: 
         });
     }
 });
+
+router.get('/cleanupDuplicates', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const user_id = (req.user as any).userId;
+        const result = await MenstrualCycleService.cleanupDuplicates(user_id);
+        
+        if (result.success === false) {
+            return res.status(400).json(result);
+        }
+        
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in /cleanupDuplicates:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'System error during cleanup'
+        });
+    }
+});
+
+router.delete('/resetAllData', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const user_id = (req.user as any).userId;
+        const result = await MenstrualCycleService.resetAllData(user_id);
+        
+        if (result.success === false) {
+            return res.status(400).json(result);
+        }
+        
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in /resetAllData:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'System error during reset'
+        });
+    }
+});
+
+// Route removed - method not implemented
+
 export default router;

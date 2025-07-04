@@ -1,4 +1,5 @@
 import api from './api';
+import { API } from '../config/apiEndpoints';
 
 export interface WorkingDay {
   start_time: string;
@@ -82,13 +83,13 @@ export interface WeeklySlots {
 export const weeklyScheduleService = {
   // Create weekly schedule
   async createSchedule(data: WeeklyScheduleRequest) {
-    const response = await api.post('/weekly-schedule', data);
+    const response = await api.post(API.WeeklySchedule.BASE, data);
     return response.data;
   },
 
   // Update weekly schedule
   async updateSchedule(scheduleId: string, data: Partial<WeeklyScheduleRequest>) {
-    const response = await api.put(`/weekly-schedule/${scheduleId}`, data);
+    const response = await api.put(`${API.WeeklySchedule.BASE}/${scheduleId}`, data);
     return response.data;
   },
 
@@ -98,7 +99,7 @@ export const weeklyScheduleService = {
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
 
-    const response = await api.get(`/weekly-schedule/consultant/${consultantId}?${params}`);
+    const response = await api.get(`${API.WeeklySchedule.CONSULTANT_SCHEDULES(consultantId)}?${params}`);
     return response.data;
   },
 
@@ -108,19 +109,19 @@ export const weeklyScheduleService = {
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
 
-    const response = await api.get(`/weekly-schedule/my-schedules?${params}`);
+    const response = await api.get(`${API.WeeklySchedule.MY_SCHEDULES}?${params}`);
     return response.data;
   },
 
   // Get weekly slots for booking
   async getWeeklySlots(consultantId: string, weekStartDate: string) {
-    const response = await api.get(`/weekly-schedule/weekly-slots/${consultantId}?week_start_date=${weekStartDate}`);
+    const response = await api.get(`${API.WeeklySchedule.WEEKLY_SLOTS(consultantId)}?week_start_date=${weekStartDate}`);
     return response.data;
   },
 
   // Copy schedule to another week
   async copySchedule(scheduleId: string, targetWeekStartDate: string) {
-    const response = await api.post(`/weekly-schedule/copy/${scheduleId}`, {
+    const response = await api.post(`${API.WeeklySchedule.BASE}/copy/${scheduleId}`, {
       target_week_start_date: targetWeekStartDate
     });
     return response.data;
@@ -128,13 +129,13 @@ export const weeklyScheduleService = {
 
   // Delete schedule
   async deleteSchedule(scheduleId: string) {
-    const response = await api.delete(`/weekly-schedule/${scheduleId}`);
+    const response = await api.delete(`${API.WeeklySchedule.BASE}/${scheduleId}`);
     return response.data;
   },
 
   // Get schedule by ID
   async getScheduleById(scheduleId: string) {
-    const response = await api.get(`/weekly-schedule/${scheduleId}`);
+    const response = await api.get(`${API.WeeklySchedule.BASE}/${scheduleId}`);
     return response.data;
   }
 };

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from "axios";
-import { config } from "../config/constants.js";  
+import { config } from "../config/constants.js";
+import { clearAllTokens } from "../utils/authUtils";  
 
 const AUTH_TOKEN_KEY = config.auth.tokenKey;
 
@@ -92,10 +93,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: User, token: string) => {
     console.log("AuthContext: login function called. Storing user and token.");
+    console.log("AuthContext: Token being stored:", token ? `${token.substring(0, 20)}...` : 'null');
+    console.log("AuthContext: Using token key:", AUTH_TOKEN_KEY);
+    
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem(AUTH_TOKEN_KEY, token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Verify token was stored
+    const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    console.log("AuthContext: Token verification after storage:", storedToken ? `${storedToken.substring(0, 20)}...` : 'null');
   };
 
   const logout = async () => {
@@ -111,8 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem(AUTH_TOKEN_KEY);
+      clearAllTokens(); // Xóa tất cả token
       delete axios.defaults.headers.common['Authorization'];
       window.location.href = '/';
     }

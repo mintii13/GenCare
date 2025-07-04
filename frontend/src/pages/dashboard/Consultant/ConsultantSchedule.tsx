@@ -43,8 +43,12 @@ const ConsultantSchedule: React.FC = () => {
   const loadConsultants = async () => {
     try {
       const response = await consultantService.getAllConsultants();
-      if (response.success && response.data) {
-        setConsultants(response.data.consultants || []);
+      if (response.data && response.data.consultants) {
+        const mapped = response.data.consultants.map((c: any) => ({
+          _id: c._id,
+          full_name: c.full_name || c.name || ''
+        }));
+        setConsultants(mapped);
       }
     } catch (error) {
       console.error('Error loading consultants:', error);

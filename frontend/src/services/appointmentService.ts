@@ -1,4 +1,5 @@
 import api from './api';
+import { API } from '../config/apiEndpoints';
 
 export interface BookAppointmentRequest {
   consultant_id: string;
@@ -56,23 +57,28 @@ export interface ApiResponse<T> {
 export const appointmentService = {
   // Customer APIs
   async bookAppointment(data: BookAppointmentRequest) {
-    const response = await api.post('/appointments/book', data);
+    const response = await api.post(API.Appointment.BOOK, data);
     return response.data;
   },
 
   async getMyAppointments(status?: string): Promise<ApiResponse<{ appointments: Appointment[] }>> {
+    const url = status ? `${API.Appointment.MY_APPOINTMENTS}?status=${status}` : API.Appointment.MY_APPOINTMENTS;
     try {
-      const url = status ? `/appointments/my-appointments?status=${status}` : '/appointments/my-appointments';
       const response = await api.get(url);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 403) {
+        const altUrl = status ? `${API.Appointment.CONSULTANT_APPOINTMENTS}?status=${status}` : API.Appointment.CONSULTANT_APPOINTMENTS;
+        const altRes = await api.get(altUrl);
+        return altRes.data;
+      }
       throw error;
     }
   },
 
   async cancelAppointment(appointmentId: string): Promise<ApiResponse<any>> {
     try {
-      const response = await api.put(`/appointments/${appointmentId}/cancel`);
+      const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/cancel`);
       return response.data;
     } catch (error) {
       throw error;
@@ -80,14 +86,14 @@ export const appointmentService = {
   },
 
   async rescheduleAppointment(appointmentId: string, data: { appointment_date: string; start_time: string; end_time: string }) {
-    const response = await api.put(`/appointments/${appointmentId}`, data);
+    const response = await api.put(`${API.Appointment.BASE}/${appointmentId}`, data);
     return response.data;
   },
 
   // Consultant APIs
   async getConsultantAppointments(status?: string): Promise<ApiResponse<{ appointments: Appointment[] }>> {
     try {
-      const url = status ? `/appointments/consultant-appointments?status=${status}` : '/appointments/consultant-appointments';
+      const url = status ? `${API.Appointment.CONSULTANT_APPOINTMENTS}?status=${status}` : API.Appointment.CONSULTANT_APPOINTMENTS;
       const response = await api.get(url);
       return response.data;
     } catch (error) {
@@ -104,13 +110,14 @@ export const appointmentService = {
     if (consultantId) params.append('consultant_id', consultantId);
     if (customerId) params.append('customer_id', customerId);
 
-    const response = await api.get(`/appointments/admin/all?${params}`);
+    const response = await api.get(`${API.Appointment.ALL}?${params}`);
     return response.data;
   },
 
-  async confirmAppointment(appointmentId: string): Promise<ApiResponse<{ appointment: Appointment }>> {
+  async confirmAppointment(appointmentId: string, googleAccessToken?: string): Promise<ApiResponse<{ appointment: Appointment }>> {
     try {
-      const response = await api.put(`/appointments/${appointmentId}/confirm`);
+      const requestBody = googleAccessToken ? { googleAccessToken } : {};
+      const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/confirm`, requestBody);
       return response.data;
     } catch (error) {
       throw error;
@@ -118,7 +125,7 @@ export const appointmentService = {
   },
 
   async completeAppointment(appointmentId: string, consultantNotes: string) {
-    const response = await api.put(`/appointments/${appointmentId}/complete`, {
+    const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/complete`, {
       consultant_notes: consultantNotes
     });
     return response.data;
@@ -126,21 +133,22 @@ export const appointmentService = {
 
   async getAppointmentById(appointmentId: string): Promise<ApiResponse<{ appointment: Appointment }>> {
     try {
-      const response = await api.get(`/appointments/${appointmentId}`);
+      const response = await api.get(`${API.Appointment.BASE}/${appointmentId}`);
       return response.data;
     } catch (error) {
       throw error;
     }
   },
 
-  async startMeeting(appointmentId: string) {
-    const response = await api.put(`/appointments/${appointmentId}/start-meeting`);
+  async startMeeting(appointmentId: string, googleAccessToken?: string) {
+    const requestBody = googleAccessToken ? { googleAccessToken } : {};
+    const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/start-meeting`, requestBody);
     return response.data;
   },
 
   async getAvailableSlots(consultantId: string, date: string): Promise<ApiResponse<{ slots: AppointmentSlot[] }>> {
     try {
-      const response = await api.get(`/appointments/slots/${consultantId}?date=${date}`);
+      const response = await api.get(`${API.Appointment.BASE}/slots/${consultantId}?date=${date}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -149,7 +157,7 @@ export const appointmentService = {
 
   async startAppointment(appointmentId: string): Promise<ApiResponse<{ meeting_link: string }>> {
     try {
-      const response = await api.post(`/appointments/${appointmentId}/start`);
+      const response = await api.post(`${API.Appointment.BASE}/${appointmentId}/start`);
       return response.data;
     } catch (error) {
       throw error;
