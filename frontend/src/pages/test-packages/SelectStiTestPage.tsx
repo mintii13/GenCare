@@ -20,14 +20,7 @@ const SelectStiTestPage: React.FC = () => {
     return <Alert message="Chức năng này chỉ dành cho khách hàng." type="warning" showIcon />;
   }
 
-  return (
-    <PageTransition>
-      <div>
-        <button onClick={() => navigate('/test-packages')}>Chuyển sang Gói xét nghiệm</button>
-        <StiTestList onSelectTest={(test) => navigate(`/consultation/book?testId=${test._id}`)} />
-      </div>
-    </PageTransition>
-  );
+
 };
 
 export default SelectStiTestPage; 
