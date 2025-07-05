@@ -71,7 +71,7 @@ Period Grouping Rule: Nếu giữa thời gian hành kinh cách nhau không quá
 Cycle Length Calculation Rule: Chu kỳ được tính là số ngày giữa ngày bắt đầu kỳ kinh hiện tại và ngày bắt đầu kỳ kinh trước đó.
 Algorithms for Prediction: 
 - Ovulation date(ov) = cycle_start + (cycle_len - 14): https://www.mayoclinic.org/diseases-conditions/infertility/in-depth/getting-pregnant/art-20046784
-- Fertile window = [ov - 5; ov]: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC27529/
+- Fertile window = [ov - 5; ov + 1]: https://www.hopkinsmedicine.org/health/wellness-and-prevention/calculating-your-monthly-fertility-window
 Validation in Cycle:
 - Range of cycle = [21, 35]: https://my.clevelandclinic.org/health/articles/10132-menstrual-cycle, https://www.nhs.uk/conditions/periods/
 - Regularity Classification: 'regular' if σ ≤ 3.95: Chiazze, Leonard, et al. "The length and variability of the human menstrual cycle." Jama 203.6 (1968): 377-380.
