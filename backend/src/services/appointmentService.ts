@@ -10,6 +10,8 @@ import { EmailNotificationService } from './emailNotificationService';
 import { FeedbackResponse, FeedbackStatsResponse } from '../dto/responses/FeedbackResponse';
 import { CreateFeedbackRequest } from '../dto/requests/FeedbackRequest';
 import { AppointmentResponse } from '../dto/responses/AppointmentResponse';
+import { PaginationUtils } from '../utils/paginationUtils';
+import { AppointmentQuery } from '../dto/requests/PaginationRequest';
 
 export class AppointmentService {
     /**
@@ -125,6 +127,30 @@ export class AppointmentService {
             });
 
             console.log('Appointment created:', newAppointment._id);
+
+            // ✅ THÊM: Log appointment history cho action "created"
+            try {
+                await AppointmentHistoryService.logAppointmentCreated(
+                    newAppointment._id.toString(),
+                    {
+                        customer_id: appointmentData.customer_id,
+                        consultant_id: appointmentData.consultant_id,
+                        appointment_date: appointmentData.appointment_date,
+                        start_time: appointmentData.start_time,
+                        end_time: appointmentData.end_time,
+                        customer_notes: appointmentData.customer_notes,
+                        status: 'pending',
+                        created_date: new Date(),
+                        updated_date: new Date()
+                    },
+                    appointmentData.customer_id,
+                    'customer'
+                );
+                console.log('✅ Appointment history created successfully for:', newAppointment._id);
+            } catch (historyError) {
+                console.error('❌ Failed to create appointment history:', historyError);
+                // Don't fail the appointment creation if history logging fails
+            }
 
             // Populate for response
             const populatedAppointment = await AppointmentRepository.findById(newAppointment._id.toString());
@@ -1391,5 +1417,146 @@ export class AppointmentService {
         }
 
         return true;
+    }
+
+    /**
+ * Get appointments với pagination và filtering
+ */
+    public static async getAppointmentsWithPagination(query: AppointmentQuery) {
+        try {
+            // Validate pagination parameters
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validatePagination(query);
+
+            // Build filter query
+            const filters = PaginationUtils.buildAppointmentFilter(query);
+
+            // Sanitize search
+            if (query.search) {
+                query.search = PaginationUtils.sanitizeSearch(query.search);
+            }
+
+            // Get data từ repository
+            const result = await AppointmentRepository.findWithPagination(
+                filters,
+                page,
+                limit,
+                sort_by || 'appointment_date',
+                sort_order
+            );
+
+            // Calculate pagination info
+            const pagination = PaginationUtils.calculatePagination(
+                result.total,
+                page,
+                limit
+            );
+
+            // Build filters_applied object
+            const filters_applied: any = {};
+            if (query.search) filters_applied.search = query.search;
+            if (query.customer_id) filters_applied.customer_id = query.customer_id;
+            if (query.consultant_id) filters_applied.consultant_id = query.consultant_id;
+            if (query.status) filters_applied.status = query.status;
+            if (query.appointment_date_from) filters_applied.appointment_date_from = query.appointment_date_from;
+            if (query.appointment_date_to) filters_applied.appointment_date_to = query.appointment_date_to;
+            if (query.video_call_status) filters_applied.video_call_status = query.video_call_status;
+            if (query.has_feedback !== undefined) filters_applied.has_feedback = query.has_feedback;
+            if (query.feedback_rating) filters_applied.feedback_rating = query.feedback_rating;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            return {
+                success: true,
+                message: result.appointments.length > 0
+                    ? 'Appointments retrieved successfully'
+                    : 'No appointments found matching the criteria',
+                data: {
+                    appointments: result.appointments,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Appointment service pagination error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting appointments'
+            };
+        }
+    }
+
+    /**
+     * Get appointment statistics
+     */
+    public static async getAppointmentStatistics(filters: any = {}) {
+        try {
+            const stats = await AppointmentRepository.getAppointmentStats(filters);
+
+            return {
+                success: true,
+                message: 'Appointment statistics retrieved successfully',
+                data: {
+                    statistics: stats
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Get appointment statistics error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting appointment statistics'
+            };
+        }
+
+        /**
+ * Get all appointments với basic filtering (for staff/admin)
+ */
+
+    }
+    public static async getAllAppointments(
+        status?: string,
+        startDate?: Date,
+        endDate?: Date
+    ): Promise<AppointmentResponse> {
+        try {
+            // Build basic filter
+            const filters: any = {};
+
+            if (status) {
+                filters.status = status;
+            }
+
+            if (startDate || endDate) {
+                filters.appointment_date = {};
+                if (startDate) {
+                    filters.appointment_date.$gte = startDate;
+                }
+                if (endDate) {
+                    const endOfDay = new Date(endDate);
+                    endOfDay.setHours(23, 59, 59, 999);
+                    filters.appointment_date.$lte = endOfDay;
+                }
+            }
+
+            // Get appointments using repository
+            const appointments = await AppointmentRepository.findAll(filters);
+
+            return {
+                success: true,
+                message: 'All appointments retrieved successfully',
+                data: {
+                    appointments,
+                    total: appointments.length
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Get all appointments service error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when retrieving all appointments'
+            };
+        }
     }
 }

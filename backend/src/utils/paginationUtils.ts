@@ -1,6 +1,6 @@
 import { PaginationQuery } from '../dto/requests/PaginationRequest';
 import { PaginationInfo } from '../dto/responses/PaginationResponse';
-
+import { AppointmentHistoryQuery } from '../dto/requests/AppointmentHistoryRequest';
 
 export class PaginationUtils {
     /**
@@ -84,9 +84,17 @@ export class PaginationUtils {
         return filter;
     }
 
+
     /**
-     * Build MongoDB filter query cho blog comments
+     * Sanitize search input để tránh regex injection
      */
+    static sanitizeSearch(search: string): string {
+        return search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    /**
+  * Build MongoDB filter query cho blog comments
+  */
     static buildBlogCommentFilter(query: any): any {
         const filter: any = {};
 
@@ -121,6 +129,11 @@ export class PaginationUtils {
             }
         }
 
+        // Content search
+        if (query.search) {
+            filter.content = { $regex: query.search.trim(), $options: 'i' };
+        }
+
         // Date range filter
         if (query.date_from || query.date_to) {
             filter.comment_date = {};
@@ -137,10 +150,109 @@ export class PaginationUtils {
         return filter;
     }
 
+    static buildAppointmentFilter(query: any): any {
+        const filter: any = {};
+
+        // Customer filter
+        if (query.customer_id) {
+            filter.customer_id = query.customer_id;
+        }
+
+        // Consultant filter
+        if (query.consultant_id) {
+            filter.consultant_id = query.consultant_id;
+        }
+
+        // Status filter
+        if (query.status) {
+            filter.status = query.status;
+        }
+
+        // Video call status filter
+        if (query.video_call_status) {
+            filter.video_call_status = query.video_call_status;
+        }
+
+        // UPDATED: Appointment date range filter (support both formats)
+        const dateFrom = query.appointment_date_from || query.start_date;
+        const dateTo = query.appointment_date_to || query.end_date;
+
+        if (dateFrom || dateTo) {
+            filter.appointment_date = {};
+            if (dateFrom) {
+                filter.appointment_date.$gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+                const endDate = new Date(dateTo);
+                endDate.setHours(23, 59, 59, 999);
+                filter.appointment_date.$lte = endDate;
+            }
+        }
+
+        // Has feedback filter
+        if (query.has_feedback !== undefined) {
+            if (query.has_feedback === 'true' || query.has_feedback === true) {
+                filter.feedback = { $exists: true, $ne: null };
+            } else {
+                filter.feedback = { $exists: false };
+            }
+        }
+
+        // Feedback rating filter
+        if (query.feedback_rating) {
+            filter['feedback.rating'] = parseInt(query.feedback_rating);
+        }
+
+        // Notes search (trong customer_notes hoặc consultant_notes)
+        if (query.search) {
+            const searchRegex = { $regex: query.search.trim(), $options: 'i' };
+            filter.$or = [
+                { customer_notes: searchRegex },
+                { consultant_notes: searchRegex }
+            ];
+        }
+
+        return filter;
+    }
     /**
-     * Sanitize search input để tránh regex injection
-     */
-    static sanitizeSearch(search: string): string {
-        return search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+         * Build MongoDB filter query cho appointment history
+         */
+    static buildAppointmentHistoryFilter(query: AppointmentHistoryQuery): any {
+        const filter: any = {};
+
+        // Appointment filter
+        if (query.appointment_id) {
+            filter.appointment_id = query.appointment_id;
+        }
+
+        // Action filter
+        if (query.action) {
+            filter.action = query.action;
+        }
+
+        // Performed by user filter
+        if (query.performed_by_user_id) {
+            filter.performed_by_user_id = query.performed_by_user_id;
+        }
+
+        // Performed by role filter
+        if (query.performed_by_role) {
+            filter.performed_by_role = query.performed_by_role;
+        }
+
+        // Date range filter
+        if (query.date_from || query.date_to) {
+            filter.timestamp = {};
+            if (query.date_from) {
+                filter.timestamp.$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                const endDate = new Date(query.date_to);
+                endDate.setHours(23, 59, 59, 999);
+                filter.timestamp.$lte = endDate;
+            }
+        }
+
+        return filter;
     }
 }

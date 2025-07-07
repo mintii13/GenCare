@@ -141,4 +141,84 @@ export class BlogCommentRepository {
             throw error;
         }
     }
+
+    /**
+ * THÊM METHOD MỚI: Find comments với pagination và filtering
+ */
+    public static async findWithPagination(
+        filters: any,
+        page: number,
+        limit: number,
+        sortBy: string = 'comment_date',
+        sortOrder: 1 | -1 = -1
+    ): Promise<{
+        comments: any[];
+        total: number;
+    }> {
+        try {
+            // Build sort object
+            const sortObj: any = {};
+            sortObj[sortBy] = sortOrder;
+
+            // Get total count với cùng filter
+            const total = await BlogComment.countDocuments(filters);
+
+            // Get paginated comments
+            const comments = await BlogComment.find(filters)
+                .sort(sortObj)
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+
+            // Populate user info cho từng comment
+            const commentsWithUser = await Promise.all(
+                comments.map(async (comment) => {
+                    // Nếu comment ẩn danh, không trả về user info
+                    if (comment.is_anonymous || !comment.customer_id) {
+                        return {
+                            _id: comment._id,
+                            blog_id: comment.blog_id,
+                            user_id: comment.customer_id,
+                            content: comment.content,
+                            comment_date: comment.comment_date,
+                            parent_comment_id: comment.parent_comment_id,
+                            status: comment.status,
+                            is_anonymous: comment.is_anonymous,
+                            comment_id: comment._id,
+                            user: null
+                        };
+                    }
+
+                    // Tìm user cho non-anonymous comments
+                    const user = await User.findById(comment.customer_id).lean();
+                    const userInfo = user ? {
+                        user_id: user._id,
+                        full_name: user.full_name,
+                        email: user.email,
+                        phone: user.phone,
+                        role: user.role,
+                        avatar: user.avatar
+                    } : null;
+
+                    return {
+                        _id: comment._id,
+                        blog_id: comment.blog_id,
+                        user_id: comment.customer_id,
+                        content: comment.content,
+                        comment_date: comment.comment_date,
+                        parent_comment_id: comment.parent_comment_id,
+                        status: comment.status,
+                        is_anonymous: comment.is_anonymous,
+                        comment_id: comment._id,
+                        user: userInfo
+                    };
+                })
+            );
+
+            return { comments: commentsWithUser, total };
+        } catch (error) {
+            console.error('Error finding comments with pagination:', error);
+            throw error;
+        }
+    }
 }
