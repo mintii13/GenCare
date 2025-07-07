@@ -336,4 +336,64 @@ export class PaginationUtils {
 
         return { page, limit, sort_by, sort_order };
     }
+
+    /**
+ * Build MongoDB filter query cho Audit Logs
+ */
+    static buildAuditLogFilter(query: any): any {
+        const filter: any = {};
+
+        // Target type filter
+        if (query.target_type) {
+            filter.target_type = query.target_type;
+        }
+
+        // Target ID filter
+        if (query.target_id) {
+            filter.target_id = new mongoose.Types.ObjectId(query.target_id);
+        }
+
+        // User ID filter
+        if (query.user_id) {
+            filter.user_id = new mongoose.Types.ObjectId(query.user_id);
+        }
+
+        // Action filter
+        if (query.action) {
+            filter.action = { $regex: query.action.trim(), $options: 'i' };
+        }
+
+        // Date range filter
+        if (query.date_from || query.date_to) {
+            filter.timestamp = {};
+            if (query.date_from) {
+                filter.timestamp.$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                // Include toàn bộ ngày cuối
+                const endDate = new Date(query.date_to);
+                endDate.setHours(23, 59, 59, 999);
+                filter.timestamp.$lte = endDate;
+            }
+        }
+
+        return filter;
+    }
+
+    /**
+     * Validate và normalize pagination parameters cho Audit Log
+     */
+    static validateAuditLogPagination(query: any): {
+        page: number;
+        limit: number;
+        sort_by: string;
+        sort_order: 1 | -1;
+    } {
+        const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
+        const sort_by = query.sort_by || 'timestamp'; // Default sort by timestamp
+        const sort_order = query.sort_order === 'asc' ? 1 : -1; // Default: newest first
+
+        return { page, limit, sort_by, sort_order };
+    }
 }

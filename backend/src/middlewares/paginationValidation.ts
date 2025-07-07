@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { StiOrderQuery } from '../dto/requests/StiRequest';
+import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 
 
 // Helper functions
@@ -400,6 +401,100 @@ export const validateStiOrderPagination = (req: Request, res: Response, next: Ne
         next();
     } catch (error) {
         console.error('Error in STI order validation:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error during validation.'
+        });
+    }
+};
+
+/**
+ * Validate Audit Log pagination parameters
+ */
+export const validateAuditLogPagination = (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const query = req.query as AuditLogQuery;
+
+        // Validate page parameter
+        if (query.page !== undefined) {
+            const page = parseInt(query.page.toString());
+            if (isNaN(page) || page < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid page parameter. Must be a positive integer.'
+                });
+            }
+        }
+
+        // Validate limit parameter
+        if (query.limit !== undefined) {
+            const limit = parseInt(query.limit.toString());
+            if (isNaN(limit) || limit < 1 || limit > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid limit parameter. Must be between 1 and 100.'
+                });
+            }
+        }
+
+        // Validate sort_order parameter
+        if (query.sort_order !== undefined) {
+            if (!['asc', 'desc'].includes(query.sort_order.toString())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid sort_order parameter. Must be either "asc" or "desc".'
+                });
+            }
+        }
+
+        // Validate target_type parameter
+        if (query.target_type !== undefined) {
+            const validTargetTypes = ['StiOrder', 'StiPackage', 'StiTest'];
+            if (!validTargetTypes.includes(query.target_type.toString())) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid target_type parameter. Must be one of: ${validTargetTypes.join(', ')}`
+                });
+            }
+        }
+
+        // Validate date parameters
+        if (query.date_from !== undefined) {
+            const dateFrom = new Date(query.date_from.toString());
+            if (isNaN(dateFrom.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid date_from parameter. Must be a valid date (YYYY-MM-DD).'
+                });
+            }
+        }
+
+        if (query.date_to !== undefined) {
+            const dateTo = new Date(query.date_to.toString());
+            if (isNaN(dateTo.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid date_to parameter. Must be a valid date (YYYY-MM-DD).'
+                });
+            }
+        }
+
+        // Validate date range logic
+        if (query.date_from && query.date_to) {
+            const dateFrom = new Date(query.date_from.toString());
+            const dateTo = new Date(query.date_to.toString());
+
+            if (dateFrom > dateTo) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'date_from cannot be later than date_to.'
+                });
+            }
+        }
+
+        next();
+    } catch (error) {
+        console.error('Error in audit log validation:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error during validation.'

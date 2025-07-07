@@ -16,6 +16,8 @@ import { UserRepository } from '../repositories/userRepository';
 import { StiOrderQuery } from '../dto/requests/StiRequest';
 import { StiOrderPaginationResponse } from '../dto/responses/StiOrderPaginationResponse';
 import { PaginationUtils } from '../utils/paginationUtils';
+import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
+import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
@@ -887,6 +889,78 @@ export class StiService {
             return {
                 success: false,
                 message: 'Internal server error when getting STI orders',
+                data: {
+                    items: [],
+                    pagination: {
+                        current_page: 1,
+                        total_pages: 0,
+                        total_items: 0,
+                        items_per_page: 10,
+                        has_next: false,
+                        has_prev: false
+                    },
+                    filters_applied: {}
+                },
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+ * Get audit logs with pagination and filtering
+ */
+    public static async getAuditLogsWithPagination(query: AuditLogQuery): Promise<AuditLogPaginationResponse> {
+        try {
+            // Validate pagination parameters
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validateAuditLogPagination(query);
+
+            // Build filter query
+            const filters = PaginationUtils.buildAuditLogFilter(query);
+
+            // Get data từ repository
+            const result = await StiAuditLogRepository.findWithPagination(
+                filters,
+                page,
+                limit,
+                sort_by,
+                sort_order
+            );
+
+            // Calculate pagination info
+            const pagination = PaginationUtils.calculatePagination(
+                result.total,
+                page,
+                limit
+            );
+
+            // Build filters_applied object
+            const filters_applied: Record<string, any> = {};
+            if (query.target_type) filters_applied.target_type = query.target_type;
+            if (query.target_id) filters_applied.target_id = query.target_id;
+            if (query.user_id) filters_applied.user_id = query.user_id;
+            if (query.action) filters_applied.action = query.action;
+            if (query.date_from) filters_applied.date_from = query.date_from;
+            if (query.date_to) filters_applied.date_to = query.date_to;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            return {
+                success: true,
+                message: result.auditLogs.length > 0
+                    ? `Found ${result.auditLogs.length} audit logs`
+                    : 'No audit logs found with the given criteria',
+                data: {
+                    items: result.auditLogs,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Error getting audit logs with pagination:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting audit logs',
                 data: {
                     items: [],
                     pagination: {

@@ -12,9 +12,62 @@ import { TargetType } from '../models/StiAuditLog';
 import { StiOrder } from '../models/StiOrder';
 import { validateStiOrderPagination } from '../middlewares/paginationValidation';
 import { StiOrderQuery } from '../dto/requests/StiRequest';
+import { validateAuditLogPagination } from '../middlewares/paginationValidation';
+import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 
 const router = Router();
+/**
+ * Get audit logs with pagination and filtering
+ * GET /api/sti/audit-logs
+ * 
+ * Query parameters:
+ * - page: số trang (default: 1)
+ * - limit: số item per page (default: 10, max: 100)
+ * - sort_by: field để sort (default: timestamp)
+ * - sort_order: asc/desc (default: desc - newest first)
+ * - target_type: filter theo target type
+ * - target_id: filter theo target ID
+ * - user_id: filter theo user ID
+ * - action: filter theo action (partial match)
+ * - date_from: filter từ ngày (YYYY-MM-DD)
+ * - date_to: filter đến ngày (YYYY-MM-DD)
+ */
+router.get('/audit-logs',
+    authenticateToken,
+    authorizeRoles('admin'),
+    validateAuditLogPagination,
+    async (req: Request, res: Response) => {
+        try {
+            const query = req.query as AuditLogQuery;
+            const result = await StiService.getAuditLogsWithPagination(query);
 
+            if (result.success) {
+                return res.status(200).json(result);
+            } else {
+                return res.status(500).json(result);
+            }
+        } catch (error) {
+            console.error('Error in audit logs pagination:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                data: {
+                    items: [],
+                    pagination: {
+                        current_page: 1,
+                        total_pages: 0,
+                        total_items: 0,
+                        items_per_page: 10,
+                        has_next: false,
+                        has_prev: false
+                    },
+                    filters_applied: {}
+                },
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
+);
 /**
  * Get STI orders with pagination and filtering
  * GET /api/sti/orders
