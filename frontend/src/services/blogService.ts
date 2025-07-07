@@ -1,6 +1,14 @@
 import api from './api';
 import { API } from '../config/apiEndpoints';
-import { BlogsResponse, CommentsResponse, BlogFilters, Comment } from '../types/blog';
+import { 
+  BlogsPaginatedResponse, 
+  BlogResponse, 
+  CommentsResponse, 
+  BlogFilters, 
+  BlogQuery,
+  BlogStatsResponse,
+  Comment 
+} from '../types/blog';
 
 export interface Blog {
   _id: string;
@@ -13,15 +21,29 @@ export interface Blog {
 }
 
 export const blogService = {
-  // Lấy danh sách blog với filter
-  getBlogs: async (filters?: BlogFilters): Promise<BlogsResponse> => {
+  // Lấy danh sách blog với pagination mới
+  getBlogs: async (query?: BlogQuery): Promise<BlogsPaginatedResponse> => {
     try {
+      console.log('🚀 BlogService.getBlogs called with:', query);
+      
+      // Validate sort_order before building params
+      if (query?.sort_order && !['asc', 'desc'].includes(query.sort_order)) {
+        console.error('❌ Invalid sort_order:', query.sort_order);
+        throw new Error(`Invalid sort_order: ${query.sort_order}. Must be 'asc' or 'desc'`);
+      }
+      
       const params = new URLSearchParams();
-      if (filters?.searchQuery) params.append('search', filters.searchQuery);
-      if (filters?.authorId) params.append('author_id', filters.authorId.toString());
-      if (filters?.specialization) params.append('specialization', filters.specialization);
-      if (filters?.sortBy) params.append('sort_by', filters.sortBy);
-      if (filters?.sortOrder) params.append('sort_order', filters.sortOrder);
+      
+      if (query?.page) params.append('page', query.page.toString());
+      if (query?.limit) params.append('limit', query.limit.toString());
+      if (query?.search) params.append('search', query.search);
+      if (query?.author_id) params.append('author_id', query.author_id);
+      if (query?.status !== undefined) params.append('status', query.status.toString());
+      if (query?.date_from) params.append('date_from', query.date_from);
+      if (query?.date_to) params.append('date_to', query.date_to);
+      if (query?.sort_by) params.append('sort_by', query.sort_by);
+      if (query?.sort_order) params.append('sort_order', query.sort_order);
+
       const response = await api.get(`${API.Blog.LIST}?${params.toString()}`);
       return response.data;
     } catch (error) {
@@ -29,16 +51,32 @@ export const blogService = {
     }
   },
 
+  // Search blogs với pagination - sử dụng endpoint chính với search param
+  searchBlogs: async (searchQuery: string, query?: Omit<BlogQuery, 'search'>): Promise<BlogsPaginatedResponse> => {
+    try {
+      return await blogService.getBlogs({
+        search: searchQuery,
+        ...query
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Lấy thống kê blog theo author
+  getBlogStats: async (authorId: string): Promise<BlogStatsResponse> => {
+    try {
+      const response = await api.get(`${API.Blog.LIST}/author/${authorId}/stats`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Lấy chi tiết blog theo ID
-  getBlogById: async (blogId: string): Promise<BlogsResponse> => {
+  getBlogById: async (blogId: string): Promise<BlogResponse> => {
     try {
       const response = await api.get(API.Blog.DETAIL(blogId));
-      if (response.data.success && response.data.data.blog) {
-        return {
-          ...response.data,
-          data: { blogs: [response.data.data.blog] }
-        };
-      }
       return response.data;
     } catch (error) {
       throw error;
@@ -134,43 +172,59 @@ export const blogService = {
     }
   },
 
-  async getAllBlogs(): Promise<Blog[]> {
+  // Backward compatibility methods
+  getAllBlogs: async (): Promise<Blog[]> => {
     try {
-      const response = await api.get(API.Blog.LIST);
-      return response.data.data.blogs || [];
+      const response = await blogService.getBlogs({ page: 1, limit: 100, status: true });
+      return response.data.blogs.map(blog => ({
+        _id: blog.blog_id,
+        title: blog.title,
+        content: blog.content,
+        authorId: blog.author_id,
+        tags: [],
+        createdAt: blog.publish_date,
+        updatedAt: blog.updated_date
+      }));
     } catch (error) {
       throw error;
     }
   },
 
-  async getBlogsByAuthor(authorId: string): Promise<Blog[]> {
+  getBlogsByAuthor: async (authorId: string): Promise<Blog[]> => {
     try {
-      const response = await api.get(`${API.Blog.LIST}/author/${authorId}`);
-      return response.data.data.blogs || [];
+      const response = await blogService.getBlogs({ author_id: authorId, limit: 100 });
+      return response.data.blogs.map(blog => ({
+        _id: blog.blog_id,
+        title: blog.title,
+        content: blog.content,
+        authorId: blog.author_id,
+        tags: [],
+        createdAt: blog.publish_date,
+        updatedAt: blog.updated_date
+      }));
     } catch (error) {
       throw error;
     }
   },
 
-  async searchBlogs(query: string): Promise<Blog[]> {
+  getBlogsByTag: async (tag: string): Promise<Blog[]> => {
     try {
-      const response = await api.get(`${API.Blog.LIST}/search?q=${encodeURIComponent(query)}`);
-      return response.data.data.blogs || [];
+      const response = await blogService.searchBlogs(tag);
+      return response.data.blogs.map(blog => ({
+        _id: blog.blog_id,
+        title: blog.title,
+        content: blog.content,
+        authorId: blog.author_id,
+        tags: [],
+        createdAt: blog.publish_date,
+        updatedAt: blog.updated_date
+      }));
     } catch (error) {
       throw error;
     }
   },
 
-  async getBlogsByTag(tag: string): Promise<Blog[]> {
-    try {
-      const response = await api.get(`${API.Blog.LIST}/tag/${encodeURIComponent(tag)}`);
-      return response.data.data.blogs || [];
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async likeBlog(id: string): Promise<void> {
+  likeBlog: async (id: string): Promise<void> => {
     try {
       await api.post(`${API.Blog.DETAIL(id)}/like`);
     } catch (error) {

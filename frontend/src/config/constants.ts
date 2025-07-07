@@ -112,7 +112,16 @@ export const DEFAULT_VALUES = {
   APP_NAME: 'GenCare',
   APP_VERSION: '1.0.0',
   APP_DESCRIPTION: 'Healthcare Services Platform',
-  RETRY_ATTEMPTS: '3'
+  RETRY_ATTEMPTS: '3',
+  // Thêm default values cho feature flags
+  ENABLE_ANALYTICS: 'false',
+  ENABLE_NOTIFICATIONS: 'true',
+  ENABLE_LOGGING: 'true',
+  ENABLE_ERROR_TRACKING: 'false',
+  ENABLE_PERFORMANCE_MONITORING: 'false',
+  ENABLE_EXPERIMENTAL_FEATURES: 'false',
+  ENABLE_BETA_FEATURES: 'false',
+  ENABLE_DEBUG_MODE: 'false'
 } as const;
 
 // Helper function to get environment variable with fallback
@@ -124,10 +133,20 @@ export const getEnvVar = (key: keyof typeof ENV_VARS, useDefault: boolean = true
     if (useDefault && key in DEFAULT_VALUES) {
       return DEFAULT_VALUES[key as keyof typeof DEFAULT_VALUES];
     }
+    if (!useDefault) {
+      return ''; // Trả về chuỗi rỗng thay vì throw error
+    }
     throw new Error(`Environment variable ${envKey} is required but not defined`);
   }
   
   return value;
+};
+
+// Helper function cho các environment variables không bắt buộc
+export const getOptionalEnvVar = (key: keyof typeof ENV_VARS, defaultValue: string = ''): string => {
+  const envKey = ENV_VARS[key];
+  const value = import.meta.env[envKey];
+  return value ?? defaultValue;
 };
 
 // Typed environment configuration
@@ -146,8 +165,14 @@ export const config = {
     description: getEnvVar('APP_DESCRIPTION')
   },
   features: {
-    analytics: getEnvVar('ENABLE_ANALYTICS', false) === 'true',
-    notifications: getEnvVar('ENABLE_NOTIFICATIONS', false) === 'true'
+    analytics: getOptionalEnvVar('ENABLE_ANALYTICS', 'false') === 'true',
+    notifications: getOptionalEnvVar('ENABLE_NOTIFICATIONS', 'true') === 'true',
+    logging: getOptionalEnvVar('ENABLE_LOGGING', 'true') === 'true',
+    errorTracking: getOptionalEnvVar('ENABLE_ERROR_TRACKING', 'false') === 'true',
+    performanceMonitoring: getOptionalEnvVar('ENABLE_PERFORMANCE_MONITORING', 'false') === 'true',
+    experimentalFeatures: getOptionalEnvVar('ENABLE_EXPERIMENTAL_FEATURES', 'false') === 'true',
+    betaFeatures: getOptionalEnvVar('ENABLE_BETA_FEATURES', 'false') === 'true',
+    debugMode: getOptionalEnvVar('ENABLE_DEBUG_MODE', 'false') === 'true'
   },
   social: {
     googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''

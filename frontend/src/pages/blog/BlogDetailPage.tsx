@@ -45,8 +45,8 @@ const BlogDetailPage: React.FC = () => {
     setError(null);
     try {
       const response = await blogService.getBlogById(blogId);
-      if (response.success && response.data.blogs.length > 0) {
-        const blogData = response.data.blogs[0];
+      if (response.success && response.data.blog) {
+        const blogData = response.data.blog;
         setBlog(blogData);
         setEditTitle(blogData.title);
         setEditContent(blogData.content);

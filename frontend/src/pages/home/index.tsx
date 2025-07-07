@@ -37,7 +37,7 @@ const HomePage = () => {
         const [testRes, packageRes, blogResponse, consultantResponse] = await Promise.all([
           api.get('/sti/getAllStiTest'),
           api.get('/sti/getAllStiPackage'),
-          blogService.getBlogs(),
+          blogService.getBlogs({ limit: 6, status: true, sort_by: 'publish_date', sort_order: 'desc' }),
           consultantService.getAllConsultants()
         ]);
 
@@ -54,7 +54,7 @@ const HomePage = () => {
           setPackagesData(pkgsArr.filter((p: any) => p.is_active !== false));
         }
 
-        // Handle blogs
+        // Handle blogs - sử dụng pagination response mới
         if (blogResponse.success && Array.isArray(blogResponse.data.blogs)) {
           setBlogs(blogResponse.data.blogs.filter((blog: BlogType) => blog.status));
         } else {
