@@ -117,4 +117,75 @@ export class BlogRepository {
             throw error;
         }
     }
+    public static async findWithPagination(
+        filters: any,
+        page: number,
+        limit: number,
+        sortBy: string = 'publish_date',
+        sortOrder: 1 | -1 = -1
+    ): Promise<{
+        blogs: any[];
+        total: number;
+    }> {
+        try {
+            // Build sort object
+            const sortObj: any = {};
+            sortObj[sortBy] = sortOrder;
+
+            // Get total count với cùng filter
+            const total = await Blog.countDocuments(filters);
+
+            // Get paginated blogs
+            const blogs = await Blog.find(filters)
+                .sort(sortObj)
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+
+            // Populate author info cho từng blog
+            const blogsWithAuthor = await Promise.all(
+                blogs.map(async (blog) => {
+                    // Tìm user (author)
+                    const user = await User.findById(blog.author_id).lean();
+                    if (!user) return { ...blog, blog_id: blog._id, author: null };
+
+                    // Tìm consultant info nếu user là consultant
+                    let consultantInfo = null;
+                    if (user.role === 'consultant') {
+                        consultantInfo = await Consultant.findOne({
+                            user_id: blog.author_id
+                        }).lean();
+                    }
+
+                    // Kết hợp thông tin author
+                    const author = {
+                        consultant_id: user._id,
+                        full_name: user.full_name,
+                        email: user.email,
+                        phone: user.phone,
+                        role: user.role,
+                        avatar: user.avatar,
+                        ...(consultantInfo && {
+                            specialization: consultantInfo.specialization,
+                            qualifications: consultantInfo.qualifications,
+                            experience_years: consultantInfo.experience_years,
+                            consultation_rating: consultantInfo.consultation_rating,
+                            total_consultations: consultantInfo.total_consultations
+                        })
+                    };
+
+                    return {
+                        ...blog,
+                        blog_id: blog._id,
+                        author
+                    };
+                })
+            );
+
+            return { blogs: blogsWithAuthor, total };
+        } catch (error) {
+            console.error('Error finding blogs with pagination:', error);
+            throw error;
+        }
+    }
 }
