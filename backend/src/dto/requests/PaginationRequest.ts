@@ -61,3 +61,13 @@ export interface AppointmentQuery extends PaginationQuery {
     // Sorting - override to specify valid fields
     sort_by?: 'appointment_date' | 'created_date' | 'updated_date' | 'status';
 }
+
+export interface AppointmentHistoryQuery extends PaginationQuery {
+    // Filter fields
+    appointment_id?: string;
+    action?: 'created' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed' | 'updated' | 'started';
+    performed_by_user_id?: string;
+    performed_by_role?: 'customer' | 'consultant' | 'staff' | 'admin';
+    date_from?: string;
+    date_to?: string;
+}

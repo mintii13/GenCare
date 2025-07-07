@@ -1,6 +1,6 @@
 import { PaginationQuery } from '../dto/requests/PaginationRequest';
 import { PaginationInfo } from '../dto/responses/PaginationResponse';
-
+import { AppointmentHistoryQuery } from '../dto/requests/AppointmentHistoryRequest';
 
 export class PaginationUtils {
     /**
@@ -210,6 +210,47 @@ export class PaginationUtils {
                 { customer_notes: searchRegex },
                 { consultant_notes: searchRegex }
             ];
+        }
+
+        return filter;
+    }
+    /**
+         * Build MongoDB filter query cho appointment history
+         */
+    static buildAppointmentHistoryFilter(query: AppointmentHistoryQuery): any {
+        const filter: any = {};
+
+        // Appointment filter
+        if (query.appointment_id) {
+            filter.appointment_id = query.appointment_id;
+        }
+
+        // Action filter
+        if (query.action) {
+            filter.action = query.action;
+        }
+
+        // Performed by user filter
+        if (query.performed_by_user_id) {
+            filter.performed_by_user_id = query.performed_by_user_id;
+        }
+
+        // Performed by role filter
+        if (query.performed_by_role) {
+            filter.performed_by_role = query.performed_by_role;
+        }
+
+        // Date range filter
+        if (query.date_from || query.date_to) {
+            filter.timestamp = {};
+            if (query.date_from) {
+                filter.timestamp.$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                const endDate = new Date(query.date_to);
+                endDate.setHours(23, 59, 59, 999);
+                filter.timestamp.$lte = endDate;
+            }
         }
 
         return filter;

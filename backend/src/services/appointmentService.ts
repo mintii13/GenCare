@@ -128,6 +128,30 @@ export class AppointmentService {
 
             console.log('Appointment created:', newAppointment._id);
 
+            // ✅ THÊM: Log appointment history cho action "created"
+            try {
+                await AppointmentHistoryService.logAppointmentCreated(
+                    newAppointment._id.toString(),
+                    {
+                        customer_id: appointmentData.customer_id,
+                        consultant_id: appointmentData.consultant_id,
+                        appointment_date: appointmentData.appointment_date,
+                        start_time: appointmentData.start_time,
+                        end_time: appointmentData.end_time,
+                        customer_notes: appointmentData.customer_notes,
+                        status: 'pending',
+                        created_date: new Date(),
+                        updated_date: new Date()
+                    },
+                    appointmentData.customer_id,
+                    'customer'
+                );
+                console.log('✅ Appointment history created successfully for:', newAppointment._id);
+            } catch (historyError) {
+                console.error('❌ Failed to create appointment history:', historyError);
+                // Don't fail the appointment creation if history logging fails
+            }
+
             // Populate for response
             const populatedAppointment = await AppointmentRepository.findById(newAppointment._id.toString());
 

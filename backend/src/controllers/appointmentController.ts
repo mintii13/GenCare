@@ -274,46 +274,6 @@ router.post('/book', authenticateToken, authorizeRoles('customer'), validateBook
 });
 
 
-// Get activity history (for admin/staff)
-router.get('/admin/activity-history', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
-    try {
-        const { user_id, limit } = req.query;
-
-        let history;
-        if (user_id) {
-            history = await AppointmentHistoryService.getUserActivityHistory(
-                user_id as string,
-                limit ? parseInt(limit as string) : 50
-            );
-        } else {
-            // Get general action stats
-            const stats = await AppointmentHistoryService.getActionStats();
-            return res.json({
-                success: true,
-                message: 'Activity statistics retrieved successfully',
-                data: {
-                    action_stats: stats
-                },
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Activity history retrieved successfully',
-            data: {
-                history: history
-            },
-            timestamp: new Date().toISOString()
-        });
-    } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
-
 // Get all feedback (admin/staff only, with pagination)
 router.get('/admin/feedback', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
     try {
@@ -971,58 +931,6 @@ router.get('/:appointmentId/meeting-info', authenticateToken, authorizeRoles('cu
                 meeting_info: appointment.meeting_info,
                 appointment_status: appointment.status,
                 video_call_status: appointment.video_call_status
-            },
-            timestamp: new Date().toISOString()
-        });
-    } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
-
-// Get appointment history
-router.get('/:appointmentId/history', authenticateToken, authorizeRoles('customer', 'consultant', 'staff', 'admin'), async (req: Request, res: Response) => {
-    try {
-        const user = req.jwtUser as JWTPayload;
-        const appointmentId = req.params.appointmentId;
-
-        // Check if user has permission to view this appointment's history
-        const appointment = await AppointmentRepository.findById(appointmentId);
-        if (!appointment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Appointment not found'
-            });
-        }
-
-        // Same permission check as viewing appointment
-        if (user.role === 'customer') {
-            if (appointment.customer_id._id.toString() !== user.userId) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'You can only view history of your own appointments'
-                });
-            }
-        } else if (user.role === 'consultant') {
-            const consultant = await Consultant.findOne({ user_id: user.userId });
-            if (!consultant || appointment.consultant_id._id.toString() !== consultant._id.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'You can only view history of your own appointments'
-                });
-            }
-        }
-
-        const history = await AppointmentHistoryService.getAppointmentHistory(appointmentId);
-
-        res.json({
-            success: true,
-            message: 'Appointment history retrieved successfully',
-            data: {
-                appointment_id: appointmentId,
-                history: history
             },
             timestamp: new Date().toISOString()
         });
