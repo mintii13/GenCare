@@ -1,6 +1,6 @@
 import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse, StiOrderResponse, AllStiOrderResponse } from '../dto/responses/StiResponse';
 import { IStiTest, StiTest } from '../models/StiTest';
-import { StiRepository } from "../repositories/stiRepository";
+import { StiTestRepository } from "../repositories/stiTestRepository";
 import { IStiPackage } from "../models/StiPackage";
 import { StiPackageRepository } from "../repositories/stiPackageRepository";
 import { IStiOrder, StiOrder } from '../models/StiOrder';
@@ -17,7 +17,7 @@ import { UserRepository } from '../repositories/userRepository';
 export class StiService{
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
         try {
-            const duplicate = await StiRepository.findByStiTestCode(stiTest.sti_test_code);
+            const duplicate = await StiTestRepository.findByStiTestCode(stiTest.sti_test_code);
             if (duplicate){
                 if (duplicate.is_active){
                     return{
@@ -27,7 +27,7 @@ export class StiService{
                 }
                 else{
                     //update is_active thành true
-                    const result = await StiRepository.updateIsActive(duplicate._id);
+                    const result = await StiTestRepository.updateIsActive(duplicate._id);
                     return{
                         success: true,
                         message: 'Insert StiTest to database successfully',
@@ -35,7 +35,7 @@ export class StiService{
                     }
                 }
             }
-            const result: Partial<IStiTest> = await StiRepository.insertStiTest(stiTest);
+            const result: Partial<IStiTest> = await StiTestRepository.insertStiTest(stiTest);
             if (!result){
                 return{
                     success: false,
@@ -58,7 +58,7 @@ export class StiService{
 
     public static async getAllStiTest(): Promise<AllStiTestResponse>{
         try {
-            const allOfTest = await StiRepository.getAllStiTest();
+            const allOfTest = await StiTestRepository.getAllStiTest();
             if (!allOfTest){
                 return{
                     success: false,
@@ -82,7 +82,7 @@ export class StiService{
 
     public static async getStiTestById(id: string): Promise<StiTestResponse> {
         try {
-            const stiTest = await StiRepository.getStiTestById(id);
+            const stiTest = await StiTestRepository.getStiTestById(id);
             if (!stiTest && !stiTest.is_active === false) {
                 return {
                     success: false,
@@ -108,20 +108,20 @@ export class StiService{
         try {
             // Tìm bản ghi khác có cùng mã nhưng không phải bản ghi đang update
             const exists = await StiTest.findOne({ sti_test_code: updateData.sti_test_code, _id: { $ne: sti_test_id } });
-            if (exists && exists._id.toString() !== sti_test_id) {
+            // if (exists && exists._id.toString() !== sti_test_id) {
+            if (exists) {
                 return {
                     success: false,
                     message: 'STI test code already exists',
                 };
             }
-            const sti_test = await StiRepository.findByIdAndUpdateStiTest(sti_test_id, updateData);
+            const sti_test = await StiTestRepository.findByIdAndUpdateStiTest(sti_test_id, updateData);
             if (!sti_test) {
                 return{
                     success: false, 
                     message: 'StiTest not found or you are not authorized to update it'
                 }
             }
-            // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
             return{
                 success: true,
                 message: 'Update STI Test successfully',
@@ -138,7 +138,7 @@ export class StiService{
 
     public static async deleteStiTest(sti_test_id: string, userId: string): Promise<StiTestResponse> {
         try {
-            const updated = await StiRepository.findByIdAndUpdate(sti_test_id, userId);
+            const updated = await StiTestRepository.findByIdAndUpdate(sti_test_id, userId);
             if (!updated) {
                 return {
                     success: false,

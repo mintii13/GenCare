@@ -1,4 +1,4 @@
-import { GetScheduleRequest, SetupPillTrackingRequest, UpdateScheduleRequest } from "../dto/requests/PillTrackingRequest";
+import { GetScheduleRequest, SetupPillTrackingRequest, UpdateScheduleRequest } from '../dto/requests/PillTrackingRequest';
 import { PillScheduleResponse } from "../dto/responses/PillTrackingResponse";
 import { IPillTracking, PillTypes } from "../models/PillTracking";
 import { PillTrackingRepository } from "../repositories/pillTrackingRepository";
@@ -7,32 +7,41 @@ import { MailUtils } from "../utils/mailUtils";
 import { UserRepository } from "../repositories/userRepository";
 import * as cron from 'node-cron'
 import { DateTime } from 'luxon';
+import { MenstrualCycleRepository } from '../repositories/menstrualCycleRepository';
 export class PillTrackingService{
-    private static calculatePillSchedule(pillTracking: SetupPillTrackingRequest): Partial<IPillTracking>[] {
-        const schedules: Partial<IPillTracking>[] = [];
-        const {userId, pill_type, pill_start_date, reminder_time, reminder_enabled, max_reminder_times, reminder_interval} = pillTracking;
-        let totalDays: number;
-        let activeDays: number;
-        
-        if (pillTracking.pill_type === '21+7') {
-            totalDays = 28;
-            activeDays = 21;
-        } else {
-            totalDays = 28;
-            activeDays = 28;
+    private static getConfigPillTypes(pillType: PillTypes): { totalDays: number; hormoneDays: number } {
+        switch (pillType) {
+            case '21-day':
+                return { totalDays: 21, hormoneDays: 21 };
+            case '24+4':
+                return { totalDays: 28, hormoneDays: 24 };
+            case '21+7':
+                return { totalDays: 28, hormoneDays: 21 };
+            default:
+                throw new Error('This pill type is unsupported.');
         }
-        for (let day = 0; day < totalDays; day++) {
+    }
+    
+    private static calculatePillSchedule(pillTracking: SetupPillTrackingRequest, menstrualCycleId: string): Partial<IPillTracking>[] {
+        const schedules: Partial<IPillTracking>[] = [];
+        const { userId, pill_type, pill_start_date, reminder_time, reminder_enabled, max_reminder_times, reminder_interval } = pillTracking;
+        const config = this.getConfigPillTypes(pill_type);
+        
+        for (let day = 0; day < config.totalDays; day++) {
             const start_date = new Date(pill_start_date);
             start_date.setDate(start_date.getDate() + day);
 
-            const isActivePill = day < activeDays;
+            const pillNumber = 1 + day;
+            const isHormonePill = day < config.hormoneDays;
+
             schedules.push({
                 user_id: new mongoose.Types.ObjectId(userId),
+                menstrual_cycle_id: new mongoose.Types.ObjectId(menstrualCycleId),
                 pill_start_date: start_date,
                 is_taken: false,
-                pill_number: day + 1,
-                pill_type: pill_type as PillTypes,
-                pill_status: isActivePill ? 'active' : 'placebo',
+                pill_number: pillNumber,
+                pill_type: pill_type,
+                pill_status: isHormonePill ? 'hormone' : 'placebo',
                 reminder_enabled: reminder_enabled,
                 reminder_time: reminder_time,
                 max_reminder_times: reminder_enabled ? max_reminder_times ?? 1 : undefined,
@@ -43,61 +52,86 @@ export class PillTrackingService{
         return schedules;
     }
 
-    public static async setupPillTracking(pillTracking: SetupPillTrackingRequest){
+    public static async setupPillTracking(pillTracking: SetupPillTrackingRequest) {
         try {
-            const {userId, pill_type, pill_start_date, reminder_time} = pillTracking;
-            console.log(userId, pill_type, pill_start_date, reminder_time)
+            const { userId, pill_type, pill_start_date, reminder_time, reminder_enabled, max_reminder_times, reminder_interval} = pillTracking;
+            console.log("info: ", userId, pill_type, pill_start_date, reminder_time, reminder_enabled, max_reminder_times, reminder_interval);
+            const TIMEZONE = process.env.TIMEZONE || 'Asia/Ho_Chi_Minh';
             if (!userId || !pill_type || !pill_start_date || !reminder_time) {
-                return{
+                return {
                     success: false,
                     message: 'Missing required fields'
-                }
+                };
             }
 
-            // Validate pillType
-            if (!['21+7', '28-day'].includes(pill_type)) {
-                return{
+            // pill type only: 21-day, 24+4, 21+7
+            if (!['21-day', '24+4', '21+7'].includes(pill_type)) {
+                return {
                     success: false,
-                    message: 'Invalid pillType. Must be "21+7" or "28-day"'
-                }
+                    message: 'Invalid pillType. Must be 21-day, 24+4, or 21+7'
+                };
             }
 
             // Parse and validate startDate
-            const parsedStartDate = new Date(pill_start_date);
-            if (isNaN(parsedStartDate.getTime())) {
-                return{
-                    success: false,
-                    message: 'Invalid startDate format'
-                }
-            }
-            const hasActiveSchedule = await PillTrackingRepository.checkNextActivePillSchedule(userId);
-            if (hasActiveSchedule) {
+            const parsedStartDate = DateTime.fromISO(pill_start_date, { zone: TIMEZONE})
+            if (!parsedStartDate.isValid) {
                 return {
                     success: false,
-                    message: 'User already has an active pill tracking.',
+                    message: 'Invalid startDate format'
                 };
             }
-            const pillSchedules = this.calculatePillSchedule(pillTracking);
-            const result = await PillTrackingRepository.createPillSchedule(pillSchedules)
-            if (!result)
+
+            // Kiểm tra menstrual cycle còn active
+            const menstrualCycle = await MenstrualCycleRepository.getLatestCycles(userId, 1);
+            if (!menstrualCycle || menstrualCycle.length === 0) {
+                return {
+                    success: false,
+                    message: 'No active menstrual cycle found. Please create menstrual cycle first.'
+                };
+            }
+            const cycleStartDate = DateTime.fromJSDate(menstrualCycle[0].cycle_start_date).startOf('day');
+            const diffDays = Math.floor(parsedStartDate.diff(cycleStartDate, 'days').days);
+            if (diffDays < 0 || diffDays >= 5){
                 return{
                     success: false,
-                    message: 'Pill Tracking is fail to create'
+                    message: 'You cannot drink pill after menstrual cycle date over 5 five days'
                 }
-            return{
+            }
+            // Kiểm tra đã có pill tracking cho menstrual cycle này chưa
+            const existingPillTracking = await PillTrackingRepository.hasTrackingForCycle(menstrualCycle[0]._id.toString())
+            if (existingPillTracking) {
+                return {
+                    success: false,
+                    message: 'Pill tracking already exists for current menstrual cycle.'
+                };
+            }
+
+            const pillSchedules = this.calculatePillSchedule(
+                pillTracking, 
+                menstrualCycle[0]._id.toString()
+            );
+            const result = await PillTrackingRepository.createPillSchedule(pillSchedules);
+            
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'Failed to create pill tracking'
+                };
+            }
+            return {
                 success: true,
                 message: 'Pill tracking schedule created successfully',
                 data: result,
-            }
+            };
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'System error in setup pill tracking'
-            }
+            };
         }
     }
-    
+
     public static async getUserPillSchedule(pillSchedule: GetScheduleRequest): Promise<PillScheduleResponse>{
         try {
             // Validate input
@@ -139,7 +173,7 @@ export class PillTrackingService{
                 parseEndDate
             );
 
-            if (!schedules && schedules.length === 0) {
+            if (!schedules || schedules.length === 0) {
                 return {
                     success: false,
                     message: 'No pill tracking schedule found for this user',
@@ -163,7 +197,7 @@ export class PillTrackingService{
     public static async updatePillSchedule(pillSchedule: UpdateScheduleRequest): Promise<PillScheduleResponse> {
         try {
             const userId = pillSchedule.user_id;
-            // 1. Tìm lịch trình hiện tại của người dùng
+            
             const existingSchedules = await PillTrackingRepository.findUserActivePillSchedule(userId);
             if (existingSchedules.length === 0) {
                 return {
@@ -173,48 +207,31 @@ export class PillTrackingService{
             }
 
             const currentSchedule = existingSchedules[0];
-            // 2. Nếu thay đổi pill_type
-            if (pillSchedule.pill_type && pillSchedule.pill_type !== currentSchedule.pill_type) {
-                let newStartDate = new Date();
-                const lastTaken = existingSchedules
-                    .filter(pillTaken => pillTaken.is_taken === true)
-                    .sort((a, b) => new Date(b.pill_start_date).getTime() - new Date(a.pill_start_date).getTime())[0];
-                if (currentSchedule.pill_type === '21+7' && lastTaken && lastTaken.is_taken === true && lastTaken.pill_number > 21 && lastTaken.pill_number < 28){
-                    return{
-                        success: false,
-                        message: 'Do not change medicine after stopping pill or drinking pill placebo'
-                    }
-                }
-                if (lastTaken) {
-                    newStartDate = new Date(new Date(lastTaken.pill_start_date).getTime() + 86400000); // cộng 1 ngày
-                }
-                
-                // Hủy lịch cũ
-                await PillTrackingRepository.deactivateAllSchedules(userId);
-                console.log(newStartDate.toISOString())
-                // Tạo lịch mới từ hôm nay
-                const newSchedules = this.calculatePillSchedule({
-                    userId: userId,
-                    pill_type: pillSchedule.pill_type,
-                    pill_start_date: newStartDate.toISOString(),
-                    reminder_time: pillSchedule.reminder_time ?? currentSchedule.reminder_time,
-                    reminder_enabled: pillSchedule.reminder_enabled ?? currentSchedule.reminder_enabled,
-                    max_reminder_times: pillSchedule.max_reminder_times ?? currentSchedule.max_reminder_times,
-                    reminder_interval: pillSchedule.reminder_interval ?? currentSchedule.reminder_interval
-                });
 
-                const inserted = await PillTrackingRepository.createPillSchedule(newSchedules);
+            // change pill_type logic
+            if (pillSchedule.pill_type && pillSchedule.pill_type !== currentSchedule.pill_type) {
+                const switchResult = await this.handlePillTypeSwitch(
+                    userId,
+                    currentSchedule.pill_type,
+                    pillSchedule.pill_type,
+                    pillSchedule,
+                    currentSchedule
+                );
+
+                if (!switchResult.success) {
+                    return switchResult;
+                }
 
                 return {
                     success: true,
-                    message: 'Pill type changed. New schedule created.',
+                    message: 'Pill type changed successfully',
                 };
             }
 
-            // 3. Các cập nhật khác (isTaken, isActive, reminder)
+            // Other updated field (not pill type)
             const updateFields: Partial<any> = {};
 
-            if (pillSchedule.is_taken !== undefined){
+            if (pillSchedule.is_taken !== undefined) {
                 updateFields.is_taken = pillSchedule.is_taken;
                 updateFields.taken_time = new Date();
             }
@@ -228,37 +245,358 @@ export class PillTrackingService{
                 updateFields.max_reminder_times = pillSchedule.max_reminder_times;
             if (pillSchedule.reminder_interval !== undefined)
                 updateFields.reminder_interval = pillSchedule.reminder_interval;
+
+            // Reset reminder timestamps if change the reminder fields
             if (
                 (pillSchedule.reminder_enabled === true && currentSchedule.reminder_enabled === false) ||
                 (pillSchedule.reminder_time !== undefined && pillSchedule.reminder_time !== currentSchedule.reminder_time) ||
-                (pillSchedule.max_reminder_times !== undefined && pillSchedule.max_reminder_times !== currentSchedule.max_reminder_times) ||
-                (pillSchedule.reminder_interval !== undefined && pillSchedule.reminder_interval !== currentSchedule.reminder_interval)
+                (pillSchedule.max_reminder_times !== undefined && pillSchedule.max_reminder_times !== currentSchedule.max_reminder_times)
+                // (pillSchedule.reminder_interval !== undefined && pillSchedule.reminder_interval !== currentSchedule.reminder_interval)
             ) {
-            updateFields.reminder_sent_timestamps = [];
+                updateFields.reminder_sent_timestamps = [];
             }
 
             const result = await PillTrackingRepository.updatePillSchedule(userId, updateFields);
-            if (result == 0)
-                return{
+            if (result === 0) {
+                return {
                     success: false,
-                    message: "Nothing to update or update fail"
-                }
+                    message: "Nothing to update or update failed"
+                };
+            }
+
             return {
                 success: true,
-                message: `Pill schedule updated successfully (no change pill_type).`
+                message: 'Pill schedule updated successfully',
             };
         } catch (error) {
             return {
                 success: false,
                 message: `Error updating pill schedule: ${error}`,
             };
-        } 
+        }
     }
+
+    private static async handlePillTypeSwitch(
+        userId: string,
+        fromPillType: PillTypes,
+        toPillType: PillTypes,
+        pillSchedule: UpdateScheduleRequest,
+        currentSchedule: any
+    ): Promise<PillScheduleResponse> {
+        try {
+            // Kiểm tra menstrual cycle gần nhất
+            const recentMenstrualCycle = await PillTrackingRepository.getMenstrualCycleByUser(userId);
+            if (!recentMenstrualCycle) {
+                return {
+                    success: false,
+                    message: 'No active menstrual cycle found for pill type change'
+                };
+            }
+
+            // Get all current schedules for this cycle
+            const allCurrentSchedules = await PillTrackingRepository.getPillSchedulesByCycle(
+                userId, 
+                recentMenstrualCycle._id.toString()
+            );
+
+            const firstPillDate = new Date(allCurrentSchedules[0].pill_start_date);
+            const today = new Date();
+            firstPillDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
+            const diffDays = Math.floor((today.getTime() - firstPillDate.getTime()) / (1000 * 60 * 60 * 24));
+            const currentPillNumber = diffDays + 1;
+
+            switch (`${fromPillType}->${toPillType}`) {
+                case '21-day->21+7':
+                    return await this.switch21DayTo21Plus7(
+                        userId, 
+                        currentPillNumber, 
+                        allCurrentSchedules,
+                        pillSchedule,
+                        currentSchedule,
+                        recentMenstrualCycle._id.toString()
+                    );
+
+                case '21-day->24+4':
+                    return await this.switch21DayTo24Plus4(
+                        userId, 
+                        currentPillNumber, 
+                        allCurrentSchedules,
+                        pillSchedule,
+                        currentSchedule,
+                        recentMenstrualCycle._id.toString()
+                    );
+
+                case '24+4->21-day':
+                    return await this.switch24Plus4To21Day(userId, currentPillNumber);
+
+                case '24+4->21+7':
+                    return await this.switch24Plus4To21Plus7(userId, currentPillNumber);
+
+                case '21+7->21-day':
+                    return await this.switch21Plus7To21Day(userId);
+
+                case '21+7->24+4':
+                    return {
+                        success: false,
+                        message: 'Cannot change from 21+7 to 24+4 pill type'
+                    };
+
+                default:
+                    return {
+                        success: false,
+                        message: 'Invalid pill type change'
+                    };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                message: `Error handling pill type switch: ${error}`
+            };
+        }
+    }
+
+    private static async switch21DayTo21Plus7(
+        userId: string,
+        currentPillNumber: number,
+        allCurrentSchedules: any[],
+        pillSchedule: UpdateScheduleRequest,
+        currentSchedule: any,
+        menstrualCycleId: string
+    ): Promise<PillScheduleResponse> {
+        try {
+            // 1. Cập nhật loại thuốc hiện tại sang '21+7'
+            const result = await PillTrackingRepository.updatePillType(userId, '21+7');
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'Failed to update pill type'
+                };
+            }
+
+            const firstPillDate = new Date(allCurrentSchedules[0].pill_start_date);
+            firstPillDate.setHours(0, 0, 0, 0);
+
+            // 3. Tạo các viên placebo từ ngày 22–28 nếu chưa đến ngày đó
+            const additionalSchedules = [];
+
+            for (let day = 22; day <= 28; day++) {
+                if (day <= currentPillNumber) 
+                    continue;
+
+                const pillDate = new Date(firstPillDate);
+                pillDate.setDate(pillDate.getDate() + (day - 1));
+
+                additionalSchedules.push({
+                    user_id: new mongoose.Types.ObjectId(userId),
+                    menstrual_cycle_id: new mongoose.Types.ObjectId(menstrualCycleId),
+                    pill_start_date: pillDate,
+                    is_taken: false,
+                    pill_number: day,
+                    pill_type: '21+7',
+                    pill_status: 'placebo',
+                    reminder_enabled: pillSchedule.reminder_enabled ?? currentSchedule.reminder_enabled,
+                    reminder_time: pillSchedule.reminder_time ?? currentSchedule.reminder_time,
+                    max_reminder_times: pillSchedule.max_reminder_times ?? currentSchedule.max_reminder_times,
+                    reminder_interval: pillSchedule.reminder_interval ?? currentSchedule.reminder_interval,
+                    reminder_sent_timestamps: []
+                });
+            }
+
+            if (additionalSchedules.length > 0) {
+                const result = await PillTrackingRepository.createPillSchedule(additionalSchedules);
+                if (!result){
+                    return { 
+                        success: false, 
+                        message: 'Failed to update from 21-day to 21+7' 
+                    };
+                }
+                return {
+                    success: true,
+                    message: 'Successfully updated from 21-day to 21+7'
+                };
+            }
+            else{
+                return {
+                    success: false,
+                    message: 'Nothing to update'
+                };
+            }
+            
+        } catch (error) {
+            return {
+                success: false,
+                message: `Error switching pill type: ${error}`
+            };
+        }
+    }
+
+    private static async switch21DayTo24Plus4(
+        userId: string,
+        currentPillNumber: number,
+        allCurrentSchedules: any[],
+        pillSchedule: UpdateScheduleRequest,
+        currentSchedule: any,
+        menstrualCycleId: string
+    ): Promise<PillScheduleResponse> {
+        try {         
+            if (currentPillNumber === 21) {
+                // Ngày 21, tạo thêm 3 viên hormone (22-24) và 4 viên placebo (25-28)
+                const additionalSchedules = [];
+                const lastSchedule = allCurrentSchedules[allCurrentSchedules.length - 1];
+                
+                for (let day = 22; day <= 28; day++) {
+                    const pillDate = new Date(lastSchedule.pill_start_date);
+                    pillDate.setDate(pillDate.getDate() + (day - lastSchedule.pill_number));
+
+                    additionalSchedules.push({
+                        user_id: new mongoose.Types.ObjectId(userId),
+                        menstrual_cycle_id: new mongoose.Types.ObjectId(menstrualCycleId),
+                        pill_start_date: pillDate,
+                        is_taken: false,
+                        pill_number: day,
+                        pill_type: '24+4',
+                        pill_status: day <= 24 ? 'hormone' : 'placebo',
+                        reminder_enabled: pillSchedule.reminder_enabled ?? currentSchedule.reminder_enabled,
+                        reminder_time: pillSchedule.reminder_time ?? currentSchedule.reminder_time,
+                        max_reminder_times: pillSchedule.max_reminder_times ?? currentSchedule.max_reminder_times,
+                        reminder_interval: pillSchedule.reminder_interval ?? currentSchedule.reminder_interval,
+                        reminder_sent_timestamps: []
+                    });
+                }
+
+                const result = await PillTrackingRepository.createPillSchedule(additionalSchedules);
+                if (!result){
+                    return { 
+                        success: false, 
+                        message: 'Failed to update from 21-day to 24+4' 
+                    };
+                }
+            } else if (currentPillNumber < 21) {
+                // Trong khi đang uống 21-day, thêm 3 viên hormone và 4 viên placebo
+                const additionalSchedules = [];
+                const baseDate = new Date(currentSchedule.pill_start_date);
+                
+                for (let day = 22; day <= 28; day++) {
+                    const pillDate = new Date(baseDate);
+                    pillDate.setDate(pillDate.getDate() + (day - 1));
+
+                    additionalSchedules.push({
+                        user_id: new mongoose.Types.ObjectId(userId),
+                        menstrual_cycle_id: new mongoose.Types.ObjectId(menstrualCycleId),
+                        pill_start_date: pillDate,
+                        is_taken: false,
+                        pill_number: day,
+                        pill_type: '24+4',
+                        pill_status: day <= 24 ? 'hormone' : 'placebo',
+                        reminder_enabled: pillSchedule.reminder_enabled ?? currentSchedule.reminder_enabled,
+                        reminder_time: pillSchedule.reminder_time ?? currentSchedule.reminder_time,
+                        max_reminder_times: pillSchedule.max_reminder_times ?? currentSchedule.max_reminder_times,
+                        reminder_interval: pillSchedule.reminder_interval ?? currentSchedule.reminder_interval,
+                        reminder_sent_timestamps: []
+                    });
+                }
+
+                await PillTrackingRepository.createPillSchedule(additionalSchedules);
+            }
+            await PillTrackingRepository.updatePillType(userId, '24+4');
+            return { 
+                success: true, 
+                message: 'Successfully updated from 21-day to 24+4' 
+            };
+        } catch (error) {
+            return { success: false, message: `Error switching pill type: ${error}` };
+        }
+    }
+
+    private static async switch24Plus4To21Day(
+        userId: string,
+        currentPillNumber: number
+    ): Promise<PillScheduleResponse> {
+        try {
+            if (currentPillNumber <= 21) {
+                // Trong 21 ngày đầu, đổi sang 21-day và vô hiệu hóa các ngày còn lại
+                const result = await PillTrackingRepository.deactivatePillsAfterDay(userId, 21);
+                if (!result){
+                    return { 
+                        success: false, 
+                        message: 'Failed to update from 24+4 to 21-day' 
+                    };
+                }
+                await PillTrackingRepository.updatePillType(userId, '21-day');
+                return { 
+                    success: true, 
+                    message: 'Successfully updated from 24+4 to 21-day' 
+                };
+            } else {
+                return {
+                    success: false,
+                    message: 'Cannot change from 24+4 to 21-day after day 21'
+                };
+            }
+        } catch (error) {
+            return { success: false, message: `Error switching pill type: ${error}` };
+        }
+    }
+
+    private static async switch24Plus4To21Plus7(
+        userId: string,
+        currentPillNumber: number,
+    ): Promise<PillScheduleResponse> {
+        try {
+            if (currentPillNumber <= 21) {
+                // Trong 21 ngày đầu, đổi sang 21+7 và chuyển 7 ngày còn lại thành placebo
+                const result = await PillTrackingRepository.updatePillsToPlacebo(userId, 22, 28);
+                if (!result){
+                    return { 
+                        success: false, 
+                        message: 'Failed to update from 24+4 to 21+7' 
+                    };
+                }
+                await PillTrackingRepository.updatePillType(userId, '21+7');
+                return { success: true, message: 'Successfully updated from 24+4 to 21+7' };
+            } else {
+                return {
+                    success: false,
+                    message: 'Cannot change from 24+4 to 21+7 after day 21'
+                };
+            }
+        } catch (error) {
+            return { 
+                success: false, 
+                message: `Error switching pill type: ${error}` 
+            };
+        }
+    }
+
+    private static async switch21Plus7To21Day(
+        userId: string
+    ): Promise<PillScheduleResponse> {
+        try {
+            // Đổi sang 21-day và vô hiệu hóa các ngày chưa uống sau ngày 21
+            const result = await PillTrackingRepository.deactivatePillsAfterDay(userId, 21);
+            if (!result){
+                return { 
+                    success: false, 
+                    message: 'Failed to update from 21+7 to 21-day' 
+                };
+            }
+            await PillTrackingRepository.updatePillType(userId, '21-day');
+            return { 
+                success: true, 
+                message: 'Successfully updated from 21+7 to 21-day' 
+            };
+        } catch (error) {
+            return { success: false, message: `Error switching pill type: ${error}` };
+        }
+    }
+
 }
 
 export class PillTrackingReminderService{
     public static async runReminderJob() {
-        const now = DateTime.now().setZone('Asia/Ho_Chi_Minh');
+        const TIMEZONE = process.env.TIMEZONE || 'Asia/Ho_Chi_Minh';
+        const now = DateTime.now().setZone(TIMEZONE);
         console.log(`[CronJob] runReminderJob() executed at ${now.toISO()}`);
         console.log("Giờ hiện tại:", now.toFormat('HH:mm'));
 
@@ -267,14 +605,31 @@ export class PillTrackingReminderService{
 
         for (const schedule of schedules) {
             const userId = schedule.user_id.toString();
+            const reminderTime = DateTime.fromFormat(schedule.reminder_time, 'HH:mm', { zone: TIMEZONE });
+
+            // Chỉ nhắc nếu đã đến giờ nhắc trong ngày
+            if (now < reminderTime) {
+                continue;
+            }
+
             const sentCount = schedule.reminder_sent_timestamps?.length ?? 0;
+            console.log(`→ Schedule for user ${userId}, pill #${schedule.pill_number}, sentCount: ${sentCount}`);
 
-            if (schedule.max_reminder_times !== undefined && sentCount >= schedule.max_reminder_times) continue;
+            // Đủ số lần nhắc tối đa
+            if (schedule.max_reminder_times !== undefined && (sentCount + 1) > schedule.max_reminder_times) {
+                console.log(`Skip: sentCount ${sentCount + 1} > max_reminder_times ${schedule.max_reminder_times}`);
+                continue;
+            }
 
+            // Kiểm tra khoảng cách giữa các lần gửi
             if (sentCount > 0) {
-                const lastSent = DateTime.fromJSDate(schedule.reminder_sent_timestamps![sentCount - 1]).setZone('Asia/Ho_Chi_Minh');
-                const diffMins = now.diff(lastSent, 'minutes').minutes;
-                if (diffMins < (schedule.reminder_interval ?? 15)) continue;
+                const lastSent = DateTime.fromJSDate(schedule.reminder_sent_timestamps![sentCount - 1]).setZone(TIMEZONE);
+                const interval = schedule.reminder_interval ?? 15;
+                const nextAllowed = lastSent.plus({ minutes: interval });
+
+                if (now < nextAllowed) {
+                    continue;
+                }
             }
 
             const user = await UserRepository.findById(userId);
@@ -288,12 +643,14 @@ export class PillTrackingReminderService{
                 schedule.reminder_sent_timestamps = schedule.reminder_sent_timestamps ?? [];
                 schedule.reminder_sent_timestamps.push(now.toJSDate());
                 await schedule.save();
-                console.log(`Reminder email sent to user ${user.email} for pill ${schedule.pill_number}`);
-            } catch (err) {
-                console.error('Failed to send reminder email', err);
+                console.log(`Reminder sent to ${user.email} for pill ${schedule.pill_number}`);
+            } catch (error) {
+                console.error('Failed to send reminder email', error);
             }
         }
     }
+
+
 
     private static task: cron.ScheduledTask | null = null;
 
