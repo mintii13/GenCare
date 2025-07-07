@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { StiTest } from '../../types/sti';
 import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const { Title, Text } = Typography;
 
@@ -24,6 +25,12 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
     fetchTests();
     fetchPackages();
   }, []);
+
+  useEffect(() => {
+    if (user && user.role !== 'customer') {
+      toast('Chức năng đặt lịch xét nghiệm chỉ dành cho khách hàng', { icon: 'ℹ️', id: 'role-warning' });
+    }
+  }, [user]);
 
   const fetchTests = async () => {
     try {
@@ -109,10 +116,26 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                 <Col xs={24} sm={24} md={12} lg={8} xl={6} key={pkg._id} style={{ display: 'flex' }}>
                   <Card 
                     hoverable 
-                    title={pkg.sti_package_name}
-                                          style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
-                      styles={{ body: { flex: 1 } }}
-                    actions={[
+                    title={
+                      <div style={{ 
+                        whiteSpace: 'normal', 
+                        wordBreak: 'break-word',
+                        lineHeight: '1.4',
+                        minHeight: '48px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        {pkg.sti_package_name}
+                      </div>
+                    }
+                    extra={
+                      <Tag color={pkg.is_active ? 'success' : 'error'}>
+                        {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
+                      </Tag>
+                    }
+                    style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                    styles={{ body: { flex: 1 } }}
+                    actions={user?.role === 'customer' ? [
                       <Button 
                         type="primary" 
                         onClick={() => handleBookSTIPackage(pkg)}
@@ -120,14 +143,11 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                       >
                         Đặt lịch xét nghiệm
                       </Button>
-                    ]}
+                    ] : undefined}
                   >
                     <div>Mã: {pkg.sti_package_code}</div>
                     <div>Giá: {pkg.price?.toLocaleString('vi-VN')} VND</div>
                     <div>{pkg.description}</div>
-                    <Tag color={pkg.is_active ? 'success' : 'error'}>
-                      {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
-                    </Tag>
                   </Card>
                 </Col>
               ))}

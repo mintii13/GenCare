@@ -253,19 +253,21 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                 
                 {/* Combined Slots Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {/* Booked Appointments */}
-                  {selectedDayData.booked_appointments && selectedDayData.booked_appointments.map((appointment, appointmentIndex) => (
-                    <div
-                      key={`booked-${appointmentIndex}`}
-                      className="w-full px-4 py-4 text-center font-semibold rounded-xl border-2 bg-red-100 text-red-700 border-red-300 cursor-not-allowed"
-                    >
-                      <div className="text-lg font-bold">{appointment.start_time}</div>
-                      <div className="text-sm opacity-75">đến {appointment.end_time}</div>
-                      <div className="text-xs mt-2 font-medium">
-                        Đã đặt
+                  {/* Booked Appointments (exclude cancelled) */}
+                  {selectedDayData.booked_appointments && selectedDayData.booked_appointments
+                    .filter(appt => appt.status !== 'cancelled')
+                    .map((appointment, appointmentIndex) => (
+                      <div
+                        key={`booked-${appointmentIndex}`}
+                        className="w-full px-4 py-4 text-center font-semibold rounded-xl border-2 bg-red-100 text-red-700 border-red-300 cursor-not-allowed"
+                      >
+                        <div className="text-lg font-bold">{appointment.start_time}</div>
+                        <div className="text-sm opacity-75">đến {appointment.end_time}</div>
+                        <div className="text-xs mt-2 font-medium">
+                          Đã đặt
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   
                   {/* Available Slots */}
                   {selectedDayData.available_slots.map((slot, slotIndex) => {
@@ -279,7 +281,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                       selectedSlot.date === selectedDay.dateString && 
                       selectedSlot.startTime === slot.start_time;
 
-                    const isBooked = selectedDayData.booked_appointments?.some(appointment => {
+                    const isBooked = selectedDayData.booked_appointments?.filter(appt => appt.status !== 'cancelled').some(appointment => {
                       return slot.start_time >= appointment.start_time && slot.start_time < appointment.end_time;
                     });
 

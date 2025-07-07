@@ -1,5 +1,6 @@
 import api from './api';
 import { config } from '../config/constants';
+import { API } from '../config/apiEndpoints';
 
 const AUTH_TOKEN_KEY = config.auth.tokenKey;
 
@@ -27,7 +28,7 @@ interface AuthResponse {
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      const response = await api.post<AuthResponse>(API.Auth.LOGIN_PUBLIC, credentials);
       const { token, user } = response.data;
       localStorage.setItem(AUTH_TOKEN_KEY, token);
       return response.data;
@@ -38,7 +39,7 @@ export const authService = {
 
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>('/auth/register', data);
+      const response = await api.post<AuthResponse>(API.Auth.REGISTER_PUBLIC, data);
       const { token, user } = response.data;
       localStorage.setItem(AUTH_TOKEN_KEY, token);
       return response.data;
@@ -52,7 +53,7 @@ export const authService = {
       // Gọi API logout trước khi clear token
       const token = this.getToken();
       if (token) {
-        await api.post('/auth/logout', {}, {
+        await api.post(API.Auth.LOGOUT, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -79,7 +80,7 @@ export const authService = {
 
   // Lấy thông tin user hiện tại
   getCurrentUser: async () => {
-    const response = await api.get('/auth/me');
+    const response = await api.get(API.Auth.ME);
     return response.data;
   },
 };

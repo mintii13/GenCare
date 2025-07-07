@@ -70,13 +70,20 @@ const ConsultantList: React.FC = () => {
         console.log('Consultants data:', consultantsData);
         
         // Add mock additional fields for better display
-        const enrichedConsultants = consultantsData.map((consultant: Consultant) => ({
-          ...consultant,
-          rating: Math.random() * 2 + 3, // Random rating between 3-5
-          total_consultations: Math.floor(Math.random() * 500) + 50, // Random consultations
-          bio: `Chuyên gia ${consultant.specialization} với ${consultant.experience_years} năm kinh nghiệm.`,
-          is_available: Math.random() > 0.2 // 80% available
-        }));
+        const enrichedConsultants = consultantsData.map((consultant: Consultant, index: number) => {
+          // Create consistent random values based on consultant ID to avoid re-randomization
+          const seed = consultant.consultant_id ? consultant.consultant_id.length + index : index;
+          const rating = (seed % 20) / 10 + 3.5; // Rating between 3.5-5.5, then clamp to 3-5
+          const clampedRating = Math.min(Math.max(rating, 3), 5);
+          
+          return {
+            ...consultant,
+            rating: Math.round(clampedRating * 10) / 10, // Round to 1 decimal
+            total_consultations: (seed * 37) % 500 + 50, // Deterministic consultations
+            bio: `Chuyên gia ${consultant.specialization} với ${consultant.experience_years} năm kinh nghiệm.`,
+            is_available: true // Always available by default
+          };
+        });
         
         setConsultants(enrichedConsultants);
       } else {
@@ -179,16 +186,11 @@ const ConsultantList: React.FC = () => {
     {
       name: 'Trạng thái',
       cell: row => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          row.is_available 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {row.is_available ? 'Có thể tư vấn' : 'Tạm nghỉ'}
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Sẵn sàng tư vấn
         </span>
       ),
-      sortable: true,
-      selector: row => row.is_available ? 1 : 0,
+      sortable: false,
       style: { minWidth: '120px' },
     },
     {

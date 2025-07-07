@@ -1,4 +1,5 @@
 import api from './api';
+import { API, BASE_API } from '../config/apiEndpoints';
 
 export interface Consultant {
   _id: string;
@@ -40,15 +41,11 @@ export const consultantService = {
    */
   async getAllConsultants(page: number = 1, limit: number = 10): Promise<{ data: { consultants: Consultant[] } }> {
     try {
-      // Sử dụng API_URL từ config
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      
-      // Build URL with query parameters
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('limit', limit.toString());
-      
-      const url = `${API_URL}/consultants/public?${params}`;
+
+      const url = `${BASE_API}${API.Consultant.PUBLIC_LIST}?${params}`;
       
       const publicResponse = await fetch(url, {
         method: 'GET',
@@ -75,9 +72,7 @@ export const consultantService = {
    */
   async getConsultantById(id: string): Promise<Consultant> {
     try {
-      // Sử dụng API_URL từ config
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const url = `${API_URL}/consultants/public/${id}`;
+      const url = `${BASE_API}${API.Consultant.PUBLIC_DETAIL(id)}`;
       
       const publicResponse = await fetch(url, {
         method: 'GET',
@@ -122,13 +117,13 @@ export const consultantService = {
 
   // Get consultant profile (for logged in consultant)
   async getMyProfile() {
-    const response = await api.get('/consultants/my-profile');
+    const response = await api.get(API.Consultant.MY_PROFILE);
     return response.data;
   },
 
   // Get consultant stats
   async getMyStats() {
-    const response = await api.get('/consultants/my-stats');
+    const response = await api.get(API.Consultant.MY_STATS);
     return response.data;
   },
 

@@ -1,4 +1,5 @@
 import api from './api';
+import { API } from '../config/apiEndpoints';
 import { BlogsResponse, CommentsResponse, BlogFilters, Comment } from '../types/blog';
 
 export interface Blog {
@@ -21,7 +22,7 @@ export const blogService = {
       if (filters?.specialization) params.append('specialization', filters.specialization);
       if (filters?.sortBy) params.append('sort_by', filters.sortBy);
       if (filters?.sortOrder) params.append('sort_order', filters.sortOrder);
-      const response = await api.get(`/blogs?${params.toString()}`);
+      const response = await api.get(`${API.Blog.LIST}?${params.toString()}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -31,7 +32,7 @@ export const blogService = {
   // Lấy chi tiết blog theo ID
   getBlogById: async (blogId: string): Promise<BlogsResponse> => {
     try {
-      const response = await api.get(`/blogs/${blogId}`);
+      const response = await api.get(API.Blog.DETAIL(blogId));
       if (response.data.success && response.data.data.blog) {
         return {
           ...response.data,
@@ -47,7 +48,7 @@ export const blogService = {
   // Lấy danh sách comment của blog
   getBlogComments: async (blogId: string): Promise<CommentsResponse> => {
     try {
-      const response = await api.get(`/blogs/${blogId}/comments`);
+      const response = await api.get(`${API.Blog.DETAIL(blogId)}/comments`);
       return response.data;
     } catch (error) {
       throw error;
@@ -57,7 +58,7 @@ export const blogService = {
   // Đăng comment mới (chỉ customer)
   createComment: async (blogId: string, content: string, isAnonymous: boolean = false, parentCommentId?: string) => {
     try {
-      const response = await api.post(`/blogs/${blogId}/comments`, {
+      const response = await api.post(`${API.Blog.DETAIL(blogId)}/comments`, {
         content,
         is_anonymous: isAnonymous,
         parent_comment_id: parentCommentId
@@ -71,7 +72,7 @@ export const blogService = {
   // Tạo blog mới (chỉ consultant)
   createBlog: async (title: string, content: string) => {
     try {
-      const response = await api.post('/blogs', {
+      const response = await api.post(API.Blog.CREATE, {
         title,
         content
       });
@@ -84,7 +85,7 @@ export const blogService = {
   // Cập nhật blog (chỉ consultant và chỉ blog của mình)
   updateBlog: async (blogId: string, title: string, content: string) => {
     try {
-      const response = await api.put(`/blogs/${blogId}`, {
+      const response = await api.put(API.Blog.UPDATE(blogId), {
         title,
         content
       });
@@ -97,7 +98,7 @@ export const blogService = {
   // Xóa blog (chỉ consultant và chỉ blog của mình)
   deleteBlog: async (blogId: string) => {
     try {
-      const response = await api.delete(`/blogs/${blogId}`);
+      const response = await api.delete(API.Blog.DELETE(blogId));
       return response.data;
     } catch (error) {
       throw error;
@@ -113,7 +114,7 @@ export const blogService = {
   // Sửa bình luận
   updateComment: async (blogId: string, commentId: string, content: string, isAnonymous?: boolean) => {
     try {
-      const response = await api.put(`/blogs/${blogId}/comments/${commentId}`, {
+      const response = await api.put(`${API.Blog.DETAIL(blogId)}/comments/${commentId}`, {
         content,
         ...(typeof isAnonymous !== 'undefined' ? { is_anonymous: isAnonymous } : {})
       });
@@ -126,7 +127,7 @@ export const blogService = {
   // Xóa bình luận
   deleteComment: async (blogId: string, commentId: string) => {
     try {
-      const response = await api.delete(`/blogs/${blogId}/comments/${commentId}`);
+      const response = await api.delete(`${API.Blog.DETAIL(blogId)}/comments/${commentId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -135,7 +136,7 @@ export const blogService = {
 
   async getAllBlogs(): Promise<Blog[]> {
     try {
-      const response = await api.get('/blogs');
+      const response = await api.get(API.Blog.LIST);
       return response.data.data.blogs || [];
     } catch (error) {
       throw error;
@@ -144,7 +145,7 @@ export const blogService = {
 
   async getBlogsByAuthor(authorId: string): Promise<Blog[]> {
     try {
-      const response = await api.get(`/blogs/author/${authorId}`);
+      const response = await api.get(`${API.Blog.LIST}/author/${authorId}`);
       return response.data.data.blogs || [];
     } catch (error) {
       throw error;
@@ -153,7 +154,7 @@ export const blogService = {
 
   async searchBlogs(query: string): Promise<Blog[]> {
     try {
-      const response = await api.get(`/blogs/search?q=${encodeURIComponent(query)}`);
+      const response = await api.get(`${API.Blog.LIST}/search?q=${encodeURIComponent(query)}`);
       return response.data.data.blogs || [];
     } catch (error) {
       throw error;
@@ -162,7 +163,7 @@ export const blogService = {
 
   async getBlogsByTag(tag: string): Promise<Blog[]> {
     try {
-      const response = await api.get(`/blogs/tag/${encodeURIComponent(tag)}`);
+      const response = await api.get(`${API.Blog.LIST}/tag/${encodeURIComponent(tag)}`);
       return response.data.data.blogs || [];
     } catch (error) {
       throw error;
@@ -171,7 +172,7 @@ export const blogService = {
 
   async likeBlog(id: string): Promise<void> {
     try {
-      await api.post(`/blogs/${id}/like`);
+      await api.post(`${API.Blog.DETAIL(id)}/like`);
     } catch (error) {
       throw error;
     }

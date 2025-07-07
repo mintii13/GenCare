@@ -13,26 +13,90 @@ export class MenstrualCycleService {
                 message: 'User ID is required'
             }
         }
-        const sorted = [...period_days].sort((a, b) => a.getTime() - b.getTime());
+
+        console.log(' Processing period days:', period_days.map(d => d.toISOString().split('T')[0]));
+
+        // Normalize dates to avoid timezone issues
+        const normalizedDates = period_days.map(date => {
+            const normalized = new Date(date);
+            normalized.setUTCHours(0, 0, 0, 0);
+            return normalized;
+        });
+
+        console.log('Normalized dates:', normalizedDates.map(d => d.toISOString().split('T')[0]));
+
+        // Remove duplicates based on date string
+        const uniqueDates = normalizedDates.filter((date, index, array) => {
+            const dateStr = date.toISOString().split('T')[0];
+            return array.findIndex(d => d.toISOString().split('T')[0] === dateStr) === index;
+        });
+
+        console.log('After removing duplicates:', uniqueDates.map(d => d.toISOString().split('T')[0]));
+
+        const sorted = [...uniqueDates].sort((a, b) => a.getTime() - b.getTime());
+        console.log('Sorted dates:', sorted.map(d => d.toISOString().split('T')[0]));
+
+        // SIMPLE GROUPING: Consecutive days = same cycle
         const groups: Date[][] = [];
         let current: Date[] = [sorted[0]];
 
         for (let i = 1; i < sorted.length; i++) {
-            const diff = (sorted[i].getTime() - sorted[i - 1].getTime()) / (1000 * 60 * 60 * 24);
-            if (diff <= 2) 
-                current.push(sorted[i]);
-            else {
+            const currentDate = sorted[i];
+            const prevDate = sorted[i - 1];
+            
+            // Tính diff bằng ngày
+            const diffMs = currentDate.getTime() - prevDate.getTime();
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            
+            console.log(`Date diff between ${prevDate.toISOString().split('T')[0]} and ${currentDate.toISOString().split('T')[0]}: ${diffDays} days`);
+            
+            // LOGIC ĐỠN GIẢN: Nếu liền nhau (1 ngày) thì cùng chu kì, không thì chu kì mới
+            if (diffDays === 1) {
+                current.push(currentDate);
+                console.log(`Consecutive day - adding to current cycle: ${currentDate.toISOString().split('T')[0]}`);
+            } else {
+                console.log(`Gap detected (${diffDays} days) - starting new cycle at: ${currentDate.toISOString().split('T')[0]}`);
                 groups.push(current);
-                current = [sorted[i]];
+                current = [currentDate];
             }
         }
         groups.push(current);
 
+        console.log('Final groups:', groups.map(group => 
+            group.map(d => d.toISOString().split('T')[0])
+        ));
+
+        // Validate groups - kiểm tra logic grouping
+        console.log('Validating groups...');
+        groups.forEach((group, index) => {
+            console.log(`Group ${index + 1}:`, {
+                dates: group.map(d => d.toISOString().split('T')[0]),
+                span: group.length > 1 ? `${Math.round((group[group.length - 1].getTime() - group[0].getTime()) / (1000 * 60 * 60 * 24))} days` : '1 day',
+                startMonth: group[0].getUTCMonth() + 1,
+                endMonth: group[group.length - 1].getUTCMonth() + 1
+            });
+        });
+
+        // Final validation: check for suspicious groupings
+        for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
+            if (group.length > 1) {
+                const span = Math.round((group[group.length - 1].getTime() - group[0].getTime()) / (1000 * 60 * 60 * 24));
+                if (span > 30) {
+                    console.warn(`Warning: Group ${i + 1} spans ${span} days, might be multiple cycles`);
+                }
+            }
+        }
+
         const cycles: IMenstrualCycle[] = [];
-        const cycle_lengths: number[] = []
+        const cycle_lengths: number[] = [];
+        
         for (let i = 0; i < groups.length; i++) {
             const period = groups[i];
             const start = period[0];
+            
+            console.log(`Creating cycle ${i + 1} with start date: ${start.toISOString().split('T')[0]}`);
+            
             const cycle: Partial<IMenstrualCycle> = {
                 user_id: new mongoose.Types.ObjectId(user_id),
                 cycle_start_date: start,
@@ -46,22 +110,35 @@ export class MenstrualCycleService {
 
             if (i >= 1) {
                 const prevStart = groups[i - 1][0];
-                const len = Math.round((start.getTime() - prevStart.getTime()) / 86400000);
+                const timeDiff = start.getTime() - prevStart.getTime();
+                const len = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+                console.log(`Cycle length: ${len} days (from ${prevStart.toISOString().split('T')[0]} to ${start.toISOString().split('T')[0]})`);
                 cycle.cycle_length = len;
                 cycle_lengths.push(len);
             }
             cycles.push(cycle as IMenstrualCycle);
         }
+        console.log('Creating cycles from groups...');
         const regularity = this.calculateCyclePeriodRegularity(cycle_lengths);
+        console.log('Calculated regularity (initial):', regularity);
 
         for (let i = 0; i < cycles.length; i++) {
             const cycle = cycles[i];
-            if (!cycle.cycle_length) 
-                continue;
-            const len = cycle.cycle_length;
-            if (len >= 21 && len <= 35 && regularity == 'regular'){
+            
+            // For the first cycle or cycles without cycle_length, use standard 28-day cycle for predictions
+            let len = cycle.cycle_length;
+            if (!len) {
+                len = 28; // Use standard cycle length for first cycle
+                console.log(`Using standard 28-day cycle for predictions (cycle ${i + 1})`);
+            }
+            
+            console.log(`Processing predictions for cycle ${i + 1}, length: ${len} days, regularity: ${regularity}`);
+            
+            // Allow predictions for reasonable cycle lengths (21-35 days)
+            if (len >= 21 && len <= 35) {
                 const ov = len - 14;
                 const start = cycle.cycle_start_date.getTime();
+                
                 cycle.predicted_cycle_end = new Date(start + len * 86400000);
                 cycle.predicted_ovulation_date = new Date(start + ov * 86400000);
                 cycle.predicted_fertile_start = new Date(start + (ov - 5) * 86400000);
@@ -72,23 +149,39 @@ export class MenstrualCycleService {
                 cycle.predicted_ovulation_date = null;
                 cycle.predicted_fertile_start = null;
                 cycle.predicted_fertile_end = null;
+                console.log(`No predictions for cycle ${i + 1} - length: ${len}, regularity: ${regularity}`);
             }
         }
 
         if (cycles.length === 0) {
+            console.error('No valid cycles created');
             return {
                 success: false,
                 message: 'No valid cycles found'
             };
         }
+        
+        console.log('Saving cycles to database...');
+        console.log('Final cycles summary:', cycles.map((cycle, index) => ({
+            cycleNum: index + 1,
+            startDate: cycle.cycle_start_date.toISOString().split('T')[0],
+            periodDays: cycle.period_days.map(d => d.toISOString().split('T')[0]),
+            cycleLength: cycle.cycle_length || 'N/A',
+            hasPredictions: !!cycle.predicted_cycle_end
+        })));
+        
         await MenstrualCycleRepository.deleteCyclesByUser(user_id);
         const result = await MenstrualCycleRepository.insertCycles(cycles);
+        
         if (!result || result.length === 0) {
+            console.error('Failed to save cycles to database');
             return {
                 success: false,
                 message: 'Failed to save cycles'
             };
         }
+        
+        console.log('Successfully saved cycles:', result.length);
         return {
             success: true,
             message: 'Saving Menstrual Cycles successfully',
@@ -173,22 +266,22 @@ export class MenstrualCycleService {
         const recommendations = [];
         
         if (isOnPeriod) {
-            recommendations.push('Stay hydrated and rest well');
-            recommendations.push('Use appropriate menstrual products');
-            recommendations.push('Consider light exercise like walking');
+            recommendations.push('Uống nhiều nước và nghỉ ngơi đầy đủ');
+            recommendations.push('Sử dụng sản phẩm vệ sinh phụ nữ phù hợp');
+            recommendations.push('Tập thể dục nhẹ nhàng như đi bộ');
         }
         
         if (isFertile) {
-            recommendations.push('This is your fertile window');
+            recommendations.push('Đây là giai đoạn rụng trứng của bạn');
             if (isOvulationDay) {
-                recommendations.push('Peak fertility day - highest chance of conception');
+                recommendations.push('Ngày rụng trứng - khả năng thụ thai cao nhất');
             }
-            recommendations.push('Track basal body temperature if trying to conceive');
+            recommendations.push('Theo dõi nhiệt độ cơ thể nếu muốn có con');
         }
         
         if (!isOnPeriod && !isFertile) {
-            recommendations.push('Regular daily activities');
-            recommendations.push('Good time for intense workouts');
+            recommendations.push('Hoạt động bình thường hàng ngày');
+            recommendations.push('Thời điểm tốt để tập luyện cường độ cao');
         }
         
         return recommendations;
@@ -391,6 +484,133 @@ export class MenstrualCycleService {
             return {
                 success: false,
                 message: 'Error when getting period statistics'
+            };
+        }
+    }
+
+    public static async cleanupDuplicates(user_id: string) {
+        try {
+            const cycles = await MenstrualCycleRepository.getCyclesByUser(user_id);
+            
+            if (!cycles || cycles.length === 0) {
+                return {
+                    success: false,
+                    message: 'No cycles found for this user'
+                };
+            }
+
+            // Collect all period days across all cycles
+            const allPeriodDays: { date: string, cycleId: string }[] = [];
+            const duplicatesFound: { date: string, cycles: string[] }[] = [];
+            
+            cycles.forEach(cycle => {
+                cycle.period_days.forEach(periodDay => {
+                    const dateKey = new Date(periodDay).toISOString().split('T')[0];
+                    allPeriodDays.push({
+                        date: dateKey,
+                        cycleId: cycle._id.toString()
+                    });
+                });
+            });
+
+            // Find duplicates
+            const dateMap = new Map<string, string[]>();
+            allPeriodDays.forEach(item => {
+                if (!dateMap.has(item.date)) {
+                    dateMap.set(item.date, []);
+                }
+                dateMap.get(item.date)!.push(item.cycleId);
+            });
+
+            // Identify duplicates
+            dateMap.forEach((cycleIds, date) => {
+                if (cycleIds.length > 1) {
+                    duplicatesFound.push({
+                        date,
+                        cycles: cycleIds
+                    });
+                }
+            });
+
+            if (duplicatesFound.length === 0) {
+                return {
+                    success: true,
+                    message: 'No duplicates found',
+                    data: {
+                        duplicatesRemoved: 0,
+                        duplicatesFound: []
+                    }
+                };
+            }
+
+            // Clean up duplicates - keep the earliest cycle and remove from others
+            let duplicatesRemoved = 0;
+            
+            for (const duplicate of duplicatesFound) {
+                const involvedCycles = cycles.filter(c => 
+                    duplicate.cycles.includes(c._id.toString())
+                );
+                
+                // Sort by cycle start date, keep the earliest
+                involvedCycles.sort((a, b) => 
+                    new Date(a.cycle_start_date).getTime() - new Date(b.cycle_start_date).getTime()
+                );
+                
+                // Remove duplicate date from all but the first cycle
+                for (let i = 1; i < involvedCycles.length; i++) {
+                    const cycle = involvedCycles[i];
+                    const originalLength = cycle.period_days.length;
+                    
+                    cycle.period_days = cycle.period_days.filter(pd => {
+                        const dateKey = new Date(pd).toISOString().split('T')[0];
+                        return dateKey !== duplicate.date;
+                    });
+                    
+                    if (cycle.period_days.length < originalLength) {
+                        await MenstrualCycleRepository.updateCycle(cycle._id.toString(), cycle);
+                        duplicatesRemoved++;
+                    }
+                }
+            }
+
+            return {
+                success: true,
+                message: `Cleaned up ${duplicatesRemoved} duplicate period days`,
+                data: {
+                    duplicatesRemoved,
+                    duplicatesFound: duplicatesFound.map(d => ({
+                        date: d.date,
+                        cycleCount: d.cycles.length
+                    }))
+                }
+            };
+
+        } catch (error) {
+            console.error('Error in cleanupDuplicates:', error);
+            return {
+                success: false,
+                message: 'Failed to cleanup duplicates'
+            };
+        }
+    }
+
+    public static async resetAllData(user_id: string) {
+        try {
+            const result = await MenstrualCycleRepository.deleteCyclesByUser(user_id);
+            
+            return {
+                success: true,
+                message: `Đã xóa tất cả dữ liệu chu kỳ của user`,
+                data: {
+                    deletedCount: result.deletedCount || 0
+                }
+            };
+
+        } catch (error) {
+            console.error('Error in resetAllData:', error);
+            return {
+                success: false,
+                message: 'Failed to reset all data'
             };
         }
     }

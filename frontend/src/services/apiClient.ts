@@ -40,10 +40,20 @@ class ApiClient {
       (config) => {
         // Add auth token if available
         const token = localStorage.getItem('gencare_auth_token');
+        
+        // Debug: Log token status
+        console.log('ApiClient Request Debug:');
+        console.log('- URL:', config.url);
+        console.log('- Token exists:', !!token);
+        console.log('- Token value:', token ? `${token.substring(0, 20)}...` : 'null');
+        
         if (token) {
           // ensure header object exists and add Authorization
           (config.headers = (config.headers || {}) as any);
           (config.headers as any)['Authorization'] = `Bearer ${token}`;
+          console.log('- Authorization header added');
+        } else {
+          console.log('- No token found, request will be unauthenticated');
         }
 
         log.api(config.method?.toUpperCase() || 'REQUEST', config.url || '', {

@@ -4,8 +4,11 @@ import { vi } from 'date-fns/locale';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { useAuth } from '../../../contexts/AuthContext';
 import axios from 'axios';
+import { appointmentService } from '../../../services/appointmentService';
 import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
 import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
+import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
+import { getGoogleAccessToken, hasGoogleAccessToken } from '../../../utils/authUtils';
 import { 
   FaCalendarAlt, 
   FaCheckCircle, 
@@ -148,7 +151,7 @@ const AppointmentManagement: React.FC = () => {
         queryParams.append('status', filter);
       }
 
-      const response = await axios.get(`http://localhost:3000/api/appointments/consultant-appointments?${queryParams}`);
+      const response = await axios.get(`http://localhost:3000/api/appointments/consultant/my-appointments?${queryParams}`);
 
 
       
@@ -240,28 +243,28 @@ const AppointmentManagement: React.FC = () => {
       return;
     }
 
+    // Kiểm tra Google access token
+    const googleAccessToken = getGoogleAccessToken();
+    if (!googleAccessToken) {
+      showNotification('error', 'Cần đăng nhập Google để tạo link Google Meet. Vui lòng đăng nhập lại.');
+      // Có thể redirect đến Google OAuth
+      window.location.href = 'http://localhost:3000/api/auth/google';
+      return;
+    }
+
     try {
       setActionLoading(appointmentId);
-      const token = localStorage.getItem('gencare_auth_token');
       
-      const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/confirm`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
+      const response = await appointmentService.confirmAppointment(appointmentId, googleAccessToken);
       
-      if (data.success) {
-        showNotification('success', 'Xác nhận lịch hẹn thành công');
+      if (response.success) {
+        showNotification('success', 'Xác nhận lịch hẹn thành công và đã tạo link Google Meet');
         fetchAppointments();
       } else {
-        showNotification('error', data.message || 'Không thể xác nhận lịch hẹn');
+        showNotification('error', response.message || 'Không thể xác nhận lịch hẹn');
       }
-    } catch (err) {
-      showNotification('error', 'Có lỗi xảy ra khi xác nhận lịch hẹn');
+    } catch (err: any) {
+      showNotification('error', err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận lịch hẹn');
     } finally {
       setActionLoading('');
     }
@@ -282,26 +285,18 @@ const AppointmentManagement: React.FC = () => {
 
     try {
       setActionLoading(appointmentId);
-      const token = localStorage.getItem('gencare_auth_token');
+      const googleAccessToken = getGoogleAccessToken();
       
-      const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}/start-meeting`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
+      const response = await appointmentService.startMeeting(appointmentId, googleAccessToken || undefined);
       
-      if (data.success) {
+      if (response.success) {
         showNotification('success', 'Bắt đầu buổi tư vấn thành công');
         fetchAppointments();
       } else {
-        showNotification('error', data.message || 'Không thể bắt đầu buổi tư vấn');
+        showNotification('error', response.message || 'Không thể bắt đầu buổi tư vấn');
       }
-    } catch (err) {
-      showNotification('error', 'Có lỗi xảy ra khi bắt đầu buổi tư vấn');
+    } catch (err: any) {
+      showNotification('error', err.response?.data?.message || 'Có lỗi xảy ra khi bắt đầu buổi tư vấn');
     } finally {
       setActionLoading('');
     }
@@ -964,6 +959,21 @@ const AppointmentManagement: React.FC = () => {
               >
                 Làm mới
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Google Auth Status */}
+        <div className="mb-4">
+          <div className="bg-white rounded-lg shadow-sm p-4 border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Trạng thái Google:</span>
+                <GoogleAuthStatus showButton={true} />
+              </div>
+              <div className="text-xs text-gray-500">
+                Cần kết nối Google để tạo link Google Meet khi xác nhận lịch hẹn
+              </div>
             </div>
           </div>
         </div>

@@ -185,9 +185,12 @@ const MultipleTestBooking: React.FC = () => {
                   size="small"
                   style={{ 
                     border: checked ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                    backgroundColor: checked ? '#f6ffed' : 'white'
+                    backgroundColor: checked ? '#f6ffed' : 'white',
+                    height: '260px',
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}
-                  styles={{ body: { padding: '12px' } }}
+                  styles={{ body: { padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 } }}
                 >
                   <div style={{ marginBottom: '8px' }}>
                     <Checkbox
@@ -199,7 +202,7 @@ const MultipleTestBooking: React.FC = () => {
                     </Checkbox>
                   </div>
                   
-                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Space direction="vertical" size="small" style={{ width: '100%', flex: 1 }}>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
                       Mã: {test.sti_test_code}
                     </Text>
@@ -209,7 +212,7 @@ const MultipleTestBooking: React.FC = () => {
                     <Text strong style={{ color: '#1890ff' }}>
                       {formatPrice(test.price)}
                     </Text>
-                    <div>
+                    <div style={{ marginTop: 'auto' }}>
                       <Tag color={getCategoryColor(test.category)}>
                         {test.category}
                       </Tag>

@@ -435,9 +435,17 @@ export class StiService{
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id)
-            const stiPackage = await StiPackageRepository.findPackageById(sti_package_id)
+            
+            // Chỉ lấy package info nếu có sti_package_id
+            let packageName = 'Xét nghiệm lẻ';
+            if (sti_package_id) {
+                const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
+                if (stiPackage) {
+                    packageName = stiPackage.sti_package_name;
+                }
+            }
 
-            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, stiPackage.sti_package_name, sti_test_items)
+            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
             return {
                 success: true,
                 message: 'StiOrder is inserted successfully',

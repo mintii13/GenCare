@@ -278,7 +278,7 @@ const BlogFormPage: React.FC = () => {
                   value={content}
                   onChange={setContent}
                   placeholder="Nhập nội dung bài viết... Hãy chia sẻ kiến thức chuyên môn của bạn một cách chi tiết và dễ hiểu."
-                  height={500}
+                  autoResize={true}
                 />
               </div>
               <p className="mt-2 text-sm text-gray-500">

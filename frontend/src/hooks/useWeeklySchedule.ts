@@ -138,13 +138,34 @@ export const useWeeklySchedule = ({
       if (response.success && response.data) {
         setWeeklySlotData(response.data);
       } else {
-        setWeeklySlotData(null);
-        setError(response.message || 'Không thể tải lịch làm việc');
+        // Create empty placeholder so UI vẫn hiển thị để điều hướng tuần
+        const { weekStart, weekEnd } = getWeekRange(currentWeek);
+        setWeeklySlotData({
+          week_start_date: weekStart,
+          week_end_date: weekEnd,
+          consultant_id: consultantId!,
+          schedule_id: '',
+          days: {},
+          summary: {
+            total_working_days: 0,
+            total_available_slots: 0,
+            total_booked_slots: 0
+          }
+        } as any);
+        setError(null);
       }
     } catch (err) {
       console.error('Error fetching weekly slots:', err);
-      setError('Có lỗi xảy ra khi tải thông tin slot');
-      log.error('useWeeklySchedule', 'Error fetching weekly slots', err);
+      const { weekStart, weekEnd } = getWeekRange(currentWeek);
+      setWeeklySlotData({
+        week_start_date: weekStart,
+        week_end_date: weekEnd,
+        consultant_id: consultantId!,
+        schedule_id: '',
+        days: {},
+        summary: { total_working_days:0,total_available_slots:0,total_booked_slots:0 }
+      } as any);
+      setError(null);
     }
   }, [currentWeek, consultantId, mode]);
 

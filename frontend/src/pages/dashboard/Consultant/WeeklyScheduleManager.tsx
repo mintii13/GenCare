@@ -4,6 +4,8 @@ import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
 import { appointmentService } from '../../../services/appointmentService';
+import { getGoogleAccessToken } from '../../../utils/authUtils';
+import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
 import { FaChevronLeft, FaChevronRight, FaLink } from 'react-icons/fa';
 
 
@@ -377,17 +379,32 @@ const WeeklyScheduleManager: React.FC = () => {
     action: 'confirm' | 'cancel' | 'start' | 'complete'
   ) => {
     try {
+      // Kiểm tra Google access token cho action confirm
+      if (action === 'confirm') {
+        const googleAccessToken = getGoogleAccessToken();
+        if (!googleAccessToken) {
+          setMessage({ 
+            type: 'error', 
+            text: 'Cần đăng nhập Google để tạo link Google Meet. Vui lòng đăng nhập lại.' 
+          });
+          // Redirect đến Google OAuth
+          window.location.href = 'http://localhost:3000/api/auth/google';
+          return;
+        }
+      }
 
       let response;
       switch (action) {
         case 'confirm':
-          response = await appointmentService.confirmAppointment(appointmentId);
+          const googleAccessToken = getGoogleAccessToken();
+          response = await appointmentService.confirmAppointment(appointmentId, googleAccessToken!);
           break;
         case 'cancel':
           response = await appointmentService.cancelAppointment(appointmentId);
           break;
         case 'start':
-          response = await appointmentService.startMeeting(appointmentId);
+          const googleTokenForStart = getGoogleAccessToken();
+          response = await appointmentService.startMeeting(appointmentId, googleTokenForStart || undefined);
           break;
         case 'complete':
           response = await appointmentService.completeAppointment(appointmentId, ''); // No notes in quick modal
@@ -398,7 +415,7 @@ const WeeklyScheduleManager: React.FC = () => {
 
       if (response.success) {
         const successMsg = {
-          confirm: 'Đã chấp nhận cuộc hẹn',
+          confirm: 'Đã chấp nhận cuộc hẹn và tạo link Google Meet thành công',
           cancel: 'Đã hủy cuộc hẹn',
           start: 'Đã bắt đầu buổi tư vấn',
           complete: 'Đã hoàn thành buổi tư vấn'
@@ -550,6 +567,21 @@ const WeeklyScheduleManager: React.FC = () => {
           </div>
         )}
 
+        {/* Google Auth Status for Consultant */}
+        {isConsultant && (
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-4 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Trạng thái Google:</span>
+                <GoogleAuthStatus showButton={true} />
+              </div>
+              <div className="text-xs text-gray-500">
+                Cần kết nối Google để tạo link Google Meet khi xác nhận lịch hẹn
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Calendar View for Consultant or Schedule Form for Staff */}
         {isConsultant ? (
           /* Calendar View for Consultant (Read-only) */
@@ -655,6 +687,7 @@ const WeeklyScheduleManager: React.FC = () => {
                                 
                                 // Get appointments for this specific day and hour
                                 const dayAppointments = appointments.filter(appointment => {
+                                  if (appointment.status === 'cancelled') return false; // Bỏ qua lịch đã hủy
                                   const appointmentDate = parseISO(appointment.appointment_date);
                                   const appointmentHour = parseInt(appointment.start_time.split(':')[0]);
                                   return isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
