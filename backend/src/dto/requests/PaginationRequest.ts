@@ -30,3 +30,18 @@ export interface BlogCommentQuery extends PaginationQuery {
     // Sorting
     sort_by?: 'comment_date' | 'status';
 }
+
+export interface BlogCommentQuery extends PaginationQuery {
+    // Filters
+    search?: string;              // Tìm trong content
+    blog_id?: string;             // Comments của blog cụ thể
+    customer_id?: string;         // Comments của user
+    status?: boolean;             // true = active, false = deleted
+    is_anonymous?: boolean;       // Ẩn danh hay không
+    parent_comment_id?: string;   // null = root comments, có giá trị = replies
+    date_from?: string;           // Lọc theo comment_date
+    date_to?: string;
+
+    // Sorting
+    sort_by?: 'comment_date' | 'status';
+}

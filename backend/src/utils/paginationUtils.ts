@@ -84,9 +84,17 @@ export class PaginationUtils {
         return filter;
     }
 
+
     /**
-     * Build MongoDB filter query cho blog comments
+     * Sanitize search input để tránh regex injection
      */
+    static sanitizeSearch(search: string): string {
+        return search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    /**
+  * Build MongoDB filter query cho blog comments
+  */
     static buildBlogCommentFilter(query: any): any {
         const filter: any = {};
 
@@ -121,6 +129,11 @@ export class PaginationUtils {
             }
         }
 
+        // Content search
+        if (query.search) {
+            filter.content = { $regex: query.search.trim(), $options: 'i' };
+        }
+
         // Date range filter
         if (query.date_from || query.date_to) {
             filter.comment_date = {};
@@ -135,12 +148,5 @@ export class PaginationUtils {
         }
 
         return filter;
-    }
-
-    /**
-     * Sanitize search input để tránh regex injection
-     */
-    static sanitizeSearch(search: string): string {
-        return search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 }

@@ -5,9 +5,181 @@ import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware'
 import { validateCreateBlog, validateCreateBlogComment } from '../middlewares/validation';
 import { BlogQuery } from '../dto/requests/PaginationRequest';
 import { validatePaginationQuery, validateBlogQuery } from '../middlewares/paginationValidation';
+import { BlogCommentQuery } from '../dto/requests/PaginationRequest';
+import { validateBlogCommentQuery } from '../middlewares/paginationValidation';
 
 const router = Router();
+/**
+ * ROUTE MỚI: GET /api/blogs/comments/paginated - Lấy tất cả comments với pagination
+ */
+router.get('/comments/',
+    validatePaginationQuery,
+    validateBlogCommentQuery,
+    async (req: Request, res: Response) => {
+        try {
+            const query: BlogCommentQuery = {
+                page: parseInt(req.query.page as string) || 1,
+                limit: parseInt(req.query.limit as string) || 20,
+                search: req.query.search as string,
+                blog_id: req.query.blog_id as string,
+                customer_id: req.query.customer_id as string,
+                status: req.query.status === 'true' ? true : req.query.status === 'false' ? false : undefined,
+                is_anonymous: req.query.is_anonymous === 'true' ? true : req.query.is_anonymous === 'false' ? false : undefined,
+                parent_comment_id: req.query.parent_comment_id as string,
+                date_from: req.query.date_from as string,
+                date_to: req.query.date_to as string,
+                sort_by: req.query.sort_by as any || 'comment_date',
+                sort_order: req.query.sort_order as any || 'desc'
+            };
 
+            console.log('Blog comment pagination query:', query);
+
+            const result = await BlogService.getBlogCommentsWithPagination(query);
+
+            if (result.success) {
+                res.status(200).json(result);
+            } else {
+                res.status(500).json(result);
+            }
+        } catch (error) {
+            console.error('Get blog comments with pagination controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+/**
+ * ROUTE MỚI: GET /api/blogs/comments/search - Search comments
+ */
+router.get('/comments/search',
+    validatePaginationQuery,
+    validateBlogCommentQuery,
+    async (req: Request, res: Response) => {
+        try {
+            if (!req.query.search) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Search parameter is required'
+                });
+            }
+
+            const query: BlogCommentQuery = {
+                page: parseInt(req.query.page as string) || 1,
+                limit: parseInt(req.query.limit as string) || 20,
+                search: req.query.search as string,
+                blog_id: req.query.blog_id as string,
+                customer_id: req.query.customer_id as string,
+                date_from: req.query.date_from as string,
+                date_to: req.query.date_to as string,
+                sort_by: req.query.sort_by as any || 'comment_date',
+                sort_order: req.query.sort_order as any || 'desc'
+            };
+
+            const result = await BlogService.getBlogCommentsWithPagination(query);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Search blog comments controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+/**
+ * ROUTE MỚI: GET /api/blogs/comments/user/:userId - Get comments của một user cụ thể
+ */
+router.get('/comments/user/:userId',
+    validatePaginationQuery,
+    async (req: Request, res: Response) => {
+        try {
+            const { userId } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'User ID không hợp lệ'
+                });
+            }
+
+            const query: BlogCommentQuery = {
+                page: parseInt(req.query.page as string) || 1,
+                limit: parseInt(req.query.limit as string) || 20,
+                customer_id: userId,
+                status: true, // Chỉ lấy active comments
+                sort_by: req.query.sort_by as any || 'comment_date',
+                sort_order: req.query.sort_order as any || 'desc'
+            };
+
+            const result = await BlogService.getBlogCommentsWithPagination(query);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Get comments by user controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+// ================================
+// SỬA LẠI ROUTE CŨ: GET /api/blogs/:blogId/comments - Thêm pagination support
+// ================================
+
+// Thay thế route cũ bằng version mới có pagination
+router.get('/:blogId/comments',
+    validatePaginationQuery,
+    async (req: Request, res: Response) => {
+        try {
+            const { blogId } = req.params;
+
+            // Kiểm tra ObjectId hợp lệ
+            if (!mongoose.Types.ObjectId.isValid(blogId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Blog ID không hợp lệ'
+                });
+            }
+
+            // Nếu có pagination parameters thì dùng pagination
+            if (req.query.page || req.query.limit) {
+                const query: BlogCommentQuery = {
+                    page: parseInt(req.query.page as string) || 1,
+                    limit: parseInt(req.query.limit as string) || 20,
+                    blog_id: blogId,
+                    parent_comment_id: req.query.parent_comment_id as string,
+                    sort_by: req.query.sort_by as any || 'comment_date',
+                    sort_order: req.query.sort_order as any || 'asc' // Comments thường sort theo thời gian cũ -> mới
+                };
+
+                const result = await BlogService.getBlogCommentsWithPagination(query);
+                return res.status(200).json(result);
+            }
+
+            // Nếu không có pagination parameters thì dùng method cũ (backward compatibility)
+            const result = await BlogService.getBlogComments(blogId);
+
+            if (result.success) {
+                res.status(200).json(result);
+            } else if (result.message === 'Blog not found') {
+                res.status(404).json(result);
+            } else {
+                res.status(500).json(result);
+            }
+        } catch (error) {
+            console.error('Get blog comments controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
 /**
  * ROUTE MỚI: GET /api/blogs/paginated - Lấy blogs với pagination
  * Đây sẽ là main route thay thế cho route cũ
