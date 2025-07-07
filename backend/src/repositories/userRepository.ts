@@ -23,8 +23,13 @@ export class UserRepository {
     }
     
     public static async getUserRoleById(userId: string): Promise<string | null> {
-        const user = await User.findById(new mongoose.Types.ObjectId(userId));
-        return user ? user.role : null;
+        try {
+            const user = await User.findById(new mongoose.Types.ObjectId(userId));
+            return user ? user.role : null;
+        } catch (error) {
+            console.log('Error getting role by id:', error);
+            throw error;
+        }
     }
 
     public static async findByIdAndUpdate(userId: ObjectId, updateData: Partial<IUser>): Promise<IUser | null> {
@@ -52,16 +57,16 @@ export class UserRepository {
         }
     }
 
-    public static async insertUser(user: Partial<IUser>){
-        try {
-            return await User.create(user);
-        } catch (error) {
-            console.error('Error insert user:', error);
-            throw error;
-        }  
-    }
+    // public static async insertUser(user: Partial<IUser>){
+    //     try {
+    //         return await User.create(user);
+    //     } catch (error) {
+    //         console.error('Error insert user:', error);
+    //         throw error;
+    //     }  
+    // }
 
-    public static async saveUser(user: IUser){
+    public static async saveUser(user: Partial<IUser>){
         try {
             return await user.save();
         } catch (error) {

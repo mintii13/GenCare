@@ -1,14 +1,15 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type PillTypes = '21+7'| '28-day';
+export type PillTypes = '21-day'| '24+4' | '21+7';
 export interface IPillTracking extends Document {
     user_id: mongoose.Types.ObjectId;
+    menstrual_cycle_id: mongoose.Types.ObjectId;
     pill_start_date: Date;
     is_taken: boolean;
     taken_time?: Date;
     pill_number: number;
     pill_type: PillTypes;
-    pill_status: 'active' | 'placebo';
+    pill_status: 'hormone' | 'placebo';
     reminder_enabled: boolean;
     reminder_time: string; // 'HH:mm' format
     reminder_sent_timestamps?: Date[];
@@ -20,12 +21,13 @@ export interface IPillTracking extends Document {
 
 const PillTrackingSchema: Schema = new Schema<IPillTracking>({
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    menstrual_cycle_id: { type: mongoose.Schema.Types.ObjectId, ref: 'MenstrualCycle', required: true },
     pill_start_date: { type: Date, required: true },
     is_taken: { type: Boolean, default: false },
     taken_time: { type: Date, default: null },
     pill_number: { type: Number, required: true },
-    pill_type: { type: String, enum: ['21+7', '28-day'], required: true },
-    pill_status: { type: String, enum: ['active', 'placebo'], required: true },
+    pill_type: { type: String, enum: ['21-day', '24+4', '21+7'], required: true },
+    pill_status: { type: String, enum: ['hormone', 'placebo'], required: true },
     reminder_enabled: { type: Boolean, default: true },
     reminder_time: { type: String, required: true },
     reminder_sent_timestamps: { type: [Date], default: [] },

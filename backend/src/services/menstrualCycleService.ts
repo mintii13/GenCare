@@ -119,7 +119,7 @@ export class MenstrualCycleService {
             cycles.push(cycle as IMenstrualCycle);
         }
         console.log('Creating cycles from groups...');
-        const regularity = this.calculateCyclePeriodRegularity(cycle_lengths);
+        const regularity = this.calculateCycleRegularity(cycle_lengths);
         console.log('Calculated regularity (initial):', regularity);
 
         for (let i = 0; i < cycles.length; i++) {
@@ -340,19 +340,24 @@ export class MenstrualCycleService {
         return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
     }
 
-    private static calculateStandardDeviation(numbers: number[]): number {
-        const mean = this.calculateAverage(numbers);
-        const squaredDiffs = numbers.map(num => Math.pow(num - mean, 2));
-        return Math.sqrt(this.calculateAverage(squaredDiffs));
+    private static calculateCycleRegularity(cycleLengths: number[]): RegularityStatus{
+        if (cycleLengths.length < 3) 
+            return 'insufficient_data';
+        const allInRange = cycleLengths.every(length => length >= 21 && length <= 35);
+
+        // Nếu chu kỳ kinh nguyệt nằm từ 21-35 thì ok, còn có giá trị chu kỳ out scope thì xem như bất bình thường
+        if (allInRange) 
+            return 'regular';       
+        return 'irregular';
     }
 
-    private static calculateCyclePeriodRegularity(cycleOrPeriodLengths: number[]): RegularityStatus{
-        if (cycleOrPeriodLengths.length < 3) 
+    private static calculatePeriodRegularity(periodLengths: number[]): RegularityStatus{
+        if (periodLengths.length < 3) 
             return 'insufficient_data';
-        const std = this.calculateStandardDeviation(cycleOrPeriodLengths);
+        const allInRange = periodLengths.every(length => length >= 3 && length <= 7);
 
-        // So sánh trực tiếp với chuẩn nghiên cứu
-        if (std <= 3.95) 
+        // Nếu số ngày hành kinh nằm từ 3-7 thì ok, còn có giá trị chu kỳ out scope thì xem như bất bình thường
+        if (allInRange) 
             return 'regular';       
         return 'irregular';
     }
@@ -400,7 +405,7 @@ export class MenstrualCycleService {
             const longestCycle = Math.max(...cycleLengths);
 
             // Tính độ đều đặn
-            const regularity = this.calculateCyclePeriodRegularity(cycleLengths);
+            const regularity = this.calculateCycleRegularity(cycleLengths);
 
             // Tính xu hướng
             const recentCycles = await MenstrualCycleRepository.getRecentCycles(user_id, 6);
@@ -458,7 +463,7 @@ export class MenstrualCycleService {
             const longestPeriod = Math.max(...periodLengths);
 
             // Tính độ đều đặn của kinh nguyệt
-            const periodRegularity = this.calculateCyclePeriodRegularity(periodLengths);
+            const periodRegularity = this.calculatePeriodRegularity(periodLengths);
 
             // Lấy 3 kỳ kinh gần nhất
             const last3Periods = periodsData.slice(0, 3).map(period => ({
