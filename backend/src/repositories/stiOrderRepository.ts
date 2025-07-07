@@ -2,8 +2,8 @@ import { StiOrder, IStiOrder } from '../models/StiOrder';
 import { IStiTestSchedule } from '../models/StiTestSchedule';
 import mongoose from 'mongoose';
 
-export class StiOrderRepository{
-    public static async insertStiOrder(stiOrder: IStiOrder): Promise<IStiOrder | null>{
+export class StiOrderRepository {
+    public static async insertStiOrder(stiOrder: IStiOrder): Promise<IStiOrder | null> {
         try {
             return await StiOrder.create(stiOrder);
         } catch (error) {
@@ -19,7 +19,7 @@ export class StiOrderRepository{
         }).sort({ createdAt: 1 });
     }
 
-    public static async findOrderById(id: string){
+    public static async findOrderById(id: string) {
         try {
             return await StiOrder.findById(id);
         } catch (error) {
@@ -28,7 +28,7 @@ export class StiOrderRepository{
         }
     }
 
-    public static async getOrdersByTestScheduleId(schedule: IStiTestSchedule){
+    public static async getOrdersByTestScheduleId(schedule: IStiTestSchedule) {
         try {
             return await StiOrder.find({ sti_schedule_id: schedule._id }).lean<IStiTestSchedule>();
         } catch (error) {
@@ -43,40 +43,147 @@ export class StiOrderRepository{
 
     public static async getTotalRevenueByCustomer(customerId: string): Promise<number> {
         const result = await StiOrder.aggregate([
-        {
-            $match: {
-                customer_id: new mongoose.Types.ObjectId(customerId),
-                order_status: 'Completed',
-                payment_status: 'Paid'
+            {
+                $match: {
+                    customer_id: new mongoose.Types.ObjectId(customerId),
+                    order_status: 'Completed',
+                    payment_status: 'Paid'
+                }
+            },
+            {
+                $group: {
+                    _id: '$customer_id',
+                    total_revenue: { $sum: '$total_amount' },
+                    count_orders: { $sum: 1 }
+                }
             }
-        },
-        {
-            $group: {
-                _id: '$customer_id',
-                total_revenue: { $sum: '$total_amount' },
-                count_orders: { $sum: 1 }
-            }
-        }
         ]);
         return result[0]?.total_revenue || 0;
     }
 
     public static async getTotalRevenue(): Promise<number> {
         const result = await StiOrder.aggregate([
-        {
-            $match: {
-                order_status: 'Completed',
-                payment_status: 'Paid'
+            {
+                $match: {
+                    order_status: 'Completed',
+                    payment_status: 'Paid'
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total_revenue: { $sum: '$total_amount' },
+                    count_orders: { $sum: 1 }
+                }
             }
-        },
-        {
-            $group: {
-                _id: null,
-                total_revenue: { $sum: '$total_amount' },
-                count_orders: { $sum: 1 }
-            }
-        }
         ]);
         return result[0]?.total_revenue || 0;
+    }
+
+    /**
+ * Find STI orders with pagination and filtering
+ */
+    public static async findWithPagination(
+        filters: any,
+        page: number,
+        limit: number,
+        sortBy: string = 'order_date',
+        sortOrder: 1 | -1 = -1
+    ): Promise<{
+        orders: IStiOrder[];
+        total: number;
+    }> {
+        try {
+            const skip = (page - 1) * limit;
+
+            const aggregationPipeline = [
+                { $match: filters },
+                {
+                    $lookup: {
+                        from: 'customers',
+                        localField: 'customer_id',
+                        foreignField: '_id',
+                        as: 'customer'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'consultant_id',
+                        foreignField: '_id',
+                        as: 'consultant'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'staff_id',
+                        foreignField: '_id',
+                        as: 'staff'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'stitests',
+                        localField: 'sti_test_items',
+                        foreignField: '_id',
+                        as: 'sti_test_details'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'stipackages',
+                        localField: 'sti_package_item.sti_package_id',
+                        foreignField: '_id',
+                        as: 'sti_package_details'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'stitestschedules',
+                        localField: 'sti_schedule_id',
+                        foreignField: '_id',
+                        as: 'schedule_details'
+                    }
+                },
+                {
+                    $addFields: {
+                        customer: { $arrayElemAt: ['$customer', 0] },
+                        consultant: { $arrayElemAt: ['$consultant', 0] },
+                        staff: { $arrayElemAt: ['$staff', 0] },
+                        sti_package_details: { $arrayElemAt: ['$sti_package_details', 0] },
+                        schedule_details: { $arrayElemAt: ['$schedule_details', 0] }
+                    }
+                },
+                {
+                    $sort: { [sortBy]: sortOrder }
+                }
+            ];
+
+            // Count total documents
+            const totalCountPipeline = [
+                { $match: filters },
+                { $count: 'total' }
+            ];
+
+            const [orders, totalCount] = await Promise.all([
+                StiOrder.aggregate([
+                    ...aggregationPipeline,
+                    { $skip: skip },
+                    { $limit: limit }
+                ]),
+                StiOrder.aggregate(totalCountPipeline)
+            ]);
+
+            const total = totalCount[0]?.total || 0;
+
+            return {
+                orders: orders as IStiOrder[],
+                total
+            };
+        } catch (error) {
+            console.error('Error in findWithPagination:', error);
+            throw error;
+        }
     }
 }
