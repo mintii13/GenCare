@@ -3,13 +3,105 @@ import { BlogService } from '../services/blogService';
 import mongoose from 'mongoose';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { validateCreateBlog, validateCreateBlogComment } from '../middlewares/validation';
+import { BlogQuery } from '../dto/requests/PaginationRequest';
+import { validatePaginationQuery, validateBlogQuery } from '../middlewares/paginationValidation';
 
 const router = Router();
 
-// GET /api/blogs - Lấy danh sách tất cả blog
-router.get('/', async (req: Request, res: Response) => {
+/**
+ * ROUTE MỚI: GET /api/blogs/paginated - Lấy blogs với pagination
+ * Đây sẽ là main route thay thế cho route cũ
+ */
+router.get('/',
+    validatePaginationQuery,
+    validateBlogQuery,
+    async (req: Request, res: Response) => {
+        try {
+            const query: BlogQuery = {
+                page: parseInt(req.query.page as string) || 1,
+                limit: parseInt(req.query.limit as string) || 10,
+                search: req.query.search as string,
+                author_id: req.query.author_id as string,
+                status: req.query.status === 'true' ? true : req.query.status === 'false' ? false : undefined,
+                date_from: req.query.date_from as string,
+                date_to: req.query.date_to as string,
+                sort_by: req.query.sort_by as any || 'publish_date',
+                sort_order: req.query.sort_order as any || 'desc'
+            };
+
+            console.log('Blog pagination query:', query);
+
+            const result = await BlogService.getBlogsWithPagination(query);
+
+            if (result.success) {
+                res.status(200).json(result);
+            } else {
+                res.status(500).json(result);
+            }
+        } catch (error) {
+            console.error('Get blogs with pagination controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+/**
+ * ROUTE MỚI: GET /api/blogs/search - Search blogs
+ */
+router.get('/search',
+    validatePaginationQuery,
+    validateBlogQuery,
+    async (req: Request, res: Response) => {
+        try {
+            if (!req.query.search) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Search parameter is required'
+                });
+            }
+
+            const query: BlogQuery = {
+                page: parseInt(req.query.page as string) || 1,
+                limit: parseInt(req.query.limit as string) || 10,
+                search: req.query.search as string,
+                author_id: req.query.author_id as string,
+                date_from: req.query.date_from as string,
+                date_to: req.query.date_to as string,
+                sort_by: req.query.sort_by as any || 'publish_date',
+                sort_order: req.query.sort_order as any || 'desc'
+            };
+
+            const result = await BlogService.getBlogsWithPagination(query);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Search blogs controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+
+/**
+ * ROUTE MỚI: GET /api/blogs/author/:authorId/stats - Get blog stats của author
+ */
+router.get('/author/:authorId/stats', async (req: Request, res: Response) => {
     try {
-        const result = await BlogService.getAllBlogs();
+        const { authorId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(authorId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Author ID không hợp lệ'
+            });
+        }
+
+        const result = await BlogService.getBlogCountByAuthor(authorId);
 
         if (result.success) {
             res.status(200).json(result);
@@ -17,7 +109,7 @@ router.get('/', async (req: Request, res: Response) => {
             res.status(500).json(result);
         }
     } catch (error) {
-        console.error('Get blogs controller error:', error);
+        console.error('Get blog stats controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống'

@@ -142,15 +142,7 @@ export class MenstrualCycleService {
                 cycle.predicted_cycle_end = new Date(start + len * 86400000);
                 cycle.predicted_ovulation_date = new Date(start + ov * 86400000);
                 cycle.predicted_fertile_start = new Date(start + (ov - 5) * 86400000);
-                cycle.predicted_fertile_end = new Date(start + ov * 86400000);
-                
-                console.log(`Predictions set for cycle ${i + 1}:`, {
-                    start: cycle.cycle_start_date.toISOString().split('T')[0],
-                    end: cycle.predicted_cycle_end.toISOString().split('T')[0],
-                    ovulation: cycle.predicted_ovulation_date.toISOString().split('T')[0],
-                    fertile_start: cycle.predicted_fertile_start.toISOString().split('T')[0],
-                    fertile_end: cycle.predicted_fertile_end.toISOString().split('T')[0]
-                });
+                cycle.predicted_fertile_end = new Date(start + (ov + 1) * 86400000);
             }
             else{
                 cycle.predicted_cycle_end = null;
