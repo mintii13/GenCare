@@ -5,6 +5,8 @@ import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware'
 import { Consultant } from '../models/Consultant';
 import { AppointmentHistoryService } from '../services/appointmentHistoryService';
 import { validateBookAppointment, validateUpdateAppointment, validateFeedback } from '../middlewares/appointmentValidation';
+import { AppointmentQuery } from '../dto/requests/PaginationRequest';
+import { validatePaginationQuery, validateAppointmentQuery } from '../middlewares/paginationValidation';
 
 // Extend Request để có jwtUser
 declare global {
@@ -24,9 +26,217 @@ interface JWTPayload {
 }
 
 const router = Router();
+/**
+ * GET /api/appointments - TẤT CẢ APPOINTMENT LOGIC TRONG 1 ENDPOINT
+ * - Automatic role-based filtering
+ * - Pagination support
+ * - Search & filtering
+ * - Date range filtering
+ */
+router.get('/',
+    authenticateToken,
+    validatePaginationQuery,
+    validateAppointmentQuery,
+    async (req: Request, res: Response) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
 
-// ================== SPECIFIC ROUTES FIRST (no parameters) ==================
+            // Nếu có pagination parameters thì dùng pagination logic
+            if (req.query.page || req.query.limit || req.query.search ||
+                req.query.status || req.query.appointment_date_from || req.query.appointment_date_to ||
+                req.query.start_date || req.query.end_date) {
 
+                const query: AppointmentQuery = {
+                    page: parseInt(req.query.page as string) || 1,
+                    limit: parseInt(req.query.limit as string) || 10,
+                    search: req.query.search as string,
+                    customer_id: req.query.customer_id as string,
+                    consultant_id: req.query.consultant_id as string,
+                    status: req.query.status as any,
+
+                    // THÊM: Support cả 2 format date filtering
+                    appointment_date_from: req.query.appointment_date_from as string || req.query.start_date as string,
+                    appointment_date_to: req.query.appointment_date_to as string || req.query.end_date as string,
+
+                    video_call_status: req.query.video_call_status as any,
+                    has_feedback: req.query.has_feedback === 'true' ? true : req.query.has_feedback === 'false' ? false : undefined,
+                    feedback_rating: req.query.feedback_rating ? parseInt(req.query.feedback_rating as string) : undefined,
+                    sort_by: req.query.sort_by as any || 'appointment_date',
+                    sort_order: req.query.sort_order as any || 'desc'
+                };
+
+                // AUTOMATIC ROLE-BASED FILTERING
+                if (user.role === 'customer') {
+                    query.customer_id = user.userId; // Customer chỉ thấy appointments của mình
+                } else if (user.role === 'consultant') {
+                    // Tìm consultant_id từ database
+                    const consultant = await Consultant.findOne({ user_id: user.userId });
+                    if (!consultant) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Consultant profile not found'
+                        });
+                    }
+                    query.consultant_id = consultant._id.toString(); // Consultant chỉ thấy appointments của mình
+                }
+                // Staff/Admin có thể thấy tất cả (không override filters)
+
+                console.log('Appointment query:', query);
+
+                const result = await AppointmentService.getAppointmentsWithPagination(query);
+
+                if (result.success) {
+                    res.status(200).json(result);
+                } else {
+                    res.status(500).json(result);
+                }
+                return;
+            }
+
+            // FALLBACK: Nếu không có pagination params thì dùng old logic để backward compatible
+            const { status, start_date, end_date } = req.query;
+
+            if (user.role === 'customer') {
+                const result = await AppointmentService.getCustomerAppointments(
+                    user.userId,
+                    status as string,
+                    start_date ? new Date(start_date as string) : undefined,
+                    end_date ? new Date(end_date as string) : undefined
+                );
+                res.status(200).json(result);
+            } else if (user.role === 'consultant') {
+                const consultant = await Consultant.findOne({ user_id: user.userId });
+                if (!consultant) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Consultant profile not found'
+                    });
+                }
+                const result = await AppointmentService.getConsultantAppointments(
+                    consultant._id.toString(),
+                    status as string,
+                    start_date ? new Date(start_date as string) : undefined,
+                    end_date ? new Date(end_date as string) : undefined
+                );
+                res.status(200).json(result);
+            } else {
+                // Staff/Admin - get all appointments với basic filtering
+                const result = await AppointmentService.getAllAppointments(
+                    status as string,
+                    start_date ? new Date(start_date as string) : undefined,
+                    end_date ? new Date(end_date as string) : undefined
+                );
+                res.status(200).json(result);
+            }
+        } catch (error) {
+            console.error('Get appointments controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+// ================================
+// SEARCH ENDPOINT (CÓ THỂ GIỮ HOẶC XÓA - TÙY BẠN)
+// ================================
+
+/**
+ * GET /api/appointments/search - Search appointments (OPTIONAL - có thể xóa vì đã có trong main endpoint)
+ */
+router.get('/search',
+    authenticateToken,
+    validatePaginationQuery,
+    validateAppointmentQuery,
+    async (req: Request, res: Response) => {
+        try {
+            if (!req.query.search) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Search parameter is required'
+                });
+            }
+
+            const user = req.jwtUser as JWTPayload;
+
+            const query: AppointmentQuery = {
+                page: parseInt(req.query.page as string) || 1,
+                limit: parseInt(req.query.limit as string) || 10,
+                search: req.query.search as string,
+                customer_id: req.query.customer_id as string,
+                consultant_id: req.query.consultant_id as string,
+                status: req.query.status as any,
+                appointment_date_from: req.query.appointment_date_from as string || req.query.start_date as string,
+                appointment_date_to: req.query.appointment_date_to as string || req.query.end_date as string,
+                sort_by: req.query.sort_by as any || 'appointment_date',
+                sort_order: req.query.sort_order as any || 'desc'
+            };
+
+            // Role-based filtering
+            if (user.role === 'customer') {
+                query.customer_id = user.userId;
+            } else if (user.role === 'consultant') {
+                const consultant = await Consultant.findOne({ user_id: user.userId });
+                if (!consultant) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Consultant profile not found'
+                    });
+                }
+                query.consultant_id = consultant._id.toString();
+            }
+
+            const result = await AppointmentService.getAppointmentsWithPagination(query);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Search appointments controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+/**
+ * GET /api/appointments/statistics - Get appointment statistics
+ */
+router.get('/statistics',
+    authenticateToken,
+    authorizeRoles('staff', 'admin'),
+    async (req: Request, res: Response) => {
+        try {
+            // Optional filters for statistics
+            const filters: any = {};
+
+            if (req.query.consultant_id) {
+                filters.consultant_id = req.query.consultant_id;
+            }
+
+            if (req.query.date_from || req.query.date_to) {
+                filters.appointment_date = {};
+                if (req.query.date_from) {
+                    filters.appointment_date.$gte = new Date(req.query.date_from as string);
+                }
+                if (req.query.date_to) {
+                    const endDate = new Date(req.query.date_to as string);
+                    endDate.setHours(23, 59, 59, 999);
+                    filters.appointment_date.$lte = endDate;
+                }
+            }
+
+            const result = await AppointmentService.getAppointmentStatistics(filters);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Get appointment statistics controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
 // Book appointment - Customer only
 router.post('/book', authenticateToken, authorizeRoles('customer'), validateBookAppointment, async (req: Request, res: Response) => {
     try {
@@ -63,148 +273,6 @@ router.post('/book', authenticateToken, authorizeRoles('customer'), validateBook
     }
 });
 
-// Get customer appointments
-router.get('/my-appointments', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response) => {
-    try {
-        const customerId = req.jwtUser?.userId;
-        const { status, start_date, end_date } = req.query;
-
-        if (!customerId) {
-            return res.status(401).json({
-                success: false,
-                message: 'User authentication required'
-            });
-        }
-
-        const result = await AppointmentService.getCustomerAppointments(
-            customerId,
-            status as string,
-            start_date ? new Date(start_date as string) : undefined,
-            end_date ? new Date(end_date as string) : undefined
-        );
-
-        res.status(200).json(result);
-    } catch (error) {
-        console.error('Get customer appointments controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-});
-
-// Get consultant appointments
-router.get('/consultant/my-appointments', authenticateToken, authorizeRoles('consultant'), async (req: Request, res: Response) => {
-    try {
-        const consultantUserId = req.jwtUser?.userId;
-        const { status, start_date, end_date } = req.query;
-
-        if (!consultantUserId) {
-            return res.status(401).json({
-                success: false,
-                message: 'User authentication required'
-            });
-        }
-
-        // Find consultant by user_id
-        const consultant = await Consultant.findOne({ user_id: consultantUserId });
-        if (!consultant) {
-            return res.status(404).json({
-                success: false,
-                message: 'Consultant profile not found'
-            });
-        }
-
-        const result = await AppointmentService.getConsultantAppointments(
-            consultant._id.toString(),
-            status as string,
-            start_date ? new Date(start_date as string) : undefined,
-            end_date ? new Date(end_date as string) : undefined
-        );
-
-        res.status(200).json(result);
-    } catch (error) {
-        console.error('Get consultant appointments controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-});
-
-// Get all appointments - Staff, Admin only
-router.get('/admin/all', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
-    try {
-        const { status, start_date, end_date, customer_id, consultant_id } = req.query;
-
-        const appointments = await AppointmentRepository.findAll(
-            status as string,
-            start_date ? new Date(start_date as string) : undefined,
-            end_date ? new Date(end_date as string) : undefined,
-            consultant_id as string,
-            customer_id as string
-        );
-
-        res.status(200).json({
-            success: true,
-            message: 'All appointments retrieved successfully',
-            data: {
-                appointments,
-                total: appointments.length
-            },
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('Get all appointments controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-});
-
-// Get appointment statistics - Staff, Admin, Consultant only  
-router.get('/admin/stats', authenticateToken, authorizeRoles('consultant', 'staff', 'admin'), async (req: Request, res: Response) => {
-    try {
-        const user = req.jwtUser as JWTPayload;
-        const { consultant_id, start_date, end_date } = req.query;
-
-        let targetConsultantId = consultant_id as string;
-
-        // Nếu là consultant, chỉ được xem stats của chính mình
-        if (user.role === 'consultant') {
-            const consultant = await Consultant.findOne({ user_id: user.userId });
-            if (!consultant) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Consultant profile not found'
-                });
-            }
-            targetConsultantId = consultant._id.toString();
-        }
-
-        const stats = await AppointmentRepository.countByStatus(
-            targetConsultantId,
-            start_date ? new Date(start_date as string) : undefined,
-            end_date ? new Date(end_date as string) : undefined
-        );
-
-        res.status(200).json({
-            success: true,
-            message: 'Appointment statistics retrieved successfully',
-            data: {
-                stats
-            },
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('Get appointment statistics controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-});
 
 // Get activity history (for admin/staff)
 router.get('/admin/activity-history', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
@@ -325,53 +393,6 @@ router.get('/my-feedbacks', authenticateToken, authorizeRoles('customer'), async
     }
 });
 
-// Get appointments for specific consultant (staff & admin can specify consultant_id)
-router.get('/consultant/:consultantId', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
-    try {
-        const consultantId = req.params.consultantId;
-        const { status, start_date, end_date } = req.query;
-
-        const result = await AppointmentService.getConsultantAppointments(
-            consultantId,
-            status as string,
-            start_date ? new Date(start_date as string) : undefined,
-            end_date ? new Date(end_date as string) : undefined
-        );
-
-        res.status(200).json(result);
-    } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
-
-// Get consultant feedback statistics
-router.get('/consultant/:consultantId/feedback-stats', authenticateToken, authorizeRoles('consultant', 'staff', 'admin'), async (req: Request, res: Response) => {
-    try {
-        const user = req.jwtUser as JWTPayload;
-        const consultantId = req.params.consultantId;
-
-        const result = await AppointmentService.getConsultantFeedbackStats(
-            consultantId,
-            user.userId,
-            user.role
-        );
-
-        if (result.success) {
-            res.json(result);
-        } else {
-            res.status(400).json(result);
-        }
-    } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
-
 // ================== APPOINTMENT ACTIONS WITH ID PARAMETERS ==================
 
 // Confirm appointment - Consultant only, BẮT BUỘC có Google Access Token
@@ -461,8 +482,8 @@ router.put('/:id/cancel', authenticateToken, async (req: Request, res: Response)
     }
 });
 
-// Update appointment - Staff, Admin, có thể có Google Access Token
-router.put('/:id', authenticateToken, authorizeRoles('staff', 'admin'), validateUpdateAppointment, async (req: Request, res: Response) => {
+// Update appointment - Customer, Staff, Admin, có thể có Google Access Token
+router.put('/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), validateUpdateAppointment, async (req: Request, res: Response) => {
     try {
         const appointmentId = req.params.id;
         const requestUserId = req.jwtUser?.userId;
@@ -519,6 +540,10 @@ router.put('/:id', authenticateToken, authorizeRoles('staff', 'admin'), validate
 });
 
 // Get appointment by ID - All authenticated users
+// ================================
+// DEBUG VERSION - Thêm console.log để debug
+// ================================
+
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     try {
         const appointmentId = req.params.id;
@@ -534,7 +559,6 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 
         // Get appointment
         const appointment = await AppointmentRepository.findById(appointmentId);
-
         if (!appointment) {
             return res.status(404).json({
                 success: false,
@@ -544,16 +568,36 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 
         // Check access permissions
         let hasAccess = false;
-
         if (userRole === 'staff' || userRole === 'admin') {
             hasAccess = true;
         } else if (userRole === 'customer') {
-            hasAccess = appointment.customer_id.toString() === userId;
+            // IMPROVED: Handle different customer_id formats
+            let customerIdToCheck: string;
+            if (typeof appointment.customer_id === 'string') {
+                customerIdToCheck = appointment.customer_id;
+            } else if (appointment.customer_id && typeof appointment.customer_id === 'object') {
+                // If populated, get _id from populated object
+                customerIdToCheck = (appointment.customer_id as any)._id?.toString() || appointment.customer_id.toString();
+            } else {
+                customerIdToCheck = appointment.customer_id?.toString() || '';
+            }
+            hasAccess = customerIdToCheck === userId;
         } else if (userRole === 'consultant') {
+
             // For consultants, check if they own this appointment
             const consultant = await Consultant.findOne({ user_id: userId });
-            if (consultant && appointment.consultant_id.toString() === consultant._id.toString()) {
-                hasAccess = true;
+            if (consultant) {
+                // IMPROVED: Handle different consultant_id formats
+                let consultantIdToCheck: string;
+                if (typeof appointment.consultant_id === 'string') {
+                    consultantIdToCheck = appointment.consultant_id;
+                } else if (appointment.consultant_id && typeof appointment.consultant_id === 'object') {
+                    // If populated, get _id from populated object  
+                    consultantIdToCheck = (appointment.consultant_id as any)._id?.toString() || appointment.consultant_id.toString();
+                } else {
+                    consultantIdToCheck = appointment.consultant_id?.toString() || '';
+                }
+                hasAccess = consultantIdToCheck === consultant._id.toString();
             }
         }
 
@@ -573,7 +617,6 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
-        console.error('Get appointment by ID controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

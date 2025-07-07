@@ -149,4 +149,69 @@ export class PaginationUtils {
 
         return filter;
     }
+
+    static buildAppointmentFilter(query: any): any {
+        const filter: any = {};
+
+        // Customer filter
+        if (query.customer_id) {
+            filter.customer_id = query.customer_id;
+        }
+
+        // Consultant filter
+        if (query.consultant_id) {
+            filter.consultant_id = query.consultant_id;
+        }
+
+        // Status filter
+        if (query.status) {
+            filter.status = query.status;
+        }
+
+        // Video call status filter
+        if (query.video_call_status) {
+            filter.video_call_status = query.video_call_status;
+        }
+
+        // UPDATED: Appointment date range filter (support both formats)
+        const dateFrom = query.appointment_date_from || query.start_date;
+        const dateTo = query.appointment_date_to || query.end_date;
+
+        if (dateFrom || dateTo) {
+            filter.appointment_date = {};
+            if (dateFrom) {
+                filter.appointment_date.$gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+                const endDate = new Date(dateTo);
+                endDate.setHours(23, 59, 59, 999);
+                filter.appointment_date.$lte = endDate;
+            }
+        }
+
+        // Has feedback filter
+        if (query.has_feedback !== undefined) {
+            if (query.has_feedback === 'true' || query.has_feedback === true) {
+                filter.feedback = { $exists: true, $ne: null };
+            } else {
+                filter.feedback = { $exists: false };
+            }
+        }
+
+        // Feedback rating filter
+        if (query.feedback_rating) {
+            filter['feedback.rating'] = parseInt(query.feedback_rating);
+        }
+
+        // Notes search (trong customer_notes hoặc consultant_notes)
+        if (query.search) {
+            const searchRegex = { $regex: query.search.trim(), $options: 'i' };
+            filter.$or = [
+                { customer_notes: searchRegex },
+                { consultant_notes: searchRegex }
+            ];
+        }
+
+        return filter;
+    }
 }

@@ -45,3 +45,19 @@ export interface BlogCommentQuery extends PaginationQuery {
     // Sorting
     sort_by?: 'comment_date' | 'status';
 }
+
+export interface AppointmentQuery extends PaginationQuery {
+    // Filters
+    search?: string;              // THÊM DÒNG NÀY - Search trong notes
+    customer_id?: string;         // Lịch hẹn của khách hàng
+    consultant_id?: string;       // Lịch hẹn của consultant
+    status?: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'in_progress';
+    appointment_date_from?: string;
+    appointment_date_to?: string;
+    video_call_status?: 'not_started' | 'in_progress' | 'ended';
+    has_feedback?: boolean;       // Có feedback hay chưa
+    feedback_rating?: number;     // Lọc theo rating (1-5)
+
+    // Sorting - override to specify valid fields
+    sort_by?: 'appointment_date' | 'created_date' | 'updated_date' | 'status';
+}
