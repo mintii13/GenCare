@@ -11,9 +11,10 @@ import { stiAuditLogger } from '../middlewares/stiAuditLogger';
 import { TargetType } from '../models/StiAuditLog';
 import { StiOrder } from '../models/StiOrder';
 import { validateStiOrderPagination } from '../middlewares/paginationValidation';
-import { StiOrderQuery } from '../dto/requests/StiRequest';
+import { StiOrderQuery, UpdateStiResultRequest } from '../dto/requests/StiRequest';
 import { validateAuditLogPagination } from '../middlewares/paginationValidation';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
+import { StiResultRepository } from '../repositories/stiResultRepository';
 
 const router = Router();
 /**
@@ -586,6 +587,183 @@ router.get('/getTotalRevenue', async (req: Request, res: Response) => {
         return res.status(500).json({
             success: false,
             message: 'Internal server error',
+        });
+    }
+});
+
+/*
+* api tạo mới một sti-result theo sti_order_id sẽ lấy khi nhấn vào 1 order nào đó trên frontend(truyền qua query)
+* (làm theo kiểu bấm tạo result cái nào thì lấy từ đó)
+*/
+router.post('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const order_id  = req.query.orderId.toString();
+
+        if (!order_id) {
+            res.status(400).json({
+                success: false,
+                message: 'Order ID is required'
+            });
+            return;
+        }
+
+        // Check if STI Result already exists for this order
+        const existingResults = await StiResultRepository.findExistedResult(order_id);
+        if (existingResults) {
+            res.status(409).json({
+                success: false,
+                message: 'STI Result already exists for this order',
+                data: existingResults
+            });
+            return;
+        }
+
+        const additionalData = req.body || {};
+        const result = await StiService.createStiResult(order_id, additionalData);
+        if (result.success)
+            res.status(201).json(result);
+        else res.status(400).json(result);
+    } catch (error) {
+        console.error('Error creating STI Result:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+//api lấy sti-result, nếu có query orderId thì sẽ lấy theo orderId, không thì lấy hết
+router.get('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant', 'customer'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const order_id  = req.query.orderId?.toString();
+        const {userId, role} = req.user as JWTPayload; 
+        const result = (order_id) ? await StiService.getStiResultByOrderId(order_id, userId, role): await StiService.getAllStiResult();
+
+        if (!result.success) {
+            res.status(404).json(result);
+        }
+        else res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching STI Result:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+//api lấy từ sti_result_id
+router.get('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant', 'customer'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const result_id  = req.params.id;
+        console.log(result_id)
+        const result = await StiService.getStiResultById(result_id)
+
+        if (!result.success) {
+            res.status(404).json(result);
+        }
+        else res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching STI Result:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * update từ việc nhập frontend, có thể dùng để xóa mềm luôn (bằng cách truyền vào is_active = false)
+ * sample: có 3 thuộc tính
+    * thuộc tính sampleQualities có thể cập nhật phần value trong bộ <key:value>, với value = boolean | null, nhưng ko được cập nhật key,
+    nếu ko sẽ báo lỗi
+    * hai thuộc tính còn lại vẫn gửi từ frontend bình thường, nhưng chú ý vì nó là 1 phần của sample nên phải gửi trong object
+    vd: "sample": {
+            "sampleQualities": {
+                "máu": false,
+                "dịch ngoáy": true
+            },
+            "timeReceived": "2025-07-08T10:00:00.000Z",
+            "timeTesting": "2025-07-08T12:00:00.000Z"
+        },
+ * Những thuộc tính dưới đây sẽ lấy từ frontend:
+        time_result?: Date;         => thời gian nhận kết quả
+        result_value?: string;      => kết quả
+        diagnosis?: string;         
+        is_confirmed: boolean;      => confirm by consultant (bắt buộc phải là consultant trong order)
+        is_critical?: boolean;      => đã thông qua hay chưa để trả về cho customer chưa
+        notes?: string;             
+        is_active: boolean;         => deactivation result
+ */
+
+router.patch('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+        try {
+            const result_id = req.params.id;
+            const user_id = (req.user as any).userId;
+            const updateData: UpdateStiResultRequest = req.body;
+            // Validate at least one field is provided for update
+            const allowedFields = [
+                'sample', 'time_result', 'result_value', 'diagnosis', 
+                'is_confirmed', 'is_critical', 'is_notified', 'notes', 'is_active'
+            ];
+            
+            const hasValidField = allowedFields.some(field => 
+                updateData[field as keyof UpdateStiResultRequest] !== undefined
+            );
+
+            if (!hasValidField) {
+                res.status(400).json({
+                    success: false,
+                    message: 'At least one field for updating'
+                });
+                return;
+            }
+
+            // Call service to update
+            const result = await StiService.updateStiResult(result_id, updateData, user_id);
+
+            if (result.success) {
+                res.status(200).json(result);
+            } else if (result.message === 'Cannot find the sti result') {
+                res.status(404).json(result);
+            } else if (result.message === 'Sti result is deactivated') {
+                res.status(409).json(result);
+            }
+            else res.status(400).json(result);
+        } catch (error) {
+            console.error('StiResultController - updateStiResult error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+});
+
+// API đồng bộ sample từ order, truyền order id từ query vào khi nhấn vào result của order tương ứng (1:1)
+router.patch('/sti-result/sync-sample', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const order_id = req.query.orderId.toString();
+        
+        if (!order_id) {
+            res.status(400).json({
+                success: false,
+                message: 'order id is required'
+            });
+            return;
+        }
+
+        const result = await StiService.syncSampleFromOrder(order_id);
+        
+        if (!result.success) {
+            res.status(400).json(result);
+        } else {
+            res.status(200).json(result);
+        }
+    } catch (error) {
+        console.error('Error syncing sample from order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
         });
     }
 });

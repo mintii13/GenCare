@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type TestTypes = 'máu' | 'nước tiểu' | 'dịch ngoáy';
+
 export interface IStiTest extends Document {
     sti_test_name: string;
     sti_test_code: string;
@@ -7,7 +9,7 @@ export interface IStiTest extends Document {
     price: number;
     is_active: boolean;
     category: 'bacterial' | 'viral' | 'parasitic';
-    sti_test_type: 'máu' | 'nước tiểu' | 'dịch ngoáy';
+    sti_test_type: TestTypes;
     createdBy: mongoose.Types.ObjectId;
 }
 

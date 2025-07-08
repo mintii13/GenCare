@@ -186,4 +186,10 @@ export class StiOrderRepository {
             throw error;
         }
     }
+
+    public static async getOrderWithTests(orderId: string): Promise<IStiOrder | null> {
+        return await StiOrder.findById(orderId)
+        .populate('sti_package_item.sti_test_ids')
+        .populate('sti_test_items');
+    }
 }
