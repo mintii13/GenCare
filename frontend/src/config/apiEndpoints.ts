@@ -1,65 +1,115 @@
 /*
   Centralised API endpoint map.
   ------------------------------------------------------
-  - Sử dụng BASE_API làm tiền tố khi cần gọi thẳng domain.
-  - Mặc định các service hiện tại đã config axios baseURL = config.api.url
-    nên bạn chỉ cần khai báo path bắt đầu bằng '/'.
+  - Mặc định các service hiện tại đã config axios baseURL nên bạn
+    chỉ cần khai báo path bắt đầu bằng '/'.
   - Gom nhóm endpoints theo module để dễ tra cứu.
 */
-import { config } from './constants';
-
-export const BASE_API = config.api.url; // e.g. http://localhost:3000/api
 
 export const API = {
   // ----------------------- AUTH -----------------------
   Auth: {
-    LOGIN: '/identity/authenticate',
-    REGISTER: '/identity/register-with-verifying',
-    VERIFY_OTP: '/identity/verify-otp',
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    CHECK_EMAIL: '/auth/check-email',
+    VERIFY_OTP: '/auth/verifyOTP',
+    LOGOUT: '/auth/logout',
+    CHANGE_PASSWORD: '/auth/change-password',
+    GOOGLE_VERIFY: '/auth/google/verify',
+    GOOGLE_CALLBACK: '/auth/google/callback',
+    CREATE_GOOGLE_MEET: '/auth/create-google-meet',
+    // Legacy endpoints below - can be removed if not used
     REFRESH: '/identity/refresh',
     USER_INFO: '/identity/user',
-
-    // Legacy auth endpoints still used by FE
     LOGIN_PUBLIC: '/auth/login',
     REGISTER_PUBLIC: '/auth/register',
-    LOGOUT: '/auth/logout',
     ME: '/auth/me',
     REFRESH_TOKEN: '/auth/refresh-token',
-    CHANGE_PASSWORD: '/auth/changePassword',
     SEND_VERIFICATION: '/auth/send-verification',
     VERIFY_EMAIL: '/auth/verify-email',
     FORGOT_PASSWORD: '/auth/forgot-password',
-    RESET_PASSWORD: '/auth/reset-password'
+    RESET_PASSWORD: '/auth/reset-password',
+    GET_USER_PROFILE: '/auth/getUserProfile'
   },
 
   // ---------------------- APPOINTMENTS ----------------
   Appointment: {
+    BASE: '/appointments', // GET (paginated), PUT /:id
+    GET_BY_ID: (id: string) => `/appointments/${id}`,
     BOOK: '/appointments/book',
-    MY_APPOINTMENTS: '/appointments/my-appointments',
-    CONSULTANT_APPOINTMENTS: '/appointments/consultant/my-appointments',
-    ALL: '/appointments/admin/all',
-    BASE: '/appointments' // append /:id, /:id/cancel ….
+    SEARCH: '/appointments/search',
+    STATS: '/appointments/statistics',
+    ADMIN_FEEDBACK: '/appointments/admin/feedback',
+    MY_FEEDBACK: '/appointments/my-feedback',
+    MY_FEEDBACKS: '/appointments/my-feedbacks', // Alternative
+    CONFIRM: (id: string) => `/appointments/${id}/confirm`,
+    CANCEL: (id: string) => `/appointments/${id}/cancel`,
+    FEEDBACK: (appointmentId: string) => `/appointments/${appointmentId}/feedback`,
+    CAN_FEEDBACK: (appointmentId: string) => `/appointments/${appointmentId}/can-feedback`,
+    MEETING_INFO: (appointmentId: string) => `/appointments/${appointmentId}/meeting-info`,
+    START_MEETING: (appointmentId: string) => `/appointments/${appointmentId}/start-meeting`,
+    COMPLETE: (appointmentId: string) => `/appointments/${appointmentId}/complete`,
+    SEND_REMINDER: (appointmentId: string) => `/appointments/${appointmentId}/send-reminder`,
+    // From previous config
+    MY_APPOINTMENTS: '/appointments',
+    CONSULTANT_APPOINTMENTS: '/appointments',
+    ALL: '/appointments',
+  },
+
+  // ---------------------- APPOINTMENT HISTORY ----------------
+  AppointmentHistory: {
+    LIST: '/appointment-history/list',
+    GET_BY_APPOINTMENT_ID: (appointmentId: string) => `/appointment-history/appointment/${appointmentId}`,
+    GET_BY_USER_ID: (userId: string) => `/appointment-history/user/${userId}`,
+    STATS_ACTIONS: '/appointment-history/stats/actions',
+    STATS_ROLES: '/appointment-history/stats/roles',
+    CLEANUP: '/appointment-history/cleanup'
   },
 
   // ----------------------- CONSULTANT -----------------
   Consultant: {
+    LIST: '/consultants',
     PUBLIC_LIST: '/consultants/public',
     PUBLIC_DETAIL: (id: string) => `/consultants/public/${id}`,
+    TOP_RATED: '/consultants/top-rated',
+    PERFORMANCE: (id: string) => `/consultants/${id}/performance`,
+    MY_PERFORMANCE: '/consultants/my-performance',
+    FEEDBACK_STATS_PUBLIC: (id: string) => `/consultants/${id}/feedback-stats-public`,
+    FEEDBACK_STATS_DETAILED: (id: string) => `/consultants/${id}/feedback-stats-detailed`,
+    // From previous config
     WITH_RATINGS: '/consultants/with-ratings',
     MY_PROFILE: '/consultants/my-profile',
-    MY_STATS: '/consultants/my-stats'
+    MY_STATS: '/consultants/my-stats',
+    MY_REVIEWS: '/consultants/my-reviews',
+    SEARCH: '/consultants/search'
   },
 
   // ----------------------- WEEKLY SCHEDULE ------------
   WeeklySchedule: {
-    BASE: '/weekly-schedule',
+    BASE: '/weekly-schedule', // POST, PUT /:scheduleId
+    GET_BY_ID: (id: string) => `/weekly-schedule/${id}`,
+    COPY_SCHEDULE: '/weekly-schedule/copy',
+    AVAILABILITY: (id: string) => `/weekly-schedule/consultant/${id}/availability`,
+    SLOTS_FOR_WEEK: (id: string) => `/weekly-schedule/consultant/${id}/slots-for-week`,
     MY_SCHEDULES: '/weekly-schedule/my-schedules',
     CONSULTANT_SCHEDULES: (consultantId: string) => `/weekly-schedule/consultant/${consultantId}`,
+    ALL: '/weekly-schedule/all',
     WEEKLY_SLOTS: (consultantId: string) => `/weekly-schedule/weekly-slots/${consultantId}`
   },
 
   // ----------------------- BLOG -----------------------
   Blog: {
+    BASE: '/blogs', // GET (paginated), POST
+    GET_BY_ID: (id: string) => `/blogs/${id}`,
+    SEARCH: '/blogs/search',
+    COMMENTS: '/blogs/comments',
+    COMMENTS_SEARCH: '/blogs/comments/search',
+    COMMENTS_BY_USER: (userId: string) => `/blogs/comments/user/${userId}`,
+    COMMENTS_FOR_BLOG: (blogId: string) => `/blogs/${blogId}/comments`,
+    POST_COMMENT: (blogId: string) => `/blogs/${blogId}/comments`, // POST
+    UPDATE_COMMENT: (commentId: string) => `/blogs/comments/${commentId}`, // PUT
+    DELETE_COMMENT: (commentId: string) => `/blogs/comments/${commentId}`, // DELETE
+    // From previous config
     LIST: '/blogs',
     DETAIL: (id: string) => `/blogs/${id}`,
     CREATE: '/blogs',
@@ -69,29 +119,95 @@ export const API = {
 
   // ----------------------- FEEDBACK -------------------
   Feedback: {
+    // Note: Most feedback routes are under Appointment now
     CONSULTANT_FEEDBACK: '/feedback/consultant',
     MY_FEEDBACK: '/feedback/my-feedback'
   },
-
-  // ----------------------- DEFAULT --------------------
-  // Add more modules here as needed
-
+  
+  // ----------------------- PROFILE & USER MANAGEMENT --------------------
   Profile: {
     GET: '/profile/getUserProfile',
-    UPDATE: '/profile/updateUserProfile'
+    UPDATE: '/profile/updateUserProfile',
+    DELETE: '/profile/deleteUserProfile',
+    UPDATE_STATUS: (userId: string) => `/profile/${userId}/status`,
+    GET_ALL_USERS: '/profile/getAllUsers'
   },
-
+  
+  // ----------------------- MENSTRUAL CYCLE --------------------
   MenstrualCycle: {
     BASE: '/menstrual-cycle',
     PROCESS: '/menstrual-cycle/processMenstrualCycle',
     GET_CYCLES: '/menstrual-cycle/getCycles',
-    GET_CYCLES_MONTH: (year:number, month:number)=>`/menstrual-cycle/getCyclesByMonth/${year}/${month}`,
+    GET_CYCLES_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,
+    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',
     TODAY_STATUS: '/menstrual-cycle/getTodayStatus',
     CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',
     PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',
-    NOTIFY_SETTINGS: '/menstrual-cycle/updateNotificationStatus',
-    CLEANUP: '/menstrual-cycle/cleanupDuplicates'
+    CLEANUP: '/menstrual-cycle/cleanupDuplicates',
+    RESET: '/menstrual-cycle/resetAllData'
   },
+  
+  // ----------------------- PILL TRACKING --------------------
+  PillTracking: {
+    SETUP: '/pill-tracking/setupPillTracking',
+    GET_SCHEDULE: (userId: string) => `/pill-tracking/getPillTrackingByUser/${userId}`,
+    UPDATE_SCHEDULE: (userId: string) => `/pill-tracking/updatePillTrackingByUser/${userId}`
+  },
+
+  // ----------------------- STI (TESTS, PACKAGES, ORDERS) --------------------
+  STI: {
+    // Tests
+    CREATE_TEST: '/sti/createStiTest',
+    GET_ALL_TESTS: '/sti/getAllStiTest',
+    GET_TEST: (id: string) => `/sti/getStiTest/${id}`,
+    UPDATE_TEST: (id: string) => `/sti/updateStiTest/${id}`,
+    DELETE_TEST: (id: string) => `/sti/deleteStiTest/${id}`, // Note: Backend uses PUT method
+    // Packages
+    CREATE_PACKAGE: '/sti/createStiPackage',
+    GET_ALL_PACKAGES: '/sti/getAllStiPackage',
+    GET_PACKAGE: (id: string) => `/sti/getStiPackage/${id}`,
+    UPDATE_PACKAGE: (id: string) => `/sti/updateStiPackage/${id}`,
+    DELETE_PACKAGE: (id: string) => `/sti/deleteStiPackage/${id}`, // Note: Backend uses PUT method
+    // Orders - NEW PAGINATED ENDPOINTS
+    GET_ALL_ORDERS_PAGINATED: '/sti/orders', // Staff/Admin với pagination
+    GET_MY_ORDERS: '/sti/my-orders', // Customer orders với pagination
+    // Orders - LEGACY ENDPOINTS  
+    CREATE_ORDER: '/sti/createStiOrder',
+    GET_ALL_ORDERS: '/sti/getAllStiOrders', // Legacy: get orders by current customer
+    GET_ORDERS_BY_CUSTOMER: (customerId: string) => `/sti/getAllStiOrders/${customerId}`,
+    GET_ORDER: (id: string) => `/sti/getStiOrder/${id}`, // Fixed: backend uses getStiOrder not getOrderById
+    UPDATE_ORDER: (id: string) => `/sti/updateStiOrder/${id}`, // Backend uses PATCH method
+    // Audit & Analytics
+    GET_AUDIT_LOGS: '/sti/audit-logs', // With pagination
+    GET_ALL_AUDIT_LOGS: '/sti/getAllAuditLogs', // Legacy
+    GET_REVENUE_BY_CUSTOMER: (customerId: string) => `/sti/getRevenueByCustomer/${customerId}`,
+    GET_TOTAL_REVENUE: '/sti/getTotalRevenue',
+    // Schedules & Views
+    VIEW_TEST_SCHEDULE_WITH_ORDERS: '/sti/viewTestScheduleWithOrders'
+  },
+
+  // ----------------------- STI ASSESSMENT --------------------
+  STIAssessment: {
+    CREATE: '/sti-assessment/create',
+    HISTORY: '/sti-assessment/history',
+    GET_BY_ID: (id: string) => `/sti-assessment/${id}`,
+    UPDATE: (id: string) => `/sti-assessment/${id}`,
+    DELETE: (id: string) => `/sti-assessment/${id}`,
+    STATS_OVERVIEW: '/sti-assessment/stats/overview',
+    PACKAGES_INFO: '/sti-assessment/packages/info'
+  },
+
+  // ----------------------- USER MANAGEMENT --------------------
+  Users: {
+    GET_ALL: '/users', // GET with pagination, search, filters
+    GET_BY_ID: (id: string) => `/users/${id}`,
+    CREATE: '/users', // POST - Admin only
+    UPDATE: (id: string) => `/users/${id}`, // PUT - Admin only
+    UPDATE_STATUS: (id: string) => `/users/${id}/status`, // PUT - Admin/Staff
+    DELETE: (id: string) => `/users/${id}`, // DELETE - Admin only (soft delete)
+    STATISTICS: '/users/statistics/overview' // GET - Admin/Staff
+  }
+
 } as const;
 
 export type ApiGroups = typeof API; 

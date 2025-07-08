@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Typography, Tag, Space, message, Modal } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { EyeOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Card, Button, Table, Typography, Tag, Space, message, Modal, Input, Select, Row, Col, DatePicker } from 'antd';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { EyeOutlined, CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
+import { API } from '../../config/apiEndpoints';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -27,30 +28,144 @@ interface STIOrder {
 
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [orders, setOrders] = useState<STIOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<STIOrder | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  
+  // Detect if this is staff/admin view based on route
+  const isStaffView = location.pathname.includes('/staff/') || location.pathname.includes('/admin/');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  
+  // Common filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Staff-only filter state
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [minAmount, setMinAmount] = useState<string>('');
+  const [maxAmount, setMaxAmount] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('order_date');
+  
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
-    if (!user || user.role !== 'customer') {
-      message.error('Chỉ khách hàng mới có thể xem lịch xét nghiệm');
+    if (!user) {
+      message.error('Vui lòng đăng nhập để xem lịch xét nghiệm');
       navigate('/login');
       return;
     }
+    
+    // Check role based on view type
+    if (isStaffView && !['staff', 'admin', 'manager'].includes(user.role)) {
+      message.error('Bạn không có quyền truy cập trang quản lý này');
+      navigate('/');
+      return;
+    }
+    
+    if (!isStaffView && user.role !== 'customer') {
+      message.error('Chỉ khách hàng mới có thể xem lịch xét nghiệm cá nhân');
+      navigate('/');
+      return;
+    }
+    
     fetchOrders();
-  }, [user]);
+  }, [user, isStaffView, currentPage, pageSize, debouncedSearchTerm, statusFilter, paymentStatusFilter, dateFrom, dateTo, minAmount, maxAmount, sortBy]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/sti/getAllStiOrders');
+      console.log('🔍 OrdersPage Debug:', {
+        userRole: user?.role,
+        isStaffView,
+        location: location.pathname,
+        fullUser: user
+      });
+      
+      // Select endpoint based on view type
+      const endpoint = isStaffView 
+        ? API.STI.GET_ALL_ORDERS_PAGINATED  // Staff API: /api/sti/orders
+        : API.STI.GET_MY_ORDERS;            // Customer API: /api/sti/my-orders
+        
+      console.log('🌐 API endpoint selected:', endpoint);
+      
+      // Build query parameters based on view type
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: pageSize.toString(),
+        sort_order: 'desc'
+      });
+      
+      // Common filters
+      if (debouncedSearchTerm.trim()) {
+        params.append('search', debouncedSearchTerm.trim());
+      }
+      
+      if (statusFilter !== 'all') {
+        params.append('order_status', statusFilter);
+      }
+      
+      // Staff-only filters
+      if (isStaffView) {
+        if (paymentStatusFilter !== 'all') {
+          params.append('payment_status', paymentStatusFilter);
+        }
+        
+        if (dateFrom) {
+          params.append('date_from', dateFrom);
+        }
+        
+        if (dateTo) {
+          params.append('date_to', dateTo);
+        }
+        
+        if (minAmount) {
+          params.append('min_amount', minAmount);
+        }
+        
+        if (maxAmount) {
+          params.append('max_amount', maxAmount);
+        }
+        
+        if (sortBy !== 'order_date') {
+          params.append('sort_by', sortBy);
+        }
+      }
+      
+      const fullUrl = `${endpoint}?${params.toString()}`;
+      console.log('📡 Full URL being called:', fullUrl);
+      
+      const response = await apiClient.get<any>(fullUrl);
+      
+      console.log('📥 API Response:', {
+        status: response.status,
+        url: response.config?.url,
+        data: response.data
+      });
+      
       if (response.data.success) {
-        setOrders(response.data.stiorder || []);
+        setOrders(response.data.data?.items || response.data.items || []);
+        setTotal(response.data.data?.pagination?.total_items || response.data.pagination?.total_items || 0);
       } else {
         if (response.data.message?.includes('Cannot find any orders')) {
           setOrders([]);
+          setTotal(0);
         } else {
           message.error('Không thể tải danh sách lịch xét nghiệm');
         }
@@ -58,7 +173,8 @@ const OrdersPage: React.FC = () => {
     } catch (error: any) {
       console.error('Error fetching STI orders:', error);
       if (error.response?.status === 404) {
-        setOrders([]); // No orders found
+        setOrders([]);
+        setTotal(0);
       } else {
         message.error('Có lỗi xảy ra khi tải danh sách lịch xét nghiệm');
       }
@@ -76,6 +192,14 @@ const OrdersPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
+      Booked: 'blue',
+      Accepted: 'cyan',
+      Processing: 'orange',
+      SpecimenCollected: 'purple',
+      Testing: 'geekblue',
+      Completed: 'green',
+      Canceled: 'red',
+      // Fallback cho status cũ
       pending: 'orange',
       confirmed: 'green',
       completed: 'blue',
@@ -86,6 +210,14 @@ const OrdersPage: React.FC = () => {
 
   const getStatusText = (status: string) => {
     const texts: { [key: string]: string } = {
+      Booked: 'Đã đặt lịch',
+      Accepted: 'Đã chấp nhận',
+      Processing: 'Đang xử lý',
+      SpecimenCollected: 'Đã lấy mẫu',
+      Testing: 'Đang xét nghiệm',
+      Completed: 'Hoàn thành',
+      Canceled: 'Đã hủy',
+      // Fallback cho status cũ
       pending: 'Chờ xác nhận',
       confirmed: 'Đã xác nhận',
       completed: 'Hoàn thành',
@@ -146,7 +278,7 @@ const OrdersPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string = 'pending') => (
+      render: (status: string = 'Booked') => (
         <Tag color={getStatusColor(status)}>
           {getStatusText(status)}
         </Tag>
@@ -178,11 +310,136 @@ const OrdersPage: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <Title level={2}>Lịch xét nghiệm STI đã đặt</Title>
-        <Button type="primary" onClick={() => navigate('/test-packages')}>
-          Đặt lịch mới
-        </Button>
+        <Title level={2}>
+          {isStaffView ? 'Quản lý lịch xét nghiệm STI' : 'Lịch xét nghiệm STI đã đặt'}
+        </Title>
+        {!isStaffView && (
+          <Button type="primary" onClick={() => navigate('/test-packages')}>
+            Đặt lịch mới
+          </Button>
+        )}
       </div>
+
+      {/* Search and Filter */}
+      <Card style={{ marginBottom: '16px' }}>
+        <Row gutter={[16, 16]} align="middle">
+          {/* Common Filters */}
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Input
+              placeholder="Tìm kiếm theo mã đơn, ghi chú..."
+              prefix={<SearchOutlined />}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={4}>
+            <Select
+              placeholder="Trạng thái đơn"
+              style={{ width: '100%' }}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              allowClear
+            >
+              <Select.Option value="all">Tất cả trạng thái</Select.Option>
+              <Select.Option value="Booked">Đã đặt lịch</Select.Option>
+              <Select.Option value="Accepted">Đã chấp nhận</Select.Option>
+              <Select.Option value="Processing">Đang xử lý</Select.Option>
+              <Select.Option value="SpecimenCollected">Đã lấy mẫu</Select.Option>
+              <Select.Option value="Testing">Đang xét nghiệm</Select.Option>
+              <Select.Option value="Completed">Hoàn thành</Select.Option>
+              <Select.Option value="Canceled">Đã hủy</Select.Option>
+            </Select>
+          </Col>
+
+          {/* Staff-only Filters */}
+          {isStaffView && (
+            <>
+              <Col xs={24} sm={12} md={6} lg={4}>
+                <Select
+                  placeholder="Trạng thái thanh toán"
+                  style={{ width: '100%' }}
+                  value={paymentStatusFilter}
+                  onChange={setPaymentStatusFilter}
+                  allowClear
+                >
+                  <Select.Option value="all">Tất cả thanh toán</Select.Option>
+                  <Select.Option value="Paid">Đã thanh toán</Select.Option>
+                  <Select.Option value="Unpaid">Chưa thanh toán</Select.Option>
+                  <Select.Option value="Refunded">Đã hoàn tiền</Select.Option>
+                </Select>
+              </Col>
+              <Col xs={12} sm={8} md={6} lg={3}>
+                <DatePicker
+                  placeholder="Từ ngày"
+                  style={{ width: '100%' }}
+                  value={dateFrom ? dayjs(dateFrom) : null}
+                  onChange={(date) => setDateFrom(date ? date.format('YYYY-MM-DD') : '')}
+                  format="DD/MM/YYYY"
+                />
+              </Col>
+              <Col xs={12} sm={8} md={6} lg={3}>
+                <DatePicker
+                  placeholder="Đến ngày"
+                  style={{ width: '100%' }}
+                  value={dateTo ? dayjs(dateTo) : null}
+                  onChange={(date) => setDateTo(date ? date.format('YYYY-MM-DD') : '')}
+                  format="DD/MM/YYYY"
+                />
+              </Col>
+              <Col xs={12} sm={8} md={6} lg={3}>
+                <Input
+                  placeholder="Tiền tối thiểu"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  type="number"
+                />
+              </Col>
+              <Col xs={12} sm={8} md={6} lg={3}>
+                <Input
+                  placeholder="Tiền tối đa"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                  type="number"
+                />
+              </Col>
+              <Col xs={24} sm={8} md={6} lg={4}>
+                <Select
+                  placeholder="Sắp xếp theo"
+                  style={{ width: '100%' }}
+                  value={sortBy}
+                  onChange={setSortBy}
+                >
+                  <Select.Option value="order_date">Ngày xét nghiệm</Select.Option>
+                  <Select.Option value="createdAt">Ngày đặt</Select.Option>
+                  <Select.Option value="total_amount">Số tiền</Select.Option>
+                  <Select.Option value="status">Trạng thái</Select.Option>
+                </Select>
+              </Col>
+            </>
+          )}
+
+          <Col xs={24} sm={12} md={4} lg={isStaffView ? 2 : 4}>
+            <Button 
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setCurrentPage(1);
+                if (isStaffView) {
+                  setPaymentStatusFilter('all');
+                  setDateFrom('');
+                  setDateTo('');
+                  setMinAmount('');
+                  setMaxAmount('');
+                  setSortBy('order_date');
+                }
+              }}
+            >
+              Đặt lại
+            </Button>
+          </Col>
+        </Row>
+      </Card>
 
       <Table
         columns={columns}
@@ -190,10 +447,23 @@ const OrdersPage: React.FC = () => {
         loading={loading}
         rowKey="_id"
         pagination={{
-          pageSize: 10,
+          current: currentPage,
+          pageSize: pageSize,
+          total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `Tổng ${total} lịch xét nghiệm`
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} lịch xét nghiệm`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            if (size !== pageSize) {
+              setPageSize(size);
+              setCurrentPage(1); // Reset to first page when page size changes
+            }
+          },
+          onShowSizeChange: (current, size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }
         }}
         locale={{
           emptyText: 'Bạn chưa đặt lịch xét nghiệm nào'
@@ -240,8 +510,8 @@ const OrdersPage: React.FC = () => {
                 </div>
                 <div>
                   <Text strong>Trạng thái: </Text>
-                  <Tag color={getStatusColor(selectedOrder.status || 'pending')}>
-                    {getStatusText(selectedOrder.status || 'pending')}
+                  <Tag color={getStatusColor(selectedOrder.status || 'Booked')}>
+                    {getStatusText(selectedOrder.status || 'Booked')}
                   </Tag>
                 </div>
                 {selectedOrder.notes && (

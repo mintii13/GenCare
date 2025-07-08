@@ -211,7 +211,7 @@ export class AppointmentService {
             // Get customer info để gửi email
             const customer = await User.findById(appointment.customer_id);
 
-            // KIỂM TRA GOOGLE ACCESS TOKEN
+     
             if (!googleAccessToken) {
                 return {
                     success: false,

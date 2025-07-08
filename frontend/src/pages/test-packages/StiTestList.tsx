@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Button, Tag, Typography, Space, Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -34,7 +34,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
 
   const fetchTests = async () => {
     try {
-      const response = await api.get('/sti/getAllStiTest');
+      const response = await apiClient.get<any>('/sti/getAllStiTest');
       if (response.data.success && Array.isArray(response.data.stitest)) {
         const mapped = response.data.stitest.map((item: any) => ({
           ...item,
@@ -51,7 +51,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
 
   const fetchPackages = async () => {
     try {
-      const response = await api.get('/sti/getAllStiPackage');
+      const response = await apiClient.get<any>('/sti/getAllStiPackage');
       if (response.data.success && Array.isArray(response.data.stipackage)) {
         setPackages(response.data.stipackage.filter((item: any) => item.is_active));
       } else {
@@ -80,7 +80,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await api.put(`/sti/deleteStiTest/${id}`);
+      const response = await apiClient.put<any>(`/sti/deleteStiTest/${id}`);
       if (response.data.success) {
         fetchTests();
       }
@@ -180,7 +180,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
             </div>
             <Row gutter={[16, 16]}>
               {Array.isArray(tests) && tests
-                .filter(test => test.isActive)
+                .filter(test => test.is_active)
                 .map((test) => (
                   <Col 
                     xs={24} 
@@ -206,8 +206,8 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         </div>
                       }
                       extra={
-                        <Tag color={test.isActive ? 'success' : 'error'}>
-                          {test.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
+                        <Tag color={test.is_active ? 'success' : 'error'}>
+                          {test.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
                         </Tag>
                       }
                       style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
@@ -216,7 +216,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         <Button 
                           type="primary" 
                           onClick={() => handleBookSTITest(test)}
-                          disabled={!test.isActive}
+                          disabled={!test.is_active}
                         >
                           Đặt lịch xét nghiệm
                         </Button>

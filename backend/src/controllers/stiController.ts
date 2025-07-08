@@ -81,6 +81,13 @@ router.get('/orders',
         try {
             const query = req.query as StiOrderQuery;
             const result = await StiService.getStiOrdersWithPagination(query);
+            
+            console.log('📊 [DEBUG] Service result:', {
+                success: result.success,
+                message: result.message,
+                itemsCount: result.data?.items?.length || 0,
+                totalItems: result.data?.pagination?.total_items || 0
+            });
 
             if (result.success) {
                 return res.status(200).json(result);
@@ -88,7 +95,7 @@ router.get('/orders',
                 return res.status(500).json(result);
             }
         } catch (error) {
-            console.error('Error in STI orders pagination:', error);
+            console.error('❌ [DEBUG] Error in STI orders pagination:', error);
             return res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -411,7 +418,7 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
 //create orders                                         (post)
 router.post('/createStiOrder', validateStiOrder, authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
     try {
-        const customer_id = (req.jwtUser as JWTPayload).userId;
+        const customer_id = (req.user as any).userId;
         const { sti_package_id, sti_test_items, order_date, notes } = req.body;
         console.log("BODY===>", req.body)
         const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_items, order_date, notes);

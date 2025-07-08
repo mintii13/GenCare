@@ -1,5 +1,6 @@
 // Load environment variables FIRST
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
@@ -25,7 +26,7 @@ import stiAssessmentRoutes from './controllers/stiAssessmentController';
 import userController from './controllers/userController';
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());

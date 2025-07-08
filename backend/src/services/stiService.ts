@@ -840,11 +840,15 @@ export class StiService {
  */
     public static async getStiOrdersWithPagination(query: StiOrderQuery): Promise<StiOrderPaginationResponse> {
         try {
+            console.log('🔍 [DEBUG] STI Service - Input query:', query);
+            
             // Validate pagination parameters
             const { page, limit, sort_by, sort_order } = PaginationUtils.validateStiOrderPagination(query);
+            console.log('📊 [DEBUG] STI Service - Validated params:', { page, limit, sort_by, sort_order });
 
             // Build filter query
             const filters = PaginationUtils.buildStiOrderFilter(query);
+            console.log('🎯 [DEBUG] STI Service - MongoDB filters:', filters);
 
             // Get data từ repository
             const result = await StiOrderRepository.findWithPagination(

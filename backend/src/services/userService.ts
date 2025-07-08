@@ -16,8 +16,9 @@ export class UserService {
     /**
      * Create role-specific entity based on user role
      */
-    private static async createRoleEntity(userId: string, role: string): Promise<void> {
+    private static async createRoleEntity(userId: string, role: string, roleData?: any): Promise<void> {
         try {
+            console.log(`🎯 createRoleEntity called with userId: ${userId}, role: ${role}, roleData:`, roleData);
             const userObjectId = new mongoose.Types.ObjectId(userId);
 
             switch (role) {
@@ -34,26 +35,26 @@ export class UserService {
                 case 'consultant':
                     const consultant = new Consultant({
                         user_id: userObjectId,
-                        specialization: '',
-                        qualifications: '',
-                        experience_years: 0,
+                        specialization: roleData?.specialization || '',
+                        qualifications: roleData?.qualifications || '',
+                        experience_years: roleData?.experience_years || 0,
                         consultation_rating: 0,
                         total_consultations: 0
                     });
                     await consultant.save();
-                    console.log(`Created Consultant entity for user ${userId}`);
+                    console.log(`Created Consultant entity for user ${userId} with specialization: ${roleData?.specialization}`);
                     break;
 
                 case 'staff':
                     const staff = new Staff({
                         staff_id: `STAFF_${Date.now()}`,
                         user_id: userId,
-                        department: '',
-                        hire_date: new Date(),
-                        permissions: []
+                        department: roleData?.department || '',
+                        hire_date: roleData?.hire_date ? new Date(roleData.hire_date) : new Date(),
+                        permissions: roleData?.permissions || []
                     });
                     await staff.save();
-                    console.log(`Created Staff entity for user ${userId}`);
+                    console.log(`Created Staff entity for user ${userId} with department: ${roleData?.department}`);
                     break;
 
                 case 'admin':
@@ -215,6 +216,9 @@ export class UserService {
  */
     public static async createUser(userData: CreateUserRequest): Promise<UserResponse> {
         try {
+            console.log('🎯 Backend createUser - received role:', userData.role);
+            console.log('📝 Backend createUser - full userData:', JSON.stringify(userData, null, 2));
+            
             // Check if email already exists
             const existingUser = await UserRepository.findByEmail(userData.email);
             if (existingUser) {
@@ -240,7 +244,7 @@ export class UserService {
                 gender: userData.gender,
                 role: userData.role,
                 status: userData.status !== undefined ? userData.status : true,
-                email_verified: userData.email_verified !== undefined ? userData.email_verified : false,
+                email_verified: userData.email_verified !== undefined ? userData.email_verified : true, // Admin tạo user → mặc định đã xác thực
                 avatar: userData.avatar,
                 registration_date: new Date(),
                 updated_date: new Date()
@@ -251,7 +255,21 @@ export class UserService {
 
             // Try to create role-specific entity
             try {
-                await this.createRoleEntity(newUser._id.toString(), userData.role);
+                // Extract role-specific data
+                const roleData = {
+                    // Staff fields
+                    department: userData.department,
+                    hire_date: userData.hire_date,
+                    permissions: userData.permissions,
+                    // Consultant fields
+                    specialization: userData.specialization,
+                    qualifications: userData.qualifications,
+                    experience_years: userData.experience_years
+                };
+                
+                console.log(`🔍 Creating ${userData.role} entity with roleData:`, roleData);
+                console.log(`🎯 About to call createRoleEntity with userId: ${newUser._id.toString()}, role: ${userData.role}`);
+                await this.createRoleEntity(newUser._id.toString(), userData.role, roleData);
             } catch (roleError) {
                 // If role entity creation fails, delete the user
                 console.error('Role entity creation failed, rolling back user creation:', roleError);
@@ -318,11 +336,16 @@ export class UserService {
                 updateData.password = await bcrypt.hash(updateData.password, 10);
             }
 
-            // Prepare update data
+            // Prepare update data with date conversion
             const updateFields: any = {
                 ...updateData,
                 updated_date: new Date()
             };
+
+            // Convert date strings to Date objects if provided
+            if (updateData.date_of_birth) {
+                updateFields.date_of_birth = new Date(updateData.date_of_birth);
+            }
 
             // Remove undefined fields
             Object.keys(updateFields).forEach(key => {

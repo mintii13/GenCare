@@ -1,12 +1,17 @@
 // API instance
-export { default as api } from './api';
+export { default as apiClient } from './apiClient';
 
 // Services
 export * from './appointmentService';
 export * from './weeklyScheduleService';
 export * from './consultantService';
 export * from './userService';
-export { default as FeedbackService } from './feedbackService';
+export * from './feedbackService';
+export * from './appointmentHistoryService';
+export * from './blogService';
+export * from './autoConfirmService';
+export * from './medicationReminderService';
+export * from './menstrualCycleService';
 
 // Re-export commonly used types
 export type {

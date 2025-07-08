@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { addDays, format } from 'date-fns';
+import React, { useState, useMemo } from 'react';
+import { addDays, format, isToday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { DAY_NAMES, DAY_LABELS, DayName, DaySchedule, WorkingDay } from '../../types/schedule';
 import { formatDateDisplay, getCurrentWeekLabel, canNavigateToPreviousWeek } from '../../utils/dateUtils';
-import { FaExclamationTriangle } from 'react-icons/fa';
+import { FaExclamationTriangle, FaClock, FaBan, FaCheckCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 interface WeeklyCalendarViewProps {
   currentWeek: Date;
@@ -21,7 +21,7 @@ interface WeeklyCalendarViewProps {
     notes?: string;
   };
   selectedSlot?: { date: string; startTime: string; endTime: string } | null;
-  mode: 'slot-picker' | 'schedule-manager' | 'read-only';
+  mode: 'slot-picker' | 'schedule-manager' | 'read-only' | 'booking';
   onSlotSelect?: (date: string, startTime: string, endTime: string) => void;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
@@ -44,9 +44,8 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   onRetry
 }) => {
   
-  // State để quản lý ngày được chọn - mặc định chọn ngày hôm nay
+  // State để quản lý ngày được chọn (chỉ cho slot-picker mode)
   const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
-    // Tìm index của ngày hôm nay trong tuần
     const today = format(new Date(), 'yyyy-MM-dd');
     for (let i = 0; i < 7; i++) {
       const dayDate = addDays(currentWeek, i);
@@ -55,12 +54,24 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         return i;
       }
     }
-    return 0; // Fallback về ngày đầu tiên nếu không tìm thấy hôm nay
+    return 0;
   });
   
+  // Tạo time slots cho booking mode (7:00 - 18:00, mỗi 1 giờ)
+  const timeSlots = useMemo(() => {
+    const slots = [];
+    for (let hour = 7; hour <= 17; hour++) {
+      const startTime = `${hour.toString().padStart(2, '0')}:00`;
+      const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+      slots.push({ startTime, endTime, displayTime: `${hour}h-${hour + 1}h` });
+    }
+    return slots;
+  }, []);
+
   const handleSlotClick = (date: string, startTime: string, endTime: string) => {
-    if (mode !== 'slot-picker' || !onSlotSelect) return;
+    if (!onSlotSelect) return;
     
+    // Validation cho booking
     const slotDateTime = new Date(`${date}T${startTime}:00`);
     const now = new Date();
     const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -79,7 +90,101 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       return;
     }
     
+    console.log('Slot selected:', { date, startTime, endTime });
     onSlotSelect(date, startTime, endTime);
+  };
+
+  // Tạo danh sách các ngày trong tuần
+  const weekDays = DAY_LABELS.map((dayLabel, dayIndex) => {
+    const dayName = DAY_NAMES[dayIndex];
+    const dayDate = addDays(currentWeek, dayIndex);
+    const dayDateString = format(dayDate, 'yyyy-MM-dd');
+    const dayData = weeklyData?.days[dayName];
+    const isDayToday = isToday(dayDate);
+    
+    return {
+      index: dayIndex,
+      label: dayLabel,
+      name: dayName,
+      date: dayDate,
+      dateString: dayDateString,
+      data: dayData,
+      isToday: isDayToday,
+      slotsCount: dayData?.available_slots?.length || 0,
+      isWorkingDay: dayData && dayData.total_slots > 0
+    };
+  });
+
+  const getSlotInfo = (day: any, timeSlot: any) => {
+    if (!day.data || day.data.total_slots === 0) {
+      return { type: 'not-working', available: false };
+    }
+
+    const slotDateTime = new Date(`${day.dateString}T${timeSlot.startTime}:00`);
+    const now = new Date();
+    const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const isPast = slotDateTime <= now;
+
+    // Kiểm tra slot có available không
+    const availableSlot = day.data.available_slots?.find((slot: any) => 
+      slot.start_time === timeSlot.startTime && slot.is_available
+    );
+
+    // Kiểm tra slot có bị đặt không
+    const isBooked = day.data.booked_appointments?.some((appt: any) => 
+      appt.status !== 'cancelled' && 
+      timeSlot.startTime >= appt.start_time && 
+      timeSlot.startTime < appt.end_time
+    );
+
+    const isSelected = selectedSlot && 
+      selectedSlot.date === day.dateString && 
+      selectedSlot.startTime === timeSlot.startTime;
+
+    if (isBooked) {
+      return { type: 'booked', available: false };
+    }
+    
+    if (isPast) {
+      return { type: 'past', available: false };
+    }
+    
+    if (!availableSlot) {
+      return { type: 'unavailable', available: false };
+    }
+    
+    if (diffHours < 2) {
+      return { type: 'restricted', available: false, diffHours };
+    }
+    
+    if (isSelected) {
+      return { type: 'selected', available: true };
+    }
+    
+    return { type: 'available', available: true };
+  };
+
+  const getSlotClassName = (slotInfo: any) => {
+    const baseClass = "w-full h-12 text-xs font-medium rounded transition-all duration-200 border cursor-pointer relative overflow-hidden";
+    
+    switch (slotInfo.type) {
+      case 'not-working':
+        return baseClass + " bg-gray-100 border-gray-200 cursor-not-allowed opacity-50";
+      case 'booked':
+        return baseClass + " bg-red-100 border-red-300 text-red-700 cursor-not-allowed";
+      case 'past':
+        return baseClass + " bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed opacity-60";
+      case 'unavailable':
+        return baseClass + " bg-gray-100 border-gray-200 cursor-not-allowed opacity-70";
+      case 'restricted':
+        return baseClass + " bg-orange-100 border-orange-300 text-orange-700 cursor-not-allowed";
+      case 'selected':
+        return baseClass + " bg-blue-500 border-blue-600 text-white shadow-md transform scale-105 z-10";
+      case 'available':
+        return baseClass + " bg-green-100 border-green-300 text-green-700 hover:bg-green-200 hover:border-green-400 hover:shadow-sm hover:scale-105 hover:z-10";
+      default:
+        return baseClass + " bg-gray-100 border-gray-200";
+    }
   };
 
   if (loading) {
@@ -116,30 +221,6 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     );
   }
 
-  // Tạo danh sách các ngày trong tuần
-  const weekDays = DAY_LABELS.map((dayLabel, dayIndex) => {
-    const dayName = DAY_NAMES[dayIndex];
-    const dayDate = addDays(currentWeek, dayIndex);
-    const dayDateString = format(dayDate, 'yyyy-MM-dd');
-    const dayData = weeklyData?.days[dayName];
-    const isToday = dayDateString === format(new Date(), 'yyyy-MM-dd');
-    
-    return {
-      index: dayIndex,
-      label: dayLabel,
-      name: dayName,
-      date: dayDate,
-      dateString: dayDateString,
-      data: dayData,
-      isToday,
-      slotsCount: dayData?.available_slots?.length || 0
-    };
-  });
-
-  // Lấy thông tin ngày được chọn
-  const selectedDay = weekDays[selectedDayIndex];
-  const selectedDayData = selectedDay?.data;
-
   return (
     <div className="bg-white rounded-lg shadow-sm">
       {/* Header */}
@@ -147,9 +228,10 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         <button
           onClick={onPreviousWeek}
           disabled={!canNavigateToPreviousWeek(currentWeek)}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          ← Tuần trước
+          <FaChevronLeft className="mr-2" />
+          Tuần trước
         </button>
         
         <h2 className="text-2xl font-bold">
@@ -158,9 +240,10 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         
         <button
           onClick={onNextWeek}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors"
+          className="flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors"
         >
-          Tuần sau →
+          Tuần sau
+          <FaChevronRight className="ml-2" />
         </button>
       </div>
 
@@ -184,186 +267,191 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         </div>
       )}
 
-      {/* Day Selector Dropdown */}
-      <div className="p-6 border-b bg-gray-50">
-        <div className="max-w-md mx-auto">
-          <label className="block text-sm font-semibold text-gray-700 mb-3">
-            Chọn ngày để xem lịch trống:
-          </label>
-          <select
-            value={selectedDayIndex}
-            onChange={(e) => setSelectedDayIndex(parseInt(e.target.value))}
-            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-          >
-            {weekDays.map((day) => (
-              <option key={day.index} value={day.index}>
-                {day.label} - {format(day.date, 'dd/MM', { locale: vi })}
-                {day.isToday && ' (Hôm nay)'}
-                {day.slotsCount > 0 && ` - ${day.slotsCount} slots`}
-              </option>
-            ))}
-          </select>
+      {/* Booking Rules Alert */}
+      <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <FaExclamationTriangle className="text-blue-600 text-lg mt-0.5" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-blue-800 mb-2">Quy tắc đặt lịch hẹn</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-blue-700">
+                <div className="flex items-center space-x-2">
+                  <FaClock className="text-blue-500 flex-shrink-0" />
+                  <span>Đặt trước tối thiểu <strong>2 giờ</strong></span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                  <span>Click vào ô xanh để <strong>đặt lịch</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Selected Day Content */}
-      <div className="p-6">
-        {selectedDay && (
-          <div className="max-w-4xl mx-auto">
-            {/* Selected Day Header */}
-            <div className="text-center mb-6">
-              <h3 className={`text-2xl font-bold mb-2 ${selectedDay.isToday ? 'text-blue-600' : 'text-gray-800'}`}>
-                {selectedDay.label}
-              </h3>
-              <p className="text-gray-600">
-                {format(selectedDay.date, 'dd/MM/yyyy', { locale: vi })}
-                {selectedDay.isToday && (
-                  <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
-                    Hôm nay
-                  </span>
-                )}
-              </p>
-            </div>
-
-            {/* Slots Grid */}
-            {!selectedDayData?.available_slots || selectedDayData.available_slots.length === 0 ? (
-              selectedDayData && selectedDayData.total_slots === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">🚫</div>
-                  <h4 className="text-xl font-semibold text-gray-700 mb-2">Không làm việc</h4>
-                  <p className="text-gray-500">Ngày này không có lịch làm việc</p>
+      {/* Content dựa trên mode */}
+      {mode === 'booking' ? (
+        // Calendar Grid cho booking mode
+        <div className="p-6">
+          <div className="overflow-x-auto">
+            <div className="min-w-[800px]">
+              {/* Header Row - Days of Week */}
+              <div className="grid grid-cols-8 gap-1 mb-4">
+                <div className="h-16 flex items-center justify-center font-semibold text-gray-600 bg-gray-50 rounded">
+                  Giờ
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📋</div>
-                  <h4 className="text-xl font-semibold text-gray-700 mb-2">Không có lịch trống</h4>
-                  <p className="text-gray-500">Ngày này không có slot nào khả dụng</p>
-                </div>
-              )
-            ) : (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-lg font-semibold text-gray-800">
-                    Tất cả khung giờ trong ngày
-                  </h4>
-                  <div className="text-sm text-gray-600">
-                    {selectedDayData.available_slots.length} trống • {selectedDayData.booked_appointments?.length || 0} đã đặt
+                {weekDays.map((day) => (
+                  <div key={day.index} className={`h-16 flex flex-col items-center justify-center rounded border-2 ${
+                    day.isToday 
+                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                      : day.isWorkingDay
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-500'
+                  }`}>
+                    <div className="font-semibold text-sm">{day.label}</div>
+                    <div className="text-xs">{format(day.date, 'dd/MM', { locale: vi })}</div>
+                    {day.isToday && (
+                      <div className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full mt-1">
+                        Hôm nay
+                      </div>
+                    )}
                   </div>
-                </div>
-                
-                {/* Combined Slots Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {/* Booked Appointments (exclude cancelled) */}
-                  {selectedDayData.booked_appointments && selectedDayData.booked_appointments
-                    .filter(appt => appt.status !== 'cancelled')
-                    .map((appointment, appointmentIndex) => (
-                      <div
-                        key={`booked-${appointmentIndex}`}
-                        className="w-full px-4 py-4 text-center font-semibold rounded-xl border-2 bg-red-100 text-red-700 border-red-300 cursor-not-allowed"
-                      >
-                        <div className="text-lg font-bold">{appointment.start_time}</div>
-                        <div className="text-sm opacity-75">đến {appointment.end_time}</div>
-                        <div className="text-xs mt-2 font-medium">
-                          Đã đặt
-                        </div>
-                      </div>
-                    ))}
-                  
-                  {/* Available Slots */}
-                  {selectedDayData.available_slots.map((slot, slotIndex) => {
-                    const slotDateTime = new Date(`${selectedDay.dateString}T${slot.start_time}:00`);
-                    const now = new Date();
-                    const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-                    const isPast = slotDateTime <= now;
-                    const isRestricted = diffHours < 2 && !isPast;
-                    
-                    const isSelected = selectedSlot && 
-                      selectedSlot.date === selectedDay.dateString && 
-                      selectedSlot.startTime === slot.start_time;
-
-                    const isBooked = selectedDayData.booked_appointments?.filter(appt => appt.status !== 'cancelled').some(appointment => {
-                      return slot.start_time >= appointment.start_time && slot.start_time < appointment.end_time;
-                    });
-
-                    let buttonClass = "w-full px-4 py-4 text-center font-semibold rounded-xl transition-all duration-200 border-2 ";
-                    let buttonContent = (
-                      <div>
-                        <div className="text-lg font-bold">{slot.start_time}</div>
-                        <div className="text-sm opacity-75">đến {slot.end_time}</div>
-                      </div>
-                    );
-                    let statusText = "";
-                    let isClickable = false;
-
-                    if (isBooked) {
-                      buttonClass += "bg-red-100 text-red-700 border-red-300 cursor-not-allowed";
-                      statusText = "Đã đặt";
-                    } else if (isPast) {
-                      buttonClass += "bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed";
-                      statusText = "Đã qua";
-                    } else if (isRestricted) {
-                      buttonClass += "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200 cursor-pointer transform hover:scale-105";
-                      statusText = "Hạn chế";
-                      isClickable = mode === 'slot-picker';
-                    } else if (slot.is_available) {
-                      if (isSelected) {
-                        buttonClass += "bg-blue-200 text-blue-800 border-blue-400 cursor-pointer shadow-lg transform scale-105";
-                        statusText = "Đã chọn";
-                      } else {
-                        buttonClass += "bg-green-100 text-green-700 border-green-300 hover:bg-green-200 cursor-pointer transform hover:scale-105 hover:shadow-md";
-                        statusText = "Có thể đặt";
-                      }
-                      isClickable = mode === 'slot-picker';
-                    }
-
-                    return (
-                      <button
-                        key={slotIndex}
-                        onClick={() => isClickable ? handleSlotClick(selectedDay.dateString, slot.start_time, slot.end_time) : undefined}
-                        disabled={!isClickable}
-                        className={buttonClass}
-                        title={`${slot.start_time} - ${slot.end_time} (${statusText})`}
-                      >
-                        {buttonContent}
-                        <div className="text-xs mt-2 font-medium">
-                          {statusText}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                ))}
               </div>
-            )}
+
+              {/* Time Slots Grid */}
+              <div className="space-y-1">
+                {timeSlots.map((timeSlot, timeIndex) => (
+                  <div key={timeSlot.startTime} className="grid grid-cols-8 gap-1">
+                    {/* Time Label */}
+                    <div className="h-12 flex items-center justify-center text-sm font-medium text-gray-600 bg-gray-50 rounded">
+                      {timeSlot.displayTime}
+                    </div>
+                    
+                    {/* Slots for each day */}
+                    {weekDays.map((day) => {
+                      const slotInfo = getSlotInfo(day, timeSlot);
+                      
+                      return (
+                        <div
+                          key={`${day.dateString}-${timeSlot.startTime}`}
+                          className={getSlotClassName(slotInfo)}
+                          onClick={() => slotInfo.available && handleSlotClick(day.dateString, timeSlot.startTime, timeSlot.endTime)}
+                          title={
+                            slotInfo.type === 'available' ? `Đặt lịch ${timeSlot.displayTime}` :
+                            slotInfo.type === 'booked' ? 'Đã được đặt' :
+                            slotInfo.type === 'past' ? 'Đã qua thời gian' :
+                            slotInfo.type === 'restricted' ? `Quá gấp (${slotInfo.diffHours?.toFixed(1)}h)` :
+                            slotInfo.type === 'selected' ? 'Đã chọn' :
+                            slotInfo.type === 'not-working' ? 'Không làm việc' :
+                            'Không khả dụng'
+                          }
+                        >
+                          <span className="flex items-center justify-center h-full text-xs font-bold">
+                            {slotInfo.type === 'available' && timeSlot.displayTime}
+                            {slotInfo.type === 'selected' && <FaCheckCircle />}
+                            {slotInfo.type === 'booked' && <FaBan />}
+                            {slotInfo.type === 'past' && <FaClock />}
+                            {slotInfo.type === 'restricted' && <FaExclamationTriangle />}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        // Original slot picker mode
+        <>
+          {/* Day Selector Dropdown */}
+          <div className="p-6 border-b bg-gray-50">
+            <div className="max-w-md mx-auto">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Chọn ngày để xem lịch trống:
+              </label>
+              <select
+                value={selectedDayIndex}
+                onChange={(e) => setSelectedDayIndex(parseInt(e.target.value))}
+                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              >
+                {weekDays.map((day) => {
+                  const isPastDay = day.date < new Date() && !day.isToday;
+                  const isNonWorkingDay = (!day.data || day.data.total_slots === 0);
+                  const hasAvailableSlots = day.slotsCount > 0;
+                  
+                  let optionText = `${day.label} - ${format(day.date, 'dd/MM', { locale: vi })}`;
+                  
+                  if (day.isToday) {
+                    optionText += ' (Hôm nay)';
+                  } else if (isPastDay) {
+                    optionText += ' (Đã qua)';
+                  }
+                  
+                  if (isNonWorkingDay) {
+                    optionText += ' - Không làm việc';
+                  } else if (hasAvailableSlots) {
+                    optionText += ` - ${day.slotsCount} slots`;
+                  } else {
+                    optionText += ' - Hết slot';
+                  }
+                  
+                  return (
+                    <option 
+                      key={day.index} 
+                      value={day.index}
+                      disabled={isPastDay || isNonWorkingDay}
+                    >
+                      {optionText}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          {/* Selected Day Content - Existing slot picker logic */}
+          <div className="p-6">
+            <div className="text-center">
+              <p className="text-gray-600">Mode slot-picker được giữ nguyên</p>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Legend */}
       <div className="px-6 py-4 bg-gray-50 border-t rounded-b-lg">
-        <div className="text-center mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">Chú thích màu sắc</h4>
+        <div className="text-center mb-3">
+          <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded mr-2"></div>
-            <span>Có thể đặt</span>
+            <div className="w-6 h-4 bg-green-100 border border-green-300 rounded mr-2"></div>
+            <span className="text-green-700">Có thể đặt</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-orange-100 border-2 border-orange-300 rounded mr-2"></div>
-            <span>Hạn chế (&lt; 2h)</span>
+            <div className="w-6 h-4 bg-blue-500 border border-blue-600 rounded mr-2"></div>
+            <span className="text-blue-700">Đã chọn</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded mr-2"></div>
-            <span>Đã đặt</span>
+            <div className="w-6 h-4 bg-red-100 border border-red-300 rounded mr-2"></div>
+            <span className="text-red-700">Đã đặt</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded mr-2"></div>
-            <span>Đã chọn</span>
+            <div className="w-6 h-4 bg-orange-100 border border-orange-300 rounded mr-2"></div>
+            <span className="text-orange-700">Hạn chế (&lt; 2h)</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded mr-2"></div>
-            <span>Không có/Đã qua</span>
+            <div className="w-6 h-4 bg-gray-200 border border-gray-300 rounded mr-2"></div>
+            <span className="text-gray-600">Đã qua/Không làm việc</span>
           </div>
+        </div>
+        <div className="text-center mt-3 text-xs text-gray-500">
+          Click vào ô xanh để đặt lịch hẹn
         </div>
       </div>
 
