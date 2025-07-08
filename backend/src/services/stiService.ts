@@ -13,10 +13,16 @@ import { validTransitions } from '../middlewares/stiValidation';
 import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
 import { MailUtils } from '../utils/mailUtils';
 import { UserRepository } from '../repositories/userRepository';
+import { StiOrderQuery } from '../dto/requests/StiRequest';
+import { StiOrderPaginationResponse } from '../dto/responses/StiOrderPaginationResponse';
+import { PaginationUtils } from '../utils/paginationUtils';
+import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
+import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 
-export class StiService{
-    public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse>{
+export class StiService {
+    public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
+
             const duplicate = await StiTestRepository.findByStiTestCode(stiTest.sti_test_code);
             if (duplicate){
                 if (duplicate.is_active){
@@ -25,7 +31,7 @@ export class StiService{
                         message: 'Sti test code is duplicated'
                     }
                 }
-                else{
+                else {
                     //update is_active thành true
                     const result = await StiTestRepository.updateIsActive(duplicate._id);
                     return{
@@ -49,14 +55,14 @@ export class StiService{
             }
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
         }
     }
 
-    public static async getAllStiTest(): Promise<AllStiTestResponse>{
+    public static async getAllStiTest(): Promise<AllStiTestResponse> {
         try {
             const allOfTest = await StiTestRepository.getAllStiTest();
             if (!allOfTest){
@@ -66,14 +72,14 @@ export class StiService{
                 }
             }
             const activeTests = allOfTest.filter(test => test.is_active === true);
-            return{
+            return {
                 success: true,
                 message: 'Get STI tests successfully',
                 stitest: activeTests
             }
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
@@ -103,7 +109,7 @@ export class StiService{
             };
         }
     }
-  
+
     public static async updateStiTest(sti_test_id: string, updateData: Partial<IStiTest>): Promise<StiTestResponse> {
         try {
             // Tìm bản ghi khác có cùng mã nhưng không phải bản ghi đang update
@@ -117,12 +123,14 @@ export class StiService{
             }
             const sti_test = await StiTestRepository.findByIdAndUpdateStiTest(sti_test_id, updateData);
             if (!sti_test) {
-                return{
-                    success: false, 
+                return {
+                    success: false,
                     message: 'StiTest not found or you are not authorized to update it'
                 }
             }
-            return{
+          
+            // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
+            return {
                 success: true,
                 message: 'Update STI Test successfully',
                 stitest: sti_test
@@ -134,7 +142,7 @@ export class StiService{
                 message: 'Server error'
             };
         }
-    }   
+    }
 
     public static async deleteStiTest(sti_test_id: string, userId: string): Promise<StiTestResponse> {
         try {
@@ -146,7 +154,7 @@ export class StiService{
                 };
             }
 
-            return{
+            return {
                 success: true,
                 message: 'StiTest is deleted successfully',
                 stitest: updated
@@ -162,20 +170,20 @@ export class StiService{
     }
 
 
-    public static async createStiPackage(stiPackage: IStiPackage): Promise<StiPackageResponse>{
+    public static async createStiPackage(stiPackage: IStiPackage): Promise<StiPackageResponse> {
         try {
             const duplicate = await StiPackageRepository.findByStiPackageCode(stiPackage.sti_package_code);
-            if (duplicate){
-                if (duplicate.is_active){
-                    return{
+            if (duplicate) {
+                if (duplicate.is_active) {
+                    return {
                         success: false,
                         message: 'Sti package code is duplicated'
                     }
                 }
-                else{
+                else {
                     //update is_active thành true
                     const result = await StiPackageRepository.updateIsActive(duplicate._id);
-                    return{
+                    return {
                         success: true,
                         message: 'Insert StiPackage to database successfully',
                         stipackage: result
@@ -183,8 +191,8 @@ export class StiService{
                 }
             }
             const result: Partial<IStiPackage> = await StiPackageRepository.insertStiPackage(stiPackage);
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Cannot insert StiPackage to database'
                 }
@@ -196,32 +204,32 @@ export class StiService{
             }
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
         }
     }
 
-    public static async getAllStiPackage(): Promise<AllStiPackageResponse>{
+    public static async getAllStiPackage(): Promise<AllStiPackageResponse> {
         try {
             const allOfTest = await StiPackageRepository.getAllStiTPackage();
-            if (!allOfTest){
-                return{
+            if (!allOfTest) {
+                return {
                     success: false,
                     message: 'Fail in getting StiPackage'
                 }
             }
             const activeTests = allOfTest.filter(test => test.is_active);
 
-            return{
+            return {
                 success: true,
                 message: 'Get STI packages successfully',
                 stipackage: activeTests
             }
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
@@ -263,13 +271,13 @@ export class StiService{
             }
             const sti_package = await StiPackageRepository.findByIdAndUpdateStiPackage(sti_package_id, updateData);
             if (!sti_package) {
-                return{
-                    success: false, 
+                return {
+                    success: false,
                     message: 'STIPackage not found'
                 }
             }
             // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
-            return{
+            return {
                 success: true,
                 message: 'Update STIPackage successfully',
                 stipackage: sti_package
@@ -282,7 +290,7 @@ export class StiService{
             };
         }
     }
-    
+
     public static async deleteStiPackage(sti_package_id: string, userId: string): Promise<StiPackageResponse> {
         try {
             const updated = await StiPackageRepository.findByIdAndDeactivate(sti_package_id, userId);
@@ -293,7 +301,7 @@ export class StiService{
                 };
             }
 
-            return{
+            return {
                 success: true,
                 message: 'StiPackage deactivated successfully',
                 stipackage: updated
@@ -312,8 +320,8 @@ export class StiService{
         const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
         if (!stiPackage) {
             return {
-            success: false,
-            message: 'StiPackage is not found'
+                success: false,
+                message: 'StiPackage is not found'
             };
         }
 
@@ -355,7 +363,7 @@ export class StiService{
     }
 
 
-    public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse>{
+    public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
             let sti_package_item = null;
             let sti_test_items = [];
@@ -366,39 +374,39 @@ export class StiService{
             // Xử lý package
             if (sti_package_id) {
                 const result = await this.handleStiPackage(sti_package_id);
-                if (!result.success) 
+                if (!result.success)
                     noPackage = true;
-                else{
+                else {
                     sti_package_item = result.sti_package_item;
                     total_amount += result.amount;
                 }
-                
+
             }
-            else{
+            else {
                 noPackage = true;
             }
 
             // Xử lý test lẻ
             if (sti_test_items_input && sti_test_items_input.length > 0) {
                 const result = await this.handleStiTest(sti_test_items_input);
-                if (!result.success) 
+                if (!result.success)
                     noTest = true;
-                else{
+                else {
                     sti_test_items = result.sti_test_items.map((item) => item.sti_test_id);
                     total_amount += result.amount;
                 }
             }
-            else{
+            else {
                 noTest = true;
             }
 
-            if (noPackage && noTest){
+            if (noPackage && noTest) {
                 return {
                     success: false,
                     message: 'No valid STI tests or package provided'
                 };
             }
-            if (!noPackage && !noTest){
+            if (!noPackage && !noTest) {
                 return {
                     success: false,
                     message: 'Cannot provide both STI package and individual tests'
@@ -435,7 +443,7 @@ export class StiService{
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id)
-            
+
             // Chỉ lấy package info nếu có sti_package_id
             let packageName = 'Xét nghiệm lẻ';
             if (sti_package_id) {
@@ -453,7 +461,7 @@ export class StiService{
             };
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
@@ -508,7 +516,7 @@ export class StiService{
     }
 
 
-    public static async getOrdersByCustomer(customer_id: string): Promise<AllStiOrderResponse>{
+    public static async getOrdersByCustomer(customer_id: string): Promise<AllStiOrderResponse> {
         try {
             if (!customer_id) {
                 return {
@@ -517,8 +525,8 @@ export class StiService{
                 };
             }
             const result = await StiOrderRepository.getOrdersByCustomer(customer_id);
-            if (!result || result.length === 0){
-                return{
+            if (!result || result.length === 0) {
+                return {
                     success: false,
                     message: `Cannot find any orders of this customer ${customer_id}`
                 }
@@ -530,7 +538,7 @@ export class StiService{
             }
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
@@ -543,8 +551,8 @@ export class StiService{
 
             if (!order) {
                 return {
-                success: false,
-                message: 'Order not found'
+                    success: false,
+                    message: 'Order not found'
                 };
             }
 
@@ -562,12 +570,12 @@ export class StiService{
         }
     }
 
-    public static async viewAllOrdersByTestSchedule(schedules: IStiTestSchedule[]){
+    public static async viewAllOrdersByTestSchedule(schedules: IStiTestSchedule[]) {
         try {
             const result = await Promise.all(schedules.map(async (schedule) => {
                 const orders = await StiOrder.find({ sti_schedule_id: schedule._id }).lean<IStiOrder[]>();
-                if (!orders){
-                    return{
+                if (!orders) {
+                    return {
                         success: false,
                         message: 'Cannot find StiOrder'
                     }
@@ -595,15 +603,15 @@ export class StiService{
             };
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
         }
-        
+
     };
 
-    public static async insertNewStiPackageTests(sti_test_ids: string[], stiPackage: IStiPackage): Promise<void>{
+    public static async insertNewStiPackageTests(sti_test_ids: string[], stiPackage: IStiPackage): Promise<void> {
         try {
             if (Array.isArray(sti_test_ids) && sti_test_ids.length > 0) {
                 const stiPackageTests = sti_test_ids.map(testId => ({
@@ -644,9 +652,9 @@ export class StiService{
         try {
             const order = await StiOrderRepository.findOrderById(orderId);
             if (!order) {
-                return { 
-                    success: false, 
-                    message: 'Order not found' 
+                return {
+                    success: false,
+                    message: 'Order not found'
                 };
             }
             // Xử lý logic update order_status
@@ -662,22 +670,22 @@ export class StiService{
                 }
 
                 if (['Canceled', 'Completed'].includes(currentStatus)) {
-                    return { 
-                        success: false, 
-                        message: 'Cannot change status of completed or canceled order' 
+                    return {
+                        success: false,
+                        message: 'Cannot change status of completed or canceled order'
                     };
                 }
 
                 if (role === 'customer') {
-                    if (currentStatus === nextStatus){
+                    if (currentStatus === nextStatus) {
                     }
                     else if (currentStatus === 'Booked' && nextStatus === 'Canceled') {
                         order.order_status = 'Canceled';
                     }
                     else {
-                        return { 
-                            success: false, 
-                            message: 'Unauthorized status update' 
+                        return {
+                            success: false,
+                            message: 'Unauthorized status update'
                         };
                     }
                 } else if (role === 'staff' || role === 'admin') {
@@ -686,9 +694,9 @@ export class StiService{
                         order.payment_status = 'Paid';
                     }
                 } else {
-                    return { 
-                        success: false, 
-                        message: 'Unauthorized role' 
+                    return {
+                        success: false,
+                        message: 'Unauthorized role'
                     };
                 }
             }
@@ -754,25 +762,25 @@ export class StiService{
         }
     }
 
-    public static async getAllAuditLog (){
+    public static async getAllAuditLog() {
         try {
             const result = await StiAuditLogRepository.getAllAuditLogs();
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Cannot find the audit logs'
                 }
             }
-            return{
+            return {
                 success: true,
                 message: 'Fetched All Audit Logs successfully',
                 audit_logs: result
             }
         } catch (error) {
             console.error('Error fetching audit logs:', error);
-            return{ 
+            return {
                 success: true,
-                message: 'Internal server error' 
+                message: 'Internal server error'
             };
         }
     }
@@ -793,15 +801,15 @@ export class StiService{
                     message: 'Customer revenue not found',
                 };
             }
-            return { 
-                success: true, 
-                message: 'Fetched customer revenue', 
+            return {
+                success: true,
+                message: 'Fetched customer revenue',
                 total_revenue: total
             };
         } catch (err) {
-            return { 
-                success: false, 
-                message: 'Failed to fetch customer revenue' 
+            return {
+                success: false,
+                message: 'Failed to fetch customer revenue'
             };
         }
     }
@@ -815,13 +823,161 @@ export class StiService{
                     message: 'Total revenue not found',
                 };
             }
-            return { 
-                success: true,  
+            return {
+                success: true,
                 message: 'Fetched total revenue',
                 total_revenue: total
             };
         } catch (err) {
             return { success: false, message: 'Failed to fetch total revenue' };
+        }
+    }
+
+    /**
+ * Get STI orders with pagination and filtering
+ */
+    public static async getStiOrdersWithPagination(query: StiOrderQuery): Promise<StiOrderPaginationResponse> {
+        try {
+            // Validate pagination parameters
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validateStiOrderPagination(query);
+
+            // Build filter query
+            const filters = PaginationUtils.buildStiOrderFilter(query);
+
+            // Get data từ repository
+            const result = await StiOrderRepository.findWithPagination(
+                filters,
+                page,
+                limit,
+                sort_by,
+                sort_order
+            );
+
+            // Calculate pagination info
+            const pagination = PaginationUtils.calculatePagination(
+                result.total,
+                page,
+                limit
+            );
+
+            // Build filters_applied object
+            const filters_applied: Record<string, any> = {};
+            if (query.customer_id) filters_applied.customer_id = query.customer_id;
+            if (query.order_status) filters_applied.order_status = query.order_status;
+            if (query.payment_status) filters_applied.payment_status = query.payment_status;
+            if (query.date_from) filters_applied.date_from = query.date_from;
+            if (query.date_to) filters_applied.date_to = query.date_to;
+            if (query.min_amount) filters_applied.min_amount = query.min_amount;
+            if (query.max_amount) filters_applied.max_amount = query.max_amount;
+            if (query.consultant_id) filters_applied.consultant_id = query.consultant_id;
+            if (query.staff_id) filters_applied.staff_id = query.staff_id;
+            if (query.sti_package_id) filters_applied.sti_package_id = query.sti_package_id;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            return {
+                success: true,
+                message: result.orders.length > 0
+                    ? `Found ${result.orders.length} STI orders`
+                    : 'No STI orders found with the given criteria',
+                data: {
+                    items: result.orders,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Error getting STI orders with pagination:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting STI orders',
+                data: {
+                    items: [],
+                    pagination: {
+                        current_page: 1,
+                        total_pages: 0,
+                        total_items: 0,
+                        items_per_page: 10,
+                        has_next: false,
+                        has_prev: false
+                    },
+                    filters_applied: {}
+                },
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+ * Get audit logs with pagination and filtering
+ */
+    public static async getAuditLogsWithPagination(query: AuditLogQuery): Promise<AuditLogPaginationResponse> {
+        try {
+            // Validate pagination parameters
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validateAuditLogPagination(query);
+
+            // Build filter query
+            const filters = PaginationUtils.buildAuditLogFilter(query);
+
+            // Get data từ repository
+            const result = await StiAuditLogRepository.findWithPagination(
+                filters,
+                page,
+                limit,
+                sort_by,
+                sort_order
+            );
+
+            // Calculate pagination info
+            const pagination = PaginationUtils.calculatePagination(
+                result.total,
+                page,
+                limit
+            );
+
+            // Build filters_applied object
+            const filters_applied: Record<string, any> = {};
+            if (query.target_type) filters_applied.target_type = query.target_type;
+            if (query.target_id) filters_applied.target_id = query.target_id;
+            if (query.user_id) filters_applied.user_id = query.user_id;
+            if (query.action) filters_applied.action = query.action;
+            if (query.date_from) filters_applied.date_from = query.date_from;
+            if (query.date_to) filters_applied.date_to = query.date_to;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            return {
+                success: true,
+                message: result.auditLogs.length > 0
+                    ? `Found ${result.auditLogs.length} audit logs`
+                    : 'No audit logs found with the given criteria',
+                data: {
+                    items: result.auditLogs,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Error getting audit logs with pagination:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting audit logs',
+                data: {
+                    items: [],
+                    pagination: {
+                        current_page: 1,
+                        total_pages: 0,
+                        total_items: 0,
+                        items_per_page: 10,
+                        has_next: false,
+                        has_prev: false
+                    },
+                    filters_applied: {}
+                },
+                timestamp: new Date().toISOString()
+            };
         }
     }
 }
