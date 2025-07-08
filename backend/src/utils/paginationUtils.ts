@@ -396,4 +396,52 @@ export class PaginationUtils {
 
         return { page, limit, sort_by, sort_order };
     }
+
+    /**
+ * Build MongoDB filter query cho User
+ */
+    static buildUserFilter(query: any): any {
+        const filter: any = {};
+
+        // Role filter
+        if (query.role) {
+            filter.role = query.role;
+        }
+
+        // Status filter
+        if (query.status !== undefined) {
+            filter.status = query.status === 'true' || query.status === true;
+        }
+
+        // Email verified filter
+        if (query.email_verified !== undefined) {
+            filter.email_verified = query.email_verified === 'true' || query.email_verified === true;
+        }
+
+        // Search filter (tìm trong email, full_name, phone)
+        if (query.search) {
+            const searchRegex = { $regex: query.search.trim(), $options: 'i' };
+            filter.$or = [
+                { email: searchRegex },
+                { full_name: searchRegex },
+                { phone: searchRegex }
+            ];
+        }
+
+        // Date range filter (registration_date)
+        if (query.date_from || query.date_to) {
+            filter.registration_date = {};
+            if (query.date_from) {
+                filter.registration_date.$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                // Include toàn bộ ngày cuối
+                const endDate = new Date(query.date_to);
+                endDate.setHours(23, 59, 59, 999);
+                filter.registration_date.$lte = endDate;
+            }
+        }
+
+        return filter;
+    }
 }

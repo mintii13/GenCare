@@ -209,7 +209,7 @@ export class AuthService {
         }
     }
 
-        // Đăng ký
+    // Đăng ký
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
             const { email, full_name, phone, date_of_birth, gender } = registerRequest;
@@ -230,9 +230,9 @@ export class AuthService {
             }
         } catch (error) {
             console.error('Register error:', error);
-            return { 
-                success: false, 
-                message: 'Server error' 
+            return {
+                success: false,
+                message: 'Server error'
             };
         }
     }
@@ -280,14 +280,14 @@ export class AuthService {
             await redisClient.del(`user:${email}`);
             await redisClient.del(`otp:${email}`);
 
-            
+
             // Tạo access token luôn để tự động đăng nhập
             const accessToken = JWTUtils.generateAccessToken({
                 userId: insertedUser._id.toString(),
                 role: insertedUser.role
             });
 
-            return { 
+            return {
                 success: true,
                 message: 'Register successfully',
                 user: {
