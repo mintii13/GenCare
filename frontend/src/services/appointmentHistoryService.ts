@@ -1,4 +1,4 @@
-import { API } from '../config';
+import { API } from '../config/apiEndpoints';
 import apiClient from './apiClient';
 
 // Based on backend models/AppointmentHistory.ts

@@ -376,6 +376,60 @@ const UserManagement: React.FC = () => {
                   loading={loading}
                   onStatusChange={handleStatusChange}
                 />
+                
+                {/* Pagination Controls */}
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <div className="text-sm text-gray-500">
+                      Hiển thị {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} của {pagination.total} người dùng
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                        disabled={pagination.page === 1}
+                      >
+                        Trước
+                      </Button>
+                      
+                      <div className="flex space-x-1">
+                        {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (pagination.totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (pagination.page <= 3) {
+                            pageNum = i + 1;
+                          } else if (pagination.page >= pagination.totalPages - 2) {
+                            pageNum = pagination.totalPages - 4 + i;
+                          } else {
+                            pageNum = pagination.page - 2 + i;
+                          }
+                          
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={pagination.page === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                        disabled={pagination.page === pagination.totalPages}
+                      >
+                        Sau
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

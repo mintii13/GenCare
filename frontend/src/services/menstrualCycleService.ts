@@ -128,7 +128,7 @@ export const menstrualCycleService = {
     notification_enabled: boolean;
     notification_types: string[];
   }): Promise<ApiResponse<any>> {
-    const response = await apiClient.patch(API.MenstrualCycle.NOTIFY_SETTINGS, settings);
+    const response = await apiClient.patch(API.MenstrualCycle.UPDATE_NOTIFICATION, settings);
     return response.data as ApiResponse<any>;
   },
 

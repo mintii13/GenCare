@@ -1,10 +1,10 @@
-import { API } from '../config/apiEndpoints';
-const AUTH_TOKEN_KEY = "gencare_auth_token";
-import { jwtDecode } from 'jwt-decode';
 import apiClient from './apiClient';
+import { API } from '../config/apiEndpoints';
+
+const AUTH_TOKEN_KEY = "gencare_auth_token";
 
 export interface User {
-  _id: string;
+  id: string;
   full_name: string;
   email: string;
   phone?: string;
@@ -13,9 +13,12 @@ export interface User {
   gender?: 'male' | 'female' | 'other';
   address?: string;
   role: 'customer' | 'consultant' | 'admin' | 'staff';
-  is_verified: boolean;
-  created_date: string;
+  status: boolean;
+  email_verified: boolean;
+  registration_date: string;
+  updated_date?: string;
   last_login?: string;
+  googleId?: string;
 }
 
 export interface LoginRequest {
@@ -34,10 +37,8 @@ export interface RegisterRequest {
 export interface AuthResponse {
   success: boolean;
   message: string;
-  data: {
-    user: User;
-    accessToken: string;
-  };
+  user: User;
+  accessToken: string;
 }
 
 export interface UpdateProfileRequest {
@@ -57,17 +58,13 @@ export interface ChangePasswordRequest {
 export interface UpdateProfileResponse {
   success: boolean;
   message: string;
-  data: {
-    user: User;
-  };
+  user: User;
 }
 
 export interface UploadAvatarResponse {
   success: boolean;
   message: string;
-  data: {
-    avatar_url: string;
-  };
+  avatar_url: string;
 }
 
 export const userService = {
@@ -79,7 +76,7 @@ export const userService = {
     );
     // Store tokens and user info
     if (response.data.success) {
-      const { accessToken, user } = response.data.data;
+      const { accessToken, user } = response.data;
       localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
       localStorage.setItem("user", JSON.stringify(user));
     }
@@ -119,7 +116,7 @@ export const userService = {
     // Update local storage if successful
     if (response.data.success) {
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const updatedUser = { ...currentUser, ...response.data.data.user };
+      const updatedUser = { ...currentUser, ...response.data.user };
       localStorage.setItem("user", JSON.stringify(updatedUser));
     }
 
@@ -147,7 +144,7 @@ export const userService = {
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
       const updatedUser = {
         ...currentUser,
-        avatar: response.data.data.avatar_url,
+        avatar: response.data.avatar_url,
       };
       localStorage.setItem("user", JSON.stringify(updatedUser));
     }
@@ -194,8 +191,14 @@ export const userService = {
     return user?.role === role;
   },
 
-  fetchUserRole: async (userId: string) => {
-    // Implementation of fetchUserRole method
+  async fetchUserRole(userId: string): Promise<string | null> {
+    try {
+      const response = await apiClient.get(`/users/${userId}/role`);
+      return (response.data as any)?.role || null;
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      return null;
+    }
   }
 };
 

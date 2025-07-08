@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/auth'; 
-import { User } from '@/services/userService';
+import { User } from '../services/userService';
 import apiClient from '../services/apiClient';
 import { API } from '../config/apiEndpoints';
 import { clearAllTokens } from '../utils/authUtils';

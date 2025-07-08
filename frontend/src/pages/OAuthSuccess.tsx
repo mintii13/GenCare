@@ -97,7 +97,6 @@ function OAuthSuccess() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">❌ {error}</div>
           <p className="text-gray-600">Đang chuyển hướng về trang chủ...</p>
           <p className="text-sm text-gray-500 mt-2">
             Kiểm tra Console để xem chi tiết lỗi

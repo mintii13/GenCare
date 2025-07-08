@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { log } from '@/utils/logger';
+import { log } from '../utils/logger';
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
 export interface ApiResponse<T = any> {
@@ -92,7 +92,15 @@ class ApiClient {
 
         // Handle specific error cases
         if (status === 401) {
-          // Token expired or invalid
+          const requestUrl = error.config?.url || '';
+          
+          // Don't auto-logout for getUserProfile requests (let AuthContext handle it)
+          if (requestUrl.includes('/getUserProfile')) {
+            console.log("getUserProfile failed - AuthContext will handle token validation");
+            return Promise.reject(error);
+          }
+          
+          // Token expired or invalid for other requests
           console.error("Token expired or invalid, logging out.");
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');

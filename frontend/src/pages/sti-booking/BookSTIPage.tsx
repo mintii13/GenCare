@@ -145,7 +145,7 @@ const BookSTIPage: React.FC = () => {
         appointment_date: dayjs(orderDate).toISOString(),
         test_id: testId,
         package_id: packageId,
-        user_id: user?.id,
+        user_id: user?._id,
       });
 
       if (response.data.success) {

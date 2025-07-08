@@ -25,7 +25,7 @@ export const blogService = {
   getBlogs: async (query?: BlogQuery): Promise<BlogsPaginatedResponse> => {
     // Validate sort_order before building params
     if (query?.sort_order && !['asc', 'desc'].includes(query.sort_order)) {
-      console.error('❌ Invalid sort_order:', query.sort_order);
+
       throw new Error(`Invalid sort_order: ${query.sort_order}. Must be 'asc' or 'desc'`);
     }
     

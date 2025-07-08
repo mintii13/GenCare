@@ -12,7 +12,9 @@ import {
   UserCheck,
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -41,9 +43,15 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const [localComments, setLocalComments] = useState<Comment[]>(comments);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(5); // 5 comments per page
 
   useEffect(() => {
     setLocalComments(comments);
+    // Reset về trang 1 khi có comments mới
+    setCurrentPage(1);
   }, [comments]);
 
   const canComment = !!user;
@@ -334,6 +342,18 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
   // Lấy comments gốc (không phải reply)
   const rootComments = localComments.filter(comment => !comment.parent_comment_id);
+  
+  // Pagination logic
+  const totalPages = Math.ceil(rootComments.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedComments = rootComments.slice(startIndex, endIndex);
+  
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   return (
     <div className="mt-8">
@@ -393,7 +413,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
       {/* Danh sách comments */}
       <div className="space-y-0">
         {rootComments.length > 0 ? (
-          rootComments.map(comment => renderComment(comment))
+          paginatedComments.map(comment => renderComment(comment))
         ) : (
           <div className="text-center py-8 text-gray-500">
             <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -401,6 +421,52 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {rootComments.length > pageSize && (
+        <div className="flex items-center justify-center mt-6 space-x-2">
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Trước
+          </button>
+          
+          <div className="flex space-x-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                className={`px-3 py-2 text-sm font-medium rounded-md ${
+                  currentPage === page
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+          
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sau
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </button>
+        </div>
+      )}
+
+      {/* Hiển thị thông tin pagination */}
+      {rootComments.length > 0 && (
+        <div className="text-center mt-4 text-sm text-gray-500">
+          Hiển thị {startIndex + 1}-{Math.min(endIndex, rootComments.length)} trong tổng số {rootComments.length} bình luận
+        </div>
+      )}
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
