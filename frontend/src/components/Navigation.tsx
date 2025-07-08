@@ -106,6 +106,16 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   </Link>
                   {isAuthenticated && user?.role === 'customer' && (
                     <>
+                      <Link to="/sti-assessment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Đánh giá sàng lọc STI
+                      </Link>
+                      <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử đánh giá STI
+                      </Link>
+                    </>
+                  )}
+                  {isAuthenticated && user?.role === 'customer' && (
+                    <>
                       <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch hẹn của tôi
                       </Link>
