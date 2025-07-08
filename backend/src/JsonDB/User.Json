@@ -147,7 +147,6 @@
   "email_verified": true,
   "role": "customer",
   "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLf_b8QuGyg1uMdm3DN5VZnvARiPJBk5M6m69DaAJC3zL7cK8VV=s96-c",
-  "googleId": "105478505793443705752",
   "__v": 0
 },
 {
@@ -175,6 +174,5 @@
   "email_verified": true,
   "role": "customer",
   "avatar": null,
-  "googleId": null,
   "__v": 0
 }]

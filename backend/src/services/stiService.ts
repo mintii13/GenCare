@@ -1,5 +1,5 @@
 import { AllStiTestResponse, StiTestResponse, StiPackageResponse, AllStiPackageResponse, StiOrderResponse, AllStiOrderResponse } from '../dto/responses/StiResponse';
-import { IStiTest, StiTest } from '../models/StiTest';
+import { IStiTest, StiTest, TestTypes } from '../models/StiTest';
 import { StiTestRepository } from "../repositories/stiTestRepository";
 import { IStiPackage } from "../models/StiPackage";
 import { StiPackageRepository } from "../repositories/stiPackageRepository";
@@ -13,11 +13,13 @@ import { validTransitions } from '../middlewares/stiValidation';
 import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
 import { MailUtils } from '../utils/mailUtils';
 import { UserRepository } from '../repositories/userRepository';
-import { StiOrderQuery } from '../dto/requests/StiRequest';
+import { StiOrderQuery, UpdateStiResultRequest } from '../dto/requests/StiRequest';
 import { StiOrderPaginationResponse } from '../dto/responses/StiOrderPaginationResponse';
 import { PaginationUtils } from '../utils/paginationUtils';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
+import { StiResultRepository } from '../repositories/stiResultRepository';
+import { IStiResult, Sample, StiResult } from '../models/StiResult';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
@@ -984,4 +986,353 @@ export class StiService {
             };
         }
     }
+
+    //STI RESULT SERVICE
+    public static async createStiResult(orderId: string, additionalData?: Partial<IStiResult>){
+        try {
+            if (!orderId){
+                return{
+                    success: false,
+                    message: 'Result id is not found'
+                }
+            }
+            // Get order information
+            const order = await StiResultRepository.getStiOrderWithTests(orderId);
+            
+            if (!order) {
+                return{
+                    success: false,
+                    message: 'Cannot find the order'
+                }
+            }
+
+            const existing = await StiResultRepository.findExistedResult(orderId);
+
+            if (existing) {
+                return {
+                    success: false,
+                    message: 'STI result for this order already exists and is active'
+                };
+            }
+            const allTests: any[] = [];
+
+            // Collect all tests from direct tests
+            if (order.sti_test_items && order.sti_test_items.length > 0) {
+                allTests.push(...order.sti_test_items);
+            }
+
+            // Collect all tests from package items
+            if (order.sti_package_item && order.sti_package_item.sti_test_ids?.length > 0) {
+                allTests.push(...order.sti_package_item.sti_test_ids);
+            }
+
+            const sampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
+            // Tạo StiResult cho từng test
+            for (const test of allTests) {
+                if (test?.sti_test_type) {
+                    sampleQualities[test.sti_test_type] = null; // Mặc định "Đạt"
+                }
+            }
+
+            const sample: Sample = {
+                sampleQualities,
+                timeReceived: new Date(),
+                timeTesting: new Date()
+            };
+
+            const stiResultData: Partial<IStiResult> = {
+                sti_order_id: new mongoose.Types.ObjectId(orderId),
+                sample,
+                ...additionalData
+            };
+            const result = await StiResultRepository.create(stiResultData);
+            if (!result){
+                return{
+                    success: false,
+                    message: 'Fail to create sti result'
+                }
+            }
+            return {
+                success: true,
+                message: 'Create sti result successfully',
+                data: result
+            }
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async getStiResultByOrderId(orderId: string, userId: string, role: string){
+        try {
+            const result = await StiResultRepository.findByOrderId(orderId);
+            if (!result){
+                return{
+                    success: false,
+                    message: 'Fail to fetch sti result by order'
+                }
+            }
+            if (role === 'Customer' && result.sti_order_id.customer_id.toString() !== userId) {
+                return {
+                    success: false,
+                    message: 'Access denied'
+                };
+            }
+            return{
+                success: true,
+                message: 'Fetched sti result by order successfully',
+                data: result
+            }
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async getAllStiResult(){
+        try {
+            const result = await StiResultRepository.findAll();
+            if (!result){
+                return{
+                    success: false,
+                    message: 'Fail to fetch sti result'
+                }
+            }
+            return{
+                success: true,
+                message: 'Fetched sti result successfully',
+                data: result
+            }
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async getStiResultById(resultId: string){
+        try {
+            if (!resultId){
+                return{
+                    success: false,
+                    message: 'Result id is not found'
+                }
+            }
+            const result = await StiResultRepository.findById(resultId);
+            if (!result){
+                return{
+                    success: false,
+                    message: 'Fail to fetch sti result by id'
+                }
+            }
+            return{
+                success: true,
+                message: 'Fetched sti result by id successfully',
+                data: result
+            }
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    public static async updateStiResult(resultId: string, updateData: UpdateStiResultRequest, userId: string) {
+        try {
+            // Validate input
+            if (!resultId || !updateData) {
+                return {
+                    success: false,
+                    message: 'ID và updated data cannot be null'
+                };
+            }
+
+            // Check if result exists
+            const result = await StiResultRepository.findById(resultId);
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'Cannot find the sti result'
+                };
+            }
+
+            // Check if result is active
+            if (!result.is_active) {
+                return {
+                    success: false,
+                    message: 'Sti result is deactivated'
+                };
+            }
+
+            if (updateData.hasOwnProperty('is_confirmed')) {
+                const consultantId = result.sti_order_id.consultant_id?.toString();
+
+                if (!consultantId || consultantId !== userId) {
+                    return {
+                        success: false,
+                        message: 'You are not authorized to confirm this result'
+                    };
+                }
+            }
+
+            // Set time_result if result_value is provided and time_result is not set
+            if (updateData.result_value && !updateData.time_result && !result.time_result) {
+                updateData.time_result = new Date();
+            }
+
+            if (updateData.sample?.sampleQualities) {
+                const existingQualities = result.sample?.sampleQualities || {};
+                const newQualities = updateData.sample.sampleQualities;
+
+                const updatedQualities: Record<string, boolean | null> = {};
+                const invalidKeys: string[] = [];
+
+                for (const key in newQualities) {
+                    if (key in existingQualities) {
+                        updatedQualities[key] = newQualities[key];
+                    } else {
+                        invalidKeys.push(key);
+                    }
+                }
+
+                // Trả lỗi nếu có key không hợp lệ (không nằm trong existingQualities)
+                if (invalidKeys.length > 0) {
+                    return {
+                        success: false,
+                        message: `Invalid sampleQualities keys: ${invalidKeys.join(', ')}`
+                    };
+                }
+
+                updateData.sample.sampleQualities = {
+                    ...existingQualities,
+                    ...updatedQualities
+                };
+            }
+            // Update the result
+            const updatedResult = await StiResultRepository.updateById(resultId, updateData);
+
+            if (!updatedResult) {
+                return {
+                    success: false,
+                    message: 'Cannot update sti result'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'Update sti result successfully',
+                data: updatedResult
+            };
+
+        } catch (error) {
+            console.error('StiResultService - updateStiResult error:', error);
+            return {
+                success: false,
+                message: 'Server error'
+            };
+        }
+    }
+
+    private static async getTestTypesFromOrder(order: IStiOrder): Promise<string[]> {
+        const testIds: mongoose.Types.ObjectId[] = [];
+
+        // Lấy test IDs từ package
+        if (order.sti_package_item?.sti_test_ids) {
+        testIds.push(...order.sti_package_item.sti_test_ids);
+        }
+
+        // Lấy test IDs từ individual tests
+        if (order.sti_test_items) {
+        testIds.push(...order.sti_test_items);
+        }
+
+        // Loại bỏ duplicates
+        const uniqueTestIds = [...new Set(testIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
+
+        if (uniqueTestIds.length === 0) {
+        return [];
+        }
+
+        // Lấy test types từ database
+        return await StiTestRepository.getTestTypesByIds(uniqueTestIds);
+    }
+
+    public static async syncSampleFromOrder(orderId: string) {
+        try {
+            // Validate order_id
+            if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
+                return {
+                    success: false,
+                    message: 'Invalid order id'
+                };
+            }
+
+            // Lấy order với tests
+            const order = await StiOrderRepository.getOrderWithTests(orderId);
+            if (!order) {
+                return {
+                success: false,
+                message: 'Order not found'
+                };
+            }
+
+            // Lấy tất cả test types từ order
+            const orderTestTypes = await this.getTestTypesFromOrder(order);
+            if (orderTestTypes.length === 0) {
+                return {
+                success: false,
+                message: 'No test types found in order'
+                };
+            }
+
+            // Tìm hoặc tạo result record
+            let result = await StiResultRepository.findByOrderId(orderId);
+
+            if (!result) {
+                return{
+                    success: false,
+                    message: 'Cannot find the sti result'
+                }
+            }
+            const currentQualities = result.sample.sampleQualities || {};
+            const newSampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
+
+            // Maintain the old type and quality in sampleQualities
+            orderTestTypes.forEach(testType => {
+            if (currentQualities.hasOwnProperty(testType)) {
+                newSampleQualities[testType] = currentQualities[testType];
+            } else {
+                newSampleQualities[testType] = null;
+            }
+            });
+
+            // Update new sample qualities
+            result = await StiResultRepository.updateById(result._id.toString(), {
+                sample: {
+                    ...result.sample,
+                    sampleQualities: newSampleQualities
+                }
+            });
+
+            return {
+                success: true,
+                message: 'Updated sti result successfully',
+                data: result
+            };
+        } catch (error) {
+            console.error('Error syncing sample qualities:', error);
+            return {
+                success: false,
+                message: 'Internal server error',
+            };
+        }
+    }
+    
 }

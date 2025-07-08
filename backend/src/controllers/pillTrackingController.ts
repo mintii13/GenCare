@@ -98,8 +98,7 @@ router.patch('/:userId', authenticateToken, authorizeRoles('customer'), async (r
         } catch (error) {
             res.status(500).json({
                 success: false,
-                message: 'Internal server error',
-                error: error instanceof Error ? error.message : 'Unknown error'
+                message: 'Internal server error'
             });
         }
 })

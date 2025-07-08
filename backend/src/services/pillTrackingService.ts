@@ -251,9 +251,18 @@ export class PillTrackingService{
                 (pillSchedule.reminder_enabled === true && currentSchedule.reminder_enabled === false) ||
                 (pillSchedule.reminder_time !== undefined && pillSchedule.reminder_time !== currentSchedule.reminder_time) ||
                 (pillSchedule.max_reminder_times !== undefined && pillSchedule.max_reminder_times !== currentSchedule.max_reminder_times)
-                // (pillSchedule.reminder_interval !== undefined && pillSchedule.reminder_interval !== currentSchedule.reminder_interval)
             ) {
-                updateFields.reminder_sent_timestamps = [];
+                if (Array.isArray(currentSchedule.reminder_sent_timestamps)) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Đầu ngày hôm nay
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1); // Đầu ngày mai
+
+                    updateFields.reminder_sent_timestamps = currentSchedule.reminder_sent_timestamps.filter((ts: Date | string) => {
+                        const date = new Date(ts);
+                        return !(date >= today && date < tomorrow); // Giữ lại những timestamp KHÔNG thuộc hôm nay
+                    });
+                }
             }
 
             const result = await PillTrackingRepository.updatePillSchedule(userId, updateFields);
@@ -601,25 +610,31 @@ export class PillTrackingReminderService{
         console.log("Giờ hiện tại:", now.toFormat('HH:mm'));
 
         const schedules = await PillTrackingRepository.findReminderPill();
-        console.log(`Found ${schedules.length} schedules needing reminders`);
-
+        let validReminder = 0;
         for (const schedule of schedules) {
             const userId = schedule.user_id.toString();
-            const reminderTime = DateTime.fromFormat(schedule.reminder_time, 'HH:mm', { zone: TIMEZONE });
+            const sentCount = schedule.reminder_sent_timestamps?.length ?? 0;
+            const pillDate = DateTime.fromJSDate(schedule.pill_start_date).setZone(TIMEZONE).startOf('day');
+            const [hour, minute] = schedule.reminder_time.split(':').map(Number);
+            const reminderDateTime = pillDate.set({
+                hour,
+                minute,
+                second: 0,
+                millisecond: 0
+            });
+            // Chưa đến thời gian cần nhắc
+            if (now < reminderDateTime) 
+                continue;
 
-            // Chỉ nhắc nếu đã đến giờ nhắc trong ngày
-            if (now < reminderTime) {
+            const user = await UserRepository.findById(userId);
+            if (!user) {
+                console.warn(`User ${userId} not found`);
                 continue;
             }
-
-            const sentCount = schedule.reminder_sent_timestamps?.length ?? 0;
-            console.log(`→ Schedule for user ${userId}, pill #${schedule.pill_number}, sentCount: ${sentCount}`);
 
             // Đủ số lần nhắc tối đa
-            if (schedule.max_reminder_times !== undefined && (sentCount + 1) > schedule.max_reminder_times) {
-                console.log(`Skip: sentCount ${sentCount + 1} > max_reminder_times ${schedule.max_reminder_times}`);
+            if (schedule.max_reminder_times !== undefined && (sentCount + 1) > schedule.max_reminder_times) 
                 continue;
-            }
 
             // Kiểm tra khoảng cách giữa các lần gửi
             if (sentCount > 0) {
@@ -631,14 +646,17 @@ export class PillTrackingReminderService{
                     continue;
                 }
             }
-
-            const user = await UserRepository.findById(userId);
-            if (!user) {
-                console.warn(`User ${userId} not found`);
-                continue;
+            validReminder++;
+            if (validReminder == 0){
+                console.log("No pill tracking found needing reminders at this time");
             }
-
+            else if (validReminder == 1){
+                console.log("There is 1 pill tracking needing reminders")
+            }
+            else console.log(`There is ${validReminder} pill tracking needing reminders`)
+            
             try {
+                console.log(`→ Schedule for user ${user.email}, pill #${schedule.pill_number}, sentCount: ${sentCount + 1}`);
                 await MailUtils.sendReminderEmail(user.email, schedule.pill_number, schedule.pill_type, schedule.reminder_time);
                 schedule.reminder_sent_timestamps = schedule.reminder_sent_timestamps ?? [];
                 schedule.reminder_sent_timestamps.push(now.toJSDate());
@@ -649,8 +667,6 @@ export class PillTrackingReminderService{
             }
         }
     }
-
-
 
     private static task: cron.ScheduledTask | null = null;
 

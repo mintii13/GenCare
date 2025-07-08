@@ -14,7 +14,6 @@ export interface IUser extends Document {
     email_verified: boolean;
     role: 'customer' | 'consultant' | 'staff' | 'admin';
     avatar?: string;
-    googleId?: string;
 }
 
 const userSchema = new Schema<IUser>({
@@ -30,8 +29,7 @@ const userSchema = new Schema<IUser>({
     status: { type: Boolean, default: true },
     email_verified: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'consultant', 'staff', 'admin'], required: true },
-    avatar: { type: String },
-    googleId: { type: String }
+    avatar: { type: String }
 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

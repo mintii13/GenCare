@@ -44,6 +44,7 @@ export class StiTestRepository{
             return await StiTest.find().lean<IStiTest[]>();
         } catch (error) {
             console.error(error);
+            throw error;
         }
     }
 
@@ -52,6 +53,7 @@ export class StiTestRepository{
             return await StiTest.findById(id);
         } catch (error) {
             console.error(error);
+            throw error;
         }
     }
 
@@ -66,6 +68,17 @@ export class StiTestRepository{
             );
         } catch (error) {
             console.error(error);
+            throw error;
+        }
+    }
+
+    public static async getTestTypesByIds(testIds: mongoose.Types.ObjectId[]): Promise<string[]> {
+        try {
+            const tests = await StiTest.find({ _id: { $in: testIds } }).select('sti_test_type');
+            return tests.map(test => test.sti_test_type);
+        } catch (error) {
+            console.error(error);
+            throw error;
         }
     }
 }
