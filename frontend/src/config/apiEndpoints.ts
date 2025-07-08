@@ -161,22 +161,29 @@ export const API = {
     GET_ALL_TESTS: '/sti/getAllStiTest',
     GET_TEST: (id: string) => `/sti/getStiTest/${id}`,
     UPDATE_TEST: (id: string) => `/sti/updateStiTest/${id}`,
-    DELETE_TEST: (id: string) => `/sti/deleteStiTest/${id}`,
+    DELETE_TEST: (id: string) => `/sti/deleteStiTest/${id}`, // Note: Backend uses PUT method
     // Packages
     CREATE_PACKAGE: '/sti/createStiPackage',
     GET_ALL_PACKAGES: '/sti/getAllStiPackage',
     GET_PACKAGE: (id: string) => `/sti/getStiPackage/${id}`,
     UPDATE_PACKAGE: (id: string) => `/sti/updateStiPackage/${id}`,
-    DELETE_PACKAGE: (id: string) => `/sti/deleteStiPackage/${id}`,
-    // Orders
+    DELETE_PACKAGE: (id: string) => `/sti/deleteStiPackage/${id}`, // Note: Backend uses PUT method
+    // Orders - NEW PAGINATED ENDPOINTS
+    GET_ALL_ORDERS_PAGINATED: '/sti/orders', // Staff/Admin với pagination
+    GET_MY_ORDERS: '/sti/my-orders', // Customer orders với pagination
+    // Orders - LEGACY ENDPOINTS  
     CREATE_ORDER: '/sti/createStiOrder',
-    GET_ALL_ORDERS: '/sti/getAllStiOrders',
-    GET_MY_ORDERS: '/sti/my-orders',
-    GET_ORDER: (id: string) => `/sti/getOrderById/${id}`,
-    CANCEL_ORDER: (id: string) => `/sti/cancelStiOrder/${id}`,
-    UPDATE_ORDER_STATUS: (id: string) => `/sti/updateStiOrderStatus/${id}`,
-    // Schedules
-    GET_AVAILABLE_SLOTS: '/sti/getAvailableSlots'
+    GET_ALL_ORDERS: '/sti/getAllStiOrders', // Legacy: get orders by current customer
+    GET_ORDERS_BY_CUSTOMER: (customerId: string) => `/sti/getAllStiOrders/${customerId}`,
+    GET_ORDER: (id: string) => `/sti/getStiOrder/${id}`, // Fixed: backend uses getStiOrder not getOrderById
+    UPDATE_ORDER: (id: string) => `/sti/updateStiOrder/${id}`, // Backend uses PATCH method
+    // Audit & Analytics
+    GET_AUDIT_LOGS: '/sti/audit-logs', // With pagination
+    GET_ALL_AUDIT_LOGS: '/sti/getAllAuditLogs', // Legacy
+    GET_REVENUE_BY_CUSTOMER: (customerId: string) => `/sti/getRevenueByCustomer/${customerId}`,
+    GET_TOTAL_REVENUE: '/sti/getTotalRevenue',
+    // Schedules & Views
+    VIEW_TEST_SCHEDULE_WITH_ORDERS: '/sti/viewTestScheduleWithOrders'
   }
 
 } as const;

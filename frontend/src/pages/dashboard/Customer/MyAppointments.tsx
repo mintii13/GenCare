@@ -276,11 +276,11 @@ const MyAppointments: React.FC = () => {
     try {
       if (consultantDetails[consultantId]) return;
       
-      const response = await consultantService.getConsultantById(consultantId);
-      if (response) {
+      const response = await consultantService.getConsultantById(consultantId) as any;
+      if (response && response.data && response.data.consultant) {
         setConsultantDetails(prev => ({
           ...prev,
-          [consultantId]: response
+          [consultantId]: response.data.consultant
         }));
       }
     } catch (error) {
@@ -291,7 +291,7 @@ const MyAppointments: React.FC = () => {
   const getConsultantNameWithFetch = (appointment: Appointment) => {
     const consultantId = appointment.consultant_id?._id;
     if (consultantDetails[consultantId]) {
-      return consultantDetails[consultantId].user_id?.full_name || 'Chuyên gia';
+      return consultantDetails[consultantId].full_name || 'Chuyên gia';
     }
     
     // Fallback to appointment data
@@ -422,12 +422,25 @@ const MyAppointments: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-3">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {getConsultantNameWithFetch(appointment)}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[appointment.status]}`}>
-                        {statusLabels[appointment.status]}
-                      </span>
+                      {/* Avatar */}
+                      <div className="flex-shrink-0">
+                        <img
+                          src={consultantDetails[appointment.consultant_id?._id]?.avatar || '/default-avatar.png'}
+                          alt={getConsultantNameWithFetch(appointment)}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/default-avatar.png';
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {getConsultantNameWithFetch(appointment)}
+                        </h3>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[appointment.status]}`}>
+                          {statusLabels[appointment.status]}
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">

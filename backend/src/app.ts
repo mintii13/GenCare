@@ -24,7 +24,7 @@ import { PillTrackingReminderService } from './services/pillTrackingService';
 import appointmentHistoryController from './controllers/appointmentHistoryController';
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());

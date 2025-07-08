@@ -28,7 +28,7 @@ const MenstrualCyclePage: React.FC = () => {
   const [showPeriodLogger, setShowPeriodLogger] = useState(false);
 
   // Sử dụng custom hook để quản lý data và performance
-  const { todayStatus, cycles, loading, error, refresh } = useMenstrualCycle(user?._id);
+  const { todayStatus, cycles, loading, error, refresh } = useMenstrualCycle(user?.id);
 
   const getStatusColor = useCallback((pregnancyChance: string) => {
     switch (pregnancyChance) {

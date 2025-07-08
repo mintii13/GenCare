@@ -257,8 +257,8 @@ const HomePage = () => {
                 <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
                   {(testTab === 'packages' ? packagesData : singleTests).map(service => (
                     <div key={service._id} className="w-80 h-50 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition flex flex-col">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_test_name || service.sti_package_name}>
-                        {service.sti_test_name || service.sti_package_name}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_test_name}>
+                        {service.sti_test_name}
                       </h3>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-3">{service.description}</p>
                       <div className="flex-grow" />

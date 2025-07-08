@@ -41,7 +41,7 @@ const StiTestDetail: React.FC = () => {
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          const response = await apiClient.delete<any>(`/sti/deleteStiTest/${id}`);
+          const response = await apiClient.put<any>(`/sti/deleteStiTest/${id}`);
           if (response.data.success) {
             message.success('Xóa xét nghiệm thành công');
             navigate('/test-packages');
@@ -120,8 +120,8 @@ const StiTestDetail: React.FC = () => {
             {formatPrice(test.price)}
           </Descriptions.Item>
           <Descriptions.Item label="Trạng thái">
-            <Tag color={test.isActive ? 'success' : 'error'}>
-              {test.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
+            <Tag color={test.is_active ? 'success' : 'error'}>
+              {test.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
             </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="Loại">

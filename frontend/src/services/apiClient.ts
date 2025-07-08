@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { log } from '../utils/logger';
-const AUTH_TOKEN_KEY = "gencare_auth_token";
+import { env } from '../config/environment';
+  const AUTH_TOKEN_KEY = "gencare_auth_token";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -23,7 +24,7 @@ class ApiClient {
     backoff: true
   };
 
-  constructor(baseURL: string = '/api') {
+  constructor(baseURL: string = env.API_BASE_URL || 'http://localhost:3000/api') {
     this.instance = axios.create({
       baseURL,
       timeout: 30000, // 30 seconds
@@ -41,19 +42,10 @@ class ApiClient {
       (config) => {
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         
-        // Debug: Log token status
-        console.log('ApiClient Request Debug:');
-        console.log('- URL:', config.url);
-        console.log('- Token exists:', !!token);
-        console.log('- Token value:', token ? `${token.substring(0, 20)}...` : 'null');
-        
         if (token) {
           // ensure header object exists and add Authorization
           (config.headers = (config.headers || {}) as any);
           (config.headers as any)['Authorization'] = `Bearer ${token}`;
-          console.log('- Authorization header added');
-        } else {
-          console.log('- No token found, request will be unauthenticated');
         }
 
         log.api(config.method?.toUpperCase() || 'REQUEST', config.url || '', {

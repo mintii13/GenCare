@@ -60,7 +60,7 @@ const ScheduleEditModal: React.FC<ScheduleEditModalProps> = ({ isOpen, onClose, 
         }
         setLoading(true);
         try {
-            const response = await weeklyScheduleService.getScheduleById(scheduleId);
+            const response = await weeklyScheduleService.getScheduleById(scheduleId) as any;
             if (response.success && response.data.schedule) {
                 const fetchedSchedule = response.data.schedule;
                 // Ensure week_start_date is in 'yyyy-MM-dd' format for the input
@@ -179,7 +179,7 @@ const ScheduleEditModal: React.FC<ScheduleEditModalProps> = ({ isOpen, onClose, 
                     working_days: cleanWorkingDays,
                 };
                 
-                response = await weeklyScheduleService.updateSchedule(scheduleId, payloadUpdate);
+                response = await weeklyScheduleService.updateSchedule(scheduleId, payloadUpdate) as any;
             } else {
                 // Create: needs consultant_id
                 const payloadCreate = {
@@ -188,7 +188,7 @@ const ScheduleEditModal: React.FC<ScheduleEditModalProps> = ({ isOpen, onClose, 
                     week_start_date: schedule.week_start_date,
                     default_slot_duration: Number(schedule.default_slot_duration) || 30,
                 } as IWeeklySchedule;
-                response = await weeklyScheduleService.createSchedule(payloadCreate);
+                response = await weeklyScheduleService.createSchedule(payloadCreate) as any;
             }
 
             if (response.success) {

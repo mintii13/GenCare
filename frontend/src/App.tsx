@@ -39,6 +39,7 @@ const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/Consulta
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
 const ConsultantLayout = lazy(() => import('./components/layout/ConsultantLayout'));
+const AdminAppointmentManagement = lazy(() => import('./pages/dashboard/Admin/AdminAppointmentManagement'));
 
 // Lazy load Staff Dashboard
 const StaffDashboard = lazy(() => import('./pages/dashboard/Staff'));
@@ -196,7 +197,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="test-packages" element={<div>Quản lý gói xét nghiệm</div>} />
               <Route path="blogs" element={<div>Quản lý bài viết</div>} />
               <Route path="revenue" element={<div>Thống kê doanh thu</div>} />
-              <Route path="appointments" element={<div>Quản lý lịch hẹn</div>} />
+              <Route path="appointments" element={<AdminAppointmentManagement />} />
               <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
             </Route>
 
@@ -205,6 +206,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
               <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
+              <Route path="sti-orders" element={<OrdersPage />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
               <Route path="blogs" element={<div>Quản lý bài viết</div>} />

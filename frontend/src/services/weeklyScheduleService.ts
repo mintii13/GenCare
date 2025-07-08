@@ -10,6 +10,7 @@ export interface WorkingDay {
 }
 
 export interface WeeklyScheduleRequest {
+  consultant_id?: string; // Required for create, optional for interface
   week_start_date: string;
   working_days: {
     monday?: WorkingDay;
@@ -83,7 +84,12 @@ export interface WeeklySlots {
 export const weeklyScheduleService = {
   // Create weekly schedule
   async createSchedule(data: WeeklyScheduleRequest) {
+    console.log('📤 [DEBUG] WeeklyScheduleService.createSchedule called with:', data);
+    console.log('🎯 [DEBUG] API endpoint:', API.WeeklySchedule.BASE);
+    
     const response = await apiClient.post(API.WeeklySchedule.BASE, data);
+    
+    console.log('📥 [DEBUG] WeeklyScheduleService.createSchedule response:', response.data);
     return response.data;
   },
 

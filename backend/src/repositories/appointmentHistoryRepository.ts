@@ -94,7 +94,21 @@ export class AppointmentHistoryRepository {
             // Execute queries in parallel
             const [appointmentHistories, total] = await Promise.all([
                 AppointmentHistory.find(filters)
-                    .populate('appointment_id', 'appointment_date start_time end_time status customer_id consultant_id')
+                    .populate({
+                        path: 'appointment_id',
+                        select: 'appointment_date start_time end_time status customer_id consultant_id',
+                        populate: [
+                            { path: 'customer_id', select: 'full_name email' },
+                            { 
+                                path: 'consultant_id', 
+                                select: 'user_id specialization',
+                                populate: {
+                                    path: 'user_id',
+                                    select: 'full_name email'
+                                }
+                            }
+                        ]
+                    })
                     .populate('performed_by_user_id', 'full_name email role')
                     .sort(sortObj)
                     .skip(skip)

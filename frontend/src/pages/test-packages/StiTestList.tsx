@@ -180,7 +180,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
             </div>
             <Row gutter={[16, 16]}>
               {Array.isArray(tests) && tests
-                .filter(test => test.isActive)
+                .filter(test => test.is_active)
                 .map((test) => (
                   <Col 
                     xs={24} 
@@ -206,8 +206,8 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         </div>
                       }
                       extra={
-                        <Tag color={test.isActive ? 'success' : 'error'}>
-                          {test.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
+                        <Tag color={test.is_active ? 'success' : 'error'}>
+                          {test.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
                         </Tag>
                       }
                       style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
@@ -216,7 +216,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         <Button 
                           type="primary" 
                           onClick={() => handleBookSTITest(test)}
-                          disabled={!test.isActive}
+                          disabled={!test.is_active}
                         >
                           Đặt lịch xét nghiệm
                         </Button>

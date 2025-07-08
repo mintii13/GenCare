@@ -1,5 +1,6 @@
 import { API } from '../config/apiEndpoints';
 import apiClient from './apiClient';
+import { Appointment, PaginationInfo } from '../types/appointment';
 
 // Based on backend models/AppointmentHistory.ts
 export interface IAppointmentHistory {
@@ -18,6 +19,15 @@ export interface IAppointmentHistory {
   details?: string;
 }
 
+export interface GetAppointmentHistoryListResponse {
+  success: boolean;
+  message: string;
+  data: {
+    items: Appointment[];
+    pagination: PaginationInfo;
+  };
+}
+
 export interface GetAppointmentHistoryResponse {
   success: boolean;
   message: string;
@@ -29,6 +39,27 @@ export interface GetAppointmentHistoryResponse {
 }
 
 const appointmentHistoryService = {
+  /**
+   * Fetches the paginated list of appointment history records.
+   * @param params The query parameters for pagination and filtering.
+   * @returns The API response with the list of appointment history.
+   */
+  getAppointmentHistoryList: async (params: URLSearchParams): Promise<GetAppointmentHistoryListResponse> => {
+    const url = `${API.AppointmentHistory.LIST}?${params.toString()}`;
+    console.log(`Fetching paginated appointment history from: ${url}`);
+    const response = await apiClient.get<any>(url); // Use 'any' to handle actual backend structure
+    
+    // Extract the appointment histories array from the nested structure
+    return {
+      success: response.data.success,
+      message: response.data.message,
+      data: {
+        items: response.data.data.appointment_histories, // Extract the array
+        pagination: response.data.data.pagination
+      }
+    };
+  },
+
   /**
    * Fetches the history for a specific appointment.
    * @param appointmentId The ID of the appointment.

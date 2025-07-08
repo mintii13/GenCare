@@ -12,6 +12,7 @@ import { AppointmentRepository } from '../repositories/appointmentRepository';
 import { Consultant } from '../models/Consultant';
 import { AppointmentHistory } from '../models/AppointmentHistory';
 import { PaginationUtils } from '../utils/paginationUtils';
+import { User } from '../models/User';
 // Extend Request để có jwtUser
 declare global {
     namespace Express {
@@ -61,6 +62,47 @@ router.get('/list',
 
             if (!result.success) {
                 return res.status(500).json(result);
+            }
+
+            // Manually populate nested fields if the repository layer fails to do so
+            if (result.data && result.data.appointment_histories) {
+                console.log('Starting manual populate for', result.data.appointment_histories.length, 'records');
+                
+                for (let i = 0; i < result.data.appointment_histories.length; i++) {
+                    const history = result.data.appointment_histories[i];
+                    const appointmentId = history.appointment_id as any; // Cast to any for property access
+                    
+                    if (appointmentId && appointmentId.customer_id) {
+                        try {
+                            const customer = await User.findById(appointmentId.customer_id).select('full_name email').lean();
+                            if (customer) {
+                                appointmentId.customer_id = customer;
+                                console.log('Populated customer:', customer.full_name);
+                            }
+                        } catch (e: any) { 
+                            console.log('Failed to populate customer:', e.message);
+                        }
+                    }
+
+                    if (appointmentId && appointmentId.consultant_id) {
+                        try {
+                            const consultant = await Consultant.findById(appointmentId.consultant_id)
+                                .populate({
+                                    path: 'user_id',
+                                    select: 'full_name email'
+                                })
+                                .lean();
+                            if (consultant) {
+                                appointmentId.consultant_id = consultant;
+                                const consultantUser = (consultant as any).user_id;
+                                console.log('Populated consultant:', consultantUser?.full_name);
+                            }
+                         } catch (e: any) { 
+                            console.log('Failed to populate consultant:', e.message);
+                         }
+                    }
+                }
+                console.log('Manual populate completed');
             }
 
             return res.status(200).json(result);

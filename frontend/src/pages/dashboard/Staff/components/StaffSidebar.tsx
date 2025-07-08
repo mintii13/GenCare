@@ -5,7 +5,8 @@ import {
   FaCalendarAlt, 
   FaUsers, 
   FaCog,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaFlask
 } from 'react-icons/fa';
 
 const StaffSidebar: React.FC = () => {
@@ -18,6 +19,12 @@ const StaffSidebar: React.FC = () => {
       items: [
         { name: 'Lịch làm việc tuần', path: '/staff/weekly-schedule', icon: FaCalendarAlt },
         { name: 'Lịch hẹn tư vấn', path: '/staff/appointments', icon: FaCalendarAlt },
+      ]
+    },
+    {
+      title: 'Quản lý Xét nghiệm',
+      items: [
+        { name: 'Đơn hàng STI', path: '/staff/sti-orders', icon: FaFlask },
       ]
     },
     {
