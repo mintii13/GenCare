@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { RandomUtils } from './randomUtils';
+import { auth } from 'googleapis/build/src/apis/abusiveexperiencereport';
 export class MailUtils{
     public static async sendPasswordForGoogle(emailSendTo: string, password: string) {
         const transporter = nodemailer.createTransport({
@@ -123,6 +124,9 @@ export class MailUtils{
             auth: {
                 user: process.env.EMAIL_FOR_VERIFY ?? '',
                 pass: process.env.EMAIL_APP_PASSWORD ?? ''
+            },
+            tls:{
+                rejectUnauthorized: false
             }
         });
 

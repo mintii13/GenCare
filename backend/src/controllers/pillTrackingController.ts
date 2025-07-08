@@ -1,40 +1,42 @@
 import { Router, Request, Response} from 'express';
-import { PillTypes } from '../models/PillTracking';
 import { GetScheduleRequest, SetupPillTrackingRequest, UpdateScheduleRequest } from '../dto/requests/PillTrackingRequest';
 import { PillTrackingService } from '../services/pillTrackingService';
-import { authenticateToken } from '../middlewares/jwtMiddleware';
+import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
+import { DateTime } from 'luxon';
 const router = Router();
 
-router.post('/setupPillTracking', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/setup', authenticateToken, async (req: Request, res: Response): Promise<void> => {
     try {
-        const user_id = (req.user as any).userId;
-        const {pill_type, pill_start_date, reminder_time, reminder_enabled } = req.body;
-        const pillTracking: SetupPillTrackingRequest = {
-            userId: user_id,
-            pill_type: pill_type as PillTypes,
-            pill_start_date: pill_start_date,
-            reminder_time: reminder_time,
-            reminder_enabled: reminder_enabled
+        const TIMEZONE = process.env.TIMEZONE || 'Asia/Ho_Chi_Minh';
+        const pill_start_date = DateTime.now().setZone(TIMEZONE).startOf('day').toISO();
+        const requestData: SetupPillTrackingRequest = {
+            userId: (req.user as any).userId,
+            pill_type: req.body.pill_type,
+            pill_start_date,
+            reminder_time: req.body.reminder_time,
+            reminder_enabled: req.body.reminder_enabled,
+            max_reminder_times: req.body.max_reminder_times,
+            reminder_interval: req.body.reminder_interval,
         };
 
-        const result = await PillTrackingService.setupPillTracking(pillTracking);
+        const result = await PillTrackingService.setupPillTracking(requestData);
 
-        if (result.success) {
-            res.status(201).json(result);
-        } else {
+        if (!result.success) {
             res.status(400).json(result);
+        } else {
+            res.status(201).json(result);
         }
-
     } catch (error) {
-        console.error(error);
+        console.error('Error in /setup:', error);
         res.status(500).json({
             success: false,
-            message: 'System error',
+            message: 'Internal server error',
         });
     }
 });
 
-router.get('/getPillTrackingByUser/:userId', async (req: Request, res: Response): Promise<void> => {
+
+router.get('/:userId', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = req.params.userId;
         const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
@@ -55,7 +57,7 @@ router.get('/getPillTrackingByUser/:userId', async (req: Request, res: Response)
     }
 });
 
-router.patch('/updatePillTrackingByUser/:userId', async (req: Request, res: Response): Promise<void> => {
+router.patch('/:userId', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
         try {
             const user_id = req.params.userId;
             const {is_taken, reminder_enabled, reminder_time, is_active, pill_type, max_reminder_times, reminder_interval} = req.body;

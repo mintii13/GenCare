@@ -70,12 +70,11 @@ MENSTRUAL CYCLE
 Period Grouping Rule: Nếu giữa thời gian hành kinh cách nhau không quá 2 ngày thì gộp thành 1 chuỗi hành kinh
 Cycle Length Calculation Rule: Chu kỳ được tính là số ngày giữa ngày bắt đầu kỳ kinh hiện tại và ngày bắt đầu kỳ kinh trước đó.
 Algorithms for Prediction: 
-- Ovulation date(ov) = cycle_start + (cycle_len - 14): https://www.mayoclinic.org/diseases-conditions/infertility/in-depth/getting-pregnant/art-20046784
+- Ovulation date(ov) = cycle_start + (cycle_len - 14): https://www.pharmacity.vn/kham-pha-ve-fertile-window-va-cach-xac-dinh-chinh-xac-thoi-gian-thu-thai.htm
 - Fertile window = [ov - 5; ov + 1]: https://www.hopkinsmedicine.org/health/wellness-and-prevention/calculating-your-monthly-fertility-window
 Validation in Cycle:
-- Range of cycle = [21, 35]: https://my.clevelandclinic.org/health/articles/10132-menstrual-cycle, https://www.nhs.uk/conditions/periods/
-- Regularity Classification: 'regular' if σ ≤ 3.95: Chiazze, Leonard, et al. "The length and variability of the human menstrual cycle." Jama 203.6 (1968): 377-380.
-- Time of periods: https://www.vinmec.com/vie/bai-viet/chu-ky-kinh-nguyet-binh-thuong-dai-bao-nhieu-ngay-vi
+- Range of cycle = [21, 35], Time of periods: https://www.pharmacity.vn/kham-pha-ve-fertile-window-va-cach-xac-dinh-chinh-xac-thoi-gian-thu-thai.htm
+- Regularity Classification: 'regular' if σ ≤ 3.95: Chiazze, Leonard, et al. "The length and variability of the human menstrual cycle." Jama 203.6 (1968): 377-380. (Reliability: https://www.scimagojr.com/journalsearch.php?q=85291&tip=sid&clean=0)
 Trend Detection Rule: 
 - Chỉ tính trend khi có từ ba chu kỳ trở lên. Nếu chỉ có từ 2 chu kỳ trở xuống, xác định là 'stable'
 - Nếu có từ ba chu kỳ trở lên, lấy độ dài của 3 chu kỳ đó. Chia nửa, tính trung bình mỗi bên. Nếu trung bình sau lớn hơn trung bình đầu từ 1 đơn vị trở lên thì là 'lengthening', nhỏ hơn thì là 'shortening'. Còn lại thì là 'stable'
@@ -83,3 +82,9 @@ Pregnancy Chance Estimation: Phân 3 cấp độ
 - 'high' if ovulation date
 - 'medium' if in fertile-window (khác ovulation date)
 - 'low': normal date
+
+
+Personal STI test Screening: 
+- Các gói test: https://www.glinkvn.com/cac-goi-xet-nghiem-nhiem-trung-qua-duong-tinh-duc-stis-tai-glink/?gidzl=EpNbVr9c2rOr8kL-Nda3L3OZwtf6VW1LAoVfA4Dy1b4g8BfyGdzS02aXvobFBGvGT2BZTc9UQjyVLsaDKG
+- Triệu chứng: https://www.cdc.gov/std/treatment-guidelines/screening-recommendations.htm
+

@@ -1,6 +1,7 @@
 import { PaginationQuery } from '../dto/requests/PaginationRequest';
 import { PaginationInfo } from '../dto/responses/PaginationResponse';
 import { AppointmentHistoryQuery } from '../dto/requests/AppointmentHistoryRequest';
+import mongoose from 'mongoose';
 
 export class PaginationUtils {
     /**
@@ -254,5 +255,145 @@ export class PaginationUtils {
         }
 
         return filter;
+    }
+    /**
+     * Build MongoDB filter query cho STI Orders
+     */
+    static buildStiOrderFilter(query: any): any {
+        const filter: any = {};
+
+        // Customer filter
+        if (query.customer_id) {
+            filter.customer_id = new mongoose.Types.ObjectId(query.customer_id);
+        }
+
+        // Order status filter
+        if (query.order_status) {
+            filter.order_status = query.order_status;
+        }
+
+        // Payment status filter
+        if (query.payment_status) {
+            filter.payment_status = query.payment_status;
+        }
+
+        // Date range filter
+        if (query.date_from || query.date_to) {
+            filter.order_date = {};
+            if (query.date_from) {
+                filter.order_date.$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                // Include toàn bộ ngày cuối
+                const endDate = new Date(query.date_to);
+                endDate.setHours(23, 59, 59, 999);
+                filter.order_date.$lte = endDate;
+            }
+        }
+
+        // Amount range filter
+        if (query.min_amount || query.max_amount) {
+            filter.total_amount = {};
+            if (query.min_amount) {
+                filter.total_amount.$gte = parseFloat(query.min_amount);
+            }
+            if (query.max_amount) {
+                filter.total_amount.$lte = parseFloat(query.max_amount);
+            }
+        }
+
+        // Consultant filter
+        if (query.consultant_id) {
+            filter.consultant_id = new mongoose.Types.ObjectId(query.consultant_id);
+        }
+
+        // Staff filter
+        if (query.staff_id) {
+            filter.staff_id = new mongoose.Types.ObjectId(query.staff_id);
+        }
+
+        // STI Package filter
+        if (query.sti_package_id) {
+            filter['sti_package_item.sti_package_id'] = new mongoose.Types.ObjectId(query.sti_package_id);
+        }
+
+        return filter;
+    }
+
+    /**
+     * Validate và normalize pagination parameters cho STI Order
+     */
+    static validateStiOrderPagination(query: any): {
+        page: number;
+        limit: number;
+        sort_by: string;
+        sort_order: 1 | -1;
+    } {
+        const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
+        const sort_by = query.sort_by || 'order_date'; // Default sort by order_date
+        const sort_order = query.sort_order === 'asc' ? 1 : -1; // Default: newest first
+
+        return { page, limit, sort_by, sort_order };
+    }
+
+    /**
+ * Build MongoDB filter query cho Audit Logs
+ */
+    static buildAuditLogFilter(query: any): any {
+        const filter: any = {};
+
+        // Target type filter
+        if (query.target_type) {
+            filter.target_type = query.target_type;
+        }
+
+        // Target ID filter
+        if (query.target_id) {
+            filter.target_id = new mongoose.Types.ObjectId(query.target_id);
+        }
+
+        // User ID filter
+        if (query.user_id) {
+            filter.user_id = new mongoose.Types.ObjectId(query.user_id);
+        }
+
+        // Action filter
+        if (query.action) {
+            filter.action = { $regex: query.action.trim(), $options: 'i' };
+        }
+
+        // Date range filter
+        if (query.date_from || query.date_to) {
+            filter.timestamp = {};
+            if (query.date_from) {
+                filter.timestamp.$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                // Include toàn bộ ngày cuối
+                const endDate = new Date(query.date_to);
+                endDate.setHours(23, 59, 59, 999);
+                filter.timestamp.$lte = endDate;
+            }
+        }
+
+        return filter;
+    }
+
+    /**
+     * Validate và normalize pagination parameters cho Audit Log
+     */
+    static validateAuditLogPagination(query: any): {
+        page: number;
+        limit: number;
+        sort_by: string;
+        sort_order: 1 | -1;
+    } {
+        const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
+        const sort_by = query.sort_by || 'timestamp'; // Default sort by timestamp
+        const sort_order = query.sort_order === 'asc' ? 1 : -1; // Default: newest first
+
+        return { page, limit, sort_by, sort_order };
     }
 }

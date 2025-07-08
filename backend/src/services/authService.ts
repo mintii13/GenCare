@@ -286,7 +286,8 @@ export class AuthService {
                 avatar: null
             };
 
-            const insertedUser = await UserRepository.insertUser(user);
+            // const insertedUser = await UserRepository.insertUser(user);
+            const insertedUser = await UserRepository.saveUser(user);
             await redisClient.del(`user:${email}`);
             await redisClient.del(`otp:${email}`);
 
