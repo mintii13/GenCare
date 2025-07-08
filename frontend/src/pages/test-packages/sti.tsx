@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Tag, Typography, Space } from 'antd';
-import api from '../../services/api';
+import { Card, Row, Col, Tag, Typography, Space, Button } from 'antd';
+import apiClient from '../../services/apiClient';
+import { message } from 'antd';
 
 const { Title, Text } = Typography;
 
 const STITestPage = () => {
   const [tests, setTests] = useState([]);
+  const [selectedTest, setSelectedTest] = useState<any>(null);
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
 
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const response = await api.get('/sti/getAllStiTest');
+        const response = await apiClient.get<any>('/sti/getAllStiTest');
         if (response.data.success && Array.isArray(response.data.stitest)) {
           setTests(response.data.stitest);
         } else {
@@ -22,6 +25,29 @@ const STITestPage = () => {
     };
     fetchTests();
   }, []);
+
+  const handleSelectTest = (test: any) => {
+    setSelectedTest(test);
+    setSelectedPackage(null);
+  };
+
+  const handleBooking = async () => {
+    if (!selectedTest && !selectedPackage) {
+      message.error('Vui lòng chọn một xét nghiệm hoặc một gói');
+      return;
+    }
+
+    const bookingData = selectedTest 
+      ? { testId: selectedTest.id }
+      : { packageId: selectedPackage.id };
+
+    try {
+      await apiClient.post('/sti/book', bookingData);
+      message.success('Đặt lịch thành công');
+    } catch (error) {
+      message.error('Đặt lịch thất bại');
+    }
+  };
 
   return (
     <div style={{ padding: '24px' }}>
@@ -71,6 +97,9 @@ const STITestPage = () => {
           </Col>
         ))}
       </Row>
+      <Space direction="horizontal" style={{ marginTop: '24px' }}>
+        <Button type="primary" onClick={handleBooking}>Đặt lịch</Button>
+      </Space>
     </div>
   );
 };

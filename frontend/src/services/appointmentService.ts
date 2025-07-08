@@ -1,168 +1,162 @@
-import api from './api';
+import apiClient, { ApiResponse } from './apiClient';
 import { API } from '../config/apiEndpoints';
+import {
+  Appointment,
+  AppointmentHistory,
+  AppointmentQuery,
+  AppointmentHistoryQuery,
+  AppointmentsPaginatedResponse,
+  AppointmentHistoryPaginatedResponse,
+  AppointmentResponse,
+  AppointmentSlot,
+  BookAppointmentRequest,
+  AppointmentStats
+} from '../types/appointment';
 
-export interface BookAppointmentRequest {
-  consultant_id: string;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  customer_notes?: string;
-}
-
-export interface Appointment {
-  _id: string;
-  customer_id: {
-    _id: string;
-    full_name: string;
-    email: string;
-    phone?: string;
-  };
-  consultant_id: {
-    _id: string;
-    specialization: string;
-    user_id: {
-      full_name: string;
-    };
-  };
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  customer_notes?: string;
-  consultant_notes?: string;
-  created_date: string;
-}
-
-export interface AppointmentResponse {
-  success: boolean;
-  message: string;
-  data: {
-    appointments: Appointment[];
-    total: number;
-  };
-}
-
-export interface AppointmentSlot {
-  date: string;
-  time: string;
-  isAvailable: boolean;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+// Helper function to remove undefined/null properties from an object
+const cleanQuery = (obj: any) => {
+  if (!obj) return {};
+  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v != null && v !== ''));
+};
 
 export const appointmentService = {
+  // NEW PAGINATED APIs
+  
+  // Lấy appointments với pagination cho customer
+  getMyAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
+    try {
+      const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.MY_APPOINTMENTS, {
+        params: cleanQuery(query)
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Lấy appointments với pagination cho consultant
+  getConsultantAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
+    try {
+      const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.CONSULTANT_APPOINTMENTS, {
+        params: cleanQuery(query)
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Lấy tất cả appointments với pagination cho staff/admin
+  getAllAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
+    try {
+      const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.ALL, {
+        params: cleanQuery(query)
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Lấy appointment history với pagination
+  getAppointmentHistory: async (query?: AppointmentHistoryQuery): Promise<AppointmentHistoryPaginatedResponse> => {
+    try {
+      const response = await apiClient.get<AppointmentHistoryPaginatedResponse>(API.AppointmentHistory.LIST, { // Corrected endpoint
+        params: cleanQuery(query)
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // EXISTING APIs (giữ lại để backward compatibility)
+  
   // Customer APIs
-  async bookAppointment(data: BookAppointmentRequest) {
-    const response = await api.post(API.Appointment.BOOK, data);
-    return response.data;
+  async bookAppointment(data: BookAppointmentRequest): Promise<ApiResponse<any>> {
+    return apiClient.safePost(API.Appointment.BOOK, data);
   },
 
   async getMyAppointments(status?: string): Promise<ApiResponse<{ appointments: Appointment[] }>> {
-    const url = status ? `${API.Appointment.MY_APPOINTMENTS}?status=${status}` : API.Appointment.MY_APPOINTMENTS;
+    const params: { status?: string } = {};
+    if (status) {
+      params.status = status;
+    }
+
     try {
-      const response = await api.get(url);
-      return response.data;
+      // First attempt: customer endpoint
+      const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY_APPOINTMENTS, { params });
+      return { success: true, message: 'Success', data: response.data };
     } catch (error: any) {
       if (error?.response?.status === 403) {
-        const altUrl = status ? `${API.Appointment.CONSULTANT_APPOINTMENTS}?status=${status}` : API.Appointment.CONSULTANT_APPOINTMENTS;
-        const altRes = await api.get(altUrl);
-        return altRes.data;
+        // If forbidden, try the consultant endpoint as a fallback
+        const altResponse = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.CONSULTANT_APPOINTMENTS, { params });
+        return { success: true, message: 'Success', data: altResponse.data };
       }
       throw error;
     }
   },
 
   async cancelAppointment(appointmentId: string): Promise<ApiResponse<any>> {
-    try {
-      const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/cancel`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/cancel`);
   },
 
   async rescheduleAppointment(appointmentId: string, data: { appointment_date: string; start_time: string; end_time: string }) {
-    const response = await api.put(`${API.Appointment.BASE}/${appointmentId}`, data);
-    return response.data;
+    return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}`, data);
   },
 
   // Consultant APIs
   async getConsultantAppointments(status?: string): Promise<ApiResponse<{ appointments: Appointment[] }>> {
-    try {
-      const url = status ? `${API.Appointment.CONSULTANT_APPOINTMENTS}?status=${status}` : API.Appointment.CONSULTANT_APPOINTMENTS;
-      const response = await api.get(url);
-      return response.data;
-    } catch (error) {
-      throw error;
+    const params: { status?: string } = {};
+    if (status) {
+      params.status = status;
     }
+    const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.CONSULTANT_APPOINTMENTS, { params });
+    return { success: true, message: 'Success', data: response.data };
   },
 
   // Staff/Admin APIs
   async getAllAppointments(status?: string, startDate?: string, endDate?: string, consultantId?: string, customerId?: string) {
-    const params = new URLSearchParams();
-    if (status && status !== 'all') params.append('status', status);
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-    if (consultantId) params.append('consultant_id', consultantId);
-    if (customerId) params.append('customer_id', customerId);
+    const params = {
+      status: status !== 'all' ? status : undefined,
+      start_date: startDate,
+      end_date: endDate,
+      consultant_id: consultantId,
+      customer_id: customerId
+    };
 
-    const response = await api.get(`${API.Appointment.ALL}?${params}`);
+    const response = await apiClient.get(API.Appointment.ALL, { params: cleanQuery(params) });
     return response.data;
   },
 
   async confirmAppointment(appointmentId: string, googleAccessToken?: string): Promise<ApiResponse<{ appointment: Appointment }>> {
-    try {
-      const requestBody = googleAccessToken ? { googleAccessToken } : {};
-      const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/confirm`, requestBody);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const requestBody = googleAccessToken ? { googleAccessToken } : {};
+    return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/confirm`, requestBody);
   },
 
   async completeAppointment(appointmentId: string, consultantNotes: string) {
-    const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/complete`, {
+    return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/complete`, {
       consultant_notes: consultantNotes
     });
-    return response.data;
   },
 
   async getAppointmentById(appointmentId: string): Promise<ApiResponse<{ appointment: Appointment }>> {
-    try {
-      const response = await api.get(`${API.Appointment.BASE}/${appointmentId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    return apiClient.safeGet(`${API.Appointment.BASE}/${appointmentId}`);
   },
 
   async startMeeting(appointmentId: string, googleAccessToken?: string) {
     const requestBody = googleAccessToken ? { googleAccessToken } : {};
-    const response = await api.put(`${API.Appointment.BASE}/${appointmentId}/start-meeting`, requestBody);
-    return response.data;
+    return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/start-meeting`, requestBody);
   },
 
   async getAvailableSlots(consultantId: string, date: string): Promise<ApiResponse<{ slots: AppointmentSlot[] }>> {
-    try {
-      const response = await api.get(`${API.Appointment.BASE}/slots/${consultantId}?date=${date}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    return apiClient.safeGet(`${API.Appointment.BASE}/slots/${consultantId}`, { params: { date } });
   },
 
   async startAppointment(appointmentId: string): Promise<ApiResponse<{ meeting_link: string }>> {
-    try {
-      const response = await api.post(`${API.Appointment.BASE}/${appointmentId}/start`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-
+    return apiClient.safePost(`${API.Appointment.BASE}/${appointmentId}/start`);
+  }
 };
+
+// Backward compatibility exports
+export type { Appointment, BookAppointmentRequest, AppointmentResponse } from '../types/appointment';

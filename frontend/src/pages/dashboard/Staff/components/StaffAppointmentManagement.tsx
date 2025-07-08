@@ -16,43 +16,22 @@ import {
   FaUser, 
   FaUserMd, 
   FaCalendarAlt,
-  FaClipboardList 
+  FaClipboardList,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaHourglassHalf,
+  FaPlay,
+  FaSearch,
+  FaChevronLeft,
+  FaChevronRight,
+  FaFilter
 } from 'react-icons/fa';
-
-interface Appointment {
-  _id: string;
-  customer_id: {
-    _id: string;
-    full_name: string;
-    email: string;
-    phone?: string;
-  } | null;
-  consultant_id: {
-    _id: string;
-    specialization: string;
-    user_id: {
-      _id: string;
-      full_name: string;
-    };
-  } | null;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress';
-  customer_notes?: string;
-  consultant_notes?: string;
-  created_date: string;
-}
-
-interface AppointmentStats {
-  total: number;
-  pending: number;
-  confirmed: number;
-  in_progress: number;
-  completed: number;
-  cancelled: number;
-  today: number;
-}
+import {
+  Appointment,
+  AppointmentQuery,
+  PaginationInfo,
+  AppointmentStats
+} from '../../../../types/appointment';
 
 interface Consultant {
   _id: string;
@@ -120,6 +99,23 @@ const StaffAppointmentManagement: React.FC = () => {
     today: 0
   });
 
+  // Pagination states
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    items_per_page: 10,
+    has_next: false,
+    has_prev: false
+  });
+
+  const [query, setQuery] = useState<AppointmentQuery>({
+    page: 1,
+    limit: 10,
+    sort_by: 'appointment_date',
+    sort_order: 'desc'
+  });
+
   const statusLabels = {
     pending: 'Chờ xác nhận',
     confirmed: 'Đã xác nhận',
@@ -166,12 +162,7 @@ const StaffAppointmentManagement: React.FC = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await appointmentService.getAllAppointments(
-        filter === 'all' ? undefined : filter,
-        dateRange.startDate || undefined,
-        dateRange.endDate || undefined,
-        selectedConsultant === 'all' ? undefined : selectedConsultant
-      );
+      const response = await appointmentService.getAllAppointmentsPaginated(query);
 
       if (response.success) {
         const appointmentsList = response.data.appointments || [];
@@ -188,6 +179,7 @@ const StaffAppointmentManagement: React.FC = () => {
           today: appointmentsList.filter((a: Appointment) => isToday(parseISO(a.appointment_date))).length
         };
         setStats(newStats);
+        setPagination(response.data.pagination);
       } else {
         setAppointments([]);
         setStats({
@@ -425,6 +417,38 @@ const StaffAppointmentManagement: React.FC = () => {
     },
   ];
 
+  const handlePageChange = (page: number) => {
+    setQuery(prev => ({ ...prev, page }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setQuery(prev => ({
+      ...prev,
+      page: 1,
+      status: status === 'all' ? undefined : status
+    }));
+  };
+
+  const handleSortChange = (sort_by: string, sort_order: 'asc' | 'desc') => {
+    setQuery(prev => ({
+      ...prev,
+      page: 1,
+      sort_by: sort_by as any,
+      sort_order
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setQuery({
+      page: 1,
+      limit: 10,
+      sort_by: 'appointment_date',
+      sort_order: 'desc'
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -480,15 +504,16 @@ const StaffAppointmentManagement: React.FC = () => {
                 Trạng thái
               </label>
               <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+                value={query.status || 'all'}
+                onChange={(e) => handleStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label} ({option.count})
-                  </option>
-                ))}
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Chờ xác nhận</option>
+                <option value="confirmed">Đã xác nhận</option>
+                <option value="in_progress">Đang tư vấn</option>
+                <option value="completed">Đã hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
               </select>
             </div>
 
@@ -569,10 +594,10 @@ const StaffAppointmentManagement: React.FC = () => {
                   <FaCalendarAlt size={24} className="mx-auto" />
                 </div>
                 <div className="text-gray-500">Không có lịch hẹn nào</div>
-                {(filter !== 'all' || selectedConsultant !== 'all' || searchTerm || dateRange.startDate || dateRange.endDate) && (
+                {(query.status !== 'all' || selectedConsultant !== 'all' || searchTerm || dateRange.startDate || dateRange.endDate) && (
                   <button
                     onClick={() => {
-                      setFilter('all');
+                      handleStatusFilter('all');
                       setSelectedConsultant('all');
                       setSearchTerm('');
                       setDateRange({ startDate: '', endDate: '' });

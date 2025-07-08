@@ -9,9 +9,6 @@ import { vi } from 'date-fns/locale';
 import { 
   ArrowLeft, 
   Calendar, 
-  User, 
-  Star, 
-  Eye, 
   MessageCircle,
   Loader,
   AlertCircle,
@@ -21,7 +18,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuillEditor from '../../components/common/QuillEditor';
-import LoginModal from '../../components/auth/LoginModal';
     
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();

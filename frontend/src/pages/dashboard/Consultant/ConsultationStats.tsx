@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '@/services/api';
+import apiClient from '@/services/apiClient';
 import { AlertCircle, BarChart3, CalendarCheck, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 
 interface FeedbackStats {
@@ -50,7 +50,7 @@ const ConsultationStats: React.FC = () => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/consultants/my-performance');
+        const response = await apiClient.get<any>('/consultants/my-performance');
         if (response.data?.success) {
           setSummary(response.data.data as PerformanceSummary);
         } else {

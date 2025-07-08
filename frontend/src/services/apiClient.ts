@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { log } from '@/utils/logger';
+const AUTH_TOKEN_KEY = "gencare_auth_token";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -38,8 +39,7 @@ class ApiClient {
     // Request interceptor
     this.instance.interceptors.request.use(
       (config) => {
-        // Add auth token if available
-        const token = localStorage.getItem('gencare_auth_token');
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
         
         // Debug: Log token status
         console.log('ApiClient Request Debug:');
@@ -93,7 +93,8 @@ class ApiClient {
         // Handle specific error cases
         if (status === 401) {
           // Token expired or invalid
-          localStorage.removeItem('gencare_auth_token');
+          console.error("Token expired or invalid, logging out.");
+          localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');
           
           // Only redirect if not already on login page

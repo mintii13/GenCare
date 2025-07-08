@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps } from 'antd';
+import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Spin, Row, Col, Alert } from 'antd';
 import { CalendarOutlined, FileTextOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
 
@@ -53,8 +53,11 @@ const BookSTIPage: React.FC = () => {
   }, [testId, packageId, user]);
 
   const fetchTestDetails = async () => {
+    setLoading(true);
+    const endpoint = `/sti/getStiTest/${testId}`;
+    
     try {
-      const response = await api.get(`/sti/getStiTest/${testId}`);
+      const response = await apiClient.get<any>(endpoint);
       if (response.data.success) {
         setSelectedTest(response.data.stitest);
       } else {
@@ -64,12 +67,17 @@ const BookSTIPage: React.FC = () => {
     } catch (error) {
       message.error('Có lỗi xảy ra khi tải thông tin xét nghiệm');
       navigate('/test-packages');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchPackageDetails = async () => {
+    setLoading(true);
+    const endpoint = `/sti/getStiPackage/${packageId}`;
+    
     try {
-      const response = await api.get(`/sti/getStiPackage/${packageId}`);
+      const response = await apiClient.get<any>(endpoint);
       if (response.data.success) {
         setSelectedPackage(response.data.stipackage);
       } else {
@@ -79,6 +87,8 @@ const BookSTIPage: React.FC = () => {
     } catch (error) {
       message.error('Có lỗi xảy ra khi tải thông tin gói xét nghiệm');
       navigate('/test-packages');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,7 +140,13 @@ const BookSTIPage: React.FC = () => {
         orderData.sti_test_items = [testId];
       }
 
-      const response = await api.post('/sti/createStiOrder', orderData);
+      const response = await apiClient.post<any>('/sti/createStiOrder', {
+        ...orderData,
+        appointment_date: dayjs(orderDate).toISOString(),
+        test_id: testId,
+        package_id: packageId,
+        user_id: user?.id,
+      });
 
       if (response.data.success) {
         message.success('Đặt lịch xét nghiệm thành công!');

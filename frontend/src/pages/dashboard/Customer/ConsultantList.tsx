@@ -65,8 +65,9 @@ const ConsultantList: React.FC = () => {
       
       console.log('API Response:', response);
       
-      if (response.success && response.data) {
-        const consultantsData = response.data.consultants || [];
+      const apiResponse = response as ApiResponse;
+      if (apiResponse.success && apiResponse.data) {
+        const consultantsData = apiResponse.data.consultants || [];
         console.log('Consultants data:', consultantsData);
         
         // Add mock additional fields for better display
@@ -87,8 +88,8 @@ const ConsultantList: React.FC = () => {
         
         setConsultants(enrichedConsultants);
       } else {
-        console.error('Failed to fetch consultants:', response.message);
-        setError(response.message || 'Không thể tải danh sách chuyên gia');
+        console.error('Failed to fetch consultants:', apiResponse.message);
+        setError(apiResponse.message || 'Không thể tải danh sách chuyên gia');
       }
     } catch (err: any) {
       console.error('Error fetching consultants:', err);

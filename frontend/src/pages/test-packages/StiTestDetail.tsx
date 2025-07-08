@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Button, Space, Tag, message, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { StiTest, StiTestResponse } from '../../types/sti';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -18,8 +18,9 @@ const StiTestDetail: React.FC = () => {
   }, [id]);
 
   const fetchTestDetails = async () => {
+    setLoading(true);
     try {
-      const response = await api.get<StiTestResponse>(`/sti/getStiTest/${id}`);
+      const response = await apiClient.get<StiTestResponse>(`/sti/getStiTest/${id}`);
       if (response.data.success) {
         setTest(response.data.stitest as StiTest);
       }
@@ -40,7 +41,7 @@ const StiTestDetail: React.FC = () => {
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          const response = await api.delete(`/sti/deleteStiTest/${id}`);
+          const response = await apiClient.delete<any>(`/sti/deleteStiTest/${id}`);
           if (response.data.success) {
             message.success('Xóa xét nghiệm thành công');
             navigate('/test-packages');
@@ -67,6 +68,12 @@ const StiTestDetail: React.FC = () => {
       style: 'currency',
       currency: 'VND'
     }).format(price);
+  };
+
+  const handleBookNow = () => {
+    if (test) {
+      navigate(`/sti-booking/book?testId=${test._id}`);
+    }
   };
 
   if (loading) {

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Table, Typography, Tag, Space, message, Modal } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { EyeOutlined, CalendarOutlined } from '@ant-design/icons';
+import { EyeOutlined, CalendarOutlined, SyncOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import dayjs from 'dayjs';
+import { StiOrder } from '../../types/sti';
 
 const { Title, Text } = Typography;
 
@@ -45,9 +46,12 @@ const OrdersPage: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/sti/getAllStiOrders');
+      const endpoint = user?.role === 'customer' 
+        ? '/sti/my-orders' 
+        : '/sti/all-orders';
+      const response = await apiClient.get<any>(endpoint);
       if (response.data.success) {
-        setOrders(response.data.stiorder || []);
+        setOrders(response.data.orders);
       } else {
         if (response.data.message?.includes('Cannot find any orders')) {
           setOrders([]);

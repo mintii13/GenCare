@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+const AUTH_TOKEN_KEY = "gencare_auth_token";
 
 interface User {
   id: string;
@@ -195,7 +196,7 @@ const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? 'gencare_auth_token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         toast.error('Phiên đăng nhập đã hết hạn');
         return;
@@ -227,7 +228,7 @@ const UserManagement: React.FC = () => {
 
   const handleStatusChange = async (userId: string, newStatus: boolean) => {
     try {
-      const token = localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_KEY ?? 'gencare_auth_token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         toast.error('Phiên đăng nhập đã hết hạn');
         return;
