@@ -218,18 +218,18 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
 
 // POST /verifyOTP - Xác thực OTP và insert vào DB nếu đúng
 router.post('/verifyOTP', async (req: Request, res: Response) => {
-    try{
+    try {
         console.log('VerifyOTP endpoint called with body:', req.body);
         const { email, otp } = req.body;
-        
+
         if (!email || !otp) {
             console.log('Missing email or otp in request');
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email và OTP là bắt buộc' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email và OTP là bắt buộc'
             });
         }
-        
+
         const result = await AuthService.verifyOTP(email, otp);
         if (result.success) {
             res.status(200).json(result);

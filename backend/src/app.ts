@@ -22,6 +22,7 @@ import pillTrackingController from './controllers/pillTrackingController'
 import { PillTrackingReminderService } from './services/pillTrackingService';
 import appointmentHistoryController from './controllers/appointmentHistoryController';
 import stiAssessmentRoutes from './controllers/stiAssessmentController';
+import userController from './controllers/userController';
 
 const app = express();
 const PORT = process.env.PORT;
@@ -81,6 +82,7 @@ app.use('/api/appointments', appointmentController);
 app.use('/api/appointment-history', appointmentHistoryController);
 app.use('/api/consultants', consultantController);
 app.use('/api/profile', profileController);
+app.use('/api/users', userController);
 app.use('/api/sti', stiController);
 app.use('/api/menstrual-cycle', menstrualCycleController);
 app.use('/api/pill-tracking', pillTrackingController);
