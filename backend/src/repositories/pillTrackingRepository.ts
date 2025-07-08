@@ -148,7 +148,6 @@ export class PillTrackingRepository {
         const now = DateTime.now().setZone('Asia/Ho_Chi_Minh');
         const todayEnd = now.endOf('day').toJSDate();
         // const currentTime = now.toFormat('HH:mm');
-        console.log(`[CronJob] runReminderJob() executed at ${now.toISO()}`);
         const result = await PillTracking.find({
             is_taken: false,
             is_active: true,

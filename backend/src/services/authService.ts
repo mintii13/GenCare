@@ -80,7 +80,6 @@ export class AuthService {
                     updated_date: user.updated_date,
                     last_login: user.last_login || null,
                     email_verified: user.email_verified,
-                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -123,7 +122,6 @@ export class AuthService {
                     updated_date: user.updated_date,
                     last_login: user.last_login || null,
                     email_verified: user.email_verified,
-                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -144,7 +142,6 @@ export class AuthService {
 
             const email = profile.emails[0]?.value ?? null;
             const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
-            const googleId = profile.id;
             const avatar = profile.photos?.[0]?.value || null;
 
             // Tìm user bằng email - SỬA: Không dùng lean() để có full mongoose document
@@ -152,18 +149,12 @@ export class AuthService {
 
             if (user) {
                 console.log('Existing user found:', user.email);
-                // User đã tồn tại - cập nhật googleId và avatar nếu chưa có
+                // User đã tồn tại - cập nhật avatar nếu chưa có
                 let needUpdate = false;
                 const updateData: any = {
                     updated_date: new Date(),
                     last_login: new Date()
                 };
-
-                if (!user.googleId) {
-                    updateData.googleId = googleId;
-                    needUpdate = true;
-                }
-
 
                 if (!user.avatar && avatar) {
                     updateData.avatar = avatar;
@@ -200,7 +191,6 @@ export class AuthService {
                 status: true,
                 email_verified: true,
                 role: 'customer' as const,
-                googleId,
                 phone: null,
                 date_of_birth: null,
                 last_login: new Date(),
@@ -282,7 +272,6 @@ export class AuthService {
                 status: true,
                 email_verified: true,
                 role: 'customer',
-                googleId: null,
                 avatar: null
             };
 
@@ -315,7 +304,6 @@ export class AuthService {
                     updated_date: insertedUser.updated_date,
                     last_login: insertedUser.last_login,
                     email_verified: insertedUser.email_verified,
-                    googleId: insertedUser.googleId
                 },
                 accessToken: accessToken // Thêm access token
             };

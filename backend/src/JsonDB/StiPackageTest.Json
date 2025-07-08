@@ -91,44 +91,8 @@
     "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9008" },
     "is_active": true
   },
-
   {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9001" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9005" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9006" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9002" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9003" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9004" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9007" },
-    "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9104" },
+    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9103" },
     "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9009" },
     "is_active": true
   }

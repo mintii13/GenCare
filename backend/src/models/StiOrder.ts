@@ -26,18 +26,19 @@ const stiOrderSchema: Schema = new Schema<IStiOrder>({
     consultant_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: false },
     staff_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: false },
     sti_package_item: {
-      sti_package_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'StiPackage',
-        required: false,
-      },
-      sti_test_ids:[ 
-        {
+      type: new mongoose.Schema({
+        sti_package_id: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: 'StiTest',
-          required: false,
-        }
-      ]
+          ref: 'StiPackage'
+        },
+        sti_test_ids: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'StiTest'
+          }
+        ]
+      }, { _id: false }),
+      required: false
     },
     sti_test_items: [
       {
