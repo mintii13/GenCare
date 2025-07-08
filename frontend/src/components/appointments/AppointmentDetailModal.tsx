@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaLink, FaClock, FaCheckCircle, FaPlay, FaTrophy, FaTimes, FaHistory } from 'react-icons/fa';
 import appointmentHistoryService, { IAppointmentHistory } from '../../services/appointmentHistoryService';
 import { Loading } from '../ui';
+import STIHistorySection from './STIHistorySection';
 
 interface MeetingInfo {
   meet_url: string;
@@ -197,6 +198,14 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* STI Assessment History - Only for Consultant */}
+            {appointment.customer_id?._id && (
+              <STIHistorySection 
+                customerId={appointment.customer_id._id}
+                className="mb-6"
+              />
+            )}
 
             {/* Appointment Info */}
             <div className="bg-blue-50 rounded-lg p-4">

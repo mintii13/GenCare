@@ -66,8 +66,8 @@ const StaffAppointmentManagement: React.FC = () => {
   } = usePaginatedResource<any>({
     apiService: appointmentHistoryService.getAppointmentHistoryList,
     initialFilters: {
-      page: 1,
-      limit: 10,
+    page: 1,
+    limit: 10,
       status: 'all',
       consultant_id: 'all',
       start_date: '',
@@ -76,16 +76,16 @@ const StaffAppointmentManagement: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchConsultants = async () => {
-      try {
-        const response = await consultantService.getAllConsultants();
-        if (response.data.consultants) {
-          setConsultants(response.data.consultants as unknown as Consultant[]);
-        }
-      } catch (error) {
-        toast.error('Không thể tải danh sách chuyên gia.');
+  const fetchConsultants = async () => {
+    try {
+      const response = await consultantService.getAllConsultants();
+      if (response.data.consultants) {
+        setConsultants(response.data.consultants as unknown as Consultant[]);
       }
-    };
+    } catch (error) {
+        toast.error('Không thể tải danh sách chuyên gia.');
+    }
+  };
     fetchConsultants();
   }, []);
 
@@ -187,7 +187,7 @@ const StaffAppointmentManagement: React.FC = () => {
       title: 'Khách hàng', 
       key: 'customer', 
       render: (_: any, r: any) => (
-        <div className="font-medium text-gray-900">
+          <div className="font-medium text-gray-900">
           {r.appointment_id?.customer_id?.full_name || 'N/A'}
         </div>
       )
@@ -196,7 +196,7 @@ const StaffAppointmentManagement: React.FC = () => {
       title: 'Chuyên gia', 
       key: 'consultant', 
       render: (_: any, r: any) => (
-        <div className="font-medium text-gray-900">
+          <div className="font-medium text-gray-900">
           {r.appointment_id?.consultant_id?.user_id?.full_name || 'N/A'}
         </div>
       )
@@ -281,9 +281,9 @@ const StaffAppointmentManagement: React.FC = () => {
                     />
                   </Popconfirm>
                 </Tooltip>
-              </>
-            )}
-
+            </>
+          )}
+          
             {(status === 'confirmed' || status === 'in_progress') && (
               <>
                 <Tooltip title="Hoàn thành">
@@ -419,50 +419,50 @@ const StaffAppointmentManagement: React.FC = () => {
         width={600}
       >
         {selectedAppointment && (
-          <div className="space-y-4">
+                <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-                             <div>
+                      <div>
                  <label className="block text-sm font-medium text-gray-700">Khách hàng</label>
                  <p className="mt-1 text-sm text-gray-900">
                    {typeof selectedAppointment.customer_id === 'object' && selectedAppointment.customer_id?.full_name 
                      ? selectedAppointment.customer_id.full_name 
                      : (typeof selectedAppointment.customer_id === 'string' ? selectedAppointment.customer_id : 'N/A')}
                  </p>
-               </div>
-               <div>
+                      </div>
+                      <div>
                  <label className="block text-sm font-medium text-gray-700">Chuyên gia</label>
                  <p className="mt-1 text-sm text-gray-900">
                    {typeof selectedAppointment.consultant_id === 'object' && selectedAppointment.consultant_id?.user_id?.full_name
                      ? selectedAppointment.consultant_id.user_id.full_name
                      : (typeof selectedAppointment.consultant_id === 'string' ? selectedAppointment.consultant_id : 'N/A')}
                  </p>
-               </div>
-              <div>
+                      </div>
+                      <div>
                 <label className="block text-sm font-medium text-gray-700">Ngày hẹn</label>
                 <p className="mt-1 text-sm text-gray-900">
                   {formatDateDisplay(selectedAppointment.appointment_date)}
                 </p>
-              </div>
-              <div>
+                      </div>
+                      <div>
                 <label className="block text-sm font-medium text-gray-700">Thời gian</label>
                 <p className="mt-1 text-sm text-gray-900">
                   {formatTimeDisplay(selectedAppointment.start_time, selectedAppointment.end_time)}
                 </p>
-              </div>
-              <div>
+                      </div>
+                      <div>
                 <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
                 <div className="mt-1">
                   <Tag color={getStatusColor(selectedAppointment.status)}>
                     {getStatusLabel(selectedAppointment.status)}
                   </Tag>
-                </div>
-              </div>
-              <div>
+                        </div>
+                      </div>
+                      <div>
                 <label className="block text-sm font-medium text-gray-700">Mã lịch hẹn</label>
                 <p className="mt-1 text-sm text-gray-900">{selectedAppointment._id}</p>
-              </div>
-            </div>
-            
+                  </div>
+                </div>
+
             {selectedAppointment.meeting_info && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Thông tin cuộc họp</label>

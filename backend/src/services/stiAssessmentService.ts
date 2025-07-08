@@ -282,15 +282,41 @@ export class StiAssessmentService {
     // API Methods
     public static async createAssessment(customerId: string, assessmentData: IStiAssessment['assessment_data']): Promise<AssessmentResponse> {
         try {
-            // Generate recommendation
-            const recommendation = this.generateRecommendation(assessmentData);
+            console.log('Creating STI assessment for customer:', customerId);
+            console.log('Assessment data received:', JSON.stringify(assessmentData, null, 2));
 
-            // Create assessment record
-            const assessment = await StiAssessmentRepository.createAssessment({
+            // Validate required fields
+            if (!assessmentData.age || !assessmentData.gender || !assessmentData.sexually_active || !assessmentData.hiv_status || !assessmentData.test_purpose) {
+                console.error('Missing required fields:', {
+                    age: assessmentData.age,
+                    gender: assessmentData.gender,
+                    sexually_active: assessmentData.sexually_active,
+                    hiv_status: assessmentData.hiv_status,
+                    test_purpose: assessmentData.test_purpose
+                });
+                return {
+                    success: false,
+                    message: 'Missing required fields in assessment data'
+                };
+            }
+
+            // Generate recommendation
+            console.log('Generating recommendation...');
+            const recommendation = this.generateRecommendation(assessmentData);
+            console.log('Generated recommendation:', recommendation);
+
+            // Prepare data for database
+            const dbData = {
                 customer_id: new mongoose.Types.ObjectId(customerId),
                 assessment_data: assessmentData,
                 recommendation
-            } as any);
+            };
+            console.log('Prepared DB data:', JSON.stringify(dbData, null, 2));
+
+            // Create assessment record
+            console.log('Creating assessment in database...');
+            const assessment = await StiAssessmentRepository.createAssessment(dbData as any);
+            console.log('Assessment created successfully:', assessment._id);
 
             return {
                 success: true,
@@ -302,9 +328,16 @@ export class StiAssessmentService {
             };
         } catch (error) {
             console.error('Error creating STI assessment:', error);
+            console.error('Error stack:', (error as Error).stack);
+            console.error('Error details:', {
+                name: (error as Error).name,
+                message: (error as Error).message,
+                customerId,
+                assessmentData
+            });
             return {
                 success: false,
-                message: 'Failed to create STI assessment'
+                message: 'Lỗi khi tạo đánh giá STI: ' + (error as Error).message
             };
         }
     }

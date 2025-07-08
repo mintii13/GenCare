@@ -20,6 +20,16 @@ export interface CreateUserRequest {
     status?: boolean;
     email_verified?: boolean;
     avatar?: string;
+    
+    // Staff-specific fields
+    department?: string;
+    hire_date?: string;
+    permissions?: string[];
+    
+    // Consultant-specific fields
+    specialization?: string;
+    qualifications?: string;
+    experience_years?: number;
 }
 
 export interface UpdateUserRequest {

@@ -184,6 +184,28 @@ export const API = {
     GET_TOTAL_REVENUE: '/sti/getTotalRevenue',
     // Schedules & Views
     VIEW_TEST_SCHEDULE_WITH_ORDERS: '/sti/viewTestScheduleWithOrders'
+  },
+
+  // ----------------------- STI ASSESSMENT --------------------
+  STIAssessment: {
+    CREATE: '/sti-assessment/create',
+    HISTORY: '/sti-assessment/history',
+    GET_BY_ID: (id: string) => `/sti-assessment/${id}`,
+    UPDATE: (id: string) => `/sti-assessment/${id}`,
+    DELETE: (id: string) => `/sti-assessment/${id}`,
+    STATS_OVERVIEW: '/sti-assessment/stats/overview',
+    PACKAGES_INFO: '/sti-assessment/packages/info'
+  },
+
+  // ----------------------- USER MANAGEMENT --------------------
+  Users: {
+    GET_ALL: '/users', // GET with pagination, search, filters
+    GET_BY_ID: (id: string) => `/users/${id}`,
+    CREATE: '/users', // POST - Admin only
+    UPDATE: (id: string) => `/users/${id}`, // PUT - Admin only
+    UPDATE_STATUS: (id: string) => `/users/${id}/status`, // PUT - Admin/Staff
+    DELETE: (id: string) => `/users/${id}`, // DELETE - Admin only (soft delete)
+    STATISTICS: '/users/statistics/overview' // GET - Admin/Staff
   }
 
 } as const;
