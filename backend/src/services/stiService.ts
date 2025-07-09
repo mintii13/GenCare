@@ -21,7 +21,6 @@ import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationR
 import { StiResultRepository } from '../repositories/stiResultRepository';
 import { IStiResult, Sample, StiResult } from '../models/StiResult';
 import { ConsultantRepository } from '../repositories/consultantRepository';
-
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
@@ -365,7 +364,6 @@ export class StiService {
         };
     }
 
-
     public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
             let sti_package_item = null;
@@ -373,7 +371,13 @@ export class StiService {
             let total_amount = 0;
             let noPackage: boolean = false;
             let noTest: boolean = false;
-
+            
+            if (!order_date){
+                return{
+                    success: false,
+                    message: 'Order date is required'
+                }
+            }
             // Xử lý package
             if (sti_package_id) {
                 const result = await this.handleStiPackage(sti_package_id);
@@ -484,17 +488,8 @@ export class StiService {
                     order_date: orderDate,
                     number_current_orders: 0,
                     is_locked: false,
-                    is_holiday: false
                 });
                 await StiTestScheduleRepository.updateStiTestSchedule(schedule);
-            }
-
-            // Check điều kiện không hợp lệ
-            if (schedule.is_holiday) {
-                return {
-                    success: false,
-                    message: 'Cannot create order on holiday'
-                };
             }
 
             if (schedule.is_locked) {
@@ -588,7 +583,6 @@ export class StiService {
                     message: 'View Orders successfully',
                     date: schedule.order_date.toISOString().slice(0, 10),
                     is_locked: schedule.is_locked,
-                    is_holiday: schedule.is_holiday,
                     number_current_orders: schedule.number_current_orders,
                     tasks: orders.map(order => ({
                         id: order._id,
@@ -739,11 +733,10 @@ export class StiService {
                         order_date: updates.order_date,
                         number_current_orders: 1,
                         is_locked: false,
-                        is_holiday: false
                     });
                     await newSchedule.save();
                 } else {
-                    if (newSchedule.is_locked || newSchedule.is_holiday) {
+                    if (newSchedule.is_locked) {
                         return {
                             success: false,
                             message: 'Cannot get schedule on locked date and holiday'
@@ -773,6 +766,7 @@ export class StiService {
                     key !== 'consultant_id' && 
                     key !== 'staff_id' && 
                     key !== 'order_date' &&
+                    key !== 'total_amount' &&
                     validFields.includes(key)
                 ){
                     (order as any)[key] = value;

@@ -244,6 +244,12 @@ export class MenstrualCycleService {
 
     public static async updateNotificationSettings(user_id: string, settings: any) { 
         try { 
+            if (!settings){
+                return{
+                    success: false,
+                    message: 'Nothing to update'
+                }
+            }
             const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, settings);
             if (!result) { 
                 return { 
