@@ -1,4 +1,4 @@
-import {IUser, User} from '../models/User'
+import {IUser} from '../models/User'
 import { UserRepository } from '../repositories/userRepository';
 import { ProfileResponse } from '../dto/responses/ProfileResponse';
 import { ObjectId } from 'mongoose';

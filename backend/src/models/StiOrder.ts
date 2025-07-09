@@ -22,8 +22,8 @@ export interface IStiOrder extends Document {
 }
 
 const stiOrderSchema: Schema = new Schema<IStiOrder>({
-    customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
-    consultant_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: false },
+    customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    consultant_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Consultant', required: false },
     staff_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: false },
     sti_package_item: {
       type: new mongoose.Schema({

@@ -20,7 +20,11 @@ import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 import { StiResultRepository } from '../repositories/stiResultRepository';
 import { IStiResult, Sample, StiResult } from '../models/StiResult';
+<<<<<<< HEAD
+import { ConsultantRepository } from '../repositories/consultantRepository';
+=======
 
+>>>>>>> 0ebce9be587aba8767d84767a5e8707fde5e615d
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
@@ -364,7 +368,6 @@ export class StiService {
         };
     }
 
-
     public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
             let sti_package_item = null;
@@ -372,7 +375,13 @@ export class StiService {
             let total_amount = 0;
             let noPackage: boolean = false;
             let noTest: boolean = false;
-
+            
+            if (!order_date){
+                return{
+                    success: false,
+                    message: 'Order date is required'
+                }
+            }
             // Xử lý package
             if (sti_package_id) {
                 const result = await this.handleStiPackage(sti_package_id);
@@ -483,17 +492,8 @@ export class StiService {
                     order_date: orderDate,
                     number_current_orders: 0,
                     is_locked: false,
-                    is_holiday: false
                 });
                 await StiTestScheduleRepository.updateStiTestSchedule(schedule);
-            }
-
-            // Check điều kiện không hợp lệ
-            if (schedule.is_holiday) {
-                return {
-                    success: false,
-                    message: 'Cannot create order on holiday'
-                };
             }
 
             if (schedule.is_locked) {
@@ -587,7 +587,6 @@ export class StiService {
                     message: 'View Orders successfully',
                     date: schedule.order_date.toISOString().slice(0, 10),
                     is_locked: schedule.is_locked,
-                    is_holiday: schedule.is_holiday,
                     number_current_orders: schedule.number_current_orders,
                     tasks: orders.map(order => ({
                         id: order._id,
@@ -667,7 +666,7 @@ export class StiService {
                 if (nextStatus && !validTransitions[currentStatus].includes(nextStatus)) {
                     return {
                         success: false,
-                        message: `Chuyển trạng thái không hợp lệ: từ "${currentStatus}" sang "${nextStatus}". Trạng thái cho phép: ${validTransitions[currentStatus].join(', ') || 'không có'}.`
+                        message: `Invalid order status change: from "${currentStatus}" to "${nextStatus}". Valid order status: ${validTransitions[currentStatus].join(', ') || 'None'}.`
                     };
                 }
 
@@ -703,6 +702,28 @@ export class StiService {
                 }
             }
 
+            if (updates.consultant_id) {
+                if (['consultant', 'staff', 'admin'].includes(role)) {
+                    order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update consultant_id'
+                    };
+                }
+            }
+
+            if (updates.staff_id) {
+                if (['staff', 'admin'].includes(role)) {
+                    order.staff_id = new mongoose.Types.ObjectId(updates.staff_id);
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update staff_id'
+                    };
+                }
+            }
+
             if (Array.isArray(updates.sti_test_items)) {
                 order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
             }
@@ -716,11 +737,10 @@ export class StiService {
                         order_date: updates.order_date,
                         number_current_orders: 1,
                         is_locked: false,
-                        is_holiday: false
                     });
                     await newSchedule.save();
                 } else {
-                    if (newSchedule.is_locked || newSchedule.is_holiday) {
+                    if (newSchedule.is_locked) {
                         return {
                             success: false,
                             message: 'Cannot get schedule on locked date and holiday'
@@ -745,7 +765,14 @@ export class StiService {
 
             const validFields = Object.keys(order.toObject());
             for (const [key, value] of Object.entries(updates)) {
-                if (key !== 'order_status' && key !== 'sti_test_items' && validFields.includes(key)) {
+                if (key !== 'order_status' && 
+                    key !== 'sti_test_items' && 
+                    key !== 'consultant_id' && 
+                    key !== 'staff_id' && 
+                    key !== 'order_date' &&
+                    key !== 'total_amount' &&
+                    validFields.includes(key)
+                ){
                     (order as any)[key] = value;
                 }
             }
@@ -1172,9 +1199,14 @@ export class StiService {
             }
 
             if (updateData.hasOwnProperty('is_confirmed')) {
+<<<<<<< HEAD
+                const consultant = await ConsultantRepository.findByUserId(userId);
+                if (!consultant || consultant._id.toString() != result.sti_order_id.consultant_id?.toString()) {
+=======
                 const consultantId = result.sti_order_id.consultant_id?.toString();
 
                 if (!consultantId || consultantId !== userId) {
+>>>>>>> 0ebce9be587aba8767d84767a5e8707fde5e615d
                     return {
                         success: false,
                         message: 'You are not authorized to confirm this result'
