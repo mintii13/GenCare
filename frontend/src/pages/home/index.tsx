@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Banner from "./components/Banner";
-import About from "./components/About";
-import Services from "./components/Services";
-import Blog from "./components/Blog";
 import BlogCard from '../../components/blog/BlogCard';
 import PeriodLogger from '../menstrual-cycle/components/PeriodLogger';
-import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { blogService } from '../../services/blogService';
 import { consultantService } from '../../services/consultantService';
 import { StiTest } from '../../types/sti';
 import { Blog as BlogType } from '../../types/blog';
+
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -35,15 +30,15 @@ const HomePage = () => {
       try {
         // Fetch data from real backend endpoints
         const [testRes, packageRes, blogResponse, consultantResponse] = await Promise.all([
-          api.get('/sti/getAllStiTest'),
-          api.get('/sti/getAllStiPackage'),
-          blogService.getBlogs(),
+          apiClient.get<any>('/sti/getAllStiTest'),
+          apiClient.get<any>('/sti/getAllStiPackage'),
+          blogService.getBlogs({ limit: 6, status: true, sort_by: 'publish_date', sort_order: 'desc' }),
           consultantService.getAllConsultants()
         ]);
 
         // Handle single tests
         if (testRes.data.success) {
-          const testsArr = testRes.data.stitest ?? testRes.data.data ?? testRes.data.tests ?? [];
+          const testsArr = testRes.data.stitest ?? testRes.data.tests ?? [];
           setSingleTests(testsArr.filter((t:any)=> t.is_active!==false));
         }
 
@@ -54,7 +49,7 @@ const HomePage = () => {
           setPackagesData(pkgsArr.filter((p: any) => p.is_active !== false));
         }
 
-        // Handle blogs
+        // Handle blogs - sử dụng pagination response mới
         if (blogResponse.success && Array.isArray(blogResponse.data.blogs)) {
           setBlogs(blogResponse.data.blogs.filter((blog: BlogType) => blog.status));
         } else {
@@ -262,8 +257,8 @@ const HomePage = () => {
                 <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
                   {(testTab === 'packages' ? packagesData : singleTests).map(service => (
                     <div key={service._id} className="w-80 h-50 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition flex flex-col">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_test_name || service.sti_package_name}>
-                        {service.sti_test_name || service.sti_package_name}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_test_name}>
+                        {service.sti_test_name}
                       </h3>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-3">{service.description}</p>
                       <div className="flex-grow" />

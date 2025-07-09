@@ -6,11 +6,11 @@ import { Badge } from '../../components/ui/badge';
 import { TodayStatus } from '../../services/menstrualCycleService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMenstrualCycle } from '../../hooks';
-import CycleDashboard from './components/CycleDashboard.tsx';
-import CycleCalendar from './components/CycleCalendar.tsx';
-import CycleStatistics from './components/CycleStatistics.tsx';
-import PeriodLogger from './components/PeriodLogger.tsx';
-import NotificationSettings from './components/NotificationSettings.tsx';
+import CycleDashboard from './components/CycleDashboard';
+import CycleCalendar from './components/CycleCalendar';
+import CycleStatistics from './components/CycleStatistics';
+import PeriodLogger from './components/PeriodLogger';
+
 import { toast } from 'react-hot-toast';
 import { 
   FaHeart, 

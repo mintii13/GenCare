@@ -1,5 +1,8 @@
-import React from 'react';
-import { FaLink, FaClock, FaCheckCircle, FaPlay, FaTrophy, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaLink, FaClock, FaCheckCircle, FaPlay, FaTrophy, FaTimes, FaHistory } from 'react-icons/fa';
+import appointmentHistoryService, { IAppointmentHistory } from '../../services/appointmentHistoryService';
+import { Loading } from '../ui';
+import STIHistorySection from './STIHistorySection';
 
 interface MeetingInfo {
   meet_url: string;
@@ -60,6 +63,67 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-800 border-red-200'
 };
 
+const AppointmentHistoryTimeline: React.FC<{ history: IAppointmentHistory[] }> = ({ history }) => {
+  if (!history || history.length === 0) {
+    return (
+      <div className="text-center text-gray-500 py-4">
+        <FaHistory className="mx-auto text-3xl mb-2" />
+        <p>Không có lịch sử cho lịch hẹn này.</p>
+      </div>
+    );
+  }
+
+  const formatHistoryTimestamp = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Thời gian không hợp lệ';
+    }
+  };
+
+  const getActionText = (action: string) => {
+    const actions: { [key: string]: string } = {
+      created: 'đã tạo lịch hẹn',
+      confirmed: 'đã xác nhận lịch hẹn',
+      cancelled: 'đã hủy lịch hẹn',
+      completed: 'đã hoàn thành buổi tư vấn',
+      in_progress: 'đã bắt đầu buổi tư vấn',
+      rescheduled: 'đã đổi lịch hẹn',
+      updated: 'đã cập nhật thông tin',
+      started: 'đã bắt đầu buổi tư vấn'
+    };
+    return actions[action] || `đã thực hiện hành động: ${action}`;
+  };
+
+  return (
+    <div className="space-y-4">
+      {history.map((item, index) => (
+        <div key={index} className="flex items-start">
+          <div className="flex-shrink-0">
+            <div className="bg-gray-200 rounded-full h-8 w-8 flex items-center justify-center">
+              <FaHistory className="text-gray-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <p className="text-sm">
+              <span className="font-semibold">{item.performed_by_user_id?.full_name || 'Hệ thống'}</span>
+              <span className="text-gray-600"> ({item.performed_by_role}) </span>
+              {getActionText(item.action)}
+            </p>
+            <p className="text-xs text-gray-500">{formatHistoryTimestamp(item.timestamp)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   appointment,
   consultantNotes,
@@ -76,6 +140,28 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   formatDateTime,
   actionLoading
 }) => {
+  const [history, setHistory] = useState<IAppointmentHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!appointment) return;
+      try {
+        setHistoryLoading(true);
+        const response = await appointmentHistoryService.getHistoryForAppointment(appointment._id);
+        if (response.success && response.data) {
+          setHistory(response.data.history);
+        }
+      } catch (error) {
+        console.error("Failed to fetch appointment history:", error);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [appointment]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -112,6 +198,14 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* STI Assessment History - Only for Consultant */}
+            {appointment.customer_id?._id && (
+              <STIHistorySection 
+                customerId={appointment.customer_id._id}
+                className="mb-6"
+              />
+            )}
 
             {/* Appointment Info */}
             <div className="bg-blue-50 rounded-lg p-4">
@@ -206,6 +300,18 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                 disabled={appointment.status === 'completed' || appointment.status === 'cancelled'}
               />
               <p className="text-sm text-gray-500 mt-1">{consultantNotes.length}/500 ký tự</p>
+            </div>
+
+            {/* Appointment History */}
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Lịch sử Lịch hẹn</h3>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                {historyLoading ? (
+                  <Loading />
+                ) : (
+                  <AppointmentHistoryTimeline history={history} />
+                )}
+              </div>
             </div>
 
             {/* Actions */}

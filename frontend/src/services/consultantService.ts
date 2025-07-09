@@ -1,5 +1,5 @@
-import api from './api';
-import { API, BASE_API } from '../config/apiEndpoints';
+import apiClient from './apiClient';
+import { API } from '../config/apiEndpoints';
 
 export interface Consultant {
   _id: string;
@@ -40,100 +40,53 @@ export const consultantService = {
    * Lấy danh sách tất cả consultants (public endpoint)
    */
   async getAllConsultants(page: number = 1, limit: number = 10): Promise<{ data: { consultants: Consultant[] } }> {
-    try {
-      const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', limit.toString());
-
-      const url = `${BASE_API}${API.Consultant.PUBLIC_LIST}?${params}`;
-      
-      const publicResponse = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Không thêm Authorization header
-        }
-      });
-
-      if (!publicResponse.ok) {
-        const errorText = await publicResponse.text();
-        throw new Error(`HTTP error! status: ${publicResponse.status}`);
-      }
-
-      const jsonData = await publicResponse.json();
-      return jsonData;
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await apiClient.get<any>(API.Consultant.PUBLIC_LIST, {
+      params: { page, limit }
+    });
+    return response.data;
   },
 
   /**
    * Lấy thông tin chi tiết consultant theo ID
    */
   async getConsultantById(id: string): Promise<Consultant> {
-    try {
-      const url = `${BASE_API}${API.Consultant.PUBLIC_DETAIL(id)}`;
-      
-      const publicResponse = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!publicResponse.ok) {
-        throw new Error(`HTTP error! status: ${publicResponse.status}`);
-      }
-
-      return await publicResponse.json();
-    } catch (error: any) {
-      throw error;
-    }
+    const response = await apiClient.get<any>(API.Consultant.PUBLIC_DETAIL(id));
+    return response.data;
   },
 
   /**
    * Cập nhật profile consultant (authenticated)
    */
   async updateProfile(profileData: Partial<Consultant>): Promise<{ data: Consultant }> {
-    try {
-      const response = await api.put('/consultant/profile', profileData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.put<any>(API.Consultant.MY_PROFILE, profileData);
+    return response.data;
   },
 
   /**
    * Lấy thống kê consultant (authenticated)
    */
   async getStats(): Promise<any> {
-    try {
-      const response = await api.get('/consultant/stats');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.get(API.Consultant.MY_STATS);
+    return response.data;
   },
 
   // Get consultant profile (for logged in consultant)
   async getMyProfile() {
-    const response = await api.get(API.Consultant.MY_PROFILE);
+    const response = await apiClient.get(API.Consultant.MY_PROFILE);
     return response.data;
   },
 
   // Get consultant stats
   async getMyStats() {
-    const response = await api.get(API.Consultant.MY_STATS);
+    const response = await apiClient.get(API.Consultant.MY_STATS);
     return response.data;
   },
 
   // Get consultant reviews
   async getMyReviews(page: number = 1, limit: number = 10) {
-    const params = new URLSearchParams();
-    params.append('page', page.toString());
-    params.append('limit', limit.toString());
-
-    const response = await api.get(`/consultants/my-reviews?${params}`);
+    const response = await apiClient.get(API.Consultant.MY_REVIEWS, {
+      params: { page, limit }
+    });
     return response.data;
   },
 
@@ -144,18 +97,11 @@ export const consultantService = {
     max_fee?: number;
     availability?: string;
   }) {
-    const params = new URLSearchParams();
-    params.append('search', query);
-    
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, value.toString());
-        }
-      });
-    }
-
-    const response = await api.get(`/consultants/search?${params}`);
+    const params = {
+      search: query,
+      ...filters
+    };
+    const response = await apiClient.get(API.Consultant.SEARCH, { params });
     return response.data;
   }
 };

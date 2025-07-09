@@ -1,8 +1,9 @@
-import api from './api';
-import { config } from '../config/constants';
+import apiClient from './apiClient';
 import { API } from '../config/apiEndpoints';
+import { User } from './userService';
+import { clearAllTokens } from '../utils/authUtils';
 
-const AUTH_TOKEN_KEY = config.auth.tokenKey;
+const AUTH_TOKEN_KEY = 'gencare_auth_token';
 
 interface LoginCredentials {
   email: string;
@@ -27,47 +28,39 @@ interface AuthResponse {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    try {
-      const response = await api.post<AuthResponse>(API.Auth.LOGIN_PUBLIC, credentials);
-      const { token, user } = response.data;
-      localStorage.setItem(AUTH_TOKEN_KEY, token);
-      return response.data;
-    } catch (error) {
-      throw error;
+    const response = await apiClient.post<AuthResponse>(API.Auth.LOGIN_PUBLIC, credentials);
+    if (response.data.token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
     }
+    return response.data;
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    try {
-      const response = await api.post<AuthResponse>(API.Auth.REGISTER_PUBLIC, data);
-      const { token, user } = response.data;
-      localStorage.setItem(AUTH_TOKEN_KEY, token);
-      return response.data;
-    } catch (error) {
-      throw error;
+    const response = await apiClient.post<AuthResponse>(API.Auth.REGISTER_PUBLIC, data);
+    if (response.data.token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
     }
+    return response.data;
   },
 
   async logout(): Promise<void> {
     try {
-      // Gọi API logout trước khi clear token
       const token = this.getToken();
       if (token) {
-        await api.post(API.Auth.LOGOUT, {}, {
+        await apiClient.post(API.Auth.LOGOUT, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
     } catch (error) {
-  
+      console.error("Logout failed:", error);
     } finally {
-      // Xóa tất cả token
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      
-      // Redirect về trang chủ
+      clearAllTokens();
       window.location.href = '/';
     }
+  },
+
+  setToken(token: string): void {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
   },
 
   getToken(): string | null {
@@ -78,9 +71,8 @@ export const authService = {
     return !!this.getToken();
   },
 
-  // Lấy thông tin user hiện tại
   getCurrentUser: async () => {
-    const response = await api.get(API.Auth.ME);
+    const response = await apiClient.get(API.Auth.ME);
     return response.data;
   },
 };

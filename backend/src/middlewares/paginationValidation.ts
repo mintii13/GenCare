@@ -274,6 +274,7 @@ export const validateAppointmentQuery = (req: Request, res: Response, next: Next
  */
 export const validateStiOrderPagination = (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log('🔍 [DEBUG] STI Order Validation - Raw query:', req.query);
         const query = req.query as StiOrderQuery;
 
         // Validate page parameter
@@ -398,9 +399,10 @@ export const validateStiOrderPagination = (req: Request, res: Response, next: Ne
             }
         }
 
+        console.log('✅ [DEBUG] STI Order Validation passed successfully');
         next();
     } catch (error) {
-        console.error('Error in STI order validation:', error);
+        console.error('❌ [DEBUG] Error in STI order validation:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error during validation.'

@@ -17,8 +17,11 @@ router.post('/create',
     async (req: Request, res: Response) => {
         try {
             const userId = req.jwtUser?.userId || (req.user as any)?.userId;
+            console.log('STI Assessment controller - userId:', userId);
+            console.log('STI Assessment controller - req.body:', JSON.stringify(req.body, null, 2));
 
             if (!userId) {
+                console.error('No userId found in request');
                 return res.status(401).json({
                     success: false,
                     message: 'Không tìm thấy thông tin người dùng'
@@ -26,7 +29,9 @@ router.post('/create',
             }
 
             const assessmentData = req.body;
+            console.log('Calling StiAssessmentService.createAssessment...');
             const result = await StiAssessmentService.createAssessment(userId, assessmentData);
+            console.log('Service result:', result);
 
             if (result.success) {
                 return res.status(201).json(result);
@@ -34,10 +39,11 @@ router.post('/create',
                 return res.status(400).json(result);
             }
         } catch (error) {
-            console.error('Error in create STI assessment:', error);
+            console.error('Error in create STI assessment controller:', error);
+            console.error('Error stack:', (error as Error).stack);
             return res.status(500).json({
                 success: false,
-                message: 'Lỗi hệ thống'
+                message: 'Lỗi hệ thống: ' + (error as Error).message
             });
         }
     }

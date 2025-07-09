@@ -2,6 +2,8 @@
  * Authentication utilities for managing tokens
  */
 
+const AUTH_TOKEN_KEY = "gencare_auth_token";
+
 /**
  * Lấy Google access token từ localStorage
  * @returns Google access token hoặc null nếu không có
@@ -38,7 +40,6 @@ export const removeGoogleAccessToken = (): void => {
  * @returns JWT token hoặc null
  */
 export const getAuthToken = (): string | null => {
-  const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY ?? "gencare_auth_token";
   return localStorage.getItem(AUTH_TOKEN_KEY);
 };
 
@@ -54,7 +55,6 @@ export const isAuthenticated = (): boolean => {
  * Xóa tất cả token khi logout
  */
 export const clearAllTokens = (): void => {
-  const AUTH_TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY ?? "gencare_auth_token";
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem("google_access_token");
   localStorage.removeItem("user");

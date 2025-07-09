@@ -20,7 +20,11 @@ import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 import { StiResultRepository } from '../repositories/stiResultRepository';
 import { IStiResult, Sample, StiResult } from '../models/StiResult';
+<<<<<<< HEAD
 import { ConsultantRepository } from '../repositories/consultantRepository';
+=======
+
+>>>>>>> 0ebce9be587aba8767d84767a5e8707fde5e615d
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
@@ -863,11 +867,15 @@ export class StiService {
  */
     public static async getStiOrdersWithPagination(query: StiOrderQuery): Promise<StiOrderPaginationResponse> {
         try {
+            console.log('🔍 [DEBUG] STI Service - Input query:', query);
+            
             // Validate pagination parameters
             const { page, limit, sort_by, sort_order } = PaginationUtils.validateStiOrderPagination(query);
+            console.log('📊 [DEBUG] STI Service - Validated params:', { page, limit, sort_by, sort_order });
 
             // Build filter query
             const filters = PaginationUtils.buildStiOrderFilter(query);
+            console.log('🎯 [DEBUG] STI Service - MongoDB filters:', filters);
 
             // Get data từ repository
             const result = await StiOrderRepository.findWithPagination(
@@ -1191,8 +1199,14 @@ export class StiService {
             }
 
             if (updateData.hasOwnProperty('is_confirmed')) {
+<<<<<<< HEAD
                 const consultant = await ConsultantRepository.findByUserId(userId);
                 if (!consultant || consultant._id.toString() != result.sti_order_id.consultant_id?.toString()) {
+=======
+                const consultantId = result.sti_order_id.consultant_id?.toString();
+
+                if (!consultantId || consultantId !== userId) {
+>>>>>>> 0ebce9be587aba8767d84767a5e8707fde5e615d
                     return {
                         success: false,
                         message: 'You are not authorized to confirm this result'

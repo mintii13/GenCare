@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps } from 'antd';
+import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Spin, Row, Col, Alert } from 'antd';
 import { CalendarOutlined, FileTextOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
+import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
 
@@ -53,8 +54,10 @@ const BookSTIPage: React.FC = () => {
   }, [testId, packageId, user]);
 
   const fetchTestDetails = async () => {
+    setLoading(true);
+    
     try {
-      const response = await api.get(`/sti/getStiTest/${testId}`);
+      const response = await apiClient.get<any>(API.STI.GET_TEST(testId!));
       if (response.data.success) {
         setSelectedTest(response.data.stitest);
       } else {
@@ -64,12 +67,16 @@ const BookSTIPage: React.FC = () => {
     } catch (error) {
       message.error('Có lỗi xảy ra khi tải thông tin xét nghiệm');
       navigate('/test-packages');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchPackageDetails = async () => {
+    setLoading(true);
+    
     try {
-      const response = await api.get(`/sti/getStiPackage/${packageId}`);
+      const response = await apiClient.get<any>(API.STI.GET_PACKAGE(packageId!));
       if (response.data.success) {
         setSelectedPackage(response.data.stipackage);
       } else {
@@ -79,6 +86,8 @@ const BookSTIPage: React.FC = () => {
     } catch (error) {
       message.error('Có lỗi xảy ra khi tải thông tin gói xét nghiệm');
       navigate('/test-packages');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,17 +129,23 @@ const BookSTIPage: React.FC = () => {
 
     try {
       const orderData: any = {
-        order_date: orderDate.format('YYYY-MM-DD'),
-        notes: notes.trim()
+        order_date: orderDate.toISOString(), // Backend expects Date object/ISO string
+        notes: notes.trim() || undefined // Remove empty notes
       };
 
+      // Backend validation: chỉ được có sti_package_id HOẶC sti_test_items (không cả hai)
       if (packageId) {
         orderData.sti_package_id = packageId;
       } else if (testId) {
         orderData.sti_test_items = [testId];
+      } else {
+        message.error('Vui lòng chọn xét nghiệm hoặc gói xét nghiệm');
+        return;
       }
 
-      const response = await api.post('/sti/createStiOrder', orderData);
+      console.log('Sending order data:', orderData); // Debug log
+
+      const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
 
       if (response.data.success) {
         message.success('Đặt lịch xét nghiệm thành công!');
@@ -140,8 +155,15 @@ const BookSTIPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error creating STI order:', error);
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch xét nghiệm';
-      message.error(errorMessage);
+      
+      // Hiển thị lỗi validation chi tiết nếu có
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        message.error(errors.join(', '));
+      } else {
+        const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch xét nghiệm';
+        message.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

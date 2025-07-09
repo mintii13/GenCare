@@ -14,45 +14,31 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['antd', '@radix-ui/react-avatar', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          'editor-vendor': ['quill', 'react-quill'],
-          'utils-vendor': ['axios', 'date-fns', 'clsx', 'class-variance-authority'],
-          'icons-vendor': ['lucide-react', '@ant-design/icons', '@radix-ui/react-icons'],
+          // Core vendor - các thư viện cơ bản, luôn cần thiết
+          'vendor-core': ['react', 'react-dom', 'react-router-dom', 'axios'],
           
-          // Page chunks
-          'dashboard-consultant': [
-            './src/pages/dashboard/Consultant/index.tsx',
-            './src/pages/dashboard/Consultant/AppointmentManagement.tsx',
-            './src/pages/dashboard/Consultant/WeeklyScheduleManager.tsx',
-            './src/pages/dashboard/Consultant/ConsultantSchedule.tsx'
-          ],
-          'dashboard-customer': [
-            './src/pages/dashboard/Customer/index.tsx',
-            './src/pages/dashboard/Customer/ConsultantList.tsx',
-            './src/pages/dashboard/Customer/MyAppointments.tsx'
-          ],
-          'consultation': [
-            './src/pages/consultation/BookAppointment.tsx',
-            './src/pages/consultation/WeeklySlotPicker.tsx'
-          ]
+          // UI vendor - các thư viện UI lớn
+          'vendor-ui': ['antd', '@radix-ui/react-avatar', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', 'lucide-react', '@ant-design/icons'],
+          
+          // Utilities - các thư viện utility (gộp lại thay vì tách nhỏ)
+          'vendor-utils': ['date-fns', 'clsx', 'class-variance-authority', 'react-hot-toast', 'quill', 'react-quill']
         }
       }
     },
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 800, // Tăng limit để cho phép chunks lớn hơn
     target: 'es2020',
     minify: 'esbuild'
   },
   server: {
     host: true,
     port: 5173,
+    // Proxy disabled - using VITE_API_URL environment variable instead
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3000',  
         changeOrigin: true,
         secure: false
       }
     }
   }
-}) 
+})  

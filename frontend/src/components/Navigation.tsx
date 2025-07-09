@@ -106,6 +106,16 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   </Link>
                   {isAuthenticated && user?.role === 'customer' && (
                     <>
+                      <Link to="/sti-assessment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Đánh giá sàng lọc STI
+                      </Link>
+                      <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử đánh giá STI
+                      </Link>
+                    </>
+                  )}
+                  {isAuthenticated && user?.role === 'customer' && (
+                    <>
                       <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch hẹn của tôi
                       </Link>
@@ -164,7 +174,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Xem thông tin user
                     </Link>
-                    <Link to="/user/test-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                    <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử xét nghiệm
                     </Link>
                     <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
@@ -312,10 +322,10 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                 <>
                   <span className="block text-gray-700 font-semibold mb-2">{user?.full_name || user?.email}</span>
                   <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
-                  <Link to="/user/test-history" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                  <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử xét nghiệm
                   </Link>
-                  <Link to="/user/consultation-history" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                  <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử tư vấn
                   </Link>
                   {user?.role === 'customer' && (

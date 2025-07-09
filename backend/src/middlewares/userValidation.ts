@@ -20,7 +20,7 @@ export const validateCreateUser = (req: Request, res: Response, next: NextFuncti
     }
 
     // Role validation
-    const validRoles = ['customer', 'consultant', 'staff', 'admin'];
+    const validRoles = ['customer', 'consultant', 'staff'];
     if (!role) {
         errors.push('Vai trò là bắt buộc');
     } else if (!validRoles.includes(role)) {
@@ -53,6 +53,38 @@ export const validateCreateUser = (req: Request, res: Response, next: NextFuncti
             errors.push('Ngày sinh không hợp lệ');
         } else if (dob < minAge || dob > maxAge) {
             errors.push('Tuổi phải từ 13-100');
+        }
+    }
+
+    // Role-specific validation
+    if (role === 'staff') {
+        if (!req.body.department || req.body.department.trim() === '') {
+            errors.push('Phòng ban là bắt buộc cho nhân viên');
+        }
+        if (!req.body.hire_date) {
+            errors.push('Ngày bắt đầu làm việc là bắt buộc cho nhân viên');
+        } else {
+            // Validate hire_date format
+            const hireDate = new Date(req.body.hire_date);
+            const now = new Date();
+            const minHireDate = new Date(1970, 0, 1); // Jan 1, 1970
+            const maxHireDate = new Date(now.getFullYear() + 1, 11, 31); // Next year
+
+            if (isNaN(hireDate.getTime())) {
+                errors.push('Ngày bắt đầu làm việc không hợp lệ');
+            } else if (hireDate < minHireDate || hireDate > maxHireDate) {
+                errors.push('Ngày bắt đầu làm việc phải từ năm 1970 đến hiện tại');
+            }
+        }
+    } else if (role === 'consultant') {
+        if (!req.body.specialization || req.body.specialization.trim() === '') {
+            errors.push('Chuyên môn là bắt buộc cho tư vấn viên');
+        }
+        if (!req.body.qualifications || req.body.qualifications.trim() === '') {
+            errors.push('Bằng cấp/Chứng chỉ là bắt buộc cho tư vấn viên');
+        }
+        if (!req.body.experience_years || req.body.experience_years <= 0) {
+            errors.push('Số năm kinh nghiệm phải lớn hơn 0 cho tư vấn viên');
         }
     }
 
@@ -90,7 +122,7 @@ export const validateUpdateUser = (req: Request, res: Response, next: NextFuncti
 
     // Role validation (if provided)
     if (req.body.role !== undefined) {
-        const validRoles = ['customer', 'consultant', 'staff', 'admin'];
+        const validRoles = ['customer', 'consultant', 'staff'];
         if (!validRoles.includes(req.body.role)) {
             errors.push('Vai trò không hợp lệ');
         }
@@ -128,6 +160,20 @@ export const validateUpdateUser = (req: Request, res: Response, next: NextFuncti
             errors.push('Ngày sinh không hợp lệ');
         } else if (dob < minAge || dob > maxAge) {
             errors.push('Tuổi phải từ 13-100');
+        }
+    }
+
+    // Hire date validation (if provided) - for staff updates
+    if (req.body.hire_date !== undefined && req.body.hire_date !== null && req.body.hire_date !== '') {
+        const hireDate = new Date(req.body.hire_date);
+        const now = new Date();
+        const minHireDate = new Date(1970, 0, 1);
+        const maxHireDate = new Date(now.getFullYear() + 1, 11, 31);
+
+        if (isNaN(hireDate.getTime())) {
+            errors.push('Ngày bắt đầu làm việc không hợp lệ');
+        } else if (hireDate < minHireDate || hireDate > maxHireDate) {
+            errors.push('Ngày bắt đầu làm việc phải từ năm 1970 đến hiện tại');
         }
     }
 

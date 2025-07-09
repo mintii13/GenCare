@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, InputNumber, Select, Switch, Button, message, Space } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { StiTest, StiTestResponse } from '../../types/sti';
 
 const { Option } = Select;
@@ -21,7 +21,7 @@ const StiTestForm: React.FC = () => {
 
   const fetchTestDetails = async () => {
     try {
-      const response = await api.get<StiTestResponse>(`/sti/getStiTest/${id}`);
+      const response = await apiClient.get<StiTestResponse>(`/sti/getStiTest/${id}`);
       if (response.data.success) {
         form.setFieldsValue(response.data.stitest as StiTest);
       }
@@ -47,8 +47,8 @@ const StiTestForm: React.FC = () => {
     };
     try {
       const response = id
-        ? await api.put<StiTestResponse>(`/sti/updateStiTest/${id}`, fixedValues)
-        : await api.post<StiTestResponse>('/sti/createStiTest', fixedValues);
+        ? await apiClient.put<StiTestResponse>(`/sti/updateStiTest/${id}`, fixedValues)
+        : await apiClient.post<StiTestResponse>('/sti/createStiTest', fixedValues);
 
       if (response.data.success) {
         message.success(id ? 'Cập nhật thành công' : 'Thêm mới thành công');
