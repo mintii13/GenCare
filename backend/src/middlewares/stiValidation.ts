@@ -102,24 +102,26 @@ export const validateStiTest = (req: Request, res: Response, next: NextFunction)
 }
 
 export const stiOrderSchema = Joi.object({
-    sti_package_id: objectId.optional().messages({
-      'any.required': 'STI Package ID là bắt buộc trong sti_package_item'
-    }),
+    // sti_package_id: objectId.optional().messages({
+    //   'any.required': 'STI Package ID là bắt buộc trong sti_package_item'
+    // }),
 
-    sti_test_items: Joi.array().items(objectId.required()).optional().messages({
-      'array.base': 'sti_test_items phải là một mảng',
-      'any.required': 'Mỗi phần tử trong sti_test_items là bắt buộc'
-    }),
-
+    // sti_test_items: Joi.array().items(objectId.required()).optional().messages({
+    //   'array.base': 'sti_test_items phải là một mảng',
+    //   'any.required': 'Mỗi phần tử trong sti_test_items là bắt buộc'
+    // }),
     order_date: Joi.date().required().messages({
       'date.base': 'Ngày đặt không hợp lệ',
       'any.required': 'Ngày đặt là bắt buộc'
     }),
 
-    notes: Joi.string().optional()
-  }).xor('sti_package_id', 'sti_test_items').messages({
-    'object.missing': 'Phải cung cấp ít nhất một trong sti_package_id hoặc sti_test_items'
+    notes: Joi.string().max(500).optional().messages({
+      'string.max': 'Ghi chú không được vượt quá 500 ký tự'
+    })
   });
+  // .xor('sti_package_id', 'sti_test_items').messages({
+  //   'object.missing': 'Phải cung cấp ít nhất một trong sti_package_id hoặc sti_test_items'
+  // });
 
 export const validateStiOrder = (req: Request, res: Response, next: NextFunction) => {
     const { error } = stiOrderSchema.validate(req.body, { abortEarly: false });

@@ -2,10 +2,11 @@
 import { Router, Request, Response} from 'express';
 import { MenstrualCycleService } from '../services/menstrualCycleService';
 import { authenticateToken } from '../middlewares/jwtMiddleware';
+import { validateMenstrualCycle } from '../middlewares/menstrualCycleValidation';
 
 const router = Router();
 
-router.post('/processMenstrualCycle', authenticateToken, async (req: Request, res: Response) => {
+router.post('/processMenstrualCycle', validateMenstrualCycle, authenticateToken, async (req: Request, res: Response) => {
     try {
         const user_id = (req.user as any).userId;
         const period_days = req.body.period_days.map((day: string) => new Date(day));
@@ -70,7 +71,7 @@ router.patch('/updateNotificationStatus', authenticateToken, async (req: Request
     try {
         const user_id = (req.user as any).userId;
         const settings = req.body;
-        
+
         const result = await MenstrualCycleService.updateNotificationSettings(user_id, settings);
         
         if (result.success) {

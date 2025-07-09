@@ -19,13 +19,12 @@ import { PaginationUtils } from '../utils/paginationUtils';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 import { StiResultRepository } from '../repositories/stiResultRepository';
-import { IStiResult, Sample, StiResult } from '../models/StiResult';
+import { IStiResult, Sample } from '../models/StiResult';
 import { ConsultantRepository } from '../repositories/consultantRepository';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
-
             const duplicate = await StiTestRepository.findByStiTestCode(stiTest.sti_test_code);
             if (duplicate){
                 if (duplicate.is_active){
@@ -367,18 +366,20 @@ export class StiService {
 
     public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
+            /*
             let sti_package_item = null;
             let sti_test_items = [];
             let total_amount = 0;
             let noPackage: boolean = false;
             let noTest: boolean = false;
-            
+            */
             if (!order_date){
                 return{
                     success: false,
                     message: 'Order date is required'
                 }
             }
+            /*
             // Xử lý package
             if (sti_package_id) {
                 const result = await this.handleStiPackage(sti_package_id);
@@ -420,6 +421,7 @@ export class StiService {
                     message: 'Cannot provide both STI package and individual tests'
                 };
             }
+            */
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
                 return {
@@ -430,11 +432,11 @@ export class StiService {
             const schedule = scheduleResult.schedule;
             const sti_order = new StiOrder({
                 customer_id,
-                sti_package_item,
-                sti_test_items,
+                //sti_package_item,
+                //sti_test_items,
                 sti_schedule_id: schedule._id,
                 order_date,
-                total_amount,
+                //total_amount,
                 notes
             });
             const result = await StiOrderRepository.insertStiOrder(sti_order);
@@ -453,6 +455,7 @@ export class StiService {
             const customer = await UserRepository.findById(customer_id)
 
             // Chỉ lấy package info nếu có sti_package_id
+            /*
             let packageName = 'Xét nghiệm lẻ';
             if (sti_package_id) {
                 const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
@@ -460,8 +463,9 @@ export class StiService {
                     packageName = stiPackage.sti_package_name;
                 }
             }
-
-            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
+            */
+            // await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
+            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email)
             return {
                 success: true,
                 message: 'StiOrder is inserted successfully',
