@@ -20,6 +20,7 @@ import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 import { StiResultRepository } from '../repositories/stiResultRepository';
 import { IStiResult, Sample, StiResult } from '../models/StiResult';
+import { ConsultantRepository } from '../repositories/consultantRepository';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
@@ -667,7 +668,7 @@ export class StiService {
                 if (nextStatus && !validTransitions[currentStatus].includes(nextStatus)) {
                     return {
                         success: false,
-                        message: `Chuyển trạng thái không hợp lệ: từ "${currentStatus}" sang "${nextStatus}". Trạng thái cho phép: ${validTransitions[currentStatus].join(', ') || 'không có'}.`
+                        message: `Invalid order status change: from "${currentStatus}" to "${nextStatus}". Valid order status: ${validTransitions[currentStatus].join(', ') || 'None'}.`
                     };
                 }
 
@@ -699,6 +700,28 @@ export class StiService {
                     return {
                         success: false,
                         message: 'Unauthorized role'
+                    };
+                }
+            }
+
+            if (updates.consultant_id) {
+                if (['consultant', 'staff', 'admin'].includes(role)) {
+                    order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update consultant_id'
+                    };
+                }
+            }
+
+            if (updates.staff_id) {
+                if (['staff', 'admin'].includes(role)) {
+                    order.staff_id = new mongoose.Types.ObjectId(updates.staff_id);
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update staff_id'
                     };
                 }
             }
@@ -745,7 +768,13 @@ export class StiService {
 
             const validFields = Object.keys(order.toObject());
             for (const [key, value] of Object.entries(updates)) {
-                if (key !== 'order_status' && key !== 'sti_test_items' && validFields.includes(key)) {
+                if (key !== 'order_status' && 
+                    key !== 'sti_test_items' && 
+                    key !== 'consultant_id' && 
+                    key !== 'staff_id' && 
+                    key !== 'order_date' &&
+                    validFields.includes(key)
+                ){
                     (order as any)[key] = value;
                 }
             }
@@ -1168,9 +1197,8 @@ export class StiService {
             }
 
             if (updateData.hasOwnProperty('is_confirmed')) {
-                const consultantId = result.sti_order_id.consultant_id?.toString();
-
-                if (!consultantId || consultantId !== userId) {
+                const consultant = await ConsultantRepository.findByUserId(userId);
+                if (!consultant || consultant._id.toString() != result.sti_order_id.consultant_id?.toString()) {
                     return {
                         success: false,
                         message: 'You are not authorized to confirm this result'

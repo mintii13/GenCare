@@ -487,7 +487,7 @@ router.get('/getStiOrder/:id', authenticateToken, async (req: Request, res: Resp
 });
 
 //update order by id
-router.patch('/updateStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin'), stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
+router.patch('/updateStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin', 'consultant'), stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
     const orderId = req.params.id;
     const userId = (req.user as any).userId;
     const role = (req.user as any).role;

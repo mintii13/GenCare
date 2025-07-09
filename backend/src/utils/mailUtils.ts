@@ -1,6 +1,5 @@
 import nodemailer from 'nodemailer';
 import { RandomUtils } from './randomUtils';
-import { auth } from 'googleapis/build/src/apis/abusiveexperiencereport';
 export class MailUtils{
     public static async sendPasswordForGoogle(emailSendTo: string, password: string) {
         const transporter = nodemailer.createTransport({
