@@ -31,14 +31,23 @@ export class ConsultantRepository {
         }
     }
 
-    public static async updateByUserId(userId: string, updateData: Partial<IConsultant>): Promise<IConsultant | null> {
+    public static async updateByUserId(userId: string, updateData: Partial<IConsultant>) {
         try {
             const userObjectId = new mongoose.Types.ObjectId(userId);
-            return await Consultant.findOneAndUpdate(
+            console.log('Updating consultant where user_id =', userObjectId);
+            console.log('Update data:', updateData);
+
+            const result = await Consultant.findOneAndUpdate(
                 { user_id: userObjectId },
                 updateData,
                 { new: true, runValidators: true }
             );
+
+            if (!result) {
+                console.warn('No consultant found to update.');
+            }
+
+            return result;
         } catch (error) {
             console.error('Error updating consultant:', error);
             throw error;

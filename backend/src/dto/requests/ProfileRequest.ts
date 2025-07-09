@@ -3,5 +3,13 @@ export interface ProfileRequest{
     full_name?: string;
     phone?: string;
     date_of_birth?: Date,
-    gender?: string
+    gender?: string;
+    avatar?: string;
+    consultant?:{
+        specialization?: string;
+        qualifications?: string;
+        experience_years?: number;
+        consultation_rating?: number;
+        total_consultations?: number;
+    }
 }

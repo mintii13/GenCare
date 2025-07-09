@@ -61,8 +61,9 @@ export class UserRepository {
         }
     }
 
-    public static async findByIdAndUpdate(userId: ObjectId, updateData: Partial<IUser>): Promise<IUser | null> {
+    public static async findByIdAndUpdate(user_id: string, updateData: Partial<IUser>): Promise<IUser | null> {
         try {
+            const userId = new mongoose.Types.ObjectId(user_id);
             return await User.findByIdAndUpdate(
                 userId,
                 updateData,
