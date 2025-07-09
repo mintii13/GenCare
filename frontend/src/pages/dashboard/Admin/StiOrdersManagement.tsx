@@ -115,10 +115,10 @@ const StiOrdersManagement: React.FC = () => {
       
       const response = await apiClient.get<any>(`${API.STI.GET_ALL_ORDERS_PAGINATED}?${params.toString()}`);
       
-      if (response.data.success) {
-        setOrders(response.data.data?.items || []);
-        setTotal(response.data.data?.pagination?.total_items || 0);
-        setCurrentPage(response.data.data?.pagination?.current_page || 1);
+      if ((response as any).success) {
+        setOrders((response as any).data?.items || []);
+        setTotal((response as any).data?.pagination?.total_items || 0);
+        setCurrentPage((response as any).data?.pagination?.current_page || 1);
       } else {
         message.error('Không thể tải danh sách đơn hàng');
       }
@@ -200,12 +200,12 @@ const StiOrdersManagement: React.FC = () => {
         status: newStatus
       });
       
-      if (response.data.success) {
+        if ((response as any).success) {
         message.success('Cập nhật trạng thái thành công');
         fetchOrders();
         setEditModalVisible(false);
       } else {
-        message.error(response.data.message || 'Không thể cập nhật trạng thái');
+        message.error((response as any).message || 'Không thể cập nhật trạng thái');
       }
     } catch (error: any) {
       console.error('Error updating order status:', error);
@@ -457,7 +457,7 @@ const StiOrdersManagement: React.FC = () => {
             <RangePicker
               style={{ width: '100%' }}
               value={dateRange}
-              onChange={handleDateRangeChange}
+                onChange={(dates: [dayjs.Dayjs, dayjs.Dayjs] | null) => handleDateRangeChange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
               format="DD/MM/YYYY"
               placeholder={['Từ ngày', 'Đến ngày']}
             />
@@ -470,7 +470,7 @@ const StiOrdersManagement: React.FC = () => {
               placeholder="0"
               min={0}
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+              parser={value => Number(value!.replace(/\$\s?|(,*)/g, ''))}
               value={amountRange[0]}
               onChange={(value) => handleAmountRangeChange('min', value)}
             />
@@ -483,7 +483,7 @@ const StiOrdersManagement: React.FC = () => {
               placeholder="∞"
               min={0}
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+              parser={value => Number(value!.replace(/\$\s?|(,*)/g, ''))}
               value={amountRange[1]}
               onChange={(value) => handleAmountRangeChange('max', value)}
             />

@@ -101,9 +101,29 @@ export const weeklyScheduleService = {
 
   // Get consultant schedules
   async getConsultantSchedules(consultantId: string, startDate?: string, endDate?: string) {
+    console.log('📤 [DEBUG] WeeklyScheduleService.getConsultantSchedules called with:', {
+      consultantId,
+      startDate,
+      endDate
+    });
+    console.log('🎯 [DEBUG] API endpoint:', API.WeeklySchedule.CONSULTANT_SCHEDULES(consultantId));
+    
     const params = { start_date: startDate, end_date: endDate };
-    const response = await apiClient.get(API.WeeklySchedule.CONSULTANT_SCHEDULES(consultantId), { params });
-    return response.data;
+    
+    try {
+      const response = await apiClient.get(API.WeeklySchedule.CONSULTANT_SCHEDULES(consultantId), { params });
+      console.log('📥 [DEBUG] WeeklyScheduleService.getConsultantSchedules response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ [DEBUG] WeeklyScheduleService.getConsultantSchedules error:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
+      throw error;
+    }
   },
 
   // Get current user's schedules (for consultant)

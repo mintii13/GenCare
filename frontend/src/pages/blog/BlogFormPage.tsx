@@ -54,8 +54,8 @@ const BlogFormPage: React.FC = () => {
     setError(null);
     try {
       const response = await blogService.getBlogById(blogId);
-      if (response.success && response.data.blog) {
-        const blog = response.data.blog;
+        if ((response as any).success && (response as any).data.blog) {
+        const blog = (response as any).data.blog;
         
         // Kiểm tra quyền chỉnh sửa (chỉ tác giả)
         if (blog.author_id.toString() !== user?.id) {
@@ -119,21 +119,21 @@ const BlogFormPage: React.FC = () => {
       let response;
       if (isEdit) {
         response = await blogService.updateBlog(blogId!, title, content);
-        if (response.success) {
+        if ((response as any).success) {
           toast.success('Cập nhật bài viết thành công!'); 
           navigate(`/blogs/${blogId}`);
         }
       } else {
         response = await blogService.createBlog(title, content);
-        if (response.success) {
+        if ((response as any).success) {
           toast.success('Tạo bài viết thành công!');
-          navigate(`/blogs/${response.data.blog.blog_id}`);
+          navigate(`/blogs/${(response as any).data.blog.blog_id}`);
         }
       }
 
-      if (!response.success) {
-        toast.error(response.message || 'Có lỗi xảy ra');
-        setError(response.message || 'Có lỗi xảy ra');
+      if (!((response as any).success)) {
+        toast.error((response as any).message || 'Có lỗi xảy ra');
+        setError((response as any).message || 'Có lỗi xảy ra');
       }
     } catch (error) {
       console.error('Error saving blog:', error);

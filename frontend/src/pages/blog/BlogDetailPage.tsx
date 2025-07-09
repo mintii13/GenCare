@@ -119,12 +119,12 @@ const BlogDetailPage: React.FC = () => {
     if (!blog) return;
     try {
       const updated = await blogService.updateBlog(blog.blog_id, editTitle, editContent);
-      if (updated.success) {
+      if ((updated as any).success) {
         setBlog({ ...blog, title: editTitle, content: editContent });
         setIsEditing(false);
         toast.success('Cập nhật bài viết thành công');
       } else {
-        toast.error(updated.message || 'Cập nhật thất bại');
+        toast.error((updated as any).message || 'Cập nhật thất bại');
       }
     } catch (error) {
       toast.error('Có lỗi khi cập nhật blog');
@@ -135,11 +135,11 @@ const BlogDetailPage: React.FC = () => {
     if (!blog) return;
     try {
       const response = await blogService.deleteBlog(blog.blog_id);
-      if (response.success) {
+      if ((response as any).success) {
         toast.success('Xóa bài viết thành công!', { duration: 3000 });
         navigate('/blogs');
       } else {
-        toast.error(response.message || 'Có lỗi xảy ra khi xóa bài viết', { duration: 4000 });
+        toast.error((response as any).message || 'Có lỗi xảy ra khi xóa bài viết', { duration: 4000 });
       }
     } catch (error) {
       console.error('Error deleting blog:', error);
