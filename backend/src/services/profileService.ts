@@ -29,9 +29,12 @@ export class ProfileService{
             if (phone) updateData.phone = phone;
             if (date_of_birth) updateData.date_of_birth = date_of_birth;
             if (gender) updateData.gender = gender;
-
-            if (file) updateData.avatar = file;
-
+            if (file) {
+                const base64Image = file.buffer.toString('base64');
+                const mimeType = file.mimetype;
+                updateData.avatar = `data:${mimeType};base64,${base64Image}`;
+                // updateData.avatar = file
+            }
             const updatedUser = await UserRepository.findByIdAndUpdate(userId, updateData);
             const updateConsultant: Partial<IConsultant> = {};
 

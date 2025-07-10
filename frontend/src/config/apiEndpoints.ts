@@ -29,7 +29,6 @@ export const API = {
     VERIFY_EMAIL: '/auth/verify-email',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
-    GET_USER_PROFILE: '/auth/getUserProfile'
   },
 
   // ---------------------- APPOINTMENTS ----------------

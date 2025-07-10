@@ -32,8 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           console.log('AuthContext: Validating token...');
           // Sử dụng endpoint đúng từ apiEndpoints
-          const response = await apiClient.get<GetUserProfileResponse>(API.Auth.GET_USER_PROFILE);
-          
+          const response = await apiClient.get<GetUserProfileResponse>(API.Profile.GET);
           if (response.data.success && response.data.user) {
             console.log('AuthContext: Token validation successful');
             setUser(response.data.user);
