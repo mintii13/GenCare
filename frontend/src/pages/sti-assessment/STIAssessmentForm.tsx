@@ -5,6 +5,7 @@ import { STIAssessmentData, STIAssessmentService } from '../../services/stiAsses
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
+import toast from 'react-hot-toast';
 
 interface Recommendation {
   recommended_package: string;
@@ -18,14 +19,14 @@ const STIAssessmentForm = () => {
   const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
-  
+
   const [formData, setFormData] = useState({
     // Thông tin cá nhân
     age: '',
     gender: '',
     is_pregnant: false,
     pregnancy_trimester: '',
-    
+
     // Thông tin tình dục
     sexually_active: '',
     sexual_orientation: '',
@@ -33,18 +34,18 @@ const STIAssessmentForm = () => {
     new_partner_recently: false,
     partner_has_sti: false,
     condom_use: 'sometimes', // Default value
-    
+
     // Tiền sử y tế
     previous_sti_history: [] as string[],
     hiv_status: '',
     last_sti_test: 'never', // Default value
     has_symptoms: false,
     symptoms: [] as string[],
-    
+
     // Yếu tố nguy cơ
     risk_factors: [] as string[],
-    living_area: '',
-    
+    living_area: 'normal', // Set default to 'normal'
+
     // Mục đích xét nghiệm
     test_purpose: '',
     urgency: 'normal'
@@ -57,10 +58,22 @@ const STIAssessmentForm = () => {
     }));
   };
 
+  const validateAge = (value: string) => {
+    if (value) {
+      const ageNum = parseInt(value);
+      if (ageNum < 13 || ageNum > 100) {
+        toast.error('Tuổi phải từ 13-100 tuổi', {
+          duration: 3000,
+          position: 'top-center',
+        });
+      }
+    }
+  };
+
   const handleMultiSelect = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: (prev[field as keyof typeof prev] as string[]).includes(value) 
+      [field]: (prev[field as keyof typeof prev] as string[]).includes(value)
         ? (prev[field as keyof typeof prev] as string[]).filter((item: string) => item !== value)
         : [...(prev[field as keyof typeof prev] as string[]), value]
     }));
@@ -71,9 +84,12 @@ const STIAssessmentForm = () => {
     try {
       // Get JWT token using authService
       const token = authService.getToken();
-      
+
       if (!token) {
-        alert('Vui lòng đăng nhập để sử dụng tính năng này');
+        toast.error('Vui lòng đăng nhập để sử dụng tính năng này', {
+          duration: 4000,
+          position: 'top-center',
+        });
         setLoading(false);
         return;
       }
@@ -82,15 +98,15 @@ const STIAssessmentForm = () => {
       const submissionData = {
         ...formData,
         // Auto-set number_of_partners based on sexually_active selection
-        number_of_partners: formData.sexually_active === 'not_active' ? 'none' : 
-                           formData.sexually_active === 'active_single' ? 'one' : 
-                           formData.number_of_partners, // Keep user selection for active_multiple
-        
+        number_of_partners: formData.sexually_active === 'not_active' ? 'none' :
+          formData.sexually_active === 'active_single' ? 'one' :
+            formData.number_of_partners, // Keep user selection for active_multiple
+
         // Ensure arrays exist
         previous_sti_history: formData.previous_sti_history || [],
         symptoms: formData.symptoms || [],
         risk_factors: formData.risk_factors || [],
-        
+
         // Convert age to number
         age: parseInt(formData.age) || 0
       };
@@ -117,25 +133,35 @@ const STIAssessmentForm = () => {
 
       // Validation bổ sung trước khi submit
       if (!cleanedData.hiv_status) {
-        alert('Vui lòng chọn tình trạng HIV ở bước 3');
+        toast.error('Vui lòng chọn tình trạng HIV ở bước 3', {
+          duration: 3000,
+          position: 'top-center',
+        });
         setCurrentStep(3);
         setLoading(false);
         return;
       }
-      
+
       if (!cleanedData.test_purpose) {
-        alert('Vui lòng chọn mục đích xét nghiệm ở bước 5');
+        toast.error('Vui lòng chọn mục đích xét nghiệm ở bước 5', {
+          duration: 3000,
+          position: 'top-center',
+        });
         setCurrentStep(5);
         setLoading(false);
         return;
       }
 
       console.log('Submitting STI Assessment (cleaned):', cleanedData);
-      
-      const result = await STIAssessmentService.createAssessment(cleanedData as unknown as STIAssessmentData);       
+
+      const result = await STIAssessmentService.createAssessment(cleanedData as unknown as STIAssessmentData);
       console.log('API Response:', result);
-      
+
       if (result.success) {
+        toast.success('Đánh giá STI hoàn thành thành công!', {
+          duration: 4000,
+          position: 'top-center',
+        });
         setRecommendation(result.data?.recommendation || null);
         setCurrentStep(6); // Move to result step
       } else {
@@ -144,12 +170,18 @@ const STIAssessmentForm = () => {
         if ((result as any).errors && Array.isArray((result as any).errors)) {
           errorMessage += '\n\nChi tiết lỗi:\n' + (result as any).errors.join('\n');
         }
-        alert(errorMessage);
+        toast.error(errorMessage, {
+          duration: 5000,
+          position: 'top-center',
+        });
         console.error('API Error:', result);
       }
     } catch (error) {
       console.error('Error submitting assessment:', error);
-      alert('Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.');
+      toast.error('Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-center',
+      });
     } finally {
       setLoading(false);
     }
@@ -157,23 +189,23 @@ const STIAssessmentForm = () => {
 
   const handleBookingSTI = async () => {
     if (!recommendation) return;
-    
+
     setBookingLoading(true);
     try {
       // Get all packages để tìm packageId từ package code
       console.log('Fetching packages with endpoint:', API.STI.GET_ALL_PACKAGES);
       const response = await apiClient.get(API.STI.GET_ALL_PACKAGES);
       const data = response.data as any;
-      
+
       console.log('API Response:', data);
       console.log('Data keys:', Object.keys(data));
       console.log('data.stippackage:', data.stippackage);
       console.log('Looking for package code:', recommendation.recommended_package);
-      
+
       if (data.success) {
         // Try different ways to access the packages data
         let packages = data.stippackage || data.stippackages || [];
-        
+
         // If still empty, try accessing response.data directly
         if (!packages || packages.length === 0) {
           const responseData = response.data as any;
@@ -181,10 +213,10 @@ const STIAssessmentForm = () => {
           console.log('responseData.stippackage direct access:', responseData.stippackage);
           console.log('responseData["stippackage"] bracket access:', responseData["stippackage"]);
           console.log('Object.keys(responseData):', Object.keys(responseData));
-          
+
           // Try different access methods
           packages = responseData.stippackage || responseData.stippackages || responseData["stippackage"] || [];
-          
+
           // If still empty, let's try to iterate through response data
           if (!packages || packages.length === 0) {
             console.log('Still empty, checking all properties...');
@@ -198,18 +230,21 @@ const STIAssessmentForm = () => {
             }
           }
         }
-        
+
         console.log('Available packages:', packages);
         console.log('Packages length:', packages.length);
         console.log('Packages type:', typeof packages);
         console.log('Is array?', Array.isArray(packages));
-        
+
         if (!Array.isArray(packages)) {
           console.error('Packages is not an array:', packages);
-          alert('Dữ liệu gói xét nghiệm không hợp lệ');
+          toast.error('Dữ liệu gói xét nghiệm không hợp lệ', {
+            duration: 3000,
+            position: 'top-center',
+          });
           return;
         }
-        
+
         // Debug each package to see the exact structure
         packages.forEach((pkg: any, index: number) => {
           console.log(`Package ${index}:`, {
@@ -219,36 +254,43 @@ const STIAssessmentForm = () => {
             fullObject: pkg
           });
         });
-        
+
         const targetPackage = packages.find((pkg: any) => {
           console.log(`Comparing "${pkg.sti_package_code}" === "${recommendation.recommended_package}"`);
           return pkg.sti_package_code === recommendation.recommended_package;
         });
-        
 
-        
+
+
         if (targetPackage) {
-        
-          
           // Convert _id to string to make sure it's not an object
-          const packageId = typeof targetPackage._id === 'object' 
-            ? targetPackage._id.toString() 
+          const packageId = typeof targetPackage._id === 'object'
+            ? targetPackage._id.toString()
             : targetPackage._id;
-          
+
           console.log('Final packageId for navigation:', packageId);
-          
+
           // Navigate đến BookSTIPage với packageId
           navigate(`/sti-booking/book?packageId=${packageId}`);
         } else {
-          alert(`Không tìm thấy gói xét nghiệm với mã: ${recommendation.recommended_package}`);
+          toast.error(`Không tìm thấy gói xét nghiệm với mã: ${recommendation.recommended_package}`, {
+            duration: 4000,
+            position: 'top-center',
+          });
         }
       } else {
         console.error('API returned success: false', data);
-        alert('Không thể tải thông tin gói xét nghiệm: ' + (data.message || 'Unknown error'));
+        toast.error('Không thể tải thông tin gói xét nghiệm: ' + (data.message || 'Unknown error'), {
+          duration: 4000,
+          position: 'top-center',
+        });
       }
     } catch (error) {
       console.error('Error fetching packages:', error);
-      alert('Có lỗi xảy ra khi tải thông tin gói xét nghiệm');
+      toast.error('Có lỗi xảy ra khi tải thông tin gói xét nghiệm', {
+        duration: 4000,
+        position: 'top-center',
+      });
     } finally {
       setBookingLoading(false);
     }
@@ -260,7 +302,7 @@ const STIAssessmentForm = () => {
         <User className="w-5 h-5 text-blue-600" />
         <h3 className="text-lg font-semibold">Thông tin cá nhân</h3>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-2">Tuổi *</label>
@@ -268,13 +310,14 @@ const STIAssessmentForm = () => {
             type="number"
             value={formData.age}
             onChange={(e) => updateFormData('age', e.target.value)}
+            onBlur={(e) => validateAge(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Nhập tuổi của bạn"
             min="13"
             max="100"
           />
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium mb-2">Giới tính *</label>
           <select
@@ -302,7 +345,7 @@ const STIAssessmentForm = () => {
             />
             <label className="text-sm font-medium">Hiện đang mang thai</label>
           </div>
-          
+
           {formData.is_pregnant && (
             <select
               value={formData.pregnancy_trimester}
@@ -341,7 +384,7 @@ const STIAssessmentForm = () => {
         <Heart className="w-5 h-5 text-red-600" />
         <h3 className="text-lg font-semibold">Thông tin tình dục</h3>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-2">Tình trạng hoạt động tình dục *</label>
         <select
@@ -399,7 +442,7 @@ const STIAssessmentForm = () => {
               />
               <label className="text-sm">Có bạn tình mới trong 3 tháng qua</label>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -435,7 +478,7 @@ const STIAssessmentForm = () => {
         <Calendar className="w-5 h-5 text-green-600" />
         <h3 className="text-lg font-semibold">Tiền sử y tế</h3>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-3">Tiền sử mắc STI (có thể chọn nhiều)</label>
         <div className="grid grid-cols-2 gap-3">
@@ -492,7 +535,7 @@ const STIAssessmentForm = () => {
           />
           <label className="text-sm font-medium">Hiện có triệu chứng nghi ngờ STI</label>
         </div>
-        
+
         {formData.has_symptoms && (
           <div className="grid grid-cols-2 gap-2 mt-3">
             {['Đau rát khi tiểu', 'Tiết dịch bất thường', 'Loét', 'Ngứa', 'Đau vùng kín', 'Phát ban'].map(symptom => (
@@ -518,7 +561,7 @@ const STIAssessmentForm = () => {
         <AlertTriangle className="w-5 h-5 text-orange-600" />
         <h3 className="text-lg font-semibold">Yếu tố nguy cơ & Môi trường</h3>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-3">Yếu tố nguy cơ (có thể chọn nhiều)</label>
         <div className="space-y-3">
@@ -550,7 +593,6 @@ const STIAssessmentForm = () => {
           onChange={(e) => updateFormData('living_area', e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Chọn khu vực</option>
           <option value="normal">Khu vực bình thường</option>
           <option value="endemic">Vùng dịch tễ cao STI</option>
         </select>
@@ -567,7 +609,7 @@ const STIAssessmentForm = () => {
         <Shield className="w-5 h-5 text-purple-600" />
         <h3 className="text-lg font-semibold">Mục đích xét nghiệm</h3>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium mb-2">Mục đích xét nghiệm *</label>
         <select
@@ -602,7 +644,7 @@ const STIAssessmentForm = () => {
 
   const renderRecommendation = () => {
     if (!recommendation) return null;
-    
+
     const getPackageInfo = (packageCode: string) => {
       const packages = {
         'STI-BASIC-01': {
@@ -612,23 +654,23 @@ const STIAssessmentForm = () => {
           description: 'Gói test nhanh cơ bản'
         },
         'STI-BASIC-02': {
-          name: 'Gói xét nghiệm STIs CƠ BẢN 2', 
+          name: 'Gói xét nghiệm STIs CƠ BẢN 2',
           price: '9.000.000 VNĐ',
           tests: ['HIV combo Alere', 'Giang mai', 'Viêm gan B', 'Viêm gan C', 'Lậu', 'Chlamydia'],
           description: 'Gói test cơ bản mở rộng'
         },
         'STI-ADVANCE': {
           name: 'Gói xét nghiệm STIs NÂNG CAO',
-          price: '17.000.000 VNĐ', 
+          price: '17.000.000 VNĐ',
           tests: ['HIV combo Alere', 'Viêm gan B', 'Viêm gan C', 'Herpes', 'RPR', 'Syphilis TP IgM/IgG', 'Lậu', 'Chlamydia'],
           description: 'Gói toàn diện với hầu hết các STIs'
         }
       };
       return packages[packageCode as keyof typeof packages];
     };
-    
+
     const packageInfo = getPackageInfo(recommendation.recommended_package);
-    
+
     return (
       <div className="space-y-6">
         <div className="text-center">
@@ -642,12 +684,12 @@ const STIAssessmentForm = () => {
             <Package className="w-6 h-6 text-blue-600 mr-2" />
             <h4 className="font-bold text-lg text-blue-800">Gói xét nghiệm được đề xuất</h4>
           </div>
-          
+
           <div className="bg-white p-4 rounded-lg border">
             <h5 className="font-bold text-xl text-blue-600 mb-2">{packageInfo.name}</h5>
             <p className="text-gray-600 mb-3">{packageInfo.description}</p>
             <p className="font-bold text-2xl text-green-600 mb-4">Giá: {packageInfo.price}</p>
-            
+
             <div>
               <p className="text-sm font-medium mb-2 text-gray-700">Bao gồm các xét nghiệm:</p>
               <div className="grid grid-cols-2 gap-2">
@@ -662,27 +704,24 @@ const STIAssessmentForm = () => {
           </div>
         </div>
 
-        <div className={`p-4 rounded-lg border ${
-          recommendation.risk_level === 'Cao' ? 'bg-red-50 border-red-200' :
+        <div className={`p-4 rounded-lg border ${recommendation.risk_level === 'Cao' ? 'bg-red-50 border-red-200' :
           recommendation.risk_level === 'Trung bình' ? 'bg-yellow-50 border-yellow-200' :
-          'bg-green-50 border-green-200'
-        }`}>
+            'bg-green-50 border-green-200'
+          }`}>
           <h5 className="font-semibold mb-2 flex items-center">
-            <AlertTriangle className={`w-5 h-5 mr-2 ${
-              recommendation.risk_level === 'Cao' ? 'text-red-600' :
+            <AlertTriangle className={`w-5 h-5 mr-2 ${recommendation.risk_level === 'Cao' ? 'text-red-600' :
               recommendation.risk_level === 'Trung bình' ? 'text-yellow-600' :
-              'text-green-600'
-            }`} />
-            Mức độ nguy cơ: 
-            <span className={`ml-2 px-3 py-1 rounded-full text-sm font-bold ${
-              recommendation.risk_level === 'Cao' ? 'bg-red-200 text-red-800' :
+                'text-green-600'
+              }`} />
+            Mức độ nguy cơ:
+            <span className={`ml-2 px-3 py-1 rounded-full text-sm font-bold ${recommendation.risk_level === 'Cao' ? 'bg-red-200 text-red-800' :
               recommendation.risk_level === 'Trung bình' ? 'bg-yellow-200 text-yellow-800' :
-              'bg-green-200 text-green-800'
-            }`}>
+                'bg-green-200 text-green-800'
+              }`}>
               {recommendation.risk_level}
             </span>
           </h5>
-          
+
           <div className="text-sm">
             <p className="font-medium mb-2">Lý do đề xuất:</p>
             <ul className="list-disc list-inside space-y-1">
@@ -694,25 +733,25 @@ const STIAssessmentForm = () => {
         </div>
 
         <div className="text-center space-y-4">
-          <button 
+          <button
             onClick={() => {
-              setCurrentStep(1); 
-              setRecommendation(null); 
+              setCurrentStep(1);
+              setRecommendation(null);
               setFormData({
                 age: '', gender: '', is_pregnant: false, pregnancy_trimester: '',
                 sexually_active: '', sexual_orientation: '', number_of_partners: '',
                 new_partner_recently: false, partner_has_sti: false, condom_use: 'sometimes',
                 previous_sti_history: [], hiv_status: '', last_sti_test: 'never',
                 has_symptoms: false, symptoms: [], risk_factors: [],
-                living_area: '', test_purpose: '', urgency: 'normal'
+                living_area: 'normal', test_purpose: '', urgency: 'normal'
               });
             }}
             className="w-full bg-gray-500 text-white py-3 px-6 rounded-lg hover:bg-gray-600 transition-colors"
           >
             Đánh giá lại
           </button>
-          
-          <button 
+
+          <button
             onClick={handleBookingSTI}
             disabled={bookingLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -732,9 +771,10 @@ const STIAssessmentForm = () => {
   };
 
   const isStepValid = () => {
-    switch(currentStep) {
+    switch (currentStep) {
       case 1:
-        return formData.age && formData.gender;
+        const age = parseInt(formData.age);
+        return formData.age && formData.gender && age >= 13 && age <= 100;
       case 2:
         return formData.sexually_active;
       case 3:
@@ -765,7 +805,7 @@ const STIAssessmentForm = () => {
   const getStepTitle = () => {
     const titles = {
       1: "Thông tin cá nhân",
-      2: "Thông tin tình dục", 
+      2: "Thông tin tình dục",
       3: "Tiền sử y tế",
       4: "Yếu tố nguy cơ",
       5: "Mục đích xét nghiệm",
@@ -776,7 +816,7 @@ const STIAssessmentForm = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen">
-        <div className="mb-8 text-center">
+      <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
           Đánh giá Sàng lọc STI Cá nhân
         </h1>
@@ -796,13 +836,13 @@ const STIAssessmentForm = () => {
               Bước {currentStep}/5: {getStepTitle()}
             </span>
             <span className="text-sm text-gray-500">
-              {Math.round((currentStep/5) * 100)}%
+              {Math.round((currentStep / 5) * 100)}%
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
-            <div 
+            <div
               className="bg-gradient-to-r from-blue-600 to-indigo-600 h-3 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(currentStep/5) * 100}%` }}
+              style={{ width: `${(currentStep / 5) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -824,24 +864,22 @@ const STIAssessmentForm = () => {
           <button
             onClick={prevStep}
             disabled={currentStep === 1}
-            className={`flex items-center px-6 py-3 rounded-lg transition-colors ${
-              currentStep === 1 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-gray-500 text-white hover:bg-gray-600'
-            }`}
+            className={`flex items-center px-6 py-3 rounded-lg transition-colors ${currentStep === 1
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Quay lại
           </button>
-          
+
           <button
             onClick={nextStep}
             disabled={!isStepValid() || loading}
-            className={`flex items-center px-6 py-3 rounded-lg transition-colors ${
-              !isStepValid() || loading
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg'
-            }`}
+            className={`flex items-center px-6 py-3 rounded-lg transition-colors ${!isStepValid() || loading
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg'
+              }`}
           >
             {loading ? (
               <>
@@ -883,4 +921,4 @@ const STIAssessmentForm = () => {
   );
 };
 
-export default STIAssessmentForm; 
+export default STIAssessmentForm;
