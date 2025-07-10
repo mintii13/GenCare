@@ -6,7 +6,7 @@
     "sti_test_name": "Xét nghiệm máu HIV combo Alere",
     "sti_test_code": "STI-VIR-BLD-HIV-COMBO",
     "description": "Xét nghiệm phát hiện virus HIV bằng công nghệ combo Alere trong máu. Kết quả chính xác sau 3 tháng phơi nhiễm.",
-    "price": 130000,
+    "price": 200000,
     "is_active": true,
     "category": "viral",
     "sti_test_type": "máu"
@@ -18,7 +18,7 @@
     "sti_test_name": "Xét nghiệm nước tiểu Chlamydia",
     "sti_test_code": "STI-BAC-URN-CHLAMYDIA",
     "description": "Phát hiện vi khuẩn Chlamydia trachomatis trong mẫu nước tiểu. Xét nghiệm không đau và cho kết quả nhanh.",
-    "price": 734000,
+    "price": 250000,
     "is_active": true,
     "category": "bacterial",
     "sti_test_type": "nước tiểu"
@@ -30,7 +30,7 @@
     "sti_test_name": "Xét nghiệm Viêm gan siêu vi B",
     "sti_test_code": "STI-VIR-BLD-HBV",
     "description": "Phát hiện virus viêm gan siêu vi B (HBV) trong máu. Bao gồm cả kháng nguyên và kháng thể.",
-    "price": 450000,
+    "price": 120000,
     "is_active": true,
     "category": "viral",
     "sti_test_type": "máu"
@@ -42,7 +42,7 @@
     "sti_test_name": "Xét nghiệm Viêm gan siêu vi C",
     "sti_test_code": "STI-VIR-BLD-HCV",
     "description": "Phát hiện virus viêm gan siêu vi C (HCV) trong máu. Xét nghiệm chính xác sau 6 tuần phơi nhiễm.",
-    "price": 450000,
+    "price": 130000,
     "is_active": true,
     "category": "viral",
     "sti_test_type": "máu"
@@ -54,7 +54,7 @@
     "sti_test_name": "Xét nghiệm Giang mai",
     "sti_test_code": "STI-BAC-BLD-SYPHILIS",
     "description": "Phát hiện xoắn khuẩn Treponema pallidum gây bệnh giang mai. Xét nghiệm máu chính xác và nhanh chóng.",
-    "price": 178000,
+    "price": 150000,
     "is_active": true,
     "category": "bacterial",
     "sti_test_type": "máu"
@@ -66,7 +66,7 @@
     "sti_test_name": "Xét nghiệm Lậu",
     "sti_test_code": "STI-BAC-URN-GON",
     "description": "Phát hiện vi khuẩn Neisseria gonorrhoeae trong mẫu nước tiểu. Xét nghiệm không đau và cho kết quả nhanh.",
-    "price": 734000,
+    "price": 250000,
     "is_active": true,
     "category": "bacterial",
     "sti_test_type": "nước tiểu"
@@ -78,7 +78,7 @@
     "sti_test_name": "Xét nghiệm Herpes sinh dục",
     "sti_test_code": "STI-VIR-SWB-HSV",
     "description": "Xét nghiệm phát hiện nhiễm virus Herpes Simplex (HSV‑1/HSV‑2) bằng cách lấy dịch ngoáy để làm PCR hoặc nuôi cấy, hoặc lấy mẫu máu để xét nghiệm kháng thể IgG/IgM.",
-    "price": 450000,
+    "price": 300000,
     "is_active": true,
     "category": "viral",
     "sti_test_type": "dịch ngoáy"
@@ -90,7 +90,7 @@
     "sti_test_name": "Xét nghiệm RPR",
     "sti_test_code": "STI-BAC-BLD-RPR",
     "description": "Xét nghiệm RPR (Rapid Plasma Reagin) để sàng lọc bệnh giang mai. Đây là xét nghiệm máu nhanh và chính xác.",
-    "price": 89000,
+    "price": 80000,
     "is_active": true,
     "category": "bacterial",
     "sti_test_type": "máu"
@@ -102,9 +102,21 @@
     "sti_test_name": "Xét nghiệm Syphilis TP IgM/IgG",
     "sti_test_code": "STI-BAC-BLD-SYPHILIS-TP",
     "description": "Xét nghiệm kháng thể IgM/IgG đặc hiệu cho Treponema pallidum. Xét nghiệm xác nhận chẩn đoán giang mai.",
-    "price": 156000,
+    "price": 400000,
     "is_active": true,
     "category": "bacterial",
     "sti_test_type": "máu"
+  },
+  {
+    "_id": {
+      "$oid": "675e1a2b3c4d5e6f7a8b9007"
+    },
+    "sti_test_name": "Xét nghiệm HPV",
+    "sti_test_code": "STI-VIR-SWB-HPV",
+    "description": "Phát hiện virus HPV (Human Papillomavirus) bằng mẫu phết cổ tử cung. Xét nghiệm quan trọng trong phòng ngừa ung thư cổ tử cung.",
+    "price": 400000,
+    "is_active": true,
+    "category": "viral",
+    "sti_test_type": "dịch tiết"
   }
 ]
