@@ -52,7 +52,7 @@ function OAuthSuccess() {
         // Bước 2: Gọi API với Authorization header rõ ràng
         console.log("Fetching user profile...");
         const response = await apiClient.get<GetUserProfileResponse>(
-          API.Auth.GET_USER_PROFILE,
+          API.Profile.GET,
           {
             headers: {
               Authorization: `Bearer ${token}`
