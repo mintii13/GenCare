@@ -6,6 +6,8 @@ import WeeklyCalendarView from '../../../components/schedule/WeeklyCalendarView'
 import { WorkingDay, DAY_NAMES, DAY_LABELS, DayName } from '../../../types/schedule';
 import { formatWeekRange } from '../../../utils/dateUtils';
 import { useAuth } from '../../../contexts/AuthContext';
+import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
+import { getWeekRange } from '../../../utils/dateUtils';
 
 interface Consultant {
   _id: string;
@@ -114,6 +116,35 @@ const ConsultantSchedule: React.FC = () => {
               </div>
               <div>
                 <strong>Error:</strong> {error || 'None'}
+              </div>
+              
+              {/* Debug Test Button */}
+              <div className="mt-2 pt-2 border-t">
+                <button
+                  onClick={async () => {
+                    console.log('🚀 [DEBUG] Testing API manually...');
+                    try {
+                      // Test consultants API first
+                      const consultantsRes = await consultantService.getAllConsultants();
+                      console.log('👨‍⚕️ Consultants API result:', consultantsRes);
+                      
+                      if (consultantsRes.data?.consultants?.length > 0 && selectedConsultantId) {
+                        // Test weekly schedule API
+                        const { weekStart } = getWeekRange(currentWeek);
+                        console.log('📅 Testing with week:', weekStart, 'consultant:', selectedConsultantId);
+                        
+                        const scheduleRes = await weeklyScheduleService.getConsultantSchedules(selectedConsultantId, weekStart, weekStart);
+                        console.log('📊 Schedule API result:', scheduleRes);
+                      }
+                    } catch (err) {
+                      console.error('❌ Debug test error:', err);
+                    }
+                  }}
+                  className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                  disabled={!selectedConsultantId}
+                >
+                  Test API
+                </button>
               </div>
             </div>
           )}

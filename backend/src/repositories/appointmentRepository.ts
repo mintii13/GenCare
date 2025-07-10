@@ -179,6 +179,21 @@ export class AppointmentRepository {
         excludeAppointmentId?: string
     ): Promise<boolean> {
         try {
+            console.log('🔍 [DEBUG] checkTimeConflict called with:', {
+                consultantId,
+                consultantIdType: typeof consultantId,
+                date,
+                startTime,
+                endTime,
+                excludeAppointmentId
+            });
+
+            // Ensure consultantId is a valid string and not an object
+            if (!consultantId || typeof consultantId !== 'string') {
+                console.error('❌ Invalid consultantId:', consultantId);
+                throw new Error('Invalid consultant ID provided');
+            }
+
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
 
@@ -215,8 +230,17 @@ export class AppointmentRepository {
                 query._id = { $ne: excludeAppointmentId };
             }
 
+            console.log('🔍 [DEBUG] Conflict check query:', JSON.stringify(query, null, 2));
+
             const conflictingAppointment = await Appointment.findOne(query);
-            return !!conflictingAppointment;
+            const hasConflict = !!conflictingAppointment;
+            
+            console.log('🔍 [DEBUG] Conflict check result:', hasConflict);
+            if (conflictingAppointment) {
+                console.log('🔍 [DEBUG] Conflicting appointment:', conflictingAppointment);
+            }
+
+            return hasConflict;
         } catch (error) {
             console.error('Error checking appointment time conflict:', error);
             throw error;

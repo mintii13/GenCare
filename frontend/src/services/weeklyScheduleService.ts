@@ -128,9 +128,28 @@ export const weeklyScheduleService = {
 
   // Get current user's schedules (for consultant)
   async getMySchedules(startDate?: string, endDate?: string) {
+    console.log('📤 [DEBUG] WeeklyScheduleService.getMySchedules called with:', {
+      startDate,
+      endDate
+    });
+    console.log('🎯 [DEBUG] API endpoint:', API.WeeklySchedule.MY_SCHEDULES);
+    
     const params = { start_date: startDate, end_date: endDate };
-    const response = await apiClient.get(API.WeeklySchedule.MY_SCHEDULES, { params });
-    return response.data;
+    
+    try {
+      const response = await apiClient.get(API.WeeklySchedule.MY_SCHEDULES, { params });
+      console.log('📥 [DEBUG] WeeklyScheduleService.getMySchedules response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ [DEBUG] WeeklyScheduleService.getMySchedules error:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
+      throw error;
+    }
   },
 
   // Get weekly slots for booking

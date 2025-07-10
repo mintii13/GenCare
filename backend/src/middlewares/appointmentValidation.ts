@@ -98,10 +98,34 @@ export const validateUpdateAppointment = (req: Request, res: Response, next: Nex
     if (error) {
         res.status(400).json({
             success: false,
-            message: 'Validation error',
+            message: 'Dữ liệu không hợp lệ',
             details: error.details[0].message
         });
         return;
+    }
+
+    // Convert string date to Date object if needed
+    if (req.body.appointment_date && typeof req.body.appointment_date === 'string') {
+        try {
+            req.body.appointment_date = new Date(req.body.appointment_date);
+            
+            // Check if the parsed date is valid
+            if (isNaN(req.body.appointment_date.getTime())) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Dữ liệu không hợp lệ',
+                    details: 'Invalid appointment date format'
+                });
+                return;
+            }
+        } catch (error) {
+            res.status(400).json({
+                success: false,
+                message: 'Dữ liệu không hợp lệ',
+                details: 'Failed to parse appointment date'
+            });
+            return;
+        }
     }
 
     // Basic validation for time if provided
@@ -116,7 +140,7 @@ export const validateUpdateAppointment = (req: Request, res: Response, next: Nex
         if (startMinutes >= endMinutes) {
             res.status(400).json({
                 success: false,
-                message: 'Validation error',
+                message: 'Dữ liệu không hợp lệ',
                 details: 'Start time must be before end time'
             });
             return;
@@ -126,7 +150,7 @@ export const validateUpdateAppointment = (req: Request, res: Response, next: Nex
     if ((start_time && !end_time) || (!start_time && end_time)) {
         res.status(400).json({
             success: false,
-            message: 'Validation error',
+            message: 'Dữ liệu không hợp lệ',
             details: 'Both start_time and end_time are required when updating appointment time'
         });
         return;
@@ -209,7 +233,15 @@ export const validateAppointmentCreation = (req: Request, res: Response, next: N
 };
 
 const updateAppointmentSchema = Joi.object({
-    appointment_date: Joi.date().optional(),
+    appointment_date: Joi.alternatives()
+        .try(
+            Joi.date(),
+            Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)
+        )
+        .optional()
+        .messages({
+            'alternatives.match': 'Appointment date must be a valid date or YYYY-MM-DD format'
+        }),
     start_time: Joi.string()
         .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
         .optional()
@@ -235,7 +267,9 @@ const updateAppointmentSchema = Joi.object({
         .allow('')
         .messages({
             'string.max': 'Consultant notes cannot exceed 500 characters'
-        })
+        }),
+    googleAccessToken: Joi.string().optional(),
+    explicitAction: Joi.string().valid('confirmed', 'rescheduled', 'cancelled', 'completed').optional()
 });
 
 export const validateAppointmentUpdate = (req: Request, res: Response, next: NextFunction): void => {

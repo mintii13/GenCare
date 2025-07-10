@@ -465,11 +465,26 @@ export class AppointmentService {
 
             // Business rules validation
             if (updateData.appointment_date || updateData.start_time || updateData.end_time) {
+                // Safely extract consultant_id as string
+                let consultantId: string;
+                if (updateData.consultant_id) {
+                    consultantId = updateData.consultant_id.toString();
+                } else {
+                    // Handle both populated and non-populated consultant_id
+                    if (typeof appointment.consultant_id === 'string') {
+                        consultantId = appointment.consultant_id;
+                    } else if (appointment.consultant_id && typeof appointment.consultant_id === 'object') {
+                        consultantId = (appointment.consultant_id as any)._id?.toString() || appointment.consultant_id.toString();
+                    } else {
+                        consultantId = appointment.consultant_id?.toString() || '';
+                    }
+                }
+
                 const validationError = await this.validateAppointmentTime(
                     updateData.appointment_date || appointment.appointment_date,
                     updateData.start_time || appointment.start_time,
                     updateData.end_time || appointment.end_time,
-                    updateData.consultant_id?.toString() || appointment.consultant_id.toString(),
+                    consultantId,
                     appointmentId
                 );
 

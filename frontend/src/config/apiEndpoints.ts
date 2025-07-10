@@ -50,6 +50,8 @@ export const API = {
     START_MEETING: (appointmentId: string) => `/appointments/${appointmentId}/start-meeting`,
     COMPLETE: (appointmentId: string) => `/appointments/${appointmentId}/complete`,
     SEND_REMINDER: (appointmentId: string) => `/appointments/${appointmentId}/send-reminder`,
+    // Simple endpoints
+    MY: '/appointments/my', // NEW: Simple endpoint for current user's appointments
     // From previous config
     MY_APPOINTMENTS: '/appointments',
     CONSULTANT_APPOINTMENTS: '/appointments',

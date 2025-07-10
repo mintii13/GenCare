@@ -77,23 +77,38 @@ export const appointmentService = {
     return apiClient.safePost(API.Appointment.BOOK, data);
   },
 
-  async getMyAppointments(status?: string): Promise<ApiResponse<{ appointments: Appointment[] }>> {
-    const params: { status?: string } = {};
-    if (status) {
-      params.status = status;
-    }
-
+  async getMyAppointments(params?: {
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<{ appointments: Appointment[] }>> {
     try {
-      // First attempt: customer endpoint
-      const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY_APPOINTMENTS, { params });
+      // Use the new simple endpoint
+      const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY, { 
+        params: params || {} 
+      });
       return { success: true, message: 'Success', data: response.data };
     } catch (error: any) {
-      if (error?.response?.status === 403) {
-        // If forbidden, try the consultant endpoint as a fallback
-        const altResponse = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.CONSULTANT_APPOINTMENTS, { params });
-        return { success: true, message: 'Success', data: altResponse.data };
+      // Fallback to old logic
+      const legacyParams: { status?: string } = {};
+      if (params?.status) {
+        legacyParams.status = params.status;
       }
-      throw error;
+
+      try {
+        // First attempt: customer endpoint
+        const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY_APPOINTMENTS, { params: legacyParams });
+        return { success: true, message: 'Success', data: response.data };
+      } catch (error: any) {
+        if (error?.response?.status === 403) {
+          // If forbidden, try the consultant endpoint as a fallback
+          const altResponse = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.CONSULTANT_APPOINTMENTS, { params: legacyParams });
+          return { success: true, message: 'Success', data: altResponse.data };
+        }
+        throw error;
+      }
     }
   },
 
@@ -102,7 +117,21 @@ export const appointmentService = {
   },
 
   async rescheduleAppointment(appointmentId: string, data: { appointment_date: string; start_time: string; end_time: string }) {
-    return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}`, data);
+    console.log('🔄 [DEBUG] rescheduleAppointment called with:', {
+      appointmentId,
+      data,
+      endpoint: `${API.Appointment.BASE}/${appointmentId}`
+    });
+    
+    try {
+      const response = await apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}`, data);
+      console.log('🔄 [DEBUG] rescheduleAppointment response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('🔄 [ERROR] rescheduleAppointment failed:', error);
+      console.error('🔄 [ERROR] Error response:', error?.response?.data);
+      throw error;
+    }
   },
 
   // Consultant APIs
