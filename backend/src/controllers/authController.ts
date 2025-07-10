@@ -86,33 +86,39 @@ router.get(
     })
 );
 
-// Sửa callback để nhận Google Access Token
-router.get(
-    '/google/callback',
-    passport.authenticate('google', { failureRedirect: "/" }),
-    async (req, res) => {
-        try {
-            const userWithToken = req.user as any; // User có chứa googleAccessToken
-
-            if (!userWithToken) {
-                return res.redirect(`${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login?error=oauth_failed`);
-            }
-
-            // Tạo JWT token cho app
-            const jwtAccessToken = JWTUtils.generateAccessToken({
-                userId: userWithToken._id.toString(),
-                role: userWithToken.role
-            });
-
-            // Redirect với cả JWT token và Google Access Token
-            const redirectUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/oauth-success?token=${jwtAccessToken}&googleToken=${userWithToken.googleAccessToken}`;
-            res.redirect(redirectUrl);
-        } catch (error) {
-            console.error('Google callback error:', error);
-            res.redirect(`${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login?error=oauth_error`);
+router.get('/google/callback', async (req, res) => {
+    try {
+        const failedRedirectedUrl = `${process.env.APP_URL || 'http://localhost:5173'}`;
+        if (req.query.error === 'access_denied'){
+            //if cancel the google, return to home page
+            return res.redirect(failedRedirectedUrl);
         }
+        return passport.authenticate('google', { failureRedirect: failedRedirectedUrl})(req, res, async() =>{
+            try {
+                const userWithToken = req.user as any; // User có chứa googleAccessToken
+
+                if (!userWithToken) {
+                    return res.redirect(failedRedirectedUrl);
+                }
+
+                // Tạo JWT token cho app
+                const jwtAccessToken = JWTUtils.generateAccessToken({
+                    userId: userWithToken._id.toString(),
+                    role: userWithToken.role
+                });
+
+                // Redirect với cả JWT token và Google Access Token
+                const redirectUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/oauth-success?token=${jwtAccessToken}&googleToken=${userWithToken.googleAccessToken}`;
+                res.redirect(redirectUrl);
+            } catch (error) {
+                console.error('Google callback error:', error);
+                res.redirect(failedRedirectedUrl);
+            }
+        })
+    } catch (error){
+        console.error('Google callback error:', error);
     }
-);
+});
 
 // Endpoint để tạo Google Meet với Google Access Token
 router.post('/create-google-meet', authenticateToken, async (req: Request, res: Response) => {
