@@ -83,26 +83,7 @@ export class StiAssessmentService {
             return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
         }
 
-        // TIER 3: MSM - High priority comprehensive screening
-        if (data.sexual_orientation === 'msm') {
-            required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia');
-            optional_tests.push('Hepatitis_B', 'Hepatitis_C', 'Herpes');
-            anatomical_sites.push('rectal', 'pharyngeal');
-
-            // Determine frequency based on risk factors
-            const hasHighRisk = this.hasMSMHighRiskFactors(data);
-            frequency = hasHighRisk ? 'every_3_6_months' : 'annual';
-            priority = 'routine';
-
-            reasoning.push('CDC: Nam quan hệ tình dục với nam cần sàng lọc ít nhất hàng năm tại các vị trí tiếp xúc');
-            if (hasHighRisk) {
-                reasoning.push('CDC: MSM có yếu tố nguy cơ cao cần sàng lọc mỗi 3-6 tháng');
-            }
-
-            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
-        }
-
-        // TIER 4: HIGH RISK FACTORS
+        // TIER 3: HIGH RISK FACTORS
         const extremeRiskFactors = ['injection_drug', 'sex_work', 'incarceration'];
         const hasExtremeRisk = data.risk_factors?.some(f => extremeRiskFactors.includes(f));
 
@@ -129,7 +110,7 @@ export class StiAssessmentService {
             return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
         }
 
-        // TIER 5: GENDER AND AGE-BASED SCREENING
+        // TIER 4: GENDER-BASED SCREENING
         const genderBasedRec = this.getGenderBasedCDCRecommendations(data);
         return {
             required_tests: genderBasedRec.required_tests,
@@ -141,27 +122,35 @@ export class StiAssessmentService {
         };
     }
 
-    // Gender-specific CDC recommendations
+    // Gender-specific CDC recommendations with consolidated transgender logic
     private static getGenderBasedCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
-        const required_tests: string[] = [];
-        const optional_tests: string[] = [];
-        const anatomical_sites: string[] = ['urogenital'];
-        const reasoning: string[] = [];
-        let frequency = 'routine';
-        let priority: 'immediate' | 'routine' | 'optional' = 'optional';
+        // Determine effective gender for screening purposes
+        let effectiveGender = data.gender;
 
-        if (data.gender === 'female') {
-            return this.getFemaleCDCRecommendations(data);
-        } else if (data.gender === 'male') {
-            return this.getMaleCDCRecommendations(data);
-        } else if (data.gender === 'transgender') {
-            return this.getTransgenderCDCRecommendations(data);
+        // Transgender logic: route to female/male based on cervix
+        if (data.gender === 'transgender') {
+            const hasCervix = data.risk_factors?.includes('has_cervix');
+            effectiveGender = hasCervix ? 'female' : 'male';
         }
 
-        return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        if (effectiveGender === 'female') {
+            return this.getFemaleCDCRecommendations(data);
+        } else if (effectiveGender === 'male') {
+            return this.getMaleCDCRecommendations(data);
+        }
+
+        // Fallback
+        return {
+            required_tests: [],
+            optional_tests: [],
+            frequency: 'routine',
+            anatomical_sites: ['urogenital'],
+            reasoning: ['CDC: Cần đánh giá cá nhân dựa trên giới tính và yếu tố nguy cơ'],
+            priority: 'optional'
+        };
     }
 
-    // Female-specific CDC recommendations
+    // Female-specific CDC recommendations (includes transgender with cervix)
     private static getFemaleCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
         const required_tests: string[] = [];
         const optional_tests: string[] = [];
@@ -169,6 +158,11 @@ export class StiAssessmentService {
         const reasoning: string[] = [];
         let frequency = 'routine';
         let priority: 'immediate' | 'routine' | 'optional' = 'optional';
+
+        // Add transgender note if applicable
+        if (data.gender === 'transgender') {
+            reasoning.push('CDC: Người chuyển giới có cổ tử cung tuân theo hướng dẫn sàng lọc như phụ nữ');
+        }
 
         // Pregnant women - CDC specific requirements
         if (data.is_pregnant) {
@@ -234,7 +228,7 @@ export class StiAssessmentService {
         return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
     }
 
-    // Male-specific CDC recommendations
+    // Male-specific CDC recommendations (includes MSM and transgender without cervix)
     private static getMaleCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
         const required_tests: string[] = [];
         const optional_tests: string[] = [];
@@ -243,7 +237,31 @@ export class StiAssessmentService {
         let frequency = 'routine';
         let priority: 'immediate' | 'routine' | 'optional' = 'optional';
 
-        // CDC: Insufficient evidence for routine screening of heterosexual low-risk men
+        // Add transgender note if applicable
+        if (data.gender === 'transgender') {
+            reasoning.push('CDC: Sàng lọc cho người chuyển giới được điều chỉnh dựa trên giải phẫu và hành vi tình dục');
+        }
+
+        // MSM - High priority comprehensive screening (moved from top tier)
+        if (data.sexual_orientation === 'msm') {
+            required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia');
+            optional_tests.push('Hepatitis_B', 'Hepatitis_C', 'Herpes');
+            anatomical_sites.push('rectal', 'pharyngeal');
+
+            // Determine frequency based on risk factors
+            const hasHighRisk = this.hasMSMHighRiskFactors(data);
+            frequency = hasHighRisk ? 'every_3_6_months' : 'annual';
+            priority = 'routine';
+
+            reasoning.push('CDC: Nam quan hệ tình dục với nam cần sàng lọc ít nhất hàng năm tại các vị trí tiếp xúc');
+            if (hasHighRisk) {
+                reasoning.push('CDC: MSM có yếu tố nguy cơ cao cần sàng lọc mỗi 3-6 tháng');
+            }
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // Heterosexual males - CDC: Insufficient evidence for routine screening of low-risk men
         const hasRisk = this.hasIncreasedRisk(data) || this.isHighPrevalenceSetting(data.living_area);
 
         if (hasRisk) {
@@ -257,28 +275,14 @@ export class StiAssessmentService {
                 reasoning.push('CDC: Nam giới có yếu tố nguy cơ cao có thể được hưởng lợi từ việc sàng lọc');
             }
         } else {
+            // Low-risk heterosexual males - follow CDC guidance
+            optional_tests.push('HIV'); // Only routine HIV screening
             reasoning.push('CDC: Không đủ bằng chứng cho việc sàng lọc định kỳ nam giới dị tính có nguy cơ thấp');
             reasoning.push('CDC: Cân nhắc sàng lọc dựa trên đánh giá nguy cơ cá nhân và quyết định lâm sàng');
+            priority = 'optional';
         }
 
         return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
-    }
-
-    // Transgender-specific CDC recommendations
-    private static getTransgenderCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
-        const hasCervix = data.risk_factors?.includes('has_cervix');
-
-        if (hasCervix) {
-            // CDC: Follow female screening guidelines
-            const femaleRec = this.getFemaleCDCRecommendations(data);
-            femaleRec.reasoning.push('CDC: Người chuyển giới có cổ tử cung cần tuân theo hướng dẫn sàng lọc ung thư cổ tử cung');
-            return femaleRec;
-        } else {
-            // CDC: Adapt based on anatomy and sexual behaviors
-            const maleRec = this.getMaleCDCRecommendations(data);
-            maleRec.reasoning.push('CDC: Sàng lọc cho người chuyển giới cần được điều chỉnh dựa trên giải phẫu và hành vi tình dục');
-            return maleRec;
-        }
     }
 
     // Map CDC recommendations to business packages
@@ -301,6 +305,15 @@ export class StiAssessmentService {
         const isUrgent = cdcRec.priority === 'immediate';
         const isFrequent = ['every_3_6_months', 'frequent_screening'].includes(cdcRec.frequency);
         const hasExtragenital = cdcRec.anatomical_sites.length > 1;
+
+        // Special case for low-risk heterosexual males
+        if (cdcRec.priority === 'optional' && cdcRec.required_tests.length === 0 &&
+            cdcRec.optional_tests.length <= 1) {
+            package_name = 'CONSULTATION_ONLY';
+            riskLevel = 'Thấp';
+            businessReasoning.push('CDC: Chỉ cần tư vấn và HIV screening cho nam giới dị tính nguy cơ thấp');
+            return { package: package_name, riskLevel, businessReasoning };
+        }
 
         // Package selection logic based on CDC complexity
         if (isUrgent || hasAdvancedTests || totalTests >= 6 || hasExtragenital) {

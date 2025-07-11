@@ -399,7 +399,6 @@ const STIAssessmentForm = () => {
                   <option value="homosexual">Đồng tính</option>
                 )}
                 <option value="bisexual">Lưỡng tính</option>
-                <option value="other">Khác</option>
               </select>
 
               {/* ✅ Enhanced MSM information */}
@@ -452,7 +451,7 @@ const STIAssessmentForm = () => {
                   onChange={(e) => updateFormData('partner_has_sti', e.target.checked)}
                   className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
                 />
-                <label className="text-sm">Bạn tình có/nghi ngờ mắc STI</label>
+                <label className="text-sm">Bạn tình có/nghi ngờ mắc STI (bệnh lây truyền qua đường tình dục)</label>
               </div>
             </div>
 
@@ -560,50 +559,38 @@ const STIAssessmentForm = () => {
         <h3 className="text-lg font-semibold text-red-800">Triệu chứng hiện tại</h3>
       </div>
 
-      <div className="flex items-center space-x-2 mb-3">
-        <input
-          type="checkbox"
-          checked={formData.has_symptoms}
-          onChange={(e) => updateFormData('has_symptoms', e.target.checked)}
-          className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-        />
-        <label className="text-sm font-medium">Hiện có triệu chứng nghi ngờ STI</label>
-      </div>
-
-      {formData.has_symptoms && (
-        <>
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            {[
-              'Đau rát khi tiểu',
-              'Tiết dịch bất thường',
-              'Loét vùng sinh dục',
-              'Ngứa vùng sinh dục',
-              'Đau vùng kín',
-              'Phát ban da',
-              'Sưng hạch bẹn',
-              'Chảy máu bất thường',
-              'Đau khi quan hệ',
-              'Mùi hôi bất thường'
-            ].map(symptom => (
-              <div key={symptom} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.symptoms.includes(symptom)}
-                  onChange={() => handleMultiSelect('symptoms', symptom)}
-                  className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-                />
-                <label className="text-sm">{symptom}</label>
-              </div>
-            ))}
-          </div>
-          <div className="bg-red-100 p-3 rounded border border-red-300 mt-4">
-            <p className="text-xs text-red-700">
-              <strong>Quan trọng:</strong> Có triệu chứng STI là yếu tố ưu tiên cao nhất trong đánh giá CDC.
-              Bạn sẽ được khuyến cáo xét nghiệm toàn diện ngay lập tức.
-            </p>
-          </div>
-        </>
-      )}
+      <>
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          {[
+            'Đau rát khi tiểu',
+            'Tiết dịch bất thường',
+            'Loét vùng sinh dục',
+            'Ngứa vùng sinh dục',
+            'Đau vùng kín',
+            'Phát ban da',
+            'Sưng hạch bẹn',
+            'Chảy máu bất thường',
+            'Đau khi quan hệ',
+            'Mùi hôi bất thường'
+          ].map(symptom => (
+            <div key={symptom} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.symptoms.includes(symptom)}
+                onChange={() => handleMultiSelect('symptoms', symptom)}
+                className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+              />
+              <label className="text-sm">{symptom}</label>
+            </div>
+          ))}
+        </div>
+        <div className="bg-red-100 p-3 rounded border border-red-300 mt-4">
+          <p className="text-xs text-red-700">
+            <strong>Quan trọng:</strong> Có triệu chứng STI là yếu tố ưu tiên cao nhất trong đánh giá CDC.
+            Bạn sẽ được khuyến cáo xét nghiệm toàn diện ngay lập tức.
+          </p>
+        </div>
+      </>
     </div>
   );
 
