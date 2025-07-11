@@ -164,8 +164,8 @@ export class StiAssessmentService {
             reasoning.push('CDC: Người chuyển giới có cổ tử cung tuân theo hướng dẫn sàng lọc như phụ nữ');
         }
 
-        // Pregnant women - CDC specific requirements
-        if (data.is_pregnant) {
+        // ✅ FIXED: Check is_pregnant properly (boolean, not string)
+        if (data.is_pregnant === true) {
             required_tests.push('HIV', 'Syphilis', 'Hepatitis_B');
 
             if (data.age < 25 || this.hasIncreasedRisk(data)) {
@@ -218,7 +218,7 @@ export class StiAssessmentService {
         if (data.age > 65) {
             if (this.hasIncreasedRisk(data) && data.sexually_active !== 'not_active') {
                 optional_tests.push('Gonorrhea', 'Chlamydia', 'HIV', 'Syphilis');
-                reasoning.push('CDC: Phụ nữ trên 65 tuổi có yếu tố nguy cơ có thể được hưởng lợi từ đánh giá cá nhân');
+                reasoning.push('CDC: Phụ nữ trên 65 tuổi có yếu tố nguy cơ bắt buộc cần tư vấn với bác sĩ để chọn gói xét nghiệm');
                 priority = 'optional';
             } else {
                 reasoning.push('CDC: Thường không khuyến cáo sàng lọc STI định kỳ cho phụ nữ trên 65 tuổi không có yếu tố nguy cơ');
@@ -242,7 +242,7 @@ export class StiAssessmentService {
             reasoning.push('CDC: Sàng lọc cho người chuyển giới được điều chỉnh dựa trên giải phẫu và hành vi tình dục');
         }
 
-        // MSM - High priority comprehensive screening (moved from top tier)
+        // MSM - High priority comprehensive screening
         if (data.sexual_orientation === 'msm') {
             required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia');
             optional_tests.push('Hepatitis_B', 'Hepatitis_C', 'Herpes');
@@ -261,7 +261,7 @@ export class StiAssessmentService {
             return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
         }
 
-        // Heterosexual males - CDC: Insufficient evidence for routine screening of low-risk men
+        // Heterosexual males - CDC guidance with minimum HIV screening
         const hasRisk = this.hasIncreasedRisk(data) || this.isHighPrevalenceSetting(data.living_area);
 
         if (hasRisk) {
@@ -275,10 +275,11 @@ export class StiAssessmentService {
                 reasoning.push('CDC: Nam giới có yếu tố nguy cơ cao có thể được hưởng lợi từ việc sàng lọc');
             }
         } else {
-            // Low-risk heterosexual males - follow CDC guidance
-            optional_tests.push('HIV'); // Only routine HIV screening
+            // ✅ FIXED: Always recommend at least HIV screening for low-risk males
+            optional_tests.push('HIV'); // Minimum HIV screening
             reasoning.push('CDC: Không đủ bằng chứng cho việc sàng lọc định kỳ nam giới dị tính có nguy cơ thấp');
-            reasoning.push('CDC: Cân nhắc sàng lọc dựa trên đánh giá nguy cơ cá nhân và quyết định lâm sàng');
+            reasoning.push('CDC: Khuyến cáo tối thiểu HIV screening và tư vấn phòng ngừa');
+            reasoning.push('Cân nhắc sàng lọc dựa trên đánh giá nguy cơ cá nhân và quyết định lâm sàng');
             priority = 'optional';
         }
 
@@ -306,12 +307,17 @@ export class StiAssessmentService {
         const isFrequent = ['every_3_6_months', 'frequent_screening'].includes(cdcRec.frequency);
         const hasExtragenital = cdcRec.anatomical_sites.length > 1;
 
-        // Special case for low-risk heterosexual males
+        // ✅ FIXED: No more CONSULTATION_ONLY - always recommend a package
+        // Special case for low-risk individuals - recommend STI-BASIC-01 with consultation note
         if (cdcRec.priority === 'optional' && cdcRec.required_tests.length === 0 &&
             cdcRec.optional_tests.length <= 1) {
-            package_name = 'CONSULTATION_ONLY';
+            package_name = 'STI-BASIC-01';
             riskLevel = 'Thấp';
-            businessReasoning.push('CDC: Chỉ cần tư vấn và HIV screening cho nam giới dị tính nguy cơ thấp');
+            businessReasoning.push('CDC: Chủ yếu cần tư vấn và HIV screening cho nhóm nguy cơ thấp');
+            businessReasoning.push('Gói cơ bản được đề xuất để đảm bảo sàng lọc tối thiểu và tư vấn chuyên sâu');
+
+            // Add consultation note
+            businessReasoning.push('Lưu ý: Tập trung vào tư vấn phòng ngừa và giáo dục sức khỏe tình dục');
             return { package: package_name, riskLevel, businessReasoning };
         }
 
@@ -415,7 +421,7 @@ export class StiAssessmentService {
             console.log('Creating STI assessment for customer:', customerId);
             console.log('Assessment data received:', JSON.stringify(assessmentData, null, 2));
 
-            // Validate required fields
+            // ✅ FIXED: Enhanced validation
             if (!assessmentData.age || !assessmentData.gender || !assessmentData.sexually_active || !assessmentData.hiv_status || !assessmentData.test_purpose) {
                 console.error('Missing required fields:', {
                     age: assessmentData.age,
@@ -429,6 +435,33 @@ export class StiAssessmentService {
                     message: 'Missing required fields in assessment data'
                 };
             }
+
+            // ✅ FIXED: Validate condom_use options
+            const validCondomUse = ['always', 'sometimes', 'rarely', 'never'];
+            if (assessmentData.condom_use && !validCondomUse.includes(assessmentData.condom_use)) {
+                return {
+                    success: false,
+                    message: `"condom_use" must be one of [${validCondomUse.join(', ')}]`
+                };
+            }
+
+            // ✅ FIXED: Validate pregnancy_trimester only if pregnant
+            // chống chế
+            if (assessmentData.is_pregnant === false) {
+                assessmentData.pregnancy_trimester = 'first';
+            }
+            if (assessmentData.is_pregnant === true) {
+                if (assessmentData.pregnancy_trimester) {
+                    const validTrimesters = ['first', 'second', 'third'];
+                    if (!validTrimesters.includes(assessmentData.pregnancy_trimester)) {
+                        return {
+                            success: false,
+                            message: `"pregnancy_trimester" must be one of [${validTrimesters.join(', ')}]`
+                        };
+                    }
+                }
+            }
+
 
             // Generate recommendation
             console.log('Generating CDC-based recommendation...');
