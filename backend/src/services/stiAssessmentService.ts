@@ -12,84 +12,362 @@ interface RecommendationResult {
     recommended_package: string;
     risk_level: 'Thấp' | 'Trung bình' | 'Cao';
     reasoning: string[];
+    cdc_tests: string[];
+    frequency: string;
+    anatomical_sites: string[];
+}
+
+interface CDCTestRecommendation {
+    required_tests: string[];
+    optional_tests: string[];
+    frequency: string;
+    anatomical_sites: string[];
+    reasoning: string[];
+    priority: 'immediate' | 'routine' | 'optional';
 }
 
 export class StiAssessmentService {
-    // Main assessment logic based on CDC flowchart
+    // Main CDC-based assessment logic
     public static generateRecommendation(assessmentData: IStiAssessment['assessment_data']): RecommendationResult {
-        const reasoning: string[] = [];
-        let recommendedPackage = 'STI-BASIC-01';
-        let riskLevel: 'Thấp' | 'Trung bình' | 'Cao' = 'Thấp';
+        // Get CDC test recommendations first
+        const cdcRec = this.getCDCTestRecommendations(assessmentData);
 
-        // TIER 1: Triệu chứng cấp tính (Ưu tiên cao nhất)
-        if (assessmentData.has_symptoms && assessmentData.symptoms.length > 0) {
-            recommendedPackage = 'STI-ADVANCE';
-            riskLevel = 'Cao';
-            reasoning.push(`Có triệu chứng nghi ngờ STI: ${assessmentData.symptoms.join(', ')} - cần xét nghiệm toàn diện ngay lập tức`);
-            return { recommended_package: recommendedPackage, risk_level: riskLevel, reasoning };
-        }
+        // Map CDC recommendations to business packages
+        const packageResult = this.mapCDCToPackage(cdcRec, assessmentData);
 
-        // TIER 2: Tình trạng HIV
-        if (assessmentData.hiv_status === 'positive') {
-            recommendedPackage = 'STI-ADVANCE';
-            riskLevel = 'Cao';
-            reasoning.push('Người nhiễm HIV có nguy cơ cao mắc các STI khác và cần sàng lọc toàn diện theo khuyến cáo CDC');
-            return { recommended_package: recommendedPackage, risk_level: riskLevel, reasoning };
-        }
-
-        // TIER 3: MSM - nhóm nguy cơ đặc biệt cao
-        if (assessmentData.sexual_orientation === 'msm') {
-            recommendedPackage = 'STI-ADVANCE';
-            riskLevel = 'Cao';
-            reasoning.push('Nam quan hệ tình dục với nam (MSM) thuộc nhóm nguy cơ cao theo CDC, cần sàng lọc toàn diện ít nhất hàng năm');
-            return { recommended_package: recommendedPackage, risk_level: riskLevel, reasoning };
-        }
-
-        // TIER 4: Yếu tố nguy cơ cực cao + PrEP users
-        const extremeRiskFactors = ['injection_drug', 'sex_work', 'incarceration'];
-        const hasExtremeRisk = assessmentData.risk_factors && assessmentData.risk_factors.some(factor => extremeRiskFactors.includes(factor));
-
-        // PrEP users cần sàng lọc thường xuyên hơn
-        const isPrEPUser = assessmentData.risk_factors && assessmentData.risk_factors.includes('prep_user');
-
-        if (hasExtremeRisk || isPrEPUser) {
-            recommendedPackage = 'STI-ADVANCE';
-            riskLevel = 'Cao';
-            if (isPrEPUser) {
-                reasoning.push('Người dùng PrEP cần sàng lọc STI định kỳ mỗi 3-6 tháng theo CDC');
-            }
-            if (hasExtremeRisk) {
-                const riskFactorNames = this.getRiskFactorNames(assessmentData.risk_factors?.filter(f => extremeRiskFactors.includes(f)) || []);
-                reasoning.push(`Có yếu tố nguy cơ cực cao: ${riskFactorNames.join(', ')}`);
-            }
-            return { recommended_package: recommendedPackage, risk_level: riskLevel, reasoning };
-        }
-
-        // TIER 5: Phân loại theo giới tính, tuổi và nguy cơ
-        const result = this.assessByGenderAndAge(assessmentData);
-        recommendedPackage = result.package;
-        riskLevel = result.riskLevel;
-        reasoning.push(...result.reasoning);
-
-        // Thêm thông tin về các yếu tố nguy cơ đã được xem xét
-        const riskFactorsSummary = this.generateRiskFactorsSummary(assessmentData);
-        if (riskFactorsSummary) {
-            reasoning.push(riskFactorsSummary);
-        }
-
-        return { recommended_package: recommendedPackage, risk_level: riskLevel, reasoning };
+        return {
+            recommended_package: packageResult.package,
+            risk_level: packageResult.riskLevel,
+            reasoning: [...cdcRec.reasoning, ...packageResult.businessReasoning],
+            cdc_tests: [...cdcRec.required_tests, ...cdcRec.optional_tests],
+            frequency: cdcRec.frequency,
+            anatomical_sites: cdcRec.anatomical_sites
+        };
     }
 
-    // ✅ FIXED: Standardized High Risk Settings Method
+    // CDC Test Recommendations based on 2021 Guidelines
+    private static getCDCTestRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
+        const required_tests: string[] = [];
+        const optional_tests: string[] = [];
+        const anatomical_sites: string[] = ['urogenital'];
+        const reasoning: string[] = [];
+        let frequency = 'routine';
+        let priority: 'immediate' | 'routine' | 'optional' = 'routine';
+
+        // TIER 1: SYMPTOMS - Immediate comprehensive testing
+        if (data.has_symptoms && data.symptoms.length > 0) {
+            required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia');
+            optional_tests.push('Herpes', 'Trichomonas', 'Hepatitis_B', 'Hepatitis_C');
+            frequency = 'immediate';
+            priority = 'immediate';
+            reasoning.push('CDC: Cá nhân có triệu chứng cần xét nghiệm STI toàn diện ngay lập tức');
+
+            // Consider extragenital sites based on sexual practices
+            if (data.sexual_orientation === 'msm' || data.number_of_partners === 'multiple') {
+                anatomical_sites.push('rectal', 'pharyngeal');
+                reasoning.push('CDC: Cân nhắc xét nghiệm ngoài bộ phận sinh dục dựa trên hành vi tình dục');
+            }
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // TIER 2: HIV POSITIVE - Annual comprehensive screening
+        if (data.hiv_status === 'positive') {
+            required_tests.push('Syphilis', 'Gonorrhea', 'Chlamydia', 'Hepatitis_B', 'Hepatitis_C');
+            optional_tests.push('Herpes', 'Trichomonas');
+            frequency = 'annual_minimum';
+            priority = 'routine';
+            reasoning.push('CDC: Người nhiễm HIV cần sàng lọc STI ít nhất hàng năm');
+            reasoning.push('CDC: Có thể cần sàng lọc thường xuyên hơn tùy theo hành vi nguy cơ');
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // TIER 3: MSM - High priority comprehensive screening
+        if (data.sexual_orientation === 'msm') {
+            required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia');
+            optional_tests.push('Hepatitis_B', 'Hepatitis_C', 'Herpes');
+            anatomical_sites.push('rectal', 'pharyngeal');
+
+            // Determine frequency based on risk factors
+            const hasHighRisk = this.hasMSMHighRiskFactors(data);
+            frequency = hasHighRisk ? 'every_3_6_months' : 'annual';
+            priority = 'routine';
+
+            reasoning.push('CDC: Nam quan hệ tình dục với nam cần sàng lọc ít nhất hàng năm tại các vị trí tiếp xúc');
+            if (hasHighRisk) {
+                reasoning.push('CDC: MSM có yếu tố nguy cơ cao cần sàng lọc mỗi 3-6 tháng');
+            }
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // TIER 4: HIGH RISK FACTORS
+        const extremeRiskFactors = ['injection_drug', 'sex_work', 'incarceration'];
+        const hasExtremeRisk = data.risk_factors?.some(f => extremeRiskFactors.includes(f));
+
+        if (hasExtremeRisk) {
+            required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia', 'Hepatitis_B', 'Hepatitis_C');
+            optional_tests.push('Herpes', 'Trichomonas');
+            frequency = 'frequent_screening';
+            priority = 'routine';
+
+            const riskNames = this.getRiskFactorNames(data.risk_factors?.filter(f => extremeRiskFactors.includes(f)) || []);
+            reasoning.push(`CDC: Yếu tố nguy cơ cao (${riskNames.join(', ')}) cần sàng lọc toàn diện thường xuyên`);
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // PrEP USERS - Specific CDC requirements
+        if (data.risk_factors?.includes('prep_user')) {
+            required_tests.push('HIV', 'Syphilis', 'Gonorrhea', 'Chlamydia');
+            optional_tests.push('Hepatitis_B', 'Hepatitis_C');
+            frequency = 'every_3_6_months';
+            priority = 'routine';
+            reasoning.push('CDC: Người dùng PrEP cần sàng lọc STI mỗi 3-6 tháng');
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // TIER 5: GENDER AND AGE-BASED SCREENING
+        const genderBasedRec = this.getGenderBasedCDCRecommendations(data);
+        return {
+            required_tests: genderBasedRec.required_tests,
+            optional_tests: genderBasedRec.optional_tests,
+            frequency: genderBasedRec.frequency,
+            anatomical_sites: genderBasedRec.anatomical_sites,
+            reasoning: genderBasedRec.reasoning,
+            priority: genderBasedRec.priority
+        };
+    }
+
+    // Gender-specific CDC recommendations
+    private static getGenderBasedCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
+        const required_tests: string[] = [];
+        const optional_tests: string[] = [];
+        const anatomical_sites: string[] = ['urogenital'];
+        const reasoning: string[] = [];
+        let frequency = 'routine';
+        let priority: 'immediate' | 'routine' | 'optional' = 'optional';
+
+        if (data.gender === 'female') {
+            return this.getFemaleCDCRecommendations(data);
+        } else if (data.gender === 'male') {
+            return this.getMaleCDCRecommendations(data);
+        } else if (data.gender === 'transgender') {
+            return this.getTransgenderCDCRecommendations(data);
+        }
+
+        return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+    }
+
+    // Female-specific CDC recommendations
+    private static getFemaleCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
+        const required_tests: string[] = [];
+        const optional_tests: string[] = [];
+        const anatomical_sites: string[] = ['urogenital'];
+        const reasoning: string[] = [];
+        let frequency = 'routine';
+        let priority: 'immediate' | 'routine' | 'optional' = 'optional';
+
+        // Pregnant women - CDC specific requirements
+        if (data.is_pregnant) {
+            required_tests.push('HIV', 'Syphilis', 'Hepatitis_B');
+
+            if (data.age < 25 || this.hasIncreasedRisk(data)) {
+                required_tests.push('Gonorrhea', 'Chlamydia');
+                reasoning.push('CDC: Phụ nữ mang thai dưới 25 tuổi hoặc có yếu tố nguy cơ cao cần sàng lọc Chlamydia và Gonorrhea');
+            }
+
+            frequency = 'prenatal_plus_retest';
+            priority = 'routine';
+            reasoning.push('CDC: Tất cả phụ nữ mang thai cần sàng lọc HIV, Giang mai và Viêm gan B');
+            reasoning.push('CDC: Tái kiểm tra trong tam cá nguyệt 3 nếu dưới 25 tuổi hoặc có yếu tố nguy cơ');
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // CDC: All sexually active women under 25
+        if (data.age < 25 && (data.sexually_active === 'active_single' || data.sexually_active === 'active_multiple')) {
+            required_tests.push('Gonorrhea', 'Chlamydia');
+            optional_tests.push('HIV', 'Syphilis');
+
+            if (data.age >= 21) {
+                optional_tests.push('HPV');
+                reasoning.push('CDC: Khuyến cáo sàng lọc HPV cho phụ nữ 21-65 tuổi');
+            }
+
+            frequency = 'annual';
+            priority = 'routine';
+            reasoning.push('CDC: Tất cả phụ nữ có hoạt động tình dục dưới 25 tuổi cần sàng lọc Chlamydia và Gonorrhea');
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // CDC: Women 25+ only if at increased risk
+        if (data.age >= 25 && data.age <= 65) {
+            if (this.hasIncreasedRisk(data) || this.isHighPrevalenceSetting(data.living_area)) {
+                required_tests.push('Gonorrhea', 'Chlamydia');
+                optional_tests.push('HIV', 'Syphilis');
+                priority = 'routine';
+                reasoning.push('CDC: Phụ nữ từ 25 tuổi trở lên có yếu tố nguy cơ cao cần sàng lọc Chlamydia và Gonorrhea');
+            }
+
+            // HPV screening regardless of risk
+            optional_tests.push('HPV');
+            reasoning.push('CDC: Sàng lọc HPV mỗi 3 năm với tế bào học hoặc mỗi 5 năm với HPV + tế bào học');
+
+            return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+        }
+
+        // Women over 65
+        if (data.age > 65) {
+            if (this.hasIncreasedRisk(data) && data.sexually_active !== 'not_active') {
+                optional_tests.push('Gonorrhea', 'Chlamydia', 'HIV', 'Syphilis');
+                reasoning.push('CDC: Phụ nữ trên 65 tuổi có yếu tố nguy cơ có thể được hưởng lợi từ đánh giá cá nhân');
+                priority = 'optional';
+            } else {
+                reasoning.push('CDC: Thường không khuyến cáo sàng lọc STI định kỳ cho phụ nữ trên 65 tuổi không có yếu tố nguy cơ');
+            }
+        }
+
+        return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+    }
+
+    // Male-specific CDC recommendations
+    private static getMaleCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
+        const required_tests: string[] = [];
+        const optional_tests: string[] = [];
+        const anatomical_sites: string[] = ['urogenital'];
+        const reasoning: string[] = [];
+        let frequency = 'routine';
+        let priority: 'immediate' | 'routine' | 'optional' = 'optional';
+
+        // CDC: Insufficient evidence for routine screening of heterosexual low-risk men
+        const hasRisk = this.hasIncreasedRisk(data) || this.isHighPrevalenceSetting(data.living_area);
+
+        if (hasRisk) {
+            required_tests.push('Gonorrhea', 'Chlamydia');
+            optional_tests.push('HIV', 'Syphilis');
+            priority = 'routine';
+
+            if (this.isHighPrevalenceSetting(data.living_area)) {
+                reasoning.push('CDC: Nam giới trong môi trường nguy cơ cao (phòng khám STI, cơ sở giam giữ, phòng khám thanh thiếu niên) cần được sàng lọc');
+            } else {
+                reasoning.push('CDC: Nam giới có yếu tố nguy cơ cao có thể được hưởng lợi từ việc sàng lọc');
+            }
+        } else {
+            reasoning.push('CDC: Không đủ bằng chứng cho việc sàng lọc định kỳ nam giới dị tính có nguy cơ thấp');
+            reasoning.push('CDC: Cân nhắc sàng lọc dựa trên đánh giá nguy cơ cá nhân và quyết định lâm sàng');
+        }
+
+        return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
+    }
+
+    // Transgender-specific CDC recommendations
+    private static getTransgenderCDCRecommendations(data: IStiAssessment['assessment_data']): CDCTestRecommendation {
+        const hasCervix = data.risk_factors?.includes('has_cervix');
+
+        if (hasCervix) {
+            // CDC: Follow female screening guidelines
+            const femaleRec = this.getFemaleCDCRecommendations(data);
+            femaleRec.reasoning.push('CDC: Người chuyển giới có cổ tử cung cần tuân theo hướng dẫn sàng lọc ung thư cổ tử cung');
+            return femaleRec;
+        } else {
+            // CDC: Adapt based on anatomy and sexual behaviors
+            const maleRec = this.getMaleCDCRecommendations(data);
+            maleRec.reasoning.push('CDC: Sàng lọc cho người chuyển giới cần được điều chỉnh dựa trên giải phẫu và hành vi tình dục');
+            return maleRec;
+        }
+    }
+
+    // Map CDC recommendations to business packages
+    private static mapCDCToPackage(cdcRec: CDCTestRecommendation, data: IStiAssessment['assessment_data']): {
+        package: string;
+        riskLevel: 'Thấp' | 'Trung bình' | 'Cao';
+        businessReasoning: string[];
+    } {
+        const businessReasoning: string[] = [];
+        let package_name = 'STI-BASIC-01';
+        let riskLevel: 'Thấp' | 'Trung bình' | 'Cao' = 'Thấp';
+
+        const totalTests = cdcRec.required_tests.length + cdcRec.optional_tests.length;
+        const hasHepatitis = [...cdcRec.required_tests, ...cdcRec.optional_tests].some(test =>
+            test.includes('Hepatitis')
+        );
+        const hasAdvancedTests = [...cdcRec.required_tests, ...cdcRec.optional_tests].some(test =>
+            ['Herpes', 'Trichomonas'].includes(test)
+        );
+        const isUrgent = cdcRec.priority === 'immediate';
+        const isFrequent = ['every_3_6_months', 'frequent_screening'].includes(cdcRec.frequency);
+        const hasExtragenital = cdcRec.anatomical_sites.length > 1;
+
+        // Package selection logic based on CDC complexity
+        if (isUrgent || hasAdvancedTests || totalTests >= 6 || hasExtragenital) {
+            package_name = 'STI-ADVANCE';
+            riskLevel = 'Cao';
+            businessReasoning.push('Gói nâng cao được đề xuất do: cần xét nghiệm toàn diện hoặc có triệu chứng');
+        } else if (hasHepatitis || totalTests >= 4 || isFrequent || cdcRec.priority === 'routine') {
+            package_name = 'STI-BASIC-02';
+            riskLevel = 'Trung bình';
+            businessReasoning.push('Gói cơ bản mở rộng được đề xuất do: có yếu tố nguy cơ hoặc cần xét nghiệm bổ sung');
+        } else {
+            package_name = 'STI-BASIC-01';
+            riskLevel = 'Thấp';
+            businessReasoning.push('Gói cơ bản đáp ứng đủ các xét nghiệm CDC khuyến cáo');
+        }
+
+        // Add frequency guidance
+        if (cdcRec.frequency !== 'routine') {
+            const frequencyText = this.getFrequencyText(cdcRec.frequency);
+            businessReasoning.push(`Tần suất khuyến cáo: ${frequencyText}`);
+        }
+
+        // Add test summary
+        if (cdcRec.required_tests.length > 0) {
+            businessReasoning.push(`Xét nghiệm CDC bắt buộc: ${cdcRec.required_tests.join(', ')}`);
+        }
+        if (cdcRec.optional_tests.length > 0) {
+            businessReasoning.push(`Xét nghiệm CDC khuyến cáo thêm: ${cdcRec.optional_tests.join(', ')}`);
+        }
+
+        return { package: package_name, riskLevel, businessReasoning };
+    }
+
+    // Helper methods
+    private static hasIncreasedRisk(data: IStiAssessment['assessment_data']): boolean {
+        return (
+            data.number_of_partners === 'multiple' ||
+            data.new_partner_recently ||
+            data.partner_has_sti ||
+            data.condom_use === 'never' || data.condom_use === 'rarely' ||
+            (data.previous_sti_history && data.previous_sti_history.length > 0) ||
+            (data.risk_factors && data.risk_factors.some(factor =>
+                ['blood_transfusion', 'immunocompromised', 'geographic_risk'].includes(factor)
+            ))
+        );
+    }
+
+    private static hasMSMHighRiskFactors(data: IStiAssessment['assessment_data']): boolean {
+        return (
+            data.risk_factors?.includes('prep_user') ||
+            data.hiv_status === 'positive' ||
+            data.number_of_partners === 'multiple' ||
+            data.new_partner_recently ||
+            data.partner_has_sti ||
+            (data.previous_sti_history && data.previous_sti_history.length > 0)
+        );
+    }
+
     private static isHighPrevalenceSetting(living_area: string): boolean {
         return [
             'sti_clinic',
             'correctional_facility',
             'adolescent_clinic',
-            'high_prevalence_area',
             'drug_treatment_center',
             'emergency_department',
-            'family_planning_clinic'
+            'family_planning_clinic',
+            'high_prevalence_area'
         ].includes(living_area);
     }
 
@@ -106,294 +384,19 @@ export class StiAssessmentService {
         return factors.map(f => factorMap[f] || f);
     }
 
-    private static generateRiskFactorsSummary(data: IStiAssessment['assessment_data']): string {
-        const riskFactors: string[] = [];
-
-        // Yếu tố hành vi tình dục
-        if (data.number_of_partners === 'multiple') {
-            riskFactors.push('có nhiều bạn tình');
-        }
-        if (data.new_partner_recently) {
-            riskFactors.push('mới có bạn tình gần đây');
-        }
-        if (data.partner_has_sti) {
-            riskFactors.push('bạn tình có STI');
-        }
-        if (data.condom_use === 'never' || data.condom_use === 'rarely') {
-            riskFactors.push(`sử dụng bao cao su ${data.condom_use === 'never' ? 'không bao giờ' : 'hiếm khi'}`);
-        }
-
-        // Tiền sử STI
-        if (data.previous_sti_history && data.previous_sti_history.length > 0) {
-            const stiNames = this.getSTINames(data.previous_sti_history);
-            riskFactors.push(`có tiền sử STI: ${stiNames.join(', ')}`);
-        }
-
-        // Các yếu tố nguy cơ khác
-        if (data.risk_factors && data.risk_factors.length > 0) {
-            const otherRisks = data.risk_factors.filter(f =>
-                !['injection_drug', 'sex_work', 'incarceration', 'prep_user'].includes(f)
-            );
-            if (otherRisks.length > 0) {
-                const riskNames = this.getRiskFactorNames(otherRisks);
-                riskFactors.push(`các yếu tố khác: ${riskNames.join(', ')}`);
-            }
-        }
-
-        if (riskFactors.length === 0) {
-            return 'Không có yếu tố nguy cơ đặc biệt được xác định';
-        }
-
-        return `Các yếu tố nguy cơ được xem xét: ${riskFactors.join('; ')}`;
-    }
-
-    private static getSTINames(stiCodes: string[]): string[] {
-        const stiMap: Record<string, string> = {
-            'chlamydia': 'Chlamydia',
-            'gonorrhea': 'Lậu',
-            'syphilis': 'Giang mai',
-            'herpes': 'Herpes',
-            'hpv': 'HPV',
-            'hepatitis_b': 'Viêm gan B',
-            'hepatitis_c': 'Viêm gan C',
-            'trichomonas': 'Trichomonas'
+    private static getFrequencyText(frequency: string): string {
+        const frequencyMap: Record<string, string> = {
+            'immediate': 'Ngay lập tức',
+            'every_3_6_months': 'Mỗi 3-6 tháng',
+            'annual': 'Hàng năm',
+            'annual_minimum': 'Tối thiểu hàng năm',
+            'frequent_screening': 'Sàng lọc thường xuyên',
+            'prenatal_plus_retest': 'Sàng lọc thai kỳ + tái kiểm tra'
         };
-        return stiCodes.map(code => stiMap[code] || code);
+        return frequencyMap[frequency] || frequency;
     }
 
-    private static assessByGenderAndAge(data: IStiAssessment['assessment_data']): {
-        package: string;
-        riskLevel: 'Thấp' | 'Trung bình' | 'Cao';
-        reasoning: string[];
-        additionalTests: string[];
-    } {
-        const reasoning: string[] = [];
-        const additionalTests: string[] = [];
-        let package_name = 'STI-BASIC-01';
-        let riskLevel: 'Thấp' | 'Trung bình' | 'Cao' = 'Thấp';
-
-        // Kiểm tra yếu tố nguy cơ chung
-        const hasGeneralRisk = this.hasGeneralRiskFactors(data);
-
-        if (data.gender === 'female') {
-            const result = this.assessFemale(data, hasGeneralRisk);
-            package_name = result.package;
-            riskLevel = result.riskLevel;
-            reasoning.push(...result.reasoning);
-            additionalTests.push(...result.additionalTests);
-        } else if (data.gender === 'male') {
-            const result = this.assessMale(data, hasGeneralRisk);
-            package_name = result.package;
-            riskLevel = result.riskLevel;
-            reasoning.push(...result.reasoning);
-            additionalTests.push(...result.additionalTests);
-        } else if (data.gender === 'transgender') {
-            const result = this.assessTransgender(data, hasGeneralRisk);
-            package_name = result.package;
-            riskLevel = result.riskLevel;
-            reasoning.push(...result.reasoning);
-            additionalTests.push(...result.additionalTests);
-        }
-
-        return { package: package_name, riskLevel, reasoning, additionalTests };
-    }
-
-    // ✅ FIXED: Female Assessment - No Logic Conflicts
-    private static assessFemale(data: IStiAssessment['assessment_data'], hasGeneralRisk: boolean): {
-        package: string;
-        riskLevel: 'Thấp' | 'Trung bình' | 'Cao';
-        reasoning: string[];
-        additionalTests: string[];
-    } {
-        const highRiskSettings = this.isHighPrevalenceSetting(data.living_area);
-        const reasoning: string[] = [];
-        const additionalTests: string[] = [];
-        let package_name = 'STI-BASIC-01';
-        let riskLevel: 'Thấp' | 'Trung bình' | 'Cao' = 'Thấp';
-
-        // Phụ nữ mang thai
-        if (data.is_pregnant) {
-            if (data.age < 25 || hasGeneralRisk || highRiskSettings) {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                const reasonText = data.age < 25 ? 'dưới 25 tuổi' :
-                    highRiskSettings ? 'ở môi trường nguy cơ cao' : 'có yếu tố nguy cơ';
-                reasoning.push(`Phụ nữ mang thai ${data.age} tuổi ${reasonText} cần sàng lọc mở rộng để bảo vệ sức khỏe mẹ và thai nhi`);
-            } else {
-                reasoning.push(`Phụ nữ mang thai ${data.age} tuổi không có yếu tố nguy cơ đặc biệt - sàng lọc cơ bản đủ điều kiện`);
-            }
-            additionalTests.push('Tái kiểm tra tam cá nguyệt 3 để theo dõi');
-            return { package: package_name, riskLevel, reasoning, additionalTests };
-        }
-
-        // CDC: Tất cả phụ nữ có hoạt động tình dục dưới 25 tuổi
-        if (data.age < 25) {
-            if (data.sexually_active === 'active_single' || data.sexually_active === 'active_multiple') {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                reasoning.push(`Phụ nữ ${data.age} tuổi có hoạt động tình dục - CDC khuyến cáo sàng lọc Chlamydia/Gonorrhea`);
-                additionalTests.push('HPV/Pap smear (nếu >= 21 tuổi)');
-            } else {
-                reasoning.push(`Phụ nữ ${data.age} tuổi không có hoạt động tình dục - nguy cơ STI thấp`);
-            }
-        } else if (data.age >= 25 && data.age <= 65) {
-            // ✅ FIXED: Combined logic - no conflicts
-            if (hasGeneralRisk || highRiskSettings) {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                const reasonText = highRiskSettings ? 'ở môi trường nguy cơ cao' : 'có yếu tố nguy cơ';
-                reasoning.push(`Phụ nữ ${data.age} tuổi ${reasonText} cần sàng lọc mở rộng theo khuyến cáo CDC`);
-            } else {
-                reasoning.push(`Phụ nữ ${data.age} tuổi không có yếu tố nguy cơ đặc biệt - sàng lọc định kỳ theo lịch khám bệnh thường quy`);
-            }
-            additionalTests.push('HPV/Pap smear (khuyến cáo 21-65 tuổi)');
-        } else if (data.age > 65) {
-            if (hasGeneralRisk || data.sexually_active !== 'not_active') {
-                reasoning.push(`Phụ nữ ${data.age} tuổi ${data.sexually_active !== 'not_active' ? 'có hoạt động tình dục' : 'có yếu tố nguy cơ'} - cần tư vấn với bác sĩ`);
-            } else {
-                reasoning.push(`Phụ nữ ${data.age} tuổi không có hoạt động tình dục và yếu tố nguy cơ - CDC không khuyến cáo sàng lọc thường xuyên`);
-            }
-        }
-
-        return { package: package_name, riskLevel, reasoning, additionalTests };
-    }
-
-    // ✅ FIXED: Male Assessment - Complete CDC Compliance
-    private static assessMale(data: IStiAssessment['assessment_data'], hasGeneralRisk: boolean): {
-        package: string;
-        riskLevel: 'Thấp' | 'Trung bình' | 'Cao';
-        reasoning: string[];
-        additionalTests: string[];
-    } {
-        const highRiskSettings = this.isHighPrevalenceSetting(data.living_area);
-        const reasoning: string[] = [];
-        const additionalTests: string[] = [];
-        let package_name = 'STI-BASIC-01';
-        let riskLevel: 'Thấp' | 'Trung bình' | 'Cao' = 'Thấp';
-
-        // ✅ FIXED: Check heterosexual low risk for ALL age groups first
-        const isHeterosexualLowRisk = data.sexual_orientation === 'heterosexual' &&
-            !hasGeneralRisk &&
-            !highRiskSettings;
-
-        if (isHeterosexualLowRisk) {
-            reasoning.push(`Nam giới ${data.age} tuổi dị tính không có yếu tố nguy cơ - CDC không khuyến cáo sàng lọc thường xuyên, tư vấn với bác sĩ nếu có triệu chứng`);
-            return { package: 'STI-BASIC-01', riskLevel: 'Thấp', reasoning, additionalTests };
-        }
-
-        if (data.age <= 25) {
-            // CDC: Sàng lọc nam trẻ CHỈ trong môi trường nguy cơ cao hoặc có general risk
-            if (highRiskSettings || hasGeneralRisk) {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                const environmentText = highRiskSettings ?
-                    'trong môi trường nguy cơ cao (phòng khám STI/trại giam/phòng khám thanh thiếu niên)' :
-                    'có yếu tố nguy cơ';
-                reasoning.push(`Nam giới ${data.age} tuổi ${environmentText} cần sàng lọc mở rộng theo khuyến cáo CDC`);
-            } else {
-                reasoning.push(`Nam giới ${data.age} tuổi có thể cân nhắc sàng lọc dựa trên đánh giá cá nhân và tư vấn y tế`);
-            }
-        } else if (data.age >= 26 && data.age <= 65) {
-            // ✅ FIXED: Include both hasGeneralRisk AND highRiskSettings
-            if (hasGeneralRisk || highRiskSettings) {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                const reasonText = highRiskSettings ? 'ở môi trường nguy cơ cao' : 'có yếu tố nguy cơ';
-                reasoning.push(`Nam giới ${data.age} tuổi ${reasonText} cần sàng lọc theo khuyến cáo CDC`);
-            } else {
-                reasoning.push(`Nam giới ${data.age} tuổi có thể cân nhắc sàng lọc dựa trên tư vấn y tế và đánh giá cá nhân`);
-            }
-        } else if (data.age > 65) {
-            // CDC KHÔNG khuyến cáo sàng lọc thường xuyên cho >65 tuổi
-            const hasExtremeRisk = hasGeneralRisk && (
-                data.number_of_partners === 'multiple' ||
-                data.new_partner_recently ||
-                data.partner_has_sti ||
-                (data.previous_sti_history && data.previous_sti_history.length > 0)
-            );
-
-            if (hasExtremeRisk && data.sexually_active !== 'not_active') {
-                reasoning.push(`Nam giới ${data.age} tuổi có hoạt động tình dục và yếu tố nguy cơ cao - CDC không có khuyến cáo chuẩn cho độ tuổi này, cần tư vấn với bác sĩ chuyên khoa để đánh giá cá nhân`);
-                reasoning.push('Lưu ý: Việc sàng lọc STI ở độ tuổi này cần dựa trên quyết định lâm sàng và đánh giá lợi ích/rủi ro cá nhân');
-                additionalTests.push('Cần tư vấn trực tiếp với bác sĩ');
-            } else if (data.sexually_active !== 'not_active') {
-                reasoning.push(`Nam giới ${data.age} tuổi có hoạt động tình dục - CDC không khuyến cáo sàng lọc thường xuyên cho độ tuổi này, tư vấn với bác sĩ nếu có triệu chứng hoặc quan ngại cụ thể`);
-            } else {
-                reasoning.push(`Nam giới ${data.age} tuổi không có hoạt động tình dục - CDC không khuyến cáo sàng lọc STI cho độ tuổi này, nguy cơ rất thấp`);
-            }
-        }
-
-        return { package: package_name, riskLevel, reasoning, additionalTests };
-    }
-
-    // ✅ FIXED: Transgender Assessment - Use Standardized High Risk Settings
-    private static assessTransgender(data: IStiAssessment['assessment_data'], hasGeneralRisk: boolean): {
-        package: string;
-        riskLevel: 'Thấp' | 'Trung bình' | 'Cao';
-        reasoning: string[];
-        additionalTests: string[];
-    } {
-        const highRiskSettings = this.isHighPrevalenceSetting(data.living_area);
-        const reasoning: string[] = [];
-        const additionalTests: string[] = [];
-        let package_name = 'STI-BASIC-01';
-        let riskLevel: 'Thấp' | 'Trung bình' | 'Cao' = 'Thấp';
-
-        // CDC: Screening dựa trên anatomy
-        const hasCervix = data.risk_factors && data.risk_factors.includes('has_cervix');
-
-        if (hasCervix) {
-            // Áp dụng quy tắc như phụ nữ
-            if (data.age < 25) {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                reasoning.push(`Người chuyển giới ${data.age} tuổi có cổ tử cung - áp dụng khuyến cáo sàng lọc như phụ nữ cùng độ tuổi`);
-                additionalTests.push('HPV/Pap smear');
-            } else if (data.age >= 25 && data.age <= 65) {
-                if (hasGeneralRisk || highRiskSettings) {
-                    package_name = 'STI-BASIC-02';
-                    riskLevel = 'Trung bình';
-                    const reasonText = highRiskSettings ? 'ở môi trường nguy cơ cao' : 'có yếu tố nguy cơ';
-                    reasoning.push(`Người chuyển giới ${data.age} tuổi có cổ tử cung ${reasonText} cần sàng lọc mở rộng`);
-                } else {
-                    reasoning.push(`Người chuyển giới ${data.age} tuổi có cổ tử cung - sàng lọc định kỳ theo khuyến cáo cho phụ nữ`);
-                }
-                additionalTests.push('HPV/Pap smear');
-            } else {
-                if (data.sexually_active !== 'not_active') {
-                    reasoning.push(`Người chuyển giới ${data.age} tuổi có hoạt động tình dục - tư vấn với bác sĩ chuyên khoa`);
-                } else {
-                    reasoning.push(`Người chuyển giới ${data.age} tuổi không có hoạt động tình dục - không cần sàng lọc thường xuyên`);
-                }
-            }
-        } else {
-            // Áp dụng quy tắc tương tự nam giới (nhưng không phân biệt orientation)
-            if (hasGeneralRisk || highRiskSettings) {
-                package_name = 'STI-BASIC-02';
-                riskLevel = 'Trung bình';
-                const reasonText = highRiskSettings ? 'ở môi trường nguy cơ cao' : 'có yếu tố nguy cơ';
-                reasoning.push(`Người chuyển giới ${data.age} tuổi ${reasonText} cần sàng lọc mở rộng`);
-            } else {
-                reasoning.push(`Người chuyển giới ${data.age} tuổi - sàng lọc dựa trên đánh giá cá nhân và tư vấn y tế chuyên khoa`);
-            }
-        }
-
-        return { package: package_name, riskLevel, reasoning, additionalTests };
-    }
-
-    // ✅ FIXED: Enhanced General Risk Factors
-    private static hasGeneralRiskFactors(data: IStiAssessment['assessment_data']): boolean {
-        return (
-            data.number_of_partners === 'multiple' ||
-            data.new_partner_recently ||
-            data.partner_has_sti ||
-            data.condom_use === 'never' || data.condom_use === 'rarely' ||
-            data.previous_sti_history && data.previous_sti_history.length > 0 ||
-            data.risk_factors && data.risk_factors.some(factor =>
-                ['blood_transfusion', 'immunocompromised', 'geographic_risk'].includes(factor)
-            )
-        );
-    }
+    // Existing CRUD methods remain the same
     public static async createAssessment(customerId: string, assessmentData: IStiAssessment['assessment_data']): Promise<AssessmentResponse> {
         try {
             console.log('Creating STI assessment for customer:', customerId);
@@ -415,7 +418,7 @@ export class StiAssessmentService {
             }
 
             // Generate recommendation
-            console.log('Generating recommendation...');
+            console.log('Generating CDC-based recommendation...');
             const recommendation = this.generateRecommendation(assessmentData);
             console.log('Generated recommendation:', recommendation);
 
@@ -423,7 +426,11 @@ export class StiAssessmentService {
             const dbData = {
                 customer_id: new mongoose.Types.ObjectId(customerId),
                 assessment_data: assessmentData,
-                recommendation
+                recommendation: {
+                    recommended_package: recommendation.recommended_package,
+                    risk_level: recommendation.risk_level,
+                    reasoning: recommendation.reasoning
+                }
             };
             console.log('Prepared DB data:', JSON.stringify(dbData, null, 2));
 
@@ -515,7 +522,11 @@ export class StiAssessmentService {
 
             const updatedAssessment = await StiAssessmentRepository.updateAssessment(assessmentId, {
                 assessment_data: updateData,
-                recommendation: newRecommendation
+                recommendation: {
+                    recommended_package: newRecommendation.recommended_package,
+                    risk_level: newRecommendation.risk_level,
+                    reasoning: newRecommendation.reasoning
+                }
             } as any);
 
             return {
