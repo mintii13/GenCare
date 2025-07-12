@@ -264,7 +264,24 @@ export class MailUtils{
             await transporter.sendMail(mailContent);
             return {
                 success: true,
-                message: "Send result successfully"
+                message: "Send result successfully",
+                customerName,
+                birthYear,
+                gender,
+                diagnosis,
+                resultValue,
+                notes,
+                isCritical,
+                consultantName,
+                staffName,
+                sample: {
+                    timeReceived: sample?.timeReceived ?? null,
+                    timeTesting: sample?.timeTesting ?? null,
+                    sampleQualities: sample?.sampleQualities ?? null
+                },
+                testNames,
+                resultDate: resultDate ?? null,
+                emailSendTo
             };
         } catch (error) {
             console.error('Error sending email:', error);
