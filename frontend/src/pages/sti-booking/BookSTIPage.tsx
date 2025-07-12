@@ -7,6 +7,7 @@ import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
+import LicenseModal from '../../components/sti/LicenseModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -32,6 +33,7 @@ const BookSTIPage: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
   const [orderDate, setOrderDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState('');
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
 
   const testId = searchParams.get('testId');
   const packageId = searchParams.get('packageId');
@@ -125,9 +127,20 @@ const BookSTIPage: React.FC = () => {
       return;
     }
 
+    // Show license modal before submitting
+    setShowLicenseModal(true);
+  };
+
+  const handleLicenseAccept = async () => {
+    setShowLicenseModal(false);
     setLoading(true);
 
     try {
+      if (!orderDate) {
+        message.error('Vui lòng chọn ngày xét nghiệm');
+        return;
+      }
+
       const orderData: any = {
         order_date: orderDate.format('YYYY-MM-DD'),
         notes: notes.trim()
@@ -154,6 +167,10 @@ const BookSTIPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLicenseCancel = () => {
+    setShowLicenseModal(false);
   };
 
   const steps = [
@@ -316,6 +333,14 @@ const BookSTIPage: React.FC = () => {
           <li>Kết quả xét nghiệm sẽ có sau 3-7 ngày làm việc</li>
         </ul>
       </Card>
+
+      {/* License Modal */}
+      <LicenseModal
+        visible={showLicenseModal}
+        onAccept={handleLicenseAccept}
+        onCancel={handleLicenseCancel}
+        title="Điều khoản sử dụng dịch vụ xét nghiệm STI"
+      />
     </div>
   );
 };
