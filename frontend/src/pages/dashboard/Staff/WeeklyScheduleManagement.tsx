@@ -52,11 +52,9 @@ const WeeklyScheduleManagement: React.FC = () => {
                 const response = await consultantService.getAllConsultants(1, 1000); 
                     
                 if (response.data && response.data.consultants) {
-                    console.log('✅ [DEBUG] Consultants response:', response.data.consultants);
                     
                     // Map từ ConsultantType sang Consultant interface
                     const mappedConsultants: Consultant[] = response.data.consultants.map((consultant: any) => {
-                        console.log('🔄 [DEBUG] Mapping consultant:', consultant);
                         const mapped = {
                             _id: consultant.consultant_id, // ✅ Dùng consultant_id - đây là ID thực của consultant
                             name: consultant.full_name, // ✅ Dùng full_name từ user
@@ -64,11 +62,9 @@ const WeeklyScheduleManagement: React.FC = () => {
                             specialization: consultant.specialization,
                             user_id: consultant.user_id // Lưu user_id nếu cần
                         };
-                        console.log('✅ [DEBUG] Mapped to:', mapped);
                         return mapped;
                     });
                     
-                    console.log('📋 [DEBUG] Final consultants list:', mappedConsultants);
                     setConsultants(mappedConsultants);
                 } else {
                     toast.error("Không thể tải danh sách chuyên gia.");
@@ -263,12 +259,7 @@ const WeeklyScheduleManagement: React.FC = () => {
                 />
             )}
             
-            {/* DEBUG: Show selected consultant ID */}
-            {selectedConsultantId && (
-                <div className="mt-4 p-2 bg-gray-100 rounded text-sm">
-                    <strong>🔍 DEBUG:</strong> Selected Consultant ID: {selectedConsultantId}
-                </div>
-            )}
+
 
             {isCopyModalOpen && (
                 <CopyScheduleModal

@@ -42,12 +42,6 @@ const ConsultantSchedule: React.FC = () => {
   });
 
   useEffect(() => {
-    console.log('🔍 [DEBUG] ConsultantSchedule - User context:', {
-      user,
-      isAuthenticated,
-      userRole: user?.role,
-      userId: user?.id
-    });
     
     setDebugInfo({
       user,
@@ -61,9 +55,7 @@ const ConsultantSchedule: React.FC = () => {
 
   const loadConsultants = async () => {
     try {
-      console.log('🔍 [DEBUG] Loading consultants...');
       const response = await consultantService.getAllConsultants();
-      console.log('📊 [DEBUG] Consultants response:', response);
       
       if (response.data && response.data.consultants) {
         const mapped = response.data.consultants.map((c: any) => ({
@@ -71,10 +63,8 @@ const ConsultantSchedule: React.FC = () => {
           full_name: c.full_name || c.name || ''
         }));
         setConsultants(mapped);
-        console.log('✅ [DEBUG] Mapped consultants:', mapped);
       }
     } catch (error) {
-      console.error('❌ [DEBUG] Error loading consultants:', error);
     }
   };
 
@@ -122,22 +112,17 @@ const ConsultantSchedule: React.FC = () => {
               <div className="mt-2 pt-2 border-t">
                 <button
                   onClick={async () => {
-                    console.log('🚀 [DEBUG] Testing API manually...');
                     try {
                       // Test consultants API first
                       const consultantsRes = await consultantService.getAllConsultants();
-                      console.log('👨‍⚕️ Consultants API result:', consultantsRes);
                       
                       if (consultantsRes.data?.consultants?.length > 0 && selectedConsultantId) {
                         // Test weekly schedule API
                         const { weekStart } = getWeekRange(currentWeek);
-                        console.log('📅 Testing with week:', weekStart, 'consultant:', selectedConsultantId);
                         
                         const scheduleRes = await weeklyScheduleService.getConsultantSchedules(selectedConsultantId, weekStart, weekStart);
-                        console.log('📊 Schedule API result:', scheduleRes);
                       }
                     } catch (err) {
-                      console.error('❌ Debug test error:', err);
                     }
                   }}
                   className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
@@ -163,8 +148,7 @@ const ConsultantSchedule: React.FC = () => {
             </label>
             <select
               value={selectedConsultantId}
-              onChange={(e) => {
-                console.log('🔍 [DEBUG] Selected consultant:', e.target.value);
+              onChange={(e) => {  
                 setSelectedConsultantId(e.target.value);
               }}
               className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

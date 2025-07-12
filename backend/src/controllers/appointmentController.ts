@@ -81,7 +81,6 @@ router.get('/',
                 }
                 // Staff/Admin có thể thấy tất cả (không override filters)
 
-                console.log('Appointment query:', query);
 
                 const result = await AppointmentService.getAppointmentsWithPagination(query);
 
@@ -129,7 +128,6 @@ router.get('/',
                 res.status(200).json(result);
             }
         } catch (error) {
-            console.error('Get appointments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -159,8 +157,7 @@ router.get('/my',
             const startDate = date_from || start_date;
             const endDate = date_to || end_date;
 
-            console.log(`[MY APPOINTMENTS] User: ${user.userId}, Role: ${user.role}`);
-            console.log(`[MY APPOINTMENTS] Filters - Status: ${status}, DateFrom: ${startDate}, DateTo: ${endDate}`);
+
 
             let result;
 
@@ -196,11 +193,9 @@ router.get('/my',
                 );
             }
 
-            console.log(`[MY APPOINTMENTS] Result: ${result.success ? 'SUCCESS' : 'FAILED'}, Count: ${result.data?.appointments?.length || 0}`);
 
             res.status(200).json(result);
         } catch (error) {
-            console.error('Get my appointments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống khi lấy lịch hẹn',
@@ -262,7 +257,6 @@ router.get('/search',
             const result = await AppointmentService.getAppointmentsWithPagination(query);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Search appointments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -301,7 +295,6 @@ router.get('/statistics',
             const result = await AppointmentService.getAppointmentStatistics(filters);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Get appointment statistics controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -337,7 +330,6 @@ router.post('/book', authenticateToken, authorizeRoles('customer'), validateBook
             res.status(400).json(result);
         }
     } catch (error) {
-        console.error('Book appointment controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -471,7 +463,6 @@ router.put('/:id/confirm', authenticateToken, authorizeRoles('consultant'), asyn
             }
         }
     } catch (error: any) {
-        console.error('Confirm appointment error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error when confirming appointment',
@@ -506,7 +497,6 @@ router.put('/:id/cancel', authenticateToken, async (req: Request, res: Response)
             res.status(400).json(result);
         }
     } catch (error) {
-        console.error('Cancel appointment controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -563,7 +553,6 @@ router.put('/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin
             }
         }
     } catch (error: any) {
-        console.error('Update appointment error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error when updating appointment'
@@ -833,7 +822,6 @@ router.put('/:appointmentId/feedback', authenticateToken, authorizeRoles('custom
                 new_data: { feedback: updatedFeedback }
             });
         } catch (historyError) {
-            console.error('Failed to log feedback update in history:', historyError);
         }
 
         // Get consultant info for response
@@ -933,7 +921,6 @@ router.delete('/:appointmentId/feedback', authenticateToken, authorizeRoles('cus
                 new_data: { feedback: null }
             });
         } catch (historyError) {
-            console.error('Failed to log feedback deletion in history:', historyError);
         }
 
         res.json({

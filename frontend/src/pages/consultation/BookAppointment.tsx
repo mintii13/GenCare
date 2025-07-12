@@ -684,15 +684,7 @@ const BookAppointment: React.FC = () => {
   };
 
   // Debug info
-  console.log('BookAppointment Debug:', {
-    isAuthenticated,
-    step,
-    selectedConsultant,
-    selectedSlot,
-    consultants: consultants.length,
-    consultantsLoading,
-    errors
-  });
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

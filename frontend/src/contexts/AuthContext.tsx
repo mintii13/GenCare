@@ -30,18 +30,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const token = authService.getToken();
       if (token) {
         try {
-          console.log('AuthContext: Validating token...');
           // Sử dụng endpoint đúng từ apiEndpoints
           const response = await apiClient.get<GetUserProfileResponse>(API.Profile.GET);
           if (response.data.success && response.data.user) {
-            console.log('AuthContext: Token validation successful');
             setUser(response.data.user);
             localStorage.setItem('user', JSON.stringify(response.data.user));
           } else {
             throw new Error('Invalid API response format');
           }
         } catch (error) {
-          console.error("AuthContext: Token validation failed.", error);
           // Xóa token không hợp lệ
           await authService.logout(); 
           setUser(null);
@@ -68,7 +65,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = (userData: User, token: string) => {
-    console.log('AuthContext: Logging in user:', userData.email);
     setUser(userData);
     authService.setToken(token);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -76,7 +72,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    console.log('AuthContext: Logging out user');
     // Clear user state immediately for faster UX
     setUser(null);
     

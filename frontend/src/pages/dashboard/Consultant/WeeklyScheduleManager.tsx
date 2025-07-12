@@ -196,14 +196,12 @@ const WeeklyScheduleManager: React.FC = () => {
     try {
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
-      console.log('🔍 [DEBUG] WeeklyScheduleManager.fetchScheduleForWeek - Fetching for week:', weekStartDate);
-      console.log('👤 [DEBUG] Current user:', user);
+      
       
       // Sử dụng weeklyScheduleService thay vì fetch trực tiếp
       const response = await weeklyScheduleService.getMySchedules(weekStartDate, weekStartDate);
       
-      console.log('📥 [DEBUG] getMySchedules response:', response);
-      
+     
       if ((response as any).success && (response as any).data && (response as any).data.schedules && (response as any).data.schedules.length > 0) {
         // Filter schedules for the exact week we're looking for
         const targetWeekStart = format(currentWeek, 'yyyy-MM-dd');
@@ -213,8 +211,6 @@ const WeeklyScheduleManager: React.FC = () => {
           // Normalize both dates to yyyy-MM-dd format for comparison
           const scheduleDate = new Date(schedule.week_start_date);
           const scheduleWeekStart = format(scheduleDate, 'yyyy-MM-dd');
-          console.log('🔍 [DEBUG] Comparing:', scheduleWeekStart, 'vs', targetWeekStart);
-          console.log('🔍 [DEBUG] Raw schedule date:', schedule.week_start_date);
           return scheduleWeekStart === targetWeekStart;
         });
 
@@ -272,10 +268,8 @@ const WeeklyScheduleManager: React.FC = () => {
       // Get current user's consultant ID (for consultant role, user.id is the consultant ID)
       const consultantId = user?.id;
       
-      console.log('📅 [DEBUG] Current user:', { id: user?.id, role: user?.role });
       
       // Try multiple approaches to get appointments
-      console.log('📅 [DEBUG] Trying approach 1: getMyAppointments (NEW) - TEMPORARILY DISABLED DUE TO 500 ERROR');
       
       // Temporarily disable new endpoint due to 500 error
       /*
@@ -297,7 +291,6 @@ const WeeklyScheduleManager: React.FC = () => {
       }
       */
       
-      console.log('📅 [DEBUG] Trying approach 2: getAllAppointmentsPaginated');
       
       try {
         const paginatedData = await appointmentService.getAllAppointmentsPaginated({

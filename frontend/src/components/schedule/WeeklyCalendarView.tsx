@@ -90,7 +90,6 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       return;
     }
     
-    console.log('Slot selected:', { date, startTime, endTime });
     onSlotSelect(date, startTime, endTime);
   };
 

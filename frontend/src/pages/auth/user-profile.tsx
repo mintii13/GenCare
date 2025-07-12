@@ -46,7 +46,6 @@ const UserProfilePage: React.FC = () => {
   const { user, updateUserInfo } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(() => {
     if (user) {
-      console.log('User data:', user);
       return convertToUserProfile(user);
     }
     return null;
@@ -98,7 +97,6 @@ const UserProfilePage: React.FC = () => {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      console.log('Starting form submission...');
       const formDataToSend = new FormData();
       
       // Append form data fields
@@ -109,7 +107,6 @@ const UserProfilePage: React.FC = () => {
       
       if (avatar) {
         formDataToSend.append('avatar', avatar);
-        console.log('Avatar file added to FormData');
       }
       
       // Use apiClient with FormData and custom headers
@@ -133,7 +130,6 @@ const UserProfilePage: React.FC = () => {
         toast.error((response.data as any)?.message || 'Có lỗi xảy ra');
       }
     } catch (error: any) {
-      console.error('Profile update error:', error);
       const errorMessage = error?.response?.data?.message || 
                           error?.response?.data?.details || 
                           'Có lỗi xảy ra khi cập nhật thông tin';
