@@ -167,7 +167,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
         const registerRequest: RegisterRequest = req.body;
         const result = await AuthService.register(registerRequest);
         if (result.success) {
-            res.status(201).json(result);
+            res.status(200).json(result);
         } else {
             res.status(400).json(result);
         }
@@ -190,11 +190,89 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
             console.log('Missing email or otp in request');
             return res.status(400).json({
                 success: false,
-                message: 'Email và OTP là bắt buộc'
+                message: 'Email and otp are required'
             });
         }
 
-        const result = await AuthService.verifyOTP(email, otp);
+        const result = await AuthService.verifyOTPForRegister(email, otp);
+        if (result.success) {
+            res.status(201).json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Verify OTP controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống'
+        });
+    }
+});
+
+router.put('/change-password', authenticateToken, validateChangePassword, async (req: Request, res: Response) => {
+    try {
+        const userId = (req.user as any).userId;
+        const {old_password, new_password} = req.body;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User id is required'
+            });
+        }
+        const result = await AuthService.changePasswordForUsers(userId, old_password, new_password);
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(400).json(result);
+        
+    } catch (error) {
+        console.error('Forgot password controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+})
+
+// Chỉ cần sửa nhỏ trong route verification và create-google-meet
+router.post('/forgot-password/request', async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+        const result = await AuthService.forgotPasswordAndSendOTP(email);
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Forgot password controller error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+router.post('/forgot-password/verify', async (req: Request, res: Response) => {
+    try {
+        console.log('VerifyOTP endpoint called with body:', req.body);
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            console.log('Missing email or otp in request');
+            return res.status(400).json({
+                success: false,
+                message: 'Email and otp are required'
+            });
+        }
+
+        const result = await AuthService.verifyOTPForForgotPassword(email, otp);
         if (result.success) {
             res.status(200).json(result);
         } else {
@@ -209,32 +287,26 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
     }
 });
 
-
-// Route cũ đã có sẵn sử dụng PUT method:
-// router.put('/changePassword', authenticateToken, validateChangePassword, ...)
-
-// Chỉ cần sửa nhỏ trong route verification và create-google-meet
-
-router.post('/forgot-password', async (req: Request, res: Response) => {
+router.post('/forgot-password/reset', async (req: Request, res: Response) => {
     try {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email is required'
+        const { email, new_password } = req.body;
+
+        if (!email || !new_password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email and new password are required' 
             });
         }
-
-        // Tạm thời trả về message, hoặc implement forgot password logic
-        res.status(200).json({
-            success: true,
-            message: 'Forgot password feature will be implemented soon. Please contact support.'
-        });
+        const result = await AuthService.resetPasswordAfterOTP(email, new_password);
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(400).json(result)
     } catch (error) {
-        console.error('Forgot password controller error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi hệ thống'
+        console.error('Reset password controller error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
         });
     }
 });

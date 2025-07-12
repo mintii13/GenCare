@@ -75,6 +75,13 @@ export class UserRepository {
         }
     }
 
+    public static async updatePasswordByEmail(email: string, hashedPassword: string): Promise<void> {
+        await User.updateOne(
+            { email },
+            { $set: { password: hashedPassword } }
+        );
+    }
+
     public static async updateLastLogin(userId: string): Promise<void> {
         try {
             await User.updateOne(
