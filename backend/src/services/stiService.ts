@@ -1128,33 +1128,6 @@ export class StiService {
         }
     }
 
-    public static async getStiResultById(resultId: string){
-        try {
-            if (!resultId){
-                return{
-                    success: false,
-                    message: 'Result id is not found'
-                }
-            }
-            const result = await StiResultRepository.findById(resultId);
-            if (!result){
-                return{
-                    success: false,
-                    message: 'Fail to fetch sti result by id'
-                }
-            }
-            return{
-                success: true,
-                message: 'Fetched sti result by id successfully',
-                data: result
-            }
-        } catch (error) {
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
 
     public static async updateStiResult(resultId: string, updateData: UpdateStiResultRequest, userId: string) {
         try {
@@ -1345,5 +1318,171 @@ export class StiService {
             };
         }
     }
+
+    public static async sendStiResultNotificationFromDB(stiResultId: string) {
+        try {
+            const result = await StiResultRepository.getFullResult(stiResultId);
+            if (!result || !result.sti_order_id) {
+                return { 
+                    success: false, 
+                    message: "Cannot find the result" 
+                };
+            }
+            if (!result.is_confirmed) {
+                return {
+                    success: false,
+                    message: 'Result is not confirmed.'
+                };
+            }
+            if (result.is_notified) {
+                return {
+                    success: false,
+                    message: 'Result is sent before.'
+                };
+            }
+            const order = result.sti_order_id as any;
+            const user = order.customer_id;
+            const consultantUser = order.consultant_id?.user_id;
+            const staffUser = order.staff_id?.user_id;
+
+            const customerName = user?.full_name ?? 'Khách hàng';
+            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
+            const gender = user?.gender ?? 'Không rõ';
+            const diagnosis = result.diagnosis ?? '';
+            const resultValue = result.result_value ?? '';
+            const notes = result.notes ?? '';
+            const isCritical = result.is_critical ?? false;
+            const consultantName = consultantUser?.full_name ?? 'Chưa có';
+            const staffName = staffUser?.full_name ?? 'Chưa có';
+            let testNames: string[] = [];
+            
+            if (staffName === 'Chưa có' && consultantName === 'Chưa có') {
+                return {
+                    success: false,
+                    message: 'Consultant and Staff is not found'
+                };
+            }
+
+            // Nếu có sti_test_items
+            if (order.sti_test_items && order.sti_test_items.length > 0) {
+                // Populate trước đó để có sti_test_items là mảng StiTest
+                testNames = order.sti_test_items.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            // Nếu không có mà có package item
+            else if (order.sti_package_item?.sti_test_ids && order.sti_package_item.sti_test_ids.length > 0) {
+                // Cần populate sti_package_item.sti_test_ids (vì là ObjectId)
+                testNames = order.sti_package_item.sti_test_ids.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            const sampleInfo = {
+                timeReceived: result.sample?.timeReceived,
+                timeTesting: result.sample?.timeTesting,
+                sampleQualities: result.sample?.sampleQualities ?? {}
+            };
+
+            const resultDate = result.time_result;
+            const emailSendTo = user?.email;
+
+            if (!emailSendTo) {
+                return { success: false, message: 'Người dùng không có email' };
+            }
+
+            const mailResult = await MailUtils.sendStiResultNotification(
+                customerName,
+                birthYear,
+                gender,
+                diagnosis,
+                resultValue,
+                notes,
+                isCritical,
+                consultantName,
+                staffName,
+                sampleInfo,
+                testNames,
+                resultDate,
+                emailSendTo
+            );
+            if (!mailResult){
+                return{
+                    success: false,
+                    message: 'Fail to send mail'
+                }
+            }
+            return mailResult;
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Internal server error'
+            }
+        }    
+    }
+
+    public static async getStiResultById(resultId: string){
+        try {
+            const result = await StiResultRepository.getFullResult(resultId);
+            if (!result || !result.sti_order_id) {
+                return { 
+                    success: false, 
+                    message: "Cannot find the result" 
+                };
+            }
+            const order = result.sti_order_id as any;
+            const user = order.customer_id;
+            const consultantUser = order.consultant_id?.user_id;
+            const staffUser = order.staff_id?.user_id;
+
+            const customerName = user?.full_name ?? 'Khách hàng';
+            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
+            const gender = user?.gender ?? 'Không rõ';
+            const diagnosis = result.diagnosis ?? '';
+            const resultValue = result.result_value ?? '';
+            const notes = result.notes ?? '';
+            const isCritical = result.is_critical ?? false;
+            const consultantName = consultantUser?.full_name ?? 'Chưa có';
+            const staffName = staffUser?.full_name ?? 'Chưa có';
+            let testNames: string[] = [];
+            // Nếu có sti_test_items
+            if (order.sti_test_items && order.sti_test_items.length > 0) {
+                // Populate trước đó để có sti_test_items là mảng StiTest
+                testNames = order.sti_test_items.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            // Nếu không có mà có package item
+            else if (order.sti_package_item?.sti_test_ids && order.sti_package_item.sti_test_ids.length > 0) {
+                // Cần populate sti_package_item.sti_test_ids (vì là ObjectId)
+                testNames = order.sti_package_item.sti_test_ids.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            const resultDate = result.time_result;
+            return {
+                success: true,
+                message: 'Send result successfully',
+                customerName,
+                birthYear,
+                gender,
+                diagnosis,
+                resultValue,
+                notes,
+                isCritical,
+                consultantName,
+                staffName,
+                sample: {
+                    timeReceived: result.sample?.timeReceived,
+                    timeTesting: result.sample?.timeTesting,
+                    sampleQualities: result.sample?.sampleQualities ?? {}
+                },
+                testNames,
+                resultDate,
+            };
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
     
 }

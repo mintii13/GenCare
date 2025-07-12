@@ -157,8 +157,7 @@ router.get('/my',
             const startDate = date_from || start_date;
             const endDate = date_to || end_date;
 
-
-
+         
             let result;
 
             if (user.role === 'customer') {
@@ -193,9 +192,11 @@ router.get('/my',
                 );
             }
 
+            console.log(`[MY APPOINTMENTS] Result: ${result.success ? 'SUCCESS' : 'FAILED'}, Count: ${result.data?.appointments?.length || 0}`);
 
             res.status(200).json(result);
         } catch (error) {
+            console.error('Get my appointments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống khi lấy lịch hẹn',

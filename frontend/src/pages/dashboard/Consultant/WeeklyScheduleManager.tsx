@@ -197,11 +197,11 @@ const WeeklyScheduleManager: React.FC = () => {
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
       
-      
       // Sử dụng weeklyScheduleService thay vì fetch trực tiếp
       const response = await weeklyScheduleService.getMySchedules(weekStartDate, weekStartDate);
       
      
+
       if ((response as any).success && (response as any).data && (response as any).data.schedules && (response as any).data.schedules.length > 0) {
         // Filter schedules for the exact week we're looking for
         const targetWeekStart = format(currentWeek, 'yyyy-MM-dd');
@@ -814,46 +814,7 @@ setAppointments(weekAppointments);
                                   return isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
                                 });
                                 
-                                // Debug appointments (only log once)
-                                if (dayIndex === 0 && hour === 7) { // Only log once
-                                                                    console.log('📅 [DEBUG] ALL appointments data:', appointments.map(apt => {
-                                    const weekStartCheck = format(currentWeek, 'yyyy-MM-dd');
-                                    const weekEndCheck = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
-                                    const inRange = apt.appointment_date >= weekStartCheck && apt.appointment_date <= weekEndCheck;
-                                    
-                                    return {
-                                      id: apt._id,
-                                      date: apt.appointment_date,
-                                      time: apt.start_time,
-                                      status: apt.status,
-                                      customer: apt.customer_id?.full_name,
-                                      weekStart: weekStartCheck,
-                                      weekEnd: weekEndCheck,
-                                      inWeekRange: inRange,
-                                      dateComparison: {
-                                        'date >= weekStart': apt.appointment_date >= weekStartCheck,
-                                        'date <= weekEnd': apt.appointment_date <= weekEndCheck
-                                      }
-                                    };
-                                  }));
-                                }
-                                
-                                // Debug current day appointments
-                                if (hour === 7) { // Only log once per day
-                                  const dayAppointmentsDebug = appointments.filter(appointment => {
-                                    if (appointment.status === 'cancelled') return false;
-                                    const appointmentDate = parseISO(appointment.appointment_date);
-                                    return isSameDay(appointmentDate, dayDate);
-                                  });
-                                  
-                                  if (dayAppointmentsDebug.length > 0) {
-                                    console.log(`📅 [DEBUG] ${dayName} (${format(dayDate, 'yyyy-MM-dd')}) appointments:`, dayAppointmentsDebug.map(apt => ({
-                                      time: apt.start_time,
-                                      customer: apt.customer_id?.full_name,
-                                      status: apt.status
-                                    })));
-                                  }
-                                }
+                             
                                 
                                 const isToday = isSameDay(dayDate, new Date());
                                 

@@ -64,9 +64,10 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
             <FaExclamationTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Không có quyền truy cập</h1>
             <p className="text-gray-600 mb-6">
-              Bạn không có quyền truy cập vào trang này. 
-              {user?.role === 'consultant' && ' Trang này chỉ dành cho nhân viên.'}
-              {user?.role === 'customer' && ' Trang này chỉ dành cho nhân viên.'}
+              <p>Bạn không có quyền truy cập vào trang này!</p>
+              {user?.role === 'consultant' && ' Chuyên gia không có tính năng này.'}
+              {user?.role === 'customer' && ' Khách hàng không có tính năng này.'}
+              {user?.role === 'staff' && ' Nhân viên không có tính năng này.'}
               {user?.role === 'admin' && ' Bạn cần quyền truy cập khác.'}
             </p>
             <button

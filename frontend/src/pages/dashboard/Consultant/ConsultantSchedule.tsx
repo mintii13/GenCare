@@ -42,6 +42,12 @@ const ConsultantSchedule: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log('🔍 [DEBUG] ConsultantSchedule - User context:', {
+      user,
+      isAuthenticated,
+      userRole: user?.role,
+      userId: user?.id
+    });
     
     setDebugInfo({
       user,
@@ -55,14 +61,16 @@ const ConsultantSchedule: React.FC = () => {
 
   const loadConsultants = async () => {
     try {
+      console.log('🔍 [DEBUG] Loading consultants...');
       const response = await consultantService.getAllConsultants();
-      
+
       if (response.data && response.data.consultants) {
         const mapped = response.data.consultants.map((c: any) => ({
           _id: c._id,
           full_name: c.full_name || c.name || ''
         }));
         setConsultants(mapped);
+ 
       }
     } catch (error) {
     }

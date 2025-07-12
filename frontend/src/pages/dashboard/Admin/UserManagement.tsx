@@ -612,7 +612,10 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
       const fetchRevenue = async () => {
         setLoadingRevenue(true);
         try {
-          const response = await analyticsService.getRevenueByCustomer(user.id);
+
+              const response = await analyticsService.getRevenueByCustomer(user.id);
+
+ 
           if (response.success) {
             setRevenue(response.data.total_revenue);
           }
