@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import LicenseModal from '../../components/sti/LicenseModal';
 import { toast } from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
+import { API } from '../../config/apiEndpoints';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -139,12 +140,10 @@ const MultipleTestBooking: React.FC = () => {
       const orderData = {
         sti_test_items: testIds,
         order_date: orderDate!.format('YYYY-MM-DD'),
-        notes: notes.trim()
+        ...(notes.trim() && { notes: notes.trim() })  // chỉ thêm notes nếu không rỗng
       };
 
-      const response = await apiClient.post<any>('/sti/book-multiple', {
-        testIds: selectedTests,
-      });
+      const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
 
       if (response.data.success) {
         message.success('Đặt lịch xét nghiệm thành công!');
