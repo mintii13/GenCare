@@ -1361,5 +1361,70 @@ export class StiService {
             };
         }
     }
+
+    public static async sendStiResultNotificationFromDB(stiResultId: string) {
+        try {
+            const result = await StiResultRepository.getFullResult(stiResultId);
+            if (!result || !result.sti_order_id) {
+                return { 
+                    success: false, 
+                    message: "Cannot find the result" 
+                };
+            }
+
+            const order = result.sti_order_id as any;
+            const user = order.customer_id;
+            const consultantUser = order.consultant_id?.user_id;
+            const staffUser = order.staff_id?.user_id;
+
+            const customerName = user?.full_name ?? 'Khách hàng';
+            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
+            const gender = user?.gender ?? 'Không rõ';
+            const diagnosis = result.diagnosis ?? '';
+            const resultValue = result.result_value ?? '';
+            const notes = result.notes ?? '';
+            const isCritical = result.is_critical ?? false;
+            const consultantName = consultantUser?.full_name ?? 'Chưa có';
+            const staffName = staffUser?.full_name ?? 'Chưa có';
+            const testNames = order.sti_test_items?.map((t: any) => t.sti_test_name) ?? [];
+
+            const sampleInfo = {
+                timeReceived: result.sample?.timeReceived,
+                timeTesting: result.sample?.timeTesting,
+                sampleQualities: result.sample?.sampleQualities ?? {}
+            };
+
+            const resultDate = result.time_result;
+            const emailSendTo = user?.email;
+
+            if (!emailSendTo) {
+                return { success: false, message: 'Người dùng không có email' };
+            }
+
+            return await MailUtils.sendStiResultNotification(
+                customerName,
+                birthYear,
+                gender,
+                diagnosis,
+                resultValue,
+                notes,
+                isCritical,
+                consultantName,
+                staffName,
+                sampleInfo,
+                testNames,
+                resultDate,
+                emailSendTo
+            );
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Internal server error'
+            }
+        }    
+    }
+
+
     
 }

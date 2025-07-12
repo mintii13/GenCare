@@ -74,4 +74,20 @@ export class StiResultRepository {
         }
     }
 
+    public static async getFullResult(stiResultId: string){
+        try {
+            return await StiResult.findById(stiResultId)
+                    .populate({
+                        path: 'sti_order_id',
+                        populate: [
+                            { path: 'customer_id', select: 'full_name email gender date_of_birth' }, // user
+                            { path: 'consultant_id', populate: { path: 'user_id', select: 'full_name' } },
+                            { path: 'staff_id', populate: { path: 'user_id', select: 'full_name' } },
+                            { path: 'sti_test_items', select: 'sti_test_name' }
+                        ]
+                    });
+        } catch (error) {
+            throw new Error(`Error getting STI result: ${error}`);
+        }
+    }
 }
