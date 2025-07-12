@@ -122,7 +122,7 @@ export class MenstrualCycleRepository {
     public static async getRecentCycles(user_id: string, limit: number): Promise<CycleStatsData[]> {
         const cycles = await MenstrualCycle.find({
             user_id: new mongoose.Types.ObjectId(user_id),
-            cycle_length: { $exists: true, $gt: 0 }
+            cycle_length: { $exists: true, $gte: 0 }
         })
         .select('cycle_start_date cycle_length period_days createdAt')
         .sort({ cycle_start_date: -1 })
