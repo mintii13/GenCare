@@ -373,9 +373,9 @@ export class MenstrualCycleService {
     private static calculatePeriodRegularity(periodLengths: number[]): RegularityStatus{
         if (periodLengths.length < 3) 
             return 'insufficient_data';
-        const allInRange = periodLengths.every(length => length >= 3 && length <= 7);
+        const allInRange = periodLengths.every(length => length >= 2 && length <= 7);
 
-        // Nếu số ngày hành kinh nằm từ 3-7 thì ok, còn có giá trị chu kỳ out scope thì xem như bất bình thường
+        // Nếu số ngày hành kinh nằm từ 2-7 thì ok, còn có giá trị chu kỳ out scope thì xem như bất bình thường
         if (allInRange) 
             return 'regular';       
         return 'irregular';
