@@ -176,6 +176,13 @@ router.get(
         try {
             const user = req.jwtUser as JWTPayload;
             const requestedConsultantId = req.params.consultantId;
+            
+            console.log('📤 [DEBUG] GET /consultant/:consultantId called with:', {
+                consultantId: requestedConsultantId,
+                userRole: user.role,
+                userId: user.userId,
+                query: req.query
+            });
 
             // Verify access rights
             if (user.role === 'consultant') {
@@ -195,9 +202,16 @@ router.get(
                 end_date ? new Date(end_date as string) : undefined
             );
 
+            console.log('📥 [DEBUG] WeeklyScheduleService.getConsultantSchedules result:', {
+                success: schedules.success,
+                dataExists: !!schedules.data,
+                schedulesCount: schedules.data?.schedules?.length || 0
+            });
+
             if (schedules.success) {
                 res.json(schedules);
             } else {
+                console.log('❌ [DEBUG] Schedules request failed:', schedules);
                 res.status(400).json(schedules);
             }
         } catch (error: any) {

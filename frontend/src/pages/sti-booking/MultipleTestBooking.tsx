@@ -6,6 +6,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
+import LicenseModal from '../../components/sti/LicenseModal';
+import { toast } from 'react-hot-toast';
+import LoginModal from '../../components/auth/LoginModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -26,11 +29,13 @@ const MultipleTestBooking: React.FC = () => {
   const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([]);
   const [orderDate, setOrderDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState('');
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'customer') {
-      message.error('Chỉ khách hàng mới có thể đặt lịch xét nghiệm');
-      navigate('/login');
+      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
+      setShowLoginModal(true);
       return;
     }
     fetchAllTests();
@@ -119,14 +124,21 @@ const MultipleTestBooking: React.FC = () => {
       return;
     }
 
+    // Show license modal before submitting
+    setShowLicenseModal(true);
+  };
+
+  const handleLicenseAccept = async () => {
+    setShowLicenseModal(false);
     setLoading(true);
 
     try {
+      const checkedTests = selectedTests.filter(item => item.checked);
       const testIds = checkedTests.map(item => item.test._id);
       
       const orderData = {
         sti_test_items: testIds,
-        order_date: orderDate.format('YYYY-MM-DD'),
+        order_date: orderDate!.format('YYYY-MM-DD'),
         notes: notes.trim()
       };
 
@@ -147,6 +159,10 @@ const MultipleTestBooking: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLicenseCancel = () => {
+    setShowLicenseModal(false);
   };
 
   const getSelectedTestsInfo = () => {
@@ -360,6 +376,17 @@ const MultipleTestBooking: React.FC = () => {
           <li>Kết quả xét nghiệm sẽ có sau 3-7 ngày làm việc</li>
         </ul>
       </Card>
+
+      {/* License Modal */}
+      <LicenseModal
+        visible={showLicenseModal}
+        onAccept={handleLicenseAccept}
+        onCancel={handleLicenseCancel}
+        title="Điều khoản sử dụng dịch vụ xét nghiệm STI"
+      />
+
+      {/* Login Modal */}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };

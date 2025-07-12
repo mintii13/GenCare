@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -24,11 +24,10 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
   useEffect(() => {
     if (autoResize && quillRef.current) {
       const editor = quillRef.current.getEditor();
-      const container = quillRef.current.getEditingArea();
       
       const resizeEditor = () => {
-        if (container) {
-          const editorElement = container.querySelector('.ql-editor') as HTMLElement;
+        // Use editor's container directly instead of getEditingArea()
+        const editorElement = editor.container.querySelector('.ql-editor') as HTMLElement;
           if (editorElement) {
             // Reset height to auto to calculate natural height
             editorElement.style.height = 'auto';
@@ -37,7 +36,6 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
             const minHeight = 150;
             const newHeight = Math.max(minHeight, scrollHeight + 10);
             editorElement.style.height = `${newHeight}px`;
-          }
         }
       };
 
@@ -45,46 +43,42 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
       editor.on('text-change', resizeEditor);
       
       // Initial resize
-      setTimeout(resizeEditor, 100);
+      const timeoutId = setTimeout(resizeEditor, 100);
 
       // Cleanup
       return () => {
         editor.off('text-change', resizeEditor);
+        clearTimeout(timeoutId);
       };
     }
   }, [autoResize, value]);
 
-  useEffect(() => {
-    // Cleanup function to remove any event listeners
-    return () => {
-      if (quillRef.current) {
-        const editor = quillRef.current.getEditor();
-        editor.off('text-change', () => {});
-      }
-    };
-  }, []);
-
-  const modules = {
+  // Memoize modules and formats to prevent unnecessary re-renders
+  const modules = useMemo(() => ({
     toolbar: [
       [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
       ['bold', 'italic', 'underline', 'strike'],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'align': [] }], // Thêm căn lề
+      ['blockquote', 'code-block'], // Thêm blockquote, code
       [{ 'color': [] }, { 'background': [] }],
-      ['link', 'image'],
-      ['clean']
+      ['link', 'image', 'video'], // Thêm video
+      ['clean'],
+      ['undo', 'redo'] // Nếu có cài đặt module undo/redo
     ],
     clipboard: {
       matchVisual: false
     }
-  };
+  }), []);
 
-  const formats = [
+  const formats = useMemo(() => [
     'header',
     'bold', 'italic', 'underline', 'strike',
     'list', 'bullet',
     'color', 'background',
     'link', 'image'
-  ];
+  ], []);
 
   return (
     <div className="quill-editor-wrapper">
@@ -97,6 +91,8 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
         placeholder={placeholder}
         modules={modules}
         formats={formats}
+        bounds=".quill-editor-wrapper"
+        preserveWhitespace={true}
         style={{ 
           height: autoResize ? 'auto' : height,
           background: readOnly ? '#f9fafb' : '#fff',
@@ -120,12 +116,15 @@ const QuillEditor: React.FC<QuillEditorProps> = ({
             ${autoResize ? 'height: auto !important;' : ''}
           }
           .quill-editor-wrapper .ql-toolbar {
-            border: none !important;
-            border-bottom: 1px solid #e5e7eb !important;
+            border: 2px solid #d1d5db !important;
+            border-bottom: 2px solid #d1d5db !important;
+            border-radius: 6px 6px 0 0 !important;
             background: #f9fafb;
           }
           .quill-editor-wrapper .ql-snow {
-            border: none !important;
+            border: 2px solid #d1d5db !important;
+            border-top: none !important;
+            border-radius: 0 0 6px 6px !important;
             ${autoResize ? 'height: auto !important;' : ''}
           }
           ${autoResize ? `

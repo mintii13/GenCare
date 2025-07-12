@@ -12,6 +12,8 @@ export * from './blogService';
 export * from './autoConfirmService';
 export * from './medicationReminderService';
 export * from './menstrualCycleService';
+export { STIAssessmentService } from './stiAssessmentService';
+export { default as homeService } from './homeService';
 
 // Re-export commonly used types
 export type {

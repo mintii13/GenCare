@@ -44,19 +44,29 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
+    // Clear local data immediately for faster UX
+    clearAllTokens();
+    
+    // Try to notify backend but don't wait for response
     try {
-      const token = this.getToken();
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
-        await apiClient.post(API.Auth.LOGOUT, {}, {
-          headers: { Authorization: `Bearer ${token}` }
+        // Send logout request without waiting for response
+        apiClient.post(API.Auth.LOGOUT, {}, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 2000 // Short timeout for logout
+        }).catch(() => {
+          // Ignore logout API errors - user is already logged out locally
+          console.log("Backend logout notification failed - continuing with local logout");
         });
       }
     } catch (error) {
-      console.error("Logout failed:", error);
-    } finally {
-      clearAllTokens();
-      window.location.href = '/';
+      // Ignore errors - user is already logged out locally
+      console.log("Logout notification skipped due to error");
     }
+    
+    // Use window.location for clean state reset
+    window.location.href = '/';
   },
 
   setToken(token: string): void {

@@ -181,6 +181,88 @@ export class EmailNotificationService {
     }
 
     /**
+     * Send feedback reminder email after appointment completion
+     */
+    public static async sendFeedbackReminder(emailData: AppointmentEmailData): Promise<{ success: boolean; message: string }> {
+        try {
+            const transporter = this.getTransporter();
+
+            const mailContent = {
+                from: `"GenCare - Đánh giá dịch vụ" <${process.env.EMAIL_FOR_VERIFY}>`,
+                to: emailData.customerEmail,
+                subject: `⭐ Hãy đánh giá cuộc tư vấn với ${emailData.consultantName}`,
+                html: `
+                <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+                    <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <h2 style="color: #2a9d8f; text-align: center;">⭐ Cảm ơn bạn đã sử dụng dịch vụ tư vấn!</h2>
+                        
+                        <div style="background-color: #e9f7f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <h3 style="color: #2a9d8f; margin-top: 0;">📋 THÔNG TIN CUỘC TÁO VẤN</h3>
+                            <p><strong>👩‍⚕️ Chuyên gia tư vấn:</strong> ${emailData.consultantName}</p>
+                            <p><strong>📅 Ngày:</strong> ${emailData.appointmentDate}</p>
+                            <p><strong>⏰ Thời gian:</strong> ${emailData.startTime} - ${emailData.endTime}</p>
+                        </div>
+
+                        <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                            <h3 style="color: #856404; margin-top: 0;">💭 Chia sẻ trải nghiệm của bạn</h3>
+                            <p style="color: #856404; margin: 15px 0;">
+                                Chất lượng tư vấn có đáp ứng mong đợi của bạn không? 
+                                Hãy dành 2 phút để đánh giá và giúp chúng tôi cải thiện dịch vụ!
+                            </p>
+                            <p style="margin: 20px 0;">
+                                <a href="${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/my-appointments?feedback=${emailData.appointmentId}"
+                                   style="background-color: #ffc107; color: #212529; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                                    ⭐ ĐÁNH GIÁ NGAY
+                                </a>
+                            </p>
+                        </div>
+
+                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <h4 style="color: #495057; margin-top: 0;">🎯 Tại sao đánh giá quan trọng?</h4>
+                            <ul style="color: #495057; margin: 0; padding-left: 20px;">
+                                <li>✅ Giúp cải thiện chất lượng dịch vụ</li>
+                                <li>✅ Hỗ trợ chuyên gia phát triển kỹ năng</li>
+                                <li>✅ Giúp khách hàng khác lựa chọn phù hợp</li>
+                                <li>✅ Xây dựng cộng đồng chăm sóc sức khỏe tốt hơn</li>
+                            </ul>
+                        </div>
+
+                        <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #bee5eb;">
+                            <h4 style="color: #0c5460; margin-top: 0;">⏰ Lưu ý</h4>
+                            <p style="color: #0c5460; margin: 0; font-size: 14px;">
+                                Bạn có thể đánh giá trong vòng <strong>7 ngày</strong> sau khi cuộc tư vấn kết thúc. 
+                                Đánh giá có thể chỉnh sửa trong vòng 24 giờ đầu.
+                            </p>
+                        </div>
+
+                        <p style="text-align: center; color: #666; font-style: italic; margin-top: 30px;">
+                            Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ GenCare!
+                        </p>
+                        
+                        <p style="text-align: center; margin-top: 20px;">
+                            <strong style="color: #2a9d8f;">${process.env.APP_NAME ?? 'GenCare'}</strong><br>
+                            <small style="color: #666;">Chăm sóc sức khỏe, Đồng hành cùng bạn</small>
+                        </p>
+                    </div>
+                </body>`
+            };
+
+            await transporter.sendMail(mailContent);
+
+            return {
+                success: true,
+                message: 'Feedback reminder email sent successfully'
+            };
+        } catch (error) {
+            console.error('Error sending feedback reminder email:', error);
+            return {
+                success: false,
+                message: `Failed to send feedback reminder email: ${error.message}`
+            };
+        }
+    }
+
+    /**
      * Send appointment cancellation email
      */
     public static async sendAppointmentCancellation(emailData: AppointmentEmailData, cancelledBy: string, reason?: string): Promise<{ success: boolean; message: string }> {

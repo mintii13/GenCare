@@ -35,7 +35,7 @@ const MyAppointments: React.FC = () => {
   });
   const [selectedNewSlot, setSelectedNewSlot] = useState<{date: string, startTime: string, endTime: string} | null>(null);
   const [consultantDetails, setConsultantDetails] = useState<{[key: string]: any}>({});
-  const [canFeedback, setCanFeedback] = useState(false);
+  // Feedback modal open condition handled per appointment (no global canFeedback)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Pagination states
@@ -53,7 +53,8 @@ const MyAppointments: React.FC = () => {
     page: 1,
     limit: 10,
     sort_by: 'appointment_date',
-    sort_order: 'desc'
+    sort_order: 'desc',
+    status: undefined // Xóa filter status để hiển thị tất cả
   });
 
   const statusLabels = {
@@ -97,15 +98,7 @@ const MyAppointments: React.FC = () => {
     }
   }, [consultantDetails]);
 
-  useEffect(() => {
-    if (selectedAppointment && selectedAppointment.status === 'completed') {
-      FeedbackService.canSubmitFeedback(selectedAppointment._id as any)
-        .then(res => setCanFeedback(res.can_submit))
-        .catch(() => setCanFeedback(false));
-    } else {
-      setCanFeedback(false);
-    }
-  }, [selectedAppointment]);
+  // Remove canFeedback fetch; will verify server-side when submitting.
 
   const fetchAppointments = async () => {
     try {
@@ -152,12 +145,17 @@ const MyAppointments: React.FC = () => {
   };
 
   const handleSortChange = (sort_by: string, sort_order: 'asc' | 'desc') => {
-    setQuery(prev => ({
-      ...prev,
-      page: 1,
-      sort_by: sort_by as any,
-      sort_order
-    }));
+    console.log('🔄 Sort change requested:', { sort_by, sort_order });
+    setQuery(prev => {
+      const newQuery = {
+        ...prev,
+        page: 1,
+        sort_by: sort_by as any,
+        sort_order
+      };
+
+      return newQuery;
+    });
   };
 
   const handleClearFilters = () => {
@@ -166,7 +164,8 @@ const MyAppointments: React.FC = () => {
       page: 1,
       limit: 10,
       sort_by: 'appointment_date',
-      sort_order: 'desc'
+      sort_order: 'asc',
+      status: undefined
     });
   };
 
@@ -378,8 +377,32 @@ const MyAppointments: React.FC = () => {
             <select
               value={`${query.sort_by}_${query.sort_order}`}
               onChange={(e) => {
-                const [sort_by, sort_order] = e.target.value.split('_');
-                handleSortChange(sort_by, sort_order as 'asc' | 'desc');
+                const value = e.target.value;
+                let sort_by: string;
+                let sort_order: 'asc' | 'desc';
+                
+                // Parse correctly based on known values
+                if (value === 'appointment_date_desc') {
+                  sort_by = 'appointment_date';
+                  sort_order = 'desc';
+                } else if (value === 'appointment_date_asc') {
+                  sort_by = 'appointment_date';
+                  sort_order = 'asc';
+                } else if (value === 'created_date_desc') {
+                  sort_by = 'created_date';
+                  sort_order = 'desc';
+                } else if (value === 'created_date_asc') {
+                  sort_by = 'created_date';
+                  sort_order = 'asc';
+                } else {
+                  // Fallback to split method
+                  const lastUnderscoreIndex = value.lastIndexOf('_');
+                  sort_by = value.substring(0, lastUnderscoreIndex);
+                  sort_order = value.substring(lastUnderscoreIndex + 1) as 'asc' | 'desc';
+                }
+                
+                console.log('🔄 Sort dropdown change:', { sort_by, sort_order, fullValue: value });
+                handleSortChange(sort_by, sort_order);
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -493,9 +516,12 @@ const MyAppointments: React.FC = () => {
                       </>
                     )}
 
-                    {appointment.status === 'completed' && canFeedback && (
+                    {appointment.status === 'completed' && !appointment.feedback && (
                       <button
-                        onClick={() => setShowFeedbackModal(true)}
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setShowFeedbackModal(true);
+                        }}
                         className="px-3 py-1 text-purple-600 hover:text-purple-800 text-sm font-medium"
                       >
                         Đánh giá
@@ -699,7 +725,7 @@ const MyAppointments: React.FC = () => {
            onSubmit={async (formData) => {
              await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
              setShowFeedbackModal(false);
-             setCanFeedback(false);
+             // No need to set canFeedback here, it will be re-fetched on next appointment load
            }}
          />
        )}
