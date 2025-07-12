@@ -3,16 +3,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'react-hot-toast';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Phone, Calendar, Users, Mail, Shield, Edit3, Save, X, Camera, Heart } from 'lucide-react';
+import { User, Phone, Calendar, Users, Mail, Shield, Edit3, Save, X, Camera, Heart, MapPin } from 'lucide-react';
 import { ProfileFormData, validationSchemas } from '../../hooks/useFormValidation';
 import { FormField, FormSelect } from '../../components/ui/FormField';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
+import { useAuth } from '../../contexts/AuthContext';
+import { userService } from '../../services/userService';
+import { toast } from 'react-hot-toast';
 
 interface UserProfile {
   id: string;
@@ -163,9 +164,8 @@ const UserProfilePage: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center py-10">
-          <Heart className="w-12 h-12 text-cyan-600 mx-auto mb-4" />
           <p className="text-gray-600">Không có thông tin người dùng.</p>
         </div>
       </div>
@@ -173,250 +173,284 @@ const UserProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-teal-50 py-8 px-4">
-      {/* Cover & Avatar */}
-      <div className="relative">
-        {/* Cover banner */}
-        <div className="h-56 w-full bg-gradient-to-r from-primary-600 to-primary-700" />
-        {/* Avatar overlapping bottom center */}
-        <div className="absolute left-1/2 -bottom-16 transform -translate-x-1/2">
-          <div className="relative group">
-            <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
-              <AvatarImage src={avatarPreview || profile.avatar || '/default-avatar.png'} className="object-cover" />
-              <AvatarFallback className="bg-cyan-600 text-white text-2xl font-bold">
-                {profile.full_name?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            {isEditing && (
-              <Label
-                htmlFor="avatar-upload"
-                className="absolute bottom-0 -right-2 bg-cyan-600 text-white rounded-full p-2 cursor-pointer hover:bg-cyan-700 transition"
-              >
-                <Camera className="w-4 h-4" />
-                <Input
-                  id="avatar-upload"
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                />
-              </Label>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1890ff' }}>Hồ sơ cá nhân</h1>
+          <p className="text-gray-600">Quản lý thông tin cá nhân của bạn</p>
         </div>
-      </div>
-      {/* Name & role */}
-      <div className="mt-20 text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-1">{profile.full_name}</h2>
-        <p className="text-cyan-600 font-medium">{profile.role}</p>
-      </div>
 
-      <div className="max-w-4xl mx-auto mt-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Card */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="flex items-center justify-between px-6 py-4 border-b border-primary-200 bg-white rounded-t-lg">
-                <CardTitle className="text-lg font-semibold flex items-center text-gray-800 tracking-tight">
-                  <User className="w-5 h-5 mr-2 text-primary-600" />Thông tin cá nhân
-                </CardTitle>
-                  {!isEditing && (
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="text-primary-600 hover:bg-primary-50">
-                      <Edit3 className="w-4 h-4 mr-1" />
-                      Chỉnh sửa
-                    </Button>
-                  )}
-              </CardHeader>
-              <CardContent className="p-8">
-                 {/* Avatar bên cover, nên không cần hiển thị lại trong card */}
-                <div className="text-center mt-4">
-                  <h3 className="text-xl font-semibold text-gray-800">{profile.full_name}</h3>
-                  <p className="text-cyan-600 font-medium">{profile.role}</p>
-                </div>
-
-                {!isEditing ? (
-                  // Display Mode
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                        <Mail className="w-5 h-5 text-cyan-600" />
-                        <div>
-                          <p className="text-sm text-gray-500">Email</p>
-                          <p className="font-medium">{profile.email}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                        <Phone className="w-5 h-5 text-cyan-600" />
-                        <div>
-                          <p className="text-sm text-gray-500">Số điện thoại</p>
-                          <p className="font-medium">{profile.phone || 'Chưa cập nhật'}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                        <Calendar className="w-5 h-5 text-cyan-600" />
-                        <div>
-                          <p className="text-sm text-gray-500">Ngày sinh</p>
-                          <p className="font-medium">
-                            {profile.date_of_birth 
-                              ? new Date(profile.date_of_birth).toLocaleDateString('vi-VN')
-                              : 'Chưa cập nhật'
-                            }
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                        <Users className="w-5 h-5 text-cyan-600" />
-                        <div>
-                          <p className="text-sm text-gray-500">Giới tính</p>
-                          <p className="font-medium">
-                            {profile.gender === 'male' ? 'Nam' : 
-                             profile.gender === 'female' ? 'Nữ' : 
-                             profile.gender === 'other' ? 'Khác' : 'Chưa cập nhật'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // Edit Mode
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        name="fullName"
-                        control={control}
-                        type="text"
-                        placeholder="Họ và tên"
-                        label="Họ và tên"
-                        error={errors.fullName?.message}
-                        className="w-full"
-                      />
-                      
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Email</Label>
-                        <Input
-                          value={profile.email}
-                          disabled
-                          className="bg-gray-100 text-gray-500"
-                        />
-                        <p className="text-xs text-gray-500">Email không thể thay đổi</p>
-                      </div>
-                      
-                      <FormField
-                        name="phone"
-                        control={control}
-                        type="tel"
-                        placeholder="Số điện thoại"
-                        label="Số điện thoại"
-                        error={errors.phone?.message}
-                        className="w-full"
-                      />
-                      
-                      <FormField
-                        name="dateOfBirth"
-                        control={control}
-                        type="date"
-                        placeholder="Ngày sinh"
-                        label="Ngày sinh"
-                        error={errors.dateOfBirth?.message}
-                        className="w-full"
-                      />
-                      
-                      <FormSelect
-                        name="gender"
-                        control={control}
-                        placeholder="Chọn giới tính"
-                        label="Giới tính"
-                        error={errors.gender?.message}
-                        options={[
-                          { value: 'male', label: 'Nam' },
-                          { value: 'female', label: 'Nữ' },
-                          { value: 'other', label: 'Khác' }
-                        ]}
-                        className="w-full"
-                      />
-                      
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Vai trò</Label>
-                        <Input
-                          value={profile.role}
-                          disabled
-                          className="bg-gray-100 text-gray-500"
-                        />
-                        <p className="text-xs text-gray-500">Vai trò không thể thay đổi</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end space-x-4 pt-6 border-t">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleCancelEdit}
-                        disabled={isSubmitting}
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Hủy
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
-                      >
-                        <Save className="w-4 h-4 mr-1" />
-                        {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
-                      </Button>
-                    </div>
-                  </form>
+        {/* Profile Card */}
+        <Card className="shadow-sm border" style={{ backgroundColor: '#ffffff', borderColor: '#e6f7ff' }}>
+          <CardContent className="p-8">
+            {/* Avatar and Basic Info */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8">
+              <div className="relative">
+                <Avatar className="h-24 w-24 border-2" style={{ borderColor: '#e6f7ff' }}>
+                  <AvatarImage 
+                    src={avatarPreview || profile.avatar || '/api/placeholder/150/150'} 
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-xl font-semibold" style={{ backgroundColor: '#e6f7ff', color: '#1890ff' }}>
+                    {profile.full_name?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
+                  <Label
+                    htmlFor="avatar-upload"
+                    className="absolute -bottom-1 -right-1 text-white rounded-full p-2 cursor-pointer transition-colors shadow-lg"
+                    style={{ backgroundColor: '#1890ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#40a9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1890ff'}
+                  >
+                    <Camera className="w-3 h-3" />
+                    <Input
+                      id="avatar-upload"
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                    />
+                  </Label>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+              
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-xl font-semibold text-gray-900 mb-1">{profile.full_name}</h2>
+                <p className="text-gray-600 mb-2">{profile.role}</p>
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 text-sm">
+                  <MapPin className="w-4 h-4" />
+                  <span>Hồ Chí Minh, Việt Nam</span>
+                </div>
+              </div>
 
-          {/* Stats/Info Card */}
-          <div className="space-y-6">
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
-                <CardTitle className="flex items-center">
-                  <Shield className="w-5 h-5 mr-2" />
-                  Trạng thái tài khoản
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Tình trạng:</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      profile.status 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {profile.status ? 'Hoạt động' : 'Tạm khóa'}
-                    </span>
+              {!isEditing && (
+                <Button 
+                  variant="outline"
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                  style={{ borderColor: '#1890ff', color: '#1890ff' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e6f7ff';
+                    e.currentTarget.style.borderColor = '#40a9ff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#1890ff';
+                  }}
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Chỉnh sửa
+                </Button>
+              )}
+            </div>
+
+            {/* Personal Information Section */}
+            <div className="border-t pt-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">Thông tin cá nhân</h3>
+                {isEditing && (
+                  <Button 
+                    variant="outline"
+                    className="flex items-center gap-2 px-3 py-2 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={handleCancelEdit}
+                  >
+                    <X className="w-4 h-4" />
+                    Hủy
+                  </Button>
+                )}
+              </div>
+
+              {!isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  {/* Display Mode */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Họ tên</label>
+                    <p className="text-gray-900">{profile.full_name}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Vai trò:</span>
-                    <span className="font-medium text-cyan-600">{profile.role}</span>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+                    <p className="text-gray-900">{profile.email}</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Số điện thoại</label>
+                    <p className="text-gray-900">{profile.phone || 'Chưa cập nhật'}</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Ngày sinh</label>
+                    <p className="text-gray-900">
+                      {profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Giới tính</label>
+                    <p className="text-gray-900">
+                      {profile.gender === 'male' ? 'Nam' : 
+                       profile.gender === 'female' ? 'Nữ' : 
+                       profile.gender === 'other' ? 'Khác' : 'Chưa cập nhật'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Trạng thái</label>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: profile.status ? '#52c41a' : '#ff4d4f' }}></div>
+                      <span className={`text-sm font-medium`} style={{ color: profile.status ? '#52c41a' : '#ff4d4f' }}>
+                        {profile.status ? 'Hoạt động' : 'Bị khóa'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Edit Mode */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 mb-2 block">
+                        Họ tên
+                      </Label>
+                      <Input
+                        id="fullName"
+                        {...control.register('fullName')}
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
+                        style={{ 
+                          borderColor: errors.fullName ? '#ff4d4f' : '#e6f7ff',
+                          backgroundColor: '#ffffff'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1890ff';
+                          e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = errors.fullName ? '#ff4d4f' : '#e6f7ff';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                      {errors.fullName && (
+                        <p className="text-sm text-red-500 mt-1">{errors.fullName.message}</p>
+                      )}
+                    </div>
 
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-lg">
-                <CardTitle>Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-3 text-sm text-gray-600">
-                  <p>• Cập nhật đầy đủ thông tin để nhận được dịch vụ tốt nhất</p>
-                  <p>• Số điện thoại giúp chúng tôi liên hệ khi cần thiết</p>
-                  <p>• Hình đại diện giúp bác sĩ dễ nhận diện bạn hơn</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                    <div>
+                      <Label htmlFor="phone" className="text-sm font-medium text-gray-700 mb-2 block">
+                        Số điện thoại
+                      </Label>
+                      <Input
+                        id="phone"
+                        {...control.register('phone')}
+                        pattern="[0-9]{10}"
+                        title="Số điện thoại phải có 10 chữ số"
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
+                        style={{ 
+                          borderColor: errors.phone ? '#ff4d4f' : '#e6f7ff',
+                          backgroundColor: '#ffffff'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1890ff';
+                          e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = errors.phone ? '#ff4d4f' : '#e6f7ff';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                      {errors.phone && (
+                        <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700 mb-2 block">
+                        Ngày sinh
+                      </Label>
+                      <Input
+                        id="dateOfBirth"
+                        type="date"
+                        {...control.register('dateOfBirth')}
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
+                        style={{ 
+                          borderColor: errors.dateOfBirth ? '#ff4d4f' : '#e6f7ff',
+                          backgroundColor: '#ffffff'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1890ff';
+                          e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = errors.dateOfBirth ? '#ff4d4f' : '#e6f7ff';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                      {errors.dateOfBirth && (
+                        <p className="text-sm text-red-500 mt-1">{errors.dateOfBirth.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="gender" className="text-sm font-medium text-gray-700 mb-2 block">
+                        Giới tính
+                      </Label>
+                      <select
+                        id="gender"
+                        {...control.register('gender')}
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
+                        style={{ 
+                          borderColor: errors.gender ? '#ff4d4f' : '#e6f7ff',
+                          backgroundColor: '#ffffff'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1890ff';
+                          e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = errors.gender ? '#ff4d4f' : '#e6f7ff';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="">Chọn giới tính</option>
+                        <option value="male">Nam</option>
+                        <option value="female">Nữ</option>
+                        <option value="other">Khác</option>
+                      </select>
+                      {errors.gender && (
+                        <p className="text-sm text-red-500 mt-1">{errors.gender.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                      style={{ borderColor: '#e6f7ff' }}
+                      onClick={handleCancelEdit}
+                      disabled={isSubmitting}
+                    >
+                      Hủy
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="px-4 py-2 text-white flex items-center gap-2 transition-colors"
+                      style={{ backgroundColor: '#1890ff' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#40a9ff'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1890ff'}
+                      disabled={isSubmitting}
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

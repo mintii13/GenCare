@@ -12,6 +12,7 @@ import { FormField, FormSelect } from '../../components/ui/FormField';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { toast } from 'react-hot-toast';
+import LoginModal from '../../components/auth/LoginModal';
 
 const Register: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -26,6 +27,7 @@ const Register: React.FC = () => {
   const [resendCountdown, setResendCountdown] = useState(60);
   const [resendLoading, setResendLoading] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -155,7 +157,7 @@ const Register: React.FC = () => {
           }
         } catch (loginError) {
           toast.success('Xác thực thành công! Vui lòng đăng nhập.');
-          navigate('/login');
+          navigate('/');
         }
       } else {
         setOTPError((response.data as any)?.message || 'OTP không hợp lệ');
@@ -417,6 +419,7 @@ const Register: React.FC = () => {
           </p>
         </CardFooter>
       </Card>
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -14,6 +14,8 @@ import PillSetupForm from './components/PillSetupForm';
 import PillCalendar from './components/PillCalendar';
 import PillSettingsModal from './components/PillSettingsModal';
 import useMenstrualCycle from '../../hooks/useMenstrualCycle';
+import FirstTimeGuideModal from '../../components/menstrual-cycle/FirstTimeGuideModal';
+
 import { toast } from 'react-hot-toast';
 import { 
   FaHeart, 
@@ -31,6 +33,7 @@ const MenstrualCyclePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('main');
   const [showPeriodLogger, setShowPeriodLogger] = useState(false);
   const [showPillSettings, setShowPillSettings] = useState(false);
+  const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
 
   // Custom hooks
   const { todayStatus, cycles, loading: cycleLoading, error: cycleError, refresh: refreshCycle } = useMenstrualCycle(user?.id);
@@ -40,7 +43,7 @@ const MenstrualCyclePage: React.FC = () => {
     error: pillError, 
     setupPillSchedule, 
     markPillAsTaken,
-    updatePillSchedule // <-- Lấy hàm update
+    updatePillSchedule
   } = usePillTracking();
 
   const getStatusColor = useCallback((pregnancyChance: string) => {
@@ -72,6 +75,18 @@ const MenstrualCyclePage: React.FC = () => {
 
   // Combined loading state
   const isLoading = cycleLoading || pillLoading;
+
+  // Kiểm tra xem người dùng có phải là người mới không
+  const isFirstTimeUser = useMemo(() => {
+    return !isLoading && cycles.length === 0;
+  }, [isLoading, cycles.length]);
+
+  // Hiển thị modal hướng dẫn cho người dùng mới
+  useEffect(() => {
+    if (isFirstTimeUser && user) {
+      setShowFirstTimeGuide(true);
+    }
+  }, [isFirstTimeUser, user]);
 
   if (!user) {
     return (
@@ -173,6 +188,16 @@ const MenstrualCyclePage: React.FC = () => {
                       </span>
                     </div>
                   )}
+
+                  {/* Desktop: Thông báo cho người dùng mới */}
+                  {isFirstTimeUser && (
+                    <div className="hidden sm:flex items-center gap-2 bg-yellow-400/20 backdrop-blur rounded-lg px-3 py-1 border border-yellow-300/30">
+                      <FaLightbulb className="text-sm text-yellow-600" />
+                      <span className="text-yellow-800 text-xs font-medium">
+                        Người dùng mới: Xem hướng dẫn
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Mobile: Gợi ý collapsed */}
@@ -184,6 +209,19 @@ const MenstrualCyclePage: React.FC = () => {
                     </div>
                     <p className="text-white/80 text-xs mt-1">
                       {todayStatus.recommendations[0]}
+                    </p>
+                  </div>
+                )}
+
+                {/* Mobile: Thông báo cho người dùng mới */}
+                {isFirstTimeUser && (
+                  <div className="sm:hidden mt-2 bg-yellow-400/20 backdrop-blur rounded-lg p-2 border border-yellow-300/30">
+                    <div className="flex items-center gap-2">
+                      <FaLightbulb className="text-xs text-yellow-600" />
+                      <span className="text-yellow-800 text-xs font-medium">Người dùng mới:</span>
+                    </div>
+                    <p className="text-yellow-700 text-xs mt-1">
+                      Xem hướng dẫn để sử dụng hiệu quả
                     </p>
                   </div>
                 )}
@@ -219,6 +257,19 @@ const MenstrualCyclePage: React.FC = () => {
                   <FaPlus className="mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Ghi nhận</span>
                 </Button>
+
+                {/* Guide Button for First Time Users */}
+                {isFirstTimeUser && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowFirstTimeGuide(true)}
+                    className="bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-800 border-yellow-300/30 backdrop-blur"
+                    variant="outline"
+                  >
+                    <FaLightbulb className="mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Hướng dẫn</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -252,13 +303,25 @@ const MenstrualCyclePage: React.FC = () => {
               </TabsTrigger>
             </TabsList>
             
-            <Button
-              onClick={() => setShowPeriodLogger(true)}
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 sm:hidden"
-            >
-              <FaPlus className="mr-2" />
-              Ghi nhận chu kì
-            </Button>
+            <div className="flex gap-2 sm:hidden">
+              {isFirstTimeUser && (
+                <Button
+                  onClick={() => setShowFirstTimeGuide(true)}
+                  variant="outline"
+                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                >
+                  <FaLightbulb className="mr-2" />
+                  Hướng dẫn
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowPeriodLogger(true)}
+                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+              >
+                <FaPlus className="mr-2" />
+                Ghi nhận chu kì
+              </Button>
+            </div>
           </div>
 
           {/* Main Dashboard */}
@@ -276,6 +339,8 @@ const MenstrualCyclePage: React.FC = () => {
               todayStatus={todayStatus} 
               cycles={cycles} 
               onRefresh={refreshCycle}
+              isFirstTimeUser={isFirstTimeUser}
+              onShowGuide={() => setShowFirstTimeGuide(true)}
             />
           </TabsContent>
 
@@ -362,6 +427,12 @@ const MenstrualCyclePage: React.FC = () => {
             onSuccess={refreshCycle}
           />
         )}
+
+        {/* First Time Guide Modal */}
+        <FirstTimeGuideModal
+          isOpen={showFirstTimeGuide}
+          onClose={() => setShowFirstTimeGuide(false)}
+        />
       </div>
     </div>
   );

@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/Input';
 import { Label } from '../../../components/ui/label';
-import { FaTimes, FaCalendarAlt, FaPlus, FaMinus } from 'react-icons/fa';
-import { menstrualCycleService, ProcessCycleRequest } from '../../../services/menstrualCycleService';
+import { FaTimes, FaCalendarAlt, FaPlus, FaMinus, FaLightbulb } from 'react-icons/fa';
+import { menstrualCycleService } from '../../../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
+import { ProcessCycleRequest } from '../../../services/menstrualCycleService';
 
 interface PeriodLoggerProps {
   onClose: () => void;
@@ -221,9 +222,12 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
               </div>
 
               {/* Info Box */}
-                              <div className="bg-blue-50 p-4 rounded-lg">
-                                  <h4 className="font-medium text-blue-800 mb-2">💡 Mẹo:</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                  <FaLightbulb className="text-blue-600" />
+                  Mẹo:
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1">
                   <li>• Ghi nhận đầy đủ tất cả ngày có kinh để dự đoán chính xác</li>
                   <li>• Hệ thống sẽ tự động tính toán và dự đoán chu kì tiếp theo</li>
                   <li>• Bạn có thể ghi chú thêm về triệu chứng hoặc cảm giác</li>

@@ -6,6 +6,7 @@ import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import LoginModal from '../../components/auth/LoginModal';
 
 const { Title, Text } = Typography;
 
@@ -20,6 +21,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
   const [packages, setPackages] = useState<any[]>([]);
   const navigate = useNavigate();
   const user = useAuth()?.user;
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     fetchTests();
@@ -91,7 +93,8 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
     if (user?.role === 'customer') {
       navigate(`/sti-booking/book?testId=${test._id}`);
     } else {
-      navigate('/login');
+      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
+      setShowLoginModal(true);
     }
   };
 
@@ -99,7 +102,8 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
     if (user?.role === 'customer') {
       navigate(`/sti-booking/book?packageId=${pkg._id}`);
     } else {
-      navigate('/login');
+      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
+      setShowLoginModal(true);
     }
   };
 
@@ -148,6 +152,9 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                     <div>Mã: {pkg.sti_package_code}</div>
                     <div>Giá: {pkg.price?.toLocaleString('vi-VN')} VND</div>
                     <div>{pkg.description}</div>
+                    <Tag color={pkg.is_active ? 'success' : 'error'}>
+                      {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
+                    </Tag>
                   </Card>
                 </Col>
               ))}
@@ -261,6 +268,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
           </>
         )}
       </Space>
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };
