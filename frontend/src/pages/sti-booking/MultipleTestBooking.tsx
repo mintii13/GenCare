@@ -7,6 +7,8 @@ import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
 import LicenseModal from '../../components/sti/LicenseModal';
+import { toast } from 'react-hot-toast';
+import LoginModal from '../../components/auth/LoginModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -28,11 +30,12 @@ const MultipleTestBooking: React.FC = () => {
   const [orderDate, setOrderDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState('');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'customer') {
-      message.error('Chỉ khách hàng mới có thể đặt lịch xét nghiệm');
-      navigate('/login');
+      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
+      setShowLoginModal(true);
       return;
     }
     fetchAllTests();
@@ -381,6 +384,9 @@ const MultipleTestBooking: React.FC = () => {
         onCancel={handleLicenseCancel}
         title="Điều khoản sử dụng dịch vụ xét nghiệm STI"
       />
+
+      {/* Login Modal */}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };

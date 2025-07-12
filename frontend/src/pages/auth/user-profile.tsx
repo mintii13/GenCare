@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Phone, Calendar, Mail, Edit3, Save, X, Camera, MapPin } from 'lucide-react';
+import { User, Phone, Calendar, Users, Mail, Shield, Edit3, Save, X, Camera, Heart, MapPin } from 'lucide-react';
+import { ProfileFormData, validationSchemas } from '../../hooks/useFormValidation';
+import { FormField, FormSelect } from '../../components/ui/FormField';
+import apiClient from '../../services/apiClient';
+import { API } from '../../config/apiEndpoints';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
+import { toast } from 'react-hot-toast';
 
 interface UserProfile {
   id: string;
@@ -20,39 +27,66 @@ interface UserProfile {
   avatar?: string;
 }
 
+// Hàm chuyển đổi dữ liệu user thành UserProfile
+const convertToUserProfile = (user: any): UserProfile => {
+  return {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    phone: user.phone || '',
+    date_of_birth: user.date_of_birth || '',
+    gender: user.gender || '',
+    role: user.role,
+    status: Boolean(user.status),
+    avatar: user.avatar
+  };
+};
+
 const UserProfilePage: React.FC = () => {
   const { user, updateUserInfo } = useAuth();
-  const [profile, setProfile] = useState(user);
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    if (user) {
+      console.log('User data:', user);
+      return convertToUserProfile(user);
+    }
+    return null;
+  });
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    setProfile(user);
-    if (user) {
-      setFormData({
-        full_name: user.full_name,
-        phone: user.phone || '',
-        date_of_birth: user.date_of_birth || '',
-        gender: (user.gender as 'male' | 'female' | 'other' | undefined),
-      });
-    } else {
-      setFormData({});
+  // React Hook Form setup
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(validationSchemas.profileSchema),
+    defaultValues: {
+      fullName: '',
+      phone: '',
+      dateOfBirth: '',
+      gender: ''
     }
-  }, [user]);
+  });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => {
-      if (name === 'gender') {
-        // Only allow allowed values or undefined
-        const genderVal = value === '' ? undefined : (value as 'male' | 'female' | 'other');
-        return { ...prev, gender: genderVal };
+  useEffect(() => {
+    if (profile) {
+      let formattedDate = '';
+      if (profile.date_of_birth) {
+        const date = new Date(profile.date_of_birth);
+        formattedDate = date.toISOString().split('T')[0];
       }
-      return { ...prev, [name]: value };
-    });
-  };
+      
+      reset({
+        fullName: profile.full_name,
+        phone: profile.phone || '',
+        dateOfBirth: formattedDate,
+        gender: (profile.gender as '' | 'male' | 'female' | 'other') || ''
+      });
+    }
+  }, [profile, reset]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -62,37 +96,69 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: ProfileFormData) => {
     try {
-      // Only send allowed fields
-      const allowedGenders = ['male', 'female', 'other'] as const;
-      const gender = allowedGenders.includes(formData.gender as any)
-        ? (formData.gender as 'male' | 'female' | 'other')
-        : undefined;
-      const submitData = {
-        full_name: formData.full_name,
-        phone: formData.phone,
-        date_of_birth: formData.date_of_birth,
-        gender,
-      };
-      const res = await userService.updateProfile(submitData);
-      let updatedUser = res.user;
+      console.log('Starting form submission...');
+      const formDataToSend = new FormData();
+      
+      // Append form data fields
+      formDataToSend.append('full_name', data.fullName);
+      if (data.phone) formDataToSend.append('phone', data.phone);
+      if (data.dateOfBirth) formDataToSend.append('date_of_birth', data.dateOfBirth);
+      if (data.gender) formDataToSend.append('gender', data.gender);
+      
       if (avatar) {
-        const form = new FormData();
-        form.append('avatar', avatar);
-        const avatarRes = await userService.uploadAvatar(form);
-        if (avatarRes.success) {
-          updatedUser = { ...updatedUser, avatar: avatarRes.avatar_url };
-        }
+        formDataToSend.append('avatar', avatar);
+        console.log('Avatar file added to FormData');
       }
-      setProfile(updatedUser);
-      updateUserInfo(updatedUser);
-      setIsEditing(false);
-      setAvatarPreview(null);
-      setAvatar(null);
-    } catch (error) {
-      // Toast error message here if needed
+      
+      // Use apiClient with FormData and custom headers
+      const response = await apiClient.put(API.Profile.UPDATE, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if ((response.data as any)?.success) {
+        toast.success('Cập nhật thông tin thành công');
+        const updatedProfile = convertToUserProfile((response.data as any).user);
+        if (updateUserInfo) {
+          updateUserInfo((response.data as any).user);
+        }
+        setProfile(updatedProfile);
+        setIsEditing(false);
+        setAvatar(null);
+        setAvatarPreview(null);
+      } else {
+        toast.error((response.data as any)?.message || 'Có lỗi xảy ra');
+      }
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.details || 
+                          'Có lỗi xảy ra khi cập nhật thông tin';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setAvatar(null);
+    setAvatarPreview(null);
+    // Reset form to original values
+    if (profile) {
+      let formattedDate = '';
+      if (profile.date_of_birth) {
+        const date = new Date(profile.date_of_birth);
+        formattedDate = date.toISOString().split('T')[0];
+      }
+      
+      reset({
+        fullName: profile.full_name,
+        phone: profile.phone || '',
+        dateOfBirth: formattedDate,
+        gender: (profile.gender as '' | 'male' | 'female' | 'other') || ''
+      });
     }
   };
 
@@ -188,7 +254,7 @@ const UserProfilePage: React.FC = () => {
                   <Button 
                     variant="outline"
                     className="flex items-center gap-2 px-3 py-2 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
-                    onClick={() => setIsEditing(false)}
+                    onClick={handleCancelEdit}
                   >
                     <X className="w-4 h-4" />
                     Hủy
@@ -241,22 +307,19 @@ const UserProfilePage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   {/* Edit Mode */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="full_name" className="text-sm font-medium text-gray-700 mb-2 block">
+                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 mb-2 block">
                         Họ tên
                       </Label>
                       <Input
-                        id="full_name"
-                        name="full_name"
-                        value={formData.full_name || ''}
-                        onChange={handleInputChange}
-                        required
+                        id="fullName"
+                        {...control.register('fullName')}
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
                         style={{ 
-                          borderColor: '#e6f7ff',
+                          borderColor: errors.fullName ? '#ff4d4f' : '#e6f7ff',
                           backgroundColor: '#ffffff'
                         }}
                         onFocus={(e) => {
@@ -264,10 +327,13 @@ const UserProfilePage: React.FC = () => {
                           e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e6f7ff';
+                          e.target.style.borderColor = errors.fullName ? '#ff4d4f' : '#e6f7ff';
                           e.target.style.boxShadow = 'none';
                         }}
                       />
+                      {errors.fullName && (
+                        <p className="text-sm text-red-500 mt-1">{errors.fullName.message}</p>
+                      )}
                     </div>
 
                     <div>
@@ -276,14 +342,12 @@ const UserProfilePage: React.FC = () => {
                       </Label>
                       <Input
                         id="phone"
-                        name="phone"
-                        value={formData.phone || ''}
-                        onChange={handleInputChange}
+                        {...control.register('phone')}
                         pattern="[0-9]{10}"
                         title="Số điện thoại phải có 10 chữ số"
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
                         style={{ 
-                          borderColor: '#e6f7ff',
+                          borderColor: errors.phone ? '#ff4d4f' : '#e6f7ff',
                           backgroundColor: '#ffffff'
                         }}
                         onFocus={(e) => {
@@ -291,25 +355,26 @@ const UserProfilePage: React.FC = () => {
                           e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e6f7ff';
+                          e.target.style.borderColor = errors.phone ? '#ff4d4f' : '#e6f7ff';
                           e.target.style.boxShadow = 'none';
                         }}
                       />
+                      {errors.phone && (
+                        <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
+                      )}
                     </div>
 
                     <div>
-                      <Label htmlFor="date_of_birth" className="text-sm font-medium text-gray-700 mb-2 block">
+                      <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700 mb-2 block">
                         Ngày sinh
                       </Label>
                       <Input
-                        id="date_of_birth"
-                        name="date_of_birth"
+                        id="dateOfBirth"
                         type="date"
-                        value={formData.date_of_birth || ''}
-                        onChange={handleInputChange}
+                        {...control.register('dateOfBirth')}
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
                         style={{ 
-                          borderColor: '#e6f7ff',
+                          borderColor: errors.dateOfBirth ? '#ff4d4f' : '#e6f7ff',
                           backgroundColor: '#ffffff'
                         }}
                         onFocus={(e) => {
@@ -317,10 +382,13 @@ const UserProfilePage: React.FC = () => {
                           e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e6f7ff';
+                          e.target.style.borderColor = errors.dateOfBirth ? '#ff4d4f' : '#e6f7ff';
                           e.target.style.boxShadow = 'none';
                         }}
                       />
+                      {errors.dateOfBirth && (
+                        <p className="text-sm text-red-500 mt-1">{errors.dateOfBirth.message}</p>
+                      )}
                     </div>
 
                     <div>
@@ -329,12 +397,10 @@ const UserProfilePage: React.FC = () => {
                       </Label>
                       <select
                         id="gender"
-                        name="gender"
-                        value={formData.gender || ''}
-                        onChange={handleInputChange}
+                        {...control.register('gender')}
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors"
                         style={{ 
-                          borderColor: '#e6f7ff',
+                          borderColor: errors.gender ? '#ff4d4f' : '#e6f7ff',
                           backgroundColor: '#ffffff'
                         }}
                         onFocus={(e) => {
@@ -342,7 +408,7 @@ const UserProfilePage: React.FC = () => {
                           e.target.style.boxShadow = '0 0 0 2px rgba(24, 144, 255, 0.2)';
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e6f7ff';
+                          e.target.style.borderColor = errors.gender ? '#ff4d4f' : '#e6f7ff';
                           e.target.style.boxShadow = 'none';
                         }}
                       >
@@ -351,6 +417,9 @@ const UserProfilePage: React.FC = () => {
                         <option value="female">Nữ</option>
                         <option value="other">Khác</option>
                       </select>
+                      {errors.gender && (
+                        <p className="text-sm text-red-500 mt-1">{errors.gender.message}</p>
+                      )}
                     </div>
                   </div>
 
@@ -360,11 +429,8 @@ const UserProfilePage: React.FC = () => {
                       variant="outline" 
                       className="px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                       style={{ borderColor: '#e6f7ff' }}
-                      onClick={() => {
-                        setIsEditing(false);
-                        setAvatarPreview(null);
-                        setAvatar(null);
-                      }}
+                      onClick={handleCancelEdit}
+                      disabled={isSubmitting}
                     >
                       Hủy
                     </Button>
@@ -374,13 +440,13 @@ const UserProfilePage: React.FC = () => {
                       style={{ backgroundColor: '#1890ff' }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#40a9ff'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1890ff'}
-                      onClick={handleSubmit}
+                      disabled={isSubmitting}
                     >
                       <Save className="w-4 h-4" />
-                      Lưu thay đổi
+                      {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
                     </Button>
                   </div>
-                </div>
+                </form>
               )}
             </div>
           </CardContent>

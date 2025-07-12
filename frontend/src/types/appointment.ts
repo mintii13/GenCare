@@ -25,6 +25,11 @@ export interface Appointment {
     meeting_id: string;
     meeting_password?: string;
   };
+  feedback?: {
+    rating: number;
+    comment?: string;
+    feedback_date: string;
+  };
 }
 
 export interface AppointmentHistory {

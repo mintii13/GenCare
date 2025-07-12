@@ -7,12 +7,16 @@
 */
 
 export const API = {
+  // Base URL for API calls
+  BASE_URL: import.meta.env.VITE_API_URL,
+  
   // ----------------------- AUTH -----------------------
   Auth: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
     CHECK_EMAIL: '/auth/check-email',
     VERIFY_OTP: '/auth/verifyOTP',
+    RESEND_OTP: '/auth/resendOTP',
     LOGOUT: '/auth/logout',
     CHANGE_PASSWORD: '/auth/change-password',
     GOOGLE_VERIFY: '/auth/google/verify',
@@ -49,6 +53,8 @@ export const API = {
     START_MEETING: (appointmentId: string) => `/appointments/${appointmentId}/start-meeting`,
     COMPLETE: (appointmentId: string) => `/appointments/${appointmentId}/complete`,
     SEND_REMINDER: (appointmentId: string) => `/appointments/${appointmentId}/send-reminder`,
+    // Simple endpoints
+    MY: '/appointments/my', // NEW: Simple endpoint for current user's appointments
     // From previous config
     MY_APPOINTMENTS: '/appointments',
     CONSULTANT_APPOINTMENTS: '/appointments',
@@ -106,8 +112,8 @@ export const API = {
     COMMENTS_BY_USER: (userId: string) => `/blogs/comments/user/${userId}`,
     COMMENTS_FOR_BLOG: (blogId: string) => `/blogs/${blogId}/comments`,
     POST_COMMENT: (blogId: string) => `/blogs/${blogId}/comments`, // POST
-    UPDATE_COMMENT: (commentId: string) => `/blogs/comments/${commentId}`, // PUT
-    DELETE_COMMENT: (commentId: string) => `/blogs/comments/${commentId}`, // DELETE
+    UPDATE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comments/${commentId}`, // PUT
+    DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comments/${commentId}`, // DELETE
     // From previous config
     LIST: '/blogs',
     DETAIL: (id: string) => `/blogs/${id}`,
@@ -132,25 +138,33 @@ export const API = {
     GET_ALL_USERS: '/profile/getAllUsers'
   },
   
-  // ----------------------- MENSTRUAL CYCLE --------------------
+  // Menstrual Cycle endpoints
   MenstrualCycle: {
     BASE: '/menstrual-cycle',
+    TRACK: '/menstrual-cycle/track',
+    GET_HISTORY: '/menstrual-cycle/history',
     PROCESS: '/menstrual-cycle/processMenstrualCycle',
     GET_CYCLES: '/menstrual-cycle/getCycles',
     GET_CYCLES_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,
-    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',
     TODAY_STATUS: '/menstrual-cycle/getTodayStatus',
     CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',
     PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',
+    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',
     CLEANUP: '/menstrual-cycle/cleanupDuplicates',
     RESET: '/menstrual-cycle/resetAllData'
   },
-  
-  // ----------------------- PILL TRACKING --------------------
+
+  // Home page endpoints
+  Home: {
+    GET_DATA: '/home/data',
+  },
+
+  // Pill tracking endpoints
   PillTracking: {
-    SETUP: '/pill-tracking/setupPillTracking',
-    GET_SCHEDULE: (userId: string) => `/pill-tracking/getPillTrackingByUser/${userId}`,
-    UPDATE_SCHEDULE: (userId: string) => `/pill-tracking/updatePillTrackingByUser/${userId}`
+    SETUP: '/pill-tracking/setup',
+    GET_SCHEDULE_BY_USER: (userId: string) => `/pill-tracking/${userId}`,
+    UPDATE_SCHEDULE_BY_USER: (userId: string) => `/pill-tracking/${userId}`,
+    TAKE_PILL: (scheduleId: string) => `/pill-tracking/${scheduleId}/take`
   },
 
   // ----------------------- STI (TESTS, PACKAGES, ORDERS) --------------------

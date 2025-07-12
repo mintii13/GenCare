@@ -52,10 +52,10 @@ export const isAuthenticated = (): boolean => {
 };
 
 /**
- * Xóa tất cả token khi logout
+ * Xóa tất cả token khi logout - optimized for performance
  */
 export const clearAllTokens = (): void => {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem("google_access_token");
-  localStorage.removeItem("user");
+  // Batch localStorage operations for better performance
+  const keysToRemove = [AUTH_TOKEN_KEY, "google_access_token", "user"];
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 }; 

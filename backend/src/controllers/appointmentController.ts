@@ -139,6 +139,78 @@ router.get('/',
 );
 
 // ================================
+// MY APPOINTMENTS ENDPOINT - ĐƠN GIẢN CHO CUSTOMER
+// ================================
+
+/**
+ * GET /api/appointments/my - Get all appointments của user hiện tại
+ * - Automatic role detection
+ * - Simple date filtering
+ * - No pagination (get all)
+ */
+router.get('/my',
+    authenticateToken,
+    async (req: Request, res: Response) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const { status, date_from, date_to, start_date, end_date } = req.query;
+
+            // Support multiple date parameter formats
+            const startDate = date_from || start_date;
+            const endDate = date_to || end_date;
+
+            console.log(`[MY APPOINTMENTS] User: ${user.userId}, Role: ${user.role}`);
+            console.log(`[MY APPOINTMENTS] Filters - Status: ${status}, DateFrom: ${startDate}, DateTo: ${endDate}`);
+
+            let result;
+
+            if (user.role === 'customer') {
+                result = await AppointmentService.getCustomerAppointments(
+                    user.userId,
+                    status as string,
+                    startDate ? new Date(startDate as string) : undefined,
+                    endDate ? new Date(endDate as string) : undefined
+                );
+            } else if (user.role === 'consultant') {
+                // Tìm consultant_id từ database
+                const consultant = await Consultant.findOne({ user_id: user.userId });
+                if (!consultant) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Consultant profile not found'
+                    });
+                }
+                
+                result = await AppointmentService.getConsultantAppointments(
+                    consultant._id.toString(),
+                    status as string,
+                    startDate ? new Date(startDate as string) : undefined,
+                    endDate ? new Date(endDate as string) : undefined
+                );
+            } else {
+                // Staff/Admin - get all appointments
+                result = await AppointmentService.getAllAppointments(
+                    status as string,
+                    startDate ? new Date(startDate as string) : undefined,
+                    endDate ? new Date(endDate as string) : undefined
+                );
+            }
+
+            console.log(`[MY APPOINTMENTS] Result: ${result.success ? 'SUCCESS' : 'FAILED'}, Count: ${result.data?.appointments?.length || 0}`);
+
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Get my appointments controller error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống khi lấy lịch hẹn',
+                error: process.env.NODE_ENV === 'development' ? error : undefined
+            });
+        }
+    }
+);
+
+// ================================
 // SEARCH ENDPOINT (CÓ THỂ GIỮ HOẶC XÓA - TÙY BẠN)
 // ================================
 
@@ -995,6 +1067,25 @@ router.post('/:appointmentId/send-reminder', authenticateToken, authorizeRoles('
         const appointmentId = req.params.appointmentId;
 
         const result = await AppointmentService.sendMeetingReminder(appointmentId);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Send feedback reminder for appointment (manual trigger)
+router.post('/:appointmentId/send-feedback-reminder', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
+    try {
+        const appointmentId = req.params.appointmentId;
+        const result = await AppointmentService.sendFeedbackReminderForAppointment(appointmentId);
 
         if (result.success) {
             res.json(result);

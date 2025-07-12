@@ -193,9 +193,11 @@ export class MenstrualCycleService {
         try {
             const cycles = await MenstrualCycleRepository.getCyclesByUser(user_id);
             if (!cycles || cycles.length === 0) {
+                // User chưa có dữ liệu chu kỳ - đây là normal với user mới
                 return {
-                    success: false,
-                    message: 'No cycles found for this user'
+                    success: true,
+                    message: 'No menstrual cycle data yet. Start tracking your period to get predictions.',
+                    data: []
                 };
             }
             return {
@@ -223,9 +225,11 @@ export class MenstrualCycleService {
 
             const cycles = await MenstrualCycleRepository.getCyclesByMonth(user_id, year, month);
             if (!cycles || cycles.length === 0) {
+                // User chưa có dữ liệu tháng này - normal với user mới hoặc tháng chưa track
                 return {
-                    success: false,
-                    message: 'No cycles found for this month'
+                    success: true,
+                    message: 'No cycle data for this month yet.',
+                    data: []
                 };
             }
             return {
@@ -298,9 +302,22 @@ export class MenstrualCycleService {
             const latestCycle = await MenstrualCycleRepository.getLatestCycles(user_id, 1);
             
             if (latestCycle.length === 0) {
+                // User mới chưa có dữ liệu - trả về default status
                 return {
-                    success: false,
-                    message: 'No cycle data found'
+                    success: true,
+                    message: 'No tracking data yet. Start tracking your period for personalized insights.',
+                    data: {
+                        date: new Date(),
+                        is_period_day: false,
+                        is_fertile_day: false,
+                        is_ovulation_day: false,
+                        pregnancy_chance: 'unknown',
+                        recommendations: [
+                            'Bắt đầu theo dõi chu kỳ kinh nguyệt để nhận thông tin cá nhân hóa',
+                            'Ghi lại ngày đầu của kỳ kinh nguyệt tiếp theo',
+                            'Duy trì lối sống lành mạnh với chế độ ăn cân bằng'
+                        ]
+                    }
                 };
             }
 
@@ -398,9 +415,20 @@ export class MenstrualCycleService {
 
             
             if (cyclesData.length === 0) {
+                // User mới chưa có đủ dữ liệu cho thống kê
                 return {
-                    success: false,
-                    message: 'No cycle data found for statistics'
+                    success: true,
+                    message: 'Track at least 2-3 cycles to see detailed statistics',
+                    data: {
+                        average_cycle_length: 0,
+                        shortest_cycle: 0,
+                        longest_cycle: 0,
+                        cycle_regularity: 'insufficient_data',
+                        trend: 'stable',
+                        last_6_cycles: [],
+                        total_cycles_tracked: 0,
+                        tracking_period_months: 0
+                    }
                 };
             }
 
@@ -456,9 +484,18 @@ export class MenstrualCycleService {
             const periodsData = await MenstrualCycleRepository.getPeriodStatsData(user_id, 12);
             
             if (periodsData.length === 0) {
+                // User mới chưa có dữ liệu kinh nguyệt
                 return {
-                    success: false,
-                    message: 'No period data found for statistics'
+                    success: true,
+                    message: 'Track at least 2-3 periods to see detailed statistics',
+                    data: {
+                        average_period_length: 0,
+                        shortest_period: 0,
+                        longest_period: 0,
+                        period_regularity: 'insufficient_data',
+                        last_3_periods: [],
+                        total_periods_tracked: 0
+                    }
                 };
             }
 
@@ -504,9 +541,14 @@ export class MenstrualCycleService {
             const cycles = await MenstrualCycleRepository.getCyclesByUser(user_id);
             
             if (!cycles || cycles.length === 0) {
+                // User mới chưa có dữ liệu - không cần cleanup
                 return {
-                    success: false,
-                    message: 'No cycles found for this user'
+                    success: true,
+                    message: 'No cycle data to clean up',
+                    data: {
+                        duplicatesRemoved: 0,
+                        duplicatesFound: []
+                    }
                 };
             }
 
