@@ -806,4 +806,159 @@ router.patch('/sti-result/sync-sample', authenticateToken, authorizeRoles('staff
     }
 });
 
+/**
+ * GET /api/sti/my-results
+ * Lấy danh sách kết quả STI của customer hiện tại
+ */
+router.get('/my-results',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req: Request, res: Response) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const customerId = user.userId;
+
+            // Lấy tất cả orders của customer
+            const orders = await StiService.getStiOrdersByCustomer(customerId);
+            
+            if (!orders.success) {
+                return res.status(500).json(orders);
+            }
+
+            // Lấy kết quả STI cho từng order
+            const results = [];
+            for (const order of orders.data || []) {
+                try {
+                    const result = await StiService.getCustomerStiResultByOrderId(order._id.toString());
+                    if (result.success && result.data) {
+                        results.push({
+                            order_id: order._id,
+                            order_date: order.order_date,
+                            order_status: order.order_status,
+                            result: result.data
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error fetching result for order ${order._id}:`, error);
+                }
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'STI results retrieved successfully',
+                data: results
+            });
+        } catch (error) {
+            console.error('Get customer STI results error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
+);
+
+/**
+ * GET /api/sti/my-result/:orderId
+ * Lấy kết quả STI chi tiết cho một order cụ thể
+ */
+router.get('/my-result/:orderId',
+    authenticateToken,
+    authorizeRoles('customer'),
+    async (req: Request, res: Response) => {
+        try {
+            const user = req.jwtUser as JWTPayload;
+            const { orderId } = req.params;
+
+            // Kiểm tra order có thuộc về customer không
+            const order = await StiService.getStiOrderById(orderId);
+            if (!order.success || !order.data) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Order not found'
+                });
+            }
+
+            if (order.data.customer_id.toString() !== user.userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied'
+                });
+            }
+
+            // Lấy kết quả STI
+            const result = await StiService.getCustomerStiResultByOrderId(orderId);
+            
+            if (!result.success) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'STI result not found'
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'STI result retrieved successfully',
+                data: {
+                    order: order.data,
+                    result: result.data
+                }
+            });
+        } catch (error) {
+            console.error('Get customer STI result error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
+);
+
+/**
+ * PATCH /api/sti/order/:orderId/status
+ * Cập nhật trạng thái STI order (cho staff/consultant)
+ */
+router.patch('/order/:orderId/status',
+    authenticateToken,
+    authorizeRoles('staff', 'consultant', 'admin'),
+    async (req: Request, res: Response) => {
+        try {
+            const { orderId } = req.params;
+            const { order_status, consultant_id, staff_id, notes } = req.body;
+            const user = req.jwtUser as JWTPayload;
+
+            if (!order_status) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Order status is required'
+                });
+            }
+
+            const updateData: any = { order_status };
+            
+            if (consultant_id) updateData.consultant_id = consultant_id;
+            if (staff_id) updateData.staff_id = staff_id;
+            if (notes) updateData.notes = notes;
+
+            const result = await StiService.updateOrder(orderId, updateData, user.userId, user.role);
+
+            if (result.success) {
+                res.status(200).json({
+                    success: true,
+                    message: 'Order status updated successfully',
+                    data: result.data
+                });
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error) {
+            console.error('Update order status error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
+);
+
 export default router;

@@ -34,7 +34,7 @@ passport.use(
           full_name: user.full_name,
           role: user.role,
           googleAccessToken: accessToken,
-          googleRefreshToken: refreshToken
+
         };
         return done(null, userForSession);
       } catch (error) {
@@ -44,7 +44,10 @@ passport.use(
   )
 );
 
-
+// Serialize user for session
+passport.serializeUser((user: any, done: any) => {
+  done(null, user._id);
+});
 
 //get data from user
 passport.deserializeUser(async (id: string, done: any) => {

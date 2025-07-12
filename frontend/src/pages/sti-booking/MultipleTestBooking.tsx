@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Checkbox, Row, Col, Divider } from 'antd';
+import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Checkbox, Row, Col, Divider, Alert } from 'antd';
 import { CalendarOutlined, FileTextOutlined, CheckCircleOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../services/apiClient';
@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import LicenseModal from '../../components/sti/LicenseModal';
 import { toast } from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
+import { API } from '../../config/apiEndpoints';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -26,7 +27,6 @@ const MultipleTestBooking: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [allTests, setAllTests] = useState<StiTest[]>([]);
-  const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([]);
   const [orderDate, setOrderDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState('');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
@@ -52,7 +52,6 @@ const MultipleTestBooking: React.FC = () => {
             isActive: test.is_active
           }));
         setAllTests(tests);
-        setSelectedTests(tests.map((test: StiTest) => ({ test, checked: false })));
       }
     } catch (error) {
       message.error('Có lỗi xảy ra khi tải danh sách xét nghiệm');
@@ -81,29 +80,10 @@ const MultipleTestBooking: React.FC = () => {
     return current && (current < today || isWeekend);
   };
 
-  const handleTestSelection = (testId: string, checked: boolean) => {
-    setSelectedTests(prev => 
-      prev.map(item => 
-        item.test._id === testId 
-          ? { ...item, checked }
-          : item
-      )
-    );
-  };
-
-  const handleNextStep = () => {
-    const checkedTests = selectedTests.filter(item => item.checked);
-    if (checkedTests.length === 0) {
-      message.error('Vui lòng chọn ít nhất một xét nghiệm');
-      return;
-    }
-    setCurrentStep(1);
-  };
-
   const handleDateChange = (date: dayjs.Dayjs | null) => {
     setOrderDate(date);
     if (date) {
-      setCurrentStep(2);
+      setCurrentStep(1);
     }
   };
 
@@ -112,19 +92,11 @@ const MultipleTestBooking: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    const checkedTests = selectedTests.filter(item => item.checked);
-    
-    if (checkedTests.length === 0) {
-      message.error('Vui lòng chọn ít nhất một xét nghiệm');
-      return;
-    }
-
     if (!orderDate) {
-      message.error('Vui lòng chọn ngày xét nghiệm');
+      message.error('Vui lòng chọn ngày tư vấn');
       return;
     }
 
-    // Show license modal before submitting
     setShowLicenseModal(true);
   };
 
@@ -133,18 +105,15 @@ const MultipleTestBooking: React.FC = () => {
     setLoading(true);
 
     try {
-      const checkedTests = selectedTests.filter(item => item.checked);
-      const testIds = checkedTests.map(item => item.test._id);
-      
+      // Tạo STI order thay vì appointment
       const orderData = {
-        sti_test_items: testIds,
+        sti_package_id: null, // Không chọn gói cụ thể
+        sti_test_items: [], // Không chọn test cụ thể
         order_date: orderDate!.format('YYYY-MM-DD'),
-        notes: notes.trim()
+        notes: `Tư vấn xét nghiệm STI. ${notes.trim()}`
       };
 
-      const response = await apiClient.post<any>('/sti/book-multiple', {
-        testIds: selectedTests,
-      });
+      const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
 
       if (response.data.success) {
         message.success('Đặt lịch xét nghiệm thành công!');
@@ -153,8 +122,8 @@ const MultipleTestBooking: React.FC = () => {
         message.error(response.data.message || 'Có lỗi xảy ra khi đặt lịch');
       }
     } catch (error: any) {
-      console.error('Error creating STI order:', error);
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch xét nghiệm';
+      console.error('Error booking STI order:', error);
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch';
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -165,21 +134,13 @@ const MultipleTestBooking: React.FC = () => {
     setShowLicenseModal(false);
   };
 
-  const getSelectedTestsInfo = () => {
-    const selected = selectedTests.filter(item => item.checked);
-    const totalPrice = selected.reduce((sum, item) => sum + item.test.price, 0);
-    return { selected, totalPrice };
-  };
-
-  const { selected: checkedTests, totalPrice } = getSelectedTestsInfo();
-
   const steps = [
     {
-      title: 'Chọn xét nghiệm',
+      title: 'Xem thông tin',
       icon: <ShoppingCartOutlined />,
     },
     {
-      title: 'Chọn ngày',
+      title: 'Chọn ngày xét nghiệm',
       icon: <CalendarOutlined />,
     },
     {
@@ -190,20 +151,29 @@ const MultipleTestBooking: React.FC = () => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <Title level={2}>Đặt lịch nhiều xét nghiệm STI</Title>
+      <Title level={2}>Xem thông tin xét nghiệm STI</Title>
+
+      {/* Thông báo quy trình mới */}
+      <Alert
+        message="Quy trình đặt lịch xét nghiệm"
+        description="Bạn đang xem thông tin tham khảo về các xét nghiệm STI. Để đặt lịch, vui lòng chọn 'Đặt lịch xét nghiệm' bên dưới. Trung tâm sẽ liên hệ xác nhận và tư vấn chọn xét nghiệm phù hợp."
+        type="info"
+        showIcon
+        style={{ marginBottom: '24px' }}
+      />
 
       <Steps current={currentStep} items={steps} style={{ marginBottom: '32px' }} />
 
       {currentStep === 0 && (
-        <Card title="Chọn xét nghiệm STI">
+        <Card title="Thông tin tham khảo các xét nghiệm STI">
           <Row gutter={[16, 16]}>
-            {selectedTests.map(({ test, checked }) => (
+            {allTests.map((test) => (
               <Col xs={24} sm={12} md={8} lg={6} key={test._id}>
                 <Card
                   size="small"
                   style={{ 
-                    border: checked ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                    backgroundColor: checked ? '#f6ffed' : 'white',
+                    border: '1px solid #d9d9d9',
+                    backgroundColor: 'white',
                     height: '260px',
                     display: 'flex',
                     flexDirection: 'column'
@@ -211,13 +181,9 @@ const MultipleTestBooking: React.FC = () => {
                   styles={{ body: { padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 } }}
                 >
                   <div style={{ marginBottom: '8px' }}>
-                    <Checkbox
-                      checked={checked}
-                      onChange={(e) => handleTestSelection(test._id, e.target.checked)}
-                      style={{ fontWeight: 'bold' }}
-                    >
+                    <Text strong style={{ fontSize: '14px' }}>
                       {test.sti_test_name}
-                    </Checkbox>
+                    </Text>
                   </div>
                   
                   <Space direction="vertical" size="small" style={{ width: '100%', flex: 1 }}>
@@ -246,26 +212,19 @@ const MultipleTestBooking: React.FC = () => {
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <Text strong>Đã chọn: {checkedTests.length} xét nghiệm</Text>
+              <Text strong>Tổng cộng: {allTests.length} xét nghiệm có sẵn</Text>
               <br />
-              <Text strong style={{ color: '#1890ff', fontSize: '18px' }}>
-                Tổng cộng: {formatPrice(totalPrice)}
-              </Text>
+              <Text type="secondary">Trung tâm sẽ tư vấn chọn xét nghiệm phù hợp khi bạn đến</Text>
             </div>
-            <Space>
-              <Button onClick={() => navigate('/test-packages')}>
-                Quay lại
-              </Button>
-              <Button type="primary" onClick={handleNextStep}>
-                Tiếp tục
-              </Button>
-            </Space>
+            <Button type="primary" onClick={() => setCurrentStep(1)}>
+              Đặt lịch xét nghiệm
+            </Button>
           </div>
         </Card>
       )}
 
       {currentStep === 1 && (
-        <Card title="Chọn ngày xét nghiệm">
+        <Card title="Đặt lịch xét nghiệm">
           <Form form={form} layout="vertical">
             <Form.Item
               label="Ngày xét nghiệm"
@@ -282,66 +241,10 @@ const MultipleTestBooking: React.FC = () => {
               />
             </Form.Item>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button onClick={() => setCurrentStep(0)}>
-                Quay lại
-              </Button>
-              <Button 
-                type="primary" 
-                onClick={() => orderDate && setCurrentStep(2)}
-                disabled={!orderDate}
-              >
-                Tiếp tục
-              </Button>
-            </div>
-          </Form>
-        </Card>
-      )}
-
-      {currentStep === 2 && (
-        <Card title="Xác nhận thông tin">
-          {/* Tóm tắt xét nghiệm đã chọn */}
-          <Card title="Xét nghiệm đã chọn" style={{ marginBottom: '16px' }}>
-            {checkedTests.map(({ test }) => (
-              <div key={test._id} style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '8px',
-                padding: '8px',
-                backgroundColor: '#f9f9f9',
-                borderRadius: '4px'
-              }}>
-                <div>
-                  <Text strong>{test.sti_test_name}</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {test.sti_test_code}
-                  </Text>
-                </div>
-                <Text strong style={{ color: '#1890ff' }}>
-                  {formatPrice(test.price)}
-                </Text>
-              </div>
-            ))}
-            <Divider />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text strong>Tổng cộng:</Text>
-              <Text strong style={{ color: '#1890ff', fontSize: '18px' }}>
-                {formatPrice(totalPrice)}
-              </Text>
-            </div>
-          </Card>
-
-          <Form form={form} layout="vertical">
-            <Form.Item label="Ngày xét nghiệm">
-              <Text strong>{orderDate?.format('DD/MM/YYYY')}</Text>
-            </Form.Item>
-
             <Form.Item label="Ghi chú (tùy chọn)">
               <TextArea
                 rows={4}
-                placeholder="Nhập ghi chú về tình trạng sức khỏe, yêu cầu đặc biệt..."
+                placeholder="Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
                 maxLength={500}
                 value={notes}
                 onChange={handleNotesChange}
@@ -349,33 +252,24 @@ const MultipleTestBooking: React.FC = () => {
               />
             </Form.Item>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button onClick={() => setCurrentStep(1)}>
-                Quay lại
-              </Button>
-              <Button
-                type="primary"
-                loading={loading}
-                onClick={handleSubmit}
-                size="large"
-              >
-                Đặt lịch xét nghiệm
-              </Button>
-            </div>
+            <Form.Item>
+              <Space>
+                <Button onClick={() => setCurrentStep(0)}>
+                  Quay lại
+                </Button>
+                <Button
+                  type="primary"
+                  loading={loading}
+                  onClick={handleSubmit}
+                  disabled={!orderDate}
+                >
+                  Đặt lịch xét nghiệm
+                </Button>
+              </Space>
+            </Form.Item>
           </Form>
         </Card>
       )}
-
-      {/* Lưu ý */}
-      <Card title="Lưu ý quan trọng" style={{ marginTop: '24px' }}>
-        <ul>
-          <li>Bạn có thể chọn nhiều xét nghiệm trong cùng một lần đặt lịch</li>
-          <li>Tất cả xét nghiệm sẽ được thực hiện trong cùng ngày đã chọn</li>
-          <li>Vui lòng đến đúng giờ để đảm bảo chất lượng mẫu xét nghiệm</li>
-          <li>Mang theo CMND/CCCD để xác minh danh tính</li>
-          <li>Kết quả xét nghiệm sẽ có sau 3-7 ngày làm việc</li>
-        </ul>
-      </Card>
 
       {/* License Modal */}
       <LicenseModal
@@ -384,8 +278,6 @@ const MultipleTestBooking: React.FC = () => {
         onCancel={handleLicenseCancel}
         title="Điều khoản sử dụng dịch vụ xét nghiệm STI"
       />
-
-      {/* Login Modal */}
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );

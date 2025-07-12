@@ -202,7 +202,7 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
 
 router.put('/change-password', authenticateToken, validateChangePassword, async (req: Request, res: Response) => {
     try {
-        const userId = (req.user as any).userId;
+        const userId = req.jwtUser?.userId;
         const {old_password, new_password} = req.body;
         if (!userId) {
             return res.status(400).json({

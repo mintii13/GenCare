@@ -366,62 +366,37 @@ export class StiService {
 
     public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
-            /*
-            let sti_package_item = null;
-            let sti_test_items = [];
-            let total_amount = 0;
-            let noPackage: boolean = false;
-            let noTest: boolean = false;
-            */
             if (!order_date){
                 return{
                     success: false,
                     message: 'Order date is required'
                 }
             }
-            /*
-            // Xử lý package
-            if (sti_package_id) {
+
+            // Xử lý trường hợp không có package hoặc test items cụ thể
+            // Đây là trường hợp đặt lịch tư vấn chung, total_amount = 0
+            let total_amount = 0;
+            let sti_package_item = null;
+            let sti_test_items: string[] = [];
+
+            // Nếu có package_id, xử lý package
+            if (sti_package_id && sti_package_id !== 'null') {
                 const result = await this.handleStiPackage(sti_package_id);
-                if (!result.success)
-                    noPackage = true;
-                else {
+                if (result.success) {
                     sti_package_item = result.sti_package_item;
                     total_amount += result.amount;
                 }
-
-            }
-            else {
-                noPackage = true;
             }
 
-            // Xử lý test lẻ
+            // Nếu có test items, xử lý test lẻ
             if (sti_test_items_input && sti_test_items_input.length > 0) {
                 const result = await this.handleStiTest(sti_test_items_input);
-                if (!result.success)
-                    noTest = true;
-                else {
+                if (result.success) {
                     sti_test_items = result.sti_test_items.map((item) => item.sti_test_id);
                     total_amount += result.amount;
                 }
             }
-            else {
-                noTest = true;
-            }
 
-            if (noPackage && noTest) {
-                return {
-                    success: false,
-                    message: 'No valid STI tests or package provided'
-                };
-            }
-            if (!noPackage && !noTest) {
-                return {
-                    success: false,
-                    message: 'Cannot provide both STI package and individual tests'
-                };
-            }
-            */
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
                 return {
@@ -430,15 +405,17 @@ export class StiService {
                 };
             }
             const schedule = scheduleResult.schedule;
+            
             const sti_order = new StiOrder({
                 customer_id,
-                //sti_package_item,
-                //sti_test_items,
+                sti_package_item,
+                sti_test_items: sti_test_items.length > 0 ? sti_test_items : undefined,
                 sti_schedule_id: schedule._id,
                 order_date,
-                //total_amount,
+                total_amount,
                 notes
             });
+            
             const result = await StiOrderRepository.insertStiOrder(sti_order);
 
             if (!result) {
@@ -447,6 +424,7 @@ export class StiService {
                     message: 'Order already exists or failed to insert'
                 };
             }
+            
             schedule.number_current_orders += 1;
             if (schedule.number_current_orders >= 10) {
                 schedule.is_locked = true;
@@ -454,17 +432,6 @@ export class StiService {
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id)
 
-            // Chỉ lấy package info nếu có sti_package_id
-            /*
-            let packageName = 'Xét nghiệm lẻ';
-            if (sti_package_id) {
-                const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
-                if (stiPackage) {
-                    packageName = stiPackage.sti_package_name;
-                }
-            }
-            */
-            // await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
             await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email)
             return {
                 success: true,
@@ -1285,7 +1252,7 @@ export class StiService {
                     message: 'Cannot find the sti result'
                 }
             }
-            const currentQualities = result.sample.sampleQualities || {};
+            const currentQualities = result.sample?.sampleQualities || {};
             const newSampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
 
             // Maintain the old type and quality in sampleQualities
@@ -1481,6 +1448,104 @@ export class StiService {
                 success: false,
                 message: 'Server error'
             }
+        }
+    }
+
+    /**
+     * Lấy tất cả STI orders của một customer
+     */
+    public static async getStiOrdersByCustomer(customerId: string) {
+        try {
+            if (!customerId) {
+                return {
+                    success: false,
+                    message: 'Customer ID is required'
+                };
+            }
+
+            const orders = await StiOrderRepository.getOrdersByCustomer(customerId);
+            
+            return {
+                success: true,
+                message: 'STI orders retrieved successfully',
+                data: orders
+            };
+        } catch (error) {
+            console.error('Error getting STI orders by customer:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /**
+     * Lấy STI order theo ID
+     */
+    public static async getStiOrderById(orderId: string) {
+        try {
+            if (!orderId) {
+                return {
+                    success: false,
+                    message: 'Order ID is required'
+                };
+            }
+
+            const order = await StiOrderRepository.findOrderById(orderId);
+            
+            if (!order) {
+                return {
+                    success: false,
+                    message: 'Order not found'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'STI order retrieved successfully',
+                data: order
+            };
+        } catch (error) {
+            console.error('Error getting STI order by ID:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /**
+     * Lấy STI result theo order ID cho customer
+     */
+    public static async getCustomerStiResultByOrderId(orderId: string) {
+        try {
+            if (!orderId) {
+                return {
+                    success: false,
+                    message: 'Order ID is required'
+                };
+            }
+
+            const result = await StiResultRepository.findByOrderId(orderId);
+            
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'STI result not found'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'STI result retrieved successfully',
+                data: result
+            };
+        } catch (error) {
+            console.error('Error getting STI result by order ID:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
         }
     }
 

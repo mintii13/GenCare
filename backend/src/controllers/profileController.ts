@@ -11,8 +11,8 @@ const router = Router();
 router.get('/getUserProfile', authenticateToken, async (req, res) => {
   try {
     // req.jwtUser được gán từ middleware authenticateToken
-    const userId = (req.user as any)?.userId;
-    const role = (req.user as any)?.role;
+    const userId = req.jwtUser?.userId;
+    const role = req.jwtUser?.role;
     const result = await ProfileService.getProfile(userId, role);
     if (result.success){
       res.status(200).json(result);
@@ -32,8 +32,8 @@ router.get('/getUserProfile', authenticateToken, async (req, res) => {
 //update profile API
 router.put('/updateUserProfile', authenticateToken, upload.single('avatar'), async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = (req.user as any)?.userId;
-        const role = (req.user as any)?.role;
+        const userId = req.jwtUser?.userId;
+        const role = req.jwtUser?.role;
         const profileRequest: ProfileRequest = req.body;
 
         let avatarError: string;
@@ -55,7 +55,7 @@ router.put('/updateUserProfile', authenticateToken, upload.single('avatar'), asy
 // delete profile API
 router.put('/deleteUserProfile', authenticateToken, async (req: Request, res: Response): Promise<void> => {
     try{
-        const userId = (req.user as any)?.userId;
+        const userId = req.jwtUser?.userId;
         const result = await ProfileService.deleteProfile(userId);        
         if (result.success){
             res.status(200).json(result);

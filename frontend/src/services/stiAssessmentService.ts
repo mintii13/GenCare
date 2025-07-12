@@ -79,6 +79,13 @@ export interface STIAssessmentStats {
   };
 }
 
+export interface StiResult {
+  id: string;
+  // ... other fields
+  isNotified: boolean;
+  notifiedAt?: Date;
+}
+
 // ================ RESPONSE INTERFACES ================
 
 export interface STIAssessmentResponse {

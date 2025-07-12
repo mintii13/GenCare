@@ -61,11 +61,16 @@ const StaffAppointmentManagement = lazy(() => import('./pages/dashboard/Staff/co
 const StaffBlogManagement = lazy(() => import('./pages/dashboard/Staff/StaffBlogManagement'));
 const AdminBlogManagement = lazy(() => import('./pages/dashboard/Admin/AdminBlogManagement'));
 const UserManagement = lazy(() => import('./pages/dashboard/Admin/UserManagement'));
+const AdminSTIManagement = lazy(() => import('./pages/dashboard/Admin/STIManagement'));
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
-// Add new lazy import for Staff STI Orders Management component
+// Add new lazy import for Staff STI Management components
 const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrdersManagement'));
+const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
+const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
+
+const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
 
 interface AppContentProps {
   showLogin: boolean;
@@ -156,6 +161,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
               <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
               <Route path="blogs" element={<ConsultantBlogList />} />
+              <Route path="sti-results" element={<StiResultsManagement />} />
               <Route path="documents" element={<div>Tài liệu chuyên môn</div>} />
               <Route path="training" element={<div>Đào tạo & Cập nhật</div>} />
               <Route path="consultation-stats" element={<ConsultationStats />} />
@@ -200,6 +206,11 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
                 <MultipleTestBooking />
               </RoleGuard>
             } />
+            <Route path="/sti-booking/consultation" element={
+              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+                <MultipleTestBooking />
+              </RoleGuard>
+            } />
             
             {/* STI Assessment routes */}
             <Route path="/sti-assessment" element={
@@ -235,6 +246,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="blogs" element={<AdminBlogManagement />} />
               <Route path="revenue" element={<div>Thống kê doanh thu</div>} />
               <Route path="appointments" element={<AdminAppointmentManagement />} />
+              <Route path="sti-management" element={<AdminSTIManagement />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
             </Route>
@@ -244,7 +256,9 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
               <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
+              <Route path="sti-management" element={<STIManagement />} />
               <Route path="sti-orders" element={<StiOrdersManagement />} />
+              <Route path="sti-results" element={<StiResultsManagement />} />
               <Route path="test-schedules" element={<TestScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
@@ -255,6 +269,9 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             {/* Catch deprecated customer dashboard routes and redirect */}
             <Route path="/dashboard/customer" element={<Navigate to="/my-appointments" replace />} />
             <Route path="/dashboard/customer/*" element={<Navigate to="/my-appointments" replace />} />
+            <Route path="/dashboard/customer/my-appointments" element={<MyAppointments />} />
+            <Route path="/dashboard/customer/my-sti-results" element={<MySTIResults />} />
+            <Route path="/dashboard/customer/consultants" element={<ConsultantList />} />
           </Routes>
         </Suspense>
         <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />

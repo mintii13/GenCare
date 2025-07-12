@@ -126,11 +126,10 @@ const BookSTIPage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!orderDate) {
-      message.error('Vui lòng chọn ngày xét nghiệm');
+      message.error('Vui lòng chọn ngày tư vấn');
       return;
     }
 
-    // Show license modal before submitting
     setShowLicenseModal(true);
   };
 
@@ -144,16 +143,13 @@ const BookSTIPage: React.FC = () => {
         return;
       }
 
-      const orderData: any = {
+      // Tạo STI order thay vì appointment
+      const orderData = {
+        sti_package_id: selectedPackage?._id || null,
+        sti_test_items: selectedTest ? [selectedTest._id] : [],
         order_date: orderDate.format('YYYY-MM-DD'),
-        notes: notes.trim()
+        notes: notes.trim() || undefined
       };
-
-      if (packageId) {
-        orderData.sti_package_id = packageId;
-      } else if (testId) {
-        orderData.sti_test_items = [testId];
-      }
 
       const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
 
@@ -164,8 +160,8 @@ const BookSTIPage: React.FC = () => {
         message.error(response.data.message || 'Có lỗi xảy ra khi đặt lịch');
       }
     } catch (error: any) {
-      console.error('Error creating STI order:', error);
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch xét nghiệm';
+      console.error('Error booking STI order:', error);
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch';
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -224,10 +220,19 @@ const BookSTIPage: React.FC = () => {
     <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
       <Title level={2}>Đặt lịch xét nghiệm STI</Title>
 
+      {/* Thông báo quy trình mới */}
+      <Alert
+        message="Quy trình đặt lịch xét nghiệm"
+        description="Bạn đang xem thông tin về gói/xét nghiệm STI. Chọn ngày xét nghiệm và hoàn tất đặt lịch. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
+        type="info"
+        showIcon
+        style={{ marginBottom: '24px' }}
+      />
+
       <Steps current={currentStep} items={steps} style={{ marginBottom: '32px' }} />
 
-      {/* Thông tin xét nghiệm/gói */}
-      <Card title="Thông tin xét nghiệm" style={{ marginBottom: '24px' }}>
+      {/* Thông tin xét nghiệm/gói (chỉ để tham khảo) */}
+      <Card title="Thông tin tham khảo" style={{ marginBottom: '24px' }}>
         {selectedTest && (
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>
@@ -243,7 +248,7 @@ const BookSTIPage: React.FC = () => {
               <Text>{selectedTest.description}</Text>
             </div>
             <div>
-              <Text strong>Giá: </Text>
+              <Text strong>Giá tham khảo: </Text>
               <Text style={{ color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
                 {formatPrice(selectedTest.price)}
               </Text>
@@ -270,7 +275,7 @@ const BookSTIPage: React.FC = () => {
               <Text>{selectedPackage.description}</Text>
             </div>
             <div>
-              <Text strong>Giá: </Text>
+              <Text strong>Giá tham khảo: </Text>
               <Text style={{ color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
                 {formatPrice(selectedPackage.price)}
               </Text>
@@ -279,8 +284,8 @@ const BookSTIPage: React.FC = () => {
         )}
       </Card>
 
-      {/* Form đặt lịch */}
-      <Card title="Thông tin đặt lịch">
+      {/* Form đặt lịch tư vấn */}
+      <Card title="Đặt lịch tư vấn">
         <Form form={form} layout="vertical">
           <Form.Item
             label="Ngày xét nghiệm"
@@ -300,7 +305,7 @@ const BookSTIPage: React.FC = () => {
           <Form.Item label="Ghi chú (tùy chọn)">
             <TextArea
               rows={4}
-              placeholder="Nhập ghi chú về tình trạng sức khỏe, yêu cầu đặc biệt..."
+              placeholder="Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
               maxLength={500}
               value={notes}
               onChange={handleNotesChange}
@@ -329,11 +334,12 @@ const BookSTIPage: React.FC = () => {
       {/* Lưu ý */}
       <Card title="Lưu ý quan trọng" style={{ marginTop: '24px' }}>
         <ul>
-          <li>Vui lòng đến đúng giờ đã hẹn để đảm bảo chất lượng mẫu xét nghiệm</li>
-          <li>Không được ăn uống trước khi xét nghiệm (tùy loại xét nghiệm)</li>
+          <li>Buổi tư vấn sẽ diễn ra khoảng 30-45 phút</li>
+          <li>Bác sĩ sẽ tư vấn gói xét nghiệm phù hợp với tình trạng của bạn</li>
+          <li>Vui lòng đến đúng giờ đã hẹn</li>
           <li>Mang theo CMND/CCCD để xác minh danh tính</li>
+          <li>Chuẩn bị các thông tin về tình trạng sức khỏe hiện tại</li>
           <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
-          <li>Kết quả xét nghiệm sẽ có sau 3-7 ngày làm việc</li>
         </ul>
       </Card>
 
@@ -342,7 +348,7 @@ const BookSTIPage: React.FC = () => {
         visible={showLicenseModal}
         onAccept={handleLicenseAccept}
         onCancel={handleLicenseCancel}
-        title="Điều khoản sử dụng dịch vụ xét nghiệm STI"
+        title="Điều khoản sử dụng dịch vụ tư vấn xét nghiệm STI"
       />
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>

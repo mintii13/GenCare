@@ -100,7 +100,7 @@ export class StiOrderRepository {
                 { $match: filters },
                 {
                     $lookup: {
-                        from: 'customers',
+                        from: 'users',
                         localField: 'customer_id',
                         foreignField: '_id',
                         as: 'customer'

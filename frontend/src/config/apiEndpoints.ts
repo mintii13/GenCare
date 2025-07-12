@@ -190,6 +190,12 @@ export const API = {
     GET_ORDERS_BY_CUSTOMER: (customerId: string) => `/sti/getAllStiOrders/${customerId}`,
     GET_ORDER: (id: string) => `/sti/getStiOrder/${id}`, // Fixed: backend uses getStiOrder not getOrderById
     UPDATE_ORDER: (id: string) => `/sti/updateStiOrder/${id}`, // Backend uses PATCH method
+    // STI Results - NEW ENDPOINTS
+    STI_RESULT: '/sti/sti-result',
+    GET_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
+    UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
+    SYNC_SAMPLE: '/sti/sti-result/sync-sample',
+    NOTIFY_RESULT: '/sti/sti-result/notify',
     // Audit & Analytics
     GET_AUDIT_LOGS: '/sti/audit-logs', // With pagination
     GET_ALL_AUDIT_LOGS: '/sti/getAllAuditLogs', // Legacy
@@ -219,7 +225,11 @@ export const API = {
     UPDATE_STATUS: (id: string) => `/users/${id}/status`, // PUT - Admin/Staff
     DELETE: (id: string) => `/users/${id}`, // DELETE - Admin only (soft delete)
     STATISTICS: '/users/statistics/overview' // GET - Admin/Staff
-  }
+  },
+
+    // STI Results for Customer
+    MY_STI_RESULTS: '/api/sti/my-results',
+    MY_STI_RESULT: (orderId: string) => `/api/sti/my-result/${orderId}`,
 
 } as const;
 

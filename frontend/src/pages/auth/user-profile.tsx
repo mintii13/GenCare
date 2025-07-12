@@ -14,6 +14,7 @@ import { API } from '../../config/apiEndpoints';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
+import { AxiosResponse } from 'axios';
 
 interface UserProfile {
   id: string;
@@ -69,6 +70,25 @@ const UserProfilePage: React.FC = () => {
       gender: ''
     }
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res: AxiosResponse<any> = await apiClient.get(API.Profile.GET);
+        if (res.data.success) {
+          setProfile(res.data.user);
+          toast.success('Profile loaded');
+        }
+      } catch (error: any) {
+        if (error.response?.data?.message?.includes('Google')) {
+          toast.error('Lỗi Google login, hãy thử lại');
+        } else {
+          toast.error('Lỗi lấy profile');
+        }
+      }
+    };
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     if (profile) {
