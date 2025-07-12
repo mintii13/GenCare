@@ -23,19 +23,12 @@ export class MenstrualCycleService {
             return normalized;
         });
 
-        console.log('Normalized dates:', normalizedDates.map(d => d.toISOString().split('T')[0]));
-
+        console.log('Normalized dates:', normalizedDates.map(d => d.toISOString().split('T')[0]));  
         // Remove duplicates based on date string
-        const uniqueDates = normalizedDates.filter((date, index, array) => {
-            const dateStr = date.toISOString().split('T')[0];
-            return array.findIndex(d => d.toISOString().split('T')[0] === dateStr) === index;
-        });
 
-        console.log('After removing duplicates:', uniqueDates.map(d => d.toISOString().split('T')[0]));
-
-        const sorted = [...uniqueDates].sort((a, b) => a.getTime() - b.getTime());
+        const sorted = [...normalizedDates].sort((a, b) => a.getTime() - b.getTime());
         console.log('Sorted dates:', sorted.map(d => d.toISOString().split('T')[0]));
-
+     
         // SIMPLE GROUPING: Consecutive days = same cycle
         const groups: Date[][] = [];
         let current: Date[] = [sorted[0]];
@@ -108,13 +101,16 @@ export class MenstrualCycleService {
                 notes,
             };
 
-            if (i >= 1) {
-                const prevStart = groups[i - 1][0];
-                const timeDiff = start.getTime() - prevStart.getTime();
+            if (i + 1 < groups.length) {
+                const nextStart = groups[i + 1][0];
+                const timeDiff = nextStart.getTime() - start.getTime();
                 const len = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-                console.log(`Cycle length: ${len} days (from ${prevStart.toISOString().split('T')[0]} to ${start.toISOString().split('T')[0]})`);
                 cycle.cycle_length = len;
                 cycle_lengths.push(len);
+                console.log(`Cycle length: ${len} days (from ${start.toISOString().split('T')[0]} to ${nextStart.toISOString().split('T')[0]})`);
+            } else {
+                cycle.cycle_length = 0;
+                console.log(`Last cycle (no next cycle) — cycle_length is undefined`);
             }
             cycles.push(cycle as IMenstrualCycle);
         }
@@ -377,9 +373,9 @@ export class MenstrualCycleService {
     private static calculatePeriodRegularity(periodLengths: number[]): RegularityStatus{
         if (periodLengths.length < 3) 
             return 'insufficient_data';
-        const allInRange = periodLengths.every(length => length >= 3 && length <= 7);
+        const allInRange = periodLengths.every(length => length >= 2 && length <= 7);
 
-        // Nếu số ngày hành kinh nằm từ 3-7 thì ok, còn có giá trị chu kỳ out scope thì xem như bất bình thường
+        // Nếu số ngày hành kinh nằm từ 2-7 thì ok, còn có giá trị chu kỳ out scope thì xem như bất bình thường
         if (allInRange) 
             return 'regular';       
         return 'irregular';
