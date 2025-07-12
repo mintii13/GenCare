@@ -1,87 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Banner from "./components/Banner";
 import BlogCard from '../../components/blog/BlogCard';
-import PeriodLogger from '../menstrual-cycle/components/PeriodLogger';
-import apiClient from '../../services/apiClient';
-import { blogService } from '../../services/blogService';
-import { consultantService } from '../../services/consultantService';
-import { StiTest } from '../../types/sti';
+import { homeService } from '../../services';
 import { Blog as BlogType } from '../../types/blog';
 
+// Memoized components để tránh re-render không cần thiết
+const MemoizedBanner = React.memo(Banner);
+const MemoizedBlogCard = React.memo(BlogCard);
 
 const HomePage = () => {
   const navigate = useNavigate();
 
-  const [packagesData, setPackagesData] = useState<StiTest[]>([]);
-  const [singleTests, setSingleTests] = useState<StiTest[]>([]);
-  const [blogs, setBlogs] = useState<BlogType[]>([]);
-  const [consultants, setConsultants] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [packagesData, setPackagesData] = useState<any[]>([]);
+  const [testsData, setTestsData] = useState<any[]>([]);
+  const [blogsData, setBlogsData] = useState<BlogType[]>([]);
+  const [consultantsData, setConsultantsData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentService, setCurrentService] = useState(0);
-  const [showPeriodLogger, setShowPeriodLogger] = useState(false);
   const [testTab, setTestTab] = useState<'packages' | 'single'>('packages');
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch data from real backend endpoints
-        const [testRes, packageRes, blogResponse, consultantResponse] = await Promise.all([
-          apiClient.get<any>('/sti/getAllStiTest'),
-          apiClient.get<any>('/sti/getAllStiPackage'),
-          blogService.getBlogs({ limit: 6, status: true, sort_by: 'publish_date', sort_order: 'desc' }),
-          consultantService.getAllConsultants()
-        ]);
-
-        // Handle single tests
-        if (testRes.data.success) {
-          const testsArr = testRes.data.stitest ?? testRes.data.tests ?? [];
-          setSingleTests(testsArr.filter((t:any)=> t.is_active!==false));
-        }
-
-        // Handle packages
-        if (packageRes.data.success) {
-          // Backend có thể trả về "stipackage" (số ít) hoặc "stipackages" (số nhiều)
-          const pkgsArr = packageRes.data.stipackage ?? packageRes.data.stipackages ?? packageRes.data.data ?? packageRes.data.packages ?? [];
-          setPackagesData(pkgsArr.filter((p: any) => p.is_active !== false));
-        }
-
-        // Handle blogs - sử dụng pagination response mới
-        if (blogResponse.success && Array.isArray(blogResponse.data.blogs)) {
-          setBlogs(blogResponse.data.blogs.filter((blog: BlogType) => blog.status));
-        } else {
-          setBlogs([]);
-        }
-
-        // Handle consultants
-        if (consultantResponse.data && Array.isArray(consultantResponse.data.consultants)) {
-          setConsultants(consultantResponse.data.consultants.slice(0, 3)); // Show top 3 consultants
-        } else {
-          setConsultants([]);
-        }
-
-      } catch (err) {
-        console.error('Error fetching homepage data:', err);
-        setError('Lỗi khi tải dữ liệu');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // Auto-play chuyển cặp dịch vụ mỗi 4s
-  useEffect(() => {
-    if (packagesData.length === 0 && singleTests.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrentService((prev) => (prev + 2) % (packagesData.length + singleTests.length));
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [packagesData, singleTests]);
-
+  const [showPeriodLogger, setShowPeriodLogger] = useState(false);
+  // Service cards config
   const serviceCards = [
     {
       icon: (
@@ -115,12 +54,70 @@ const HomePage = () => {
     },
   ];
 
-  if (loading) {
+  // Optimized data fetching with single API call
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('🏠 HomePage: Fetching data with composite API...');
+      const homepageData = await homeService.getHomepageData();
+      
+      if (homepageData.success) {
+        const { sti_packages, sti_tests, blogs, consultants } = homepageData.data;
+        
+        setPackagesData(sti_packages || []);
+        setTestsData(sti_tests || []);
+        setBlogsData(blogs || []);
+        setConsultantsData(consultants || []);
+        
+        console.log('✅ HomePage: All data fetched successfully', {
+          packages: sti_packages?.length || 0,
+          blogs: blogs?.length || 0,
+          consultants: consultants?.length || 0
+        });
+      }
+    } catch (error) {
+      console.error('❌ HomePage: Error fetching data:', error);
+      setError('Không thể tải dữ liệu trang chủ. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Memoized data processing
+  const displayPackages = useMemo(() => 
+    packagesData.slice(0, 6), [packagesData]
+  );
+  
+  const displayBlogs = useMemo(() => 
+    blogsData.slice(0, 6), [blogsData]
+  );
+  
+  const topConsultants = useMemo(() => 
+    consultantsData.slice(0, 3), [consultantsData]
+  );
+
+  const activePackages = useMemo(() => 
+    packagesData.filter((p: any) => p.is_active !== false),
+    [packagesData]
+  );
+
+  const activeTests = useMemo(() => 
+    testsData.filter((t: any) => t.is_active !== false),
+    [testsData]
+  );
+
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải dữ liệu...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <p className="text-gray-600 text-sm">Đang tải trang chủ...</p>
         </div>
       </div>
     );
@@ -128,13 +125,12 @@ const HomePage = () => {
 
   if (error) {
     return (
-      <div className="text-center text-red-500 min-h-screen flex items-center justify-center">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Có lỗi xảy ra</h2>
-          <p>{error}</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={fetchData}
+            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
           >
             Thử lại
           </button>
@@ -145,7 +141,7 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
-      <Banner />
+      <MemoizedBanner />
 
   
 
@@ -175,7 +171,7 @@ const HomePage = () => {
       </section>
 
       {/* Top Consultants Section - Sử dụng data thật từ API */}
-      {consultants.length > 0 && (
+      {topConsultants.length > 0 && (
         <section className="py-20 bg-blue-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -193,7 +189,7 @@ const HomePage = () => {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {consultants.map((consultant, idx) => (
+              {topConsultants.map((consultant, idx) => (
                 <div key={consultant.consultant_id} className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
                   <div className="w-20 h-20 rounded-full bg-blue-100 mx-auto mb-4 flex items-center justify-center">
                     {consultant.avatar ? (
@@ -251,14 +247,31 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* Content - thanh cuộn ngang giống Blog */}
+            {/* Content - Logic for centering or scrolling */}
             <div className="relative">
-              <div className="overflow-x-auto scrollbar-hide">
-                <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
-                  {(testTab === 'packages' ? packagesData : singleTests).map(service => (
+              <div
+                className={
+                  (testTab === 'packages' ? activePackages.length : activeTests.length) > 4
+                    ? 'overflow-x-auto scrollbar-hide'
+                    : 'flex justify-center'
+                }
+              >
+                <div
+                  className={`flex flex-wrap gap-6 pb-4 ${
+                    (testTab === 'packages' ? activePackages.length : activeTests.length) <= 4
+                      ? 'justify-center'
+                      : ''
+                  }`}
+                  style={
+                    (testTab === 'packages' ? activePackages.length : activeTests.length) > 4
+                      ? { width: 'max-content' }
+                      : {}
+                  }
+                >
+                  {(testTab === 'packages' ? activePackages : activeTests).map(service => (
                     <div key={service._id} className="w-80 h-50 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition flex flex-col">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_test_name}>
-                        {service.sti_test_name}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_package_name || service.sti_test_name}>
+                        {service.sti_package_name || service.sti_test_name}
                       </h3>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-3">{service.description}</p>
                       <div className="flex-grow" />
@@ -267,7 +280,7 @@ const HomePage = () => {
                           {service.price?.toLocaleString('vi-VN')}đ
                         </span>
                         <span className="text-sm text-gray-500">
-                          {service.sti_test_type || 'Gói'}
+                          {testTab==='packages' ? 'Gói' : service.sti_test_type || 'Test'}
                         </span>
                       </div>
                       <Link
@@ -311,14 +324,14 @@ const HomePage = () => {
             </Link>
           </div>
           
-          {blogs.length > 0 ? (
+          {blogsData.length > 0 ? (
             <div className="relative">
                <div className="overflow-x-auto scrollbar-hide">
                  <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
-                   {blogs.map((blog) => (
+                   {blogsData.map((blog) => (
                      <div key={blog.blog_id} className="w-96 flex-shrink-0">
                        <div className="h-full">
-                         <BlogCard
+                         <MemoizedBlogCard
                            blog={blog}
                            onClick={(blogId) => navigate(`/blogs/${blogId}`)}
                          />
@@ -330,7 +343,7 @@ const HomePage = () => {
               
               {/* Scroll Indicators */}
               <div className="flex justify-center mt-4 space-x-2">
-                {Array.from({ length: Math.ceil(blogs.length / 3) }).map((_, index) => (
+                {Array.from({ length: Math.ceil(blogsData.length / 3) }).map((_, index) => (
                   <div
                     key={index}
                     className="w-2 h-2 rounded-full bg-gray-300"
@@ -450,16 +463,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* PeriodLogger Modal */}
-      {showPeriodLogger && (
-        <PeriodLogger
-          onClose={() => setShowPeriodLogger(false)}
-          onSuccess={() => {
-            setShowPeriodLogger(false);
-            // Có thể thêm logic để refresh data nếu cần
-          }}
-        />
-      )}
+
     </div>
   );
 };

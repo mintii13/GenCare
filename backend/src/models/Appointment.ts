@@ -26,6 +26,8 @@ export interface IAppointment extends Document {
     meeting_info?: MeetingInfo;
     video_call_status?: 'not_started' | 'in_progress' | 'ended';
     feedback?: AppointmentFeedback;
+    feedback_reminder_sent: boolean;
+    feedback_reminder_sent_at: Date;
     created_date: Date;
     updated_date: Date;
 }
@@ -121,15 +123,28 @@ const appointmentSchema = new Schema<IAppointment>({
         type: String
     },
     consultant_notes: {
-        type: String
+        type: String,
+        maxlength: 2000,
+        trim: true
     },
-    meeting_info: meetingInfoSchema,
+    meeting_info: {
+        type: meetingInfoSchema
+    },
     video_call_status: {
         type: String,
         enum: ['not_started', 'in_progress', 'ended'],
         default: 'not_started'
     },
-    feedback: appointmentFeedbackSchema,
+    feedback: {
+        type: appointmentFeedbackSchema
+    },
+    feedback_reminder_sent: {
+        type: Boolean,
+        default: false
+    },
+    feedback_reminder_sent_at: {
+        type: Date
+    },
     created_date: {
         type: Date,
         default: Date.now

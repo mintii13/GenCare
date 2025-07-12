@@ -27,19 +27,18 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
     
     // Tránh duplicate calls
     if (isLoadingRef.current) {
-      console.log('⏳ useMenstrualCycle: Load already in progress, skipping...');
+
+
       return;
     }
 
     // Check cache timeout
     const now = Date.now();
     if (now - lastLoadTimeRef.current < CACHE_TIMEOUT && cycles.length > 0) {
-      console.log('📦 useMenstrualCycle: Using cached data');
       return;
     }
     
     try {
-      console.log('🔄 useMenstrualCycle: Loading data...');
       isLoadingRef.current = true;
       setLoading(true);
       setError(null);
@@ -49,21 +48,35 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
         menstrualCycleService.getCycles()
       ]);
 
-      console.log('📊 useMenstrualCycle: Data loaded successfully');
-
-      if (todayResponse.success && todayResponse.data) {
-        setTodayStatus(todayResponse.data);
+      // Xử lý response cho user mới (success=true nhưng có thể data=null/[])
+      if (todayResponse.success) {
+        setTodayStatus(todayResponse.data || null);
+      } else {
+        // Chỉ log warning, không set error cho user chưa có dữ liệu
+        console.warn('Today status không có dữ liệu:', todayResponse.message);
+        setTodayStatus(null);
       }
 
-      if (cyclesResponse.success && cyclesResponse.data) {
-        setCycles(cyclesResponse.data);
+      if (cyclesResponse.success) {
+        setCycles(cyclesResponse.data || []);
+      } else {
+        // Chỉ log warning, không set error cho user chưa có dữ liệu
+        console.warn('Cycles không có dữ liệu:', cyclesResponse.message);
+        setCycles([]);
       }
       
       lastLoadTimeRef.current = now;
-    } catch (err) {
-      console.error('💥 useMenstrualCycle: Load error:', err);
-      setError('Lỗi khi tải dữ liệu chu kì');
-      toast.error('Lỗi khi tải dữ liệu chu kì');
+    } catch (err: any) {
+      // Chỉ hiển thị error cho network errors hoặc server errors thật sự
+      console.error('Network error loading menstrual cycle data:', err);
+      if (err.response?.status >= 500 || !err.response) {
+        setError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+        toast.error('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      } else {
+        // Cho các lỗi 4xx, không hiển thị error (có thể là user chưa có dữ liệu)
+        console.warn('API response error (likely no data):', err.response?.data?.message);
+        setError(null);
+      }
     } finally {
       setLoading(false);
       isLoadingRef.current = false;

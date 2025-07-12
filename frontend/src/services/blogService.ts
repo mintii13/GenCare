@@ -47,6 +47,12 @@ export const blogService = {
     return response.data;
   },
 
+  // Lấy thống kê tất cả blog (cho admin/staff)
+  getAllBlogStats: async (): Promise<BlogStatsResponse> => {
+    const response = await apiClient.get<BlogStatsResponse>(`${API.Blog.LIST}/stats`);
+    return response.data;
+  },
+
   // Lấy chi tiết blog theo ID
   getBlogById: async (blogId: string): Promise<BlogResponse> => {
     const response = await apiClient.get<BlogResponse>(API.Blog.DETAIL(blogId));
@@ -101,7 +107,7 @@ export const blogService = {
 
   // Sửa bình luận
   updateComment: async (blogId: string, commentId: string, content: string, isAnonymous?: boolean) => {
-    const response = await apiClient.put(API.Blog.UPDATE_COMMENT(commentId), {
+    const response = await apiClient.put(API.Blog.UPDATE_COMMENT(blogId, commentId), {
       content,
       ...(typeof isAnonymous !== 'undefined' ? { is_anonymous: isAnonymous } : {})
     });
@@ -110,7 +116,7 @@ export const blogService = {
 
   // Xóa bình luận
   deleteComment: async (blogId: string, commentId: string) => {
-    const response = await apiClient.delete(API.Blog.DELETE_COMMENT(commentId));
+    const response = await apiClient.delete(API.Blog.DELETE_COMMENT(blogId, commentId));
     return response.data;
   },
 

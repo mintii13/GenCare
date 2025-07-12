@@ -69,14 +69,14 @@ export const useWeeklySchedule = ({
       const { weekStart } = getWeekRange(currentWeek);
       console.log('🔍 Fetching schedule for week:', weekStart, 'mode:', mode);
       
-      let response;
+            let response: any;
       if (mode === 'my-schedule') {
         console.log('📅 Calling getMySchedules...');
         response = await weeklyScheduleService.getMySchedules(weekStart, weekStart);
         console.log('📊 getMySchedules response:', response);
       } else if (mode === 'consultant-schedule' && consultantId) {
-        console.log('👨‍⚕️ Calling getConsultantSchedules for:', consultantId);
-        response = await weeklyScheduleService.getConsultantSchedules(consultantId);
+        console.log('👨‍⚕️ Calling getConsultantSchedules for:', consultantId, 'week:', weekStart);
+        response = await weeklyScheduleService.getConsultantSchedules(consultantId, weekStart, weekStart);
         console.log('📊 getConsultantSchedules response:', response);
       } else {
         console.log('❌ No valid mode or consultantId');
@@ -85,11 +85,11 @@ export const useWeeklySchedule = ({
 
       console.log('📋 Processing response:', response);
 
-      if (response.success && response.data?.schedules?.length > 0) {
+      if ((response as any).success && (response as any).data?.schedules?.length > 0) {
         const targetWeekStart = weekStart;
         console.log('🎯 Looking for schedule with week_start_date:', targetWeekStart);
         
-        const matchingSchedule = response.data.schedules.find((schedule: Schedule) => {
+        const matchingSchedule = (response as any).data.schedules.find((schedule: Schedule) => {
           console.log('🔍 Checking schedule:', schedule.week_start_date, 'vs target:', targetWeekStart);
           return schedule.week_start_date === targetWeekStart;
         });
@@ -135,8 +135,8 @@ export const useWeeklySchedule = ({
       const { weekStart } = getWeekRange(currentWeek);
       const response = await weeklyScheduleService.getWeeklySlots(consultantId, weekStart);
 
-      if (response.success && response.data) {
-        setWeeklySlotData(response.data);
+      if ((response as any).success && (response as any).data) {
+        setWeeklySlotData((response as any).data);
       } else {
         // Create empty placeholder so UI vẫn hiển thị để điều hướng tuần
         const { weekStart, weekEnd } = getWeekRange(currentWeek);
@@ -211,11 +211,11 @@ export const useWeeklySchedule = ({
         response = await weeklyScheduleService.createSchedule(requestData);
       }
 
-      if (response.success) {
+      if ((response as any).success) {
         await fetchWeekData(); // Refresh data
         return true;
       } else {
-        setError(response.message || 'Có lỗi xảy ra khi lưu lịch');
+        setError((response as any).message || 'Có lỗi xảy ra khi lưu lịch');
         return false;
       }
     } catch (err) {
@@ -235,10 +235,10 @@ export const useWeeklySchedule = ({
       const { weekStart } = getWeekRange(addWeeks(currentWeek, 1));
       const response = await weeklyScheduleService.copySchedule(existingSchedule._id, weekStart);
 
-      if (response.success) {
+      if ((response as any).success) {
         return true;
       } else {
-        setError(response.message || 'Không thể sao chép lịch');
+        setError((response as any).message || 'Không thể sao chép lịch');
         return false;
       }
     } catch (err) {

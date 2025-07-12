@@ -20,7 +20,6 @@ const SelectStiTestPage: React.FC = () => {
     return <Alert message="Chức năng này chỉ dành cho khách hàng." type="warning" showIcon />;
   }
 
-
 };
 
 export default SelectStiTestPage; 

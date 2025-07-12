@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
-import { FaCalendarAlt, FaHeart, FaBullseye, FaTint } from 'react-icons/fa';
+import { FaCalendarAlt, FaHeart, FaBullseye, FaTint, FaStar, FaLock, FaMobileAlt, FaLightbulb, FaUserPlus } from 'react-icons/fa';
 import { HiSparkles, HiSun, HiMoon } from 'react-icons/hi';
 import { CycleData, TodayStatus } from '../../../services/menstrualCycleService';
 
@@ -9,6 +9,8 @@ interface CycleDashboardProps {
   cycles: CycleData[];
   todayStatus: TodayStatus | null;
   onRefresh: () => void;
+  isFirstTimeUser?: boolean;
+  onShowGuide?: () => void;
 }
 
 // Circular Progress Component giống Flo
@@ -88,7 +90,7 @@ const CircularProgress: React.FC<{
   );
 };
 
-const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) => {
+const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus, isFirstTimeUser, onShowGuide }) => {
   const currentCycle = cycles.length > 0 ? cycles[0] : null;
 
   const formatDate = (dateString: string) => {
@@ -235,13 +237,39 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus }) 
 
               {/* CTA */}
               <div className="bg-white/10 backdrop-blur rounded-xl p-6 max-w-md mx-auto">
-                <p className="text-sm mb-4">
-                  💡 <strong>Bắt đầu ngay:</strong> Hãy sử dụng tab "Lịch Chu Kì" để thêm ngày kinh nguyệt đầu tiên
+                <p className="text-sm mb-4 flex items-start gap-2">
+                  <FaLightbulb className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Bắt đầu ngay:</strong> Hãy sử dụng tab "Lịch Chu Kì" để thêm ngày kinh nguyệt đầu tiên</span>
                 </p>
+                
+                {isFirstTimeUser && onShowGuide && (
+                  <div className="mb-4 p-3 bg-yellow-400/20 border border-yellow-300/30 rounded-lg">
+                    <p className="text-sm text-yellow-800 mb-2 flex items-center gap-2">
+                      <FaUserPlus className="text-yellow-600" />
+                      <span><strong>Người dùng mới:</strong> Xem hướng dẫn chi tiết để sử dụng hiệu quả</span>
+                    </p>
+                    <button
+                      onClick={onShowGuide}
+                      className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full transition-colors"
+                    >
+                      Xem hướng dẫn
+                    </button>
+                  </div>
+                )}
+                
                 <div className="flex flex-wrap gap-2 justify-center text-xs">
-                  <span className="bg-white/20 px-3 py-1 rounded-full">✨ Miễn phí</span>
-                  <span className="bg-white/20 px-3 py-1 rounded-full">🔒 Bảo mật</span>
-                  <span className="bg-white/20 px-3 py-1 rounded-full">📱 Thông báo</span>
+                  <span className="bg-white/20 px-3 py-1 rounded-full flex items-center gap-1">
+                    <FaStar className="text-yellow-300" />
+                    Miễn phí
+                  </span>
+                  <span className="bg-white/20 px-3 py-1 rounded-full flex items-center gap-1">
+                    <FaLock className="text-green-300" />
+                    Bảo mật
+                  </span>
+                  <span className="bg-white/20 px-3 py-1 rounded-full flex items-center gap-1">
+                    <FaMobileAlt className="text-blue-300" />
+                    Thông báo
+                  </span>
                 </div>
               </div>
             </div>

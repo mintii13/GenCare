@@ -49,6 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { FaEye, FaEdit, FaTrash, FaPlus, FaUser, FaMale, FaFemale } from 'react-icons/fa';
 import { UserManagementService, UserData, CreateUserData, UpdateUserData } from '@/services/userManagementService';
+import { analyticsService } from '@/services/analyticsService';
 
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
@@ -622,7 +623,33 @@ interface UserDetailModalProps {
 }
 
 const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user }) => {
-  if (!user) return null;
+  const [revenue, setRevenue] = useState<number | null>(null);
+  const [loadingRevenue, setLoadingRevenue] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && user && user.role === 'customer') {
+      const fetchRevenue = async () => {
+        setLoadingRevenue(true);
+        try {
+          const response = await analyticsService.getRevenueByCustomer(user._id);
+          if (response.success) {
+            setRevenue(response.data.total_revenue);
+          }
+        } catch (error) {
+          console.error("Failed to fetch customer revenue", error);
+        } finally {
+          setLoadingRevenue(false);
+        }
+      };
+      fetchRevenue();
+    } else {
+      setRevenue(null);
+    }
+  }, [isOpen, user]);
+
+  if (!isOpen || !user) {
+    return null;
+  }
 
   const formatDate = (dateString: string) => {
     try {
@@ -685,19 +712,22 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
               <p className="text-sm">{user.phone || 'Chưa cập nhật'}</p>
             </div>
             
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Ngày sinh</Label>
-              <p className="text-sm">{user.date_of_birth ? formatDate(user.date_of_birth) : 'Chưa cập nhật'}</p>
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-500">Ngày sinh</span>
+              <span className="font-medium">{user.date_of_birth ? formatDate(user.date_of_birth) : 'N/A'}</span>
             </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Giới tính</Label>
-              <p className="text-sm flex items-center">
-                {user.gender === 'male' && <FaMale className="mr-1 text-blue-500" />}
-                {user.gender === 'female' && <FaFemale className="mr-1 text-pink-500" />}
-                {getGenderDisplay(user.gender)}
-              </p>
-            </div>
+
+            {user.role === 'customer' && (
+              <div className="mt-4 pt-4 border-t">
+                <h4 className="font-semibold text-lg mb-2">Thông tin mua hàng</h4>
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500">Tổng chi tiêu:</span>
+                  <span className="font-medium ml-2">
+                    {loadingRevenue ? 'Đang tải...' : revenue !== null ? `${revenue.toLocaleString()} VND` : 'Không có dữ liệu'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Thông tin tài khoản */}

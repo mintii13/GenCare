@@ -680,6 +680,10 @@ router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'con
         await StiResultRepository.updateById(stiResultId, {
             is_notified: true
         });
+<<<<<<< HEAD
+=======
+
+>>>>>>> 234d4f5ae314bf5ec8c39bd9633ea41e9c634320
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({

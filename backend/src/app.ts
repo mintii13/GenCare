@@ -24,6 +24,7 @@ import { PillTrackingReminderService } from './services/pillTrackingService';
 import appointmentHistoryController from './controllers/appointmentHistoryController';
 import stiAssessmentRoutes from './controllers/stiAssessmentController';
 import userController from './controllers/userController';
+import homeController from './controllers/homeController';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -88,6 +89,7 @@ app.use('/api/sti', stiController);
 app.use('/api/menstrual-cycle', menstrualCycleController);
 app.use('/api/pill-tracking', pillTrackingController);
 app.use('/api/sti-assessment', stiAssessmentRoutes);
+app.use('/api/home', homeController);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

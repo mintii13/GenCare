@@ -27,7 +27,7 @@ class ApiClient {
   constructor(baseURL: string = env.API_BASE_URL || 'http://localhost:3000/api') {
     this.instance = axios.create({
       baseURL,
-      timeout: 30000, // 30 seconds
+      timeout: 15000, // 15 seconds - increased for heavy data operations
       headers: {
         'Content-Type': 'application/json',
       },
@@ -92,14 +92,22 @@ class ApiClient {
             return Promise.reject(error);
           }
           
-          // Token expired or invalid for other requests
+          // Don't auto-logout for login requests (let login form handle the error)
+          if (requestUrl.includes('/auth/login')) {
+            console.log("Login failed - form will handle the error");
+            return Promise.reject(error);
+          }
+          
+          // Token expired or invalid for other requests - clear immediately
           console.error("Token expired or invalid, logging out.");
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');
           
-          // Only redirect if not already on login page
+          // Only redirect if not already on login page - use setTimeout for better UX
           if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 100); // Small delay to prevent blocking
           }
         }
 
@@ -116,7 +124,9 @@ class ApiClient {
     operation: () => Promise<AxiosResponse<T>>,
     retryConfig: Partial<RetryConfig> = {}
   ): Promise<AxiosResponse<T>> {
-    const config = { ...this.defaultRetryConfig, ...retryConfig };
+    // Defensive check to ensure retryConfig is an object
+    const safeRetryConfig = retryConfig && typeof retryConfig === 'object' ? retryConfig : {};
+    const config = { ...this.defaultRetryConfig, ...safeRetryConfig };
     let lastError: AxiosError;
 
     for (let attempt = 1; attempt <= config.attempts; attempt++) {
@@ -142,9 +152,9 @@ class ApiClient {
           : config.delay;
 
         log.warn('ApiClient', `Attempt ${attempt} failed, retrying in ${delay}ms`, {
-          error: lastError.message,
-          url: lastError.config?.url,
-          status: status
+          error: lastError.message || 'Unknown error',
+          url: lastError.config?.url || 'Unknown URL',
+          status: status || 'Unknown status'
         });
 
         await this.delay(delay);
@@ -257,6 +267,24 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const response = await this.put<T>(url, data, config, retryConfig);
+      return {
+        success: true,
+        data: response.data,
+        message: 'Request successful'
+      };
+    } catch (error) {
+      return this.handleError<T>(error as AxiosError);
+    }
+  }
+
+  async safePatch<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+    retryConfig?: Partial<RetryConfig>
+  ): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.patch<T>(url, data, config, retryConfig);
       return {
         success: true,
         data: response.data,

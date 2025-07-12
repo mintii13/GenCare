@@ -91,6 +91,7 @@ export class StiResultRepository {
                                     select: 'sti_test_name'
                                 }
                             }
+
                         ]
                     });
         } catch (error) {

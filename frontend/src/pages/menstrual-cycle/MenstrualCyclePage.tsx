@@ -1,15 +1,20 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { TodayStatus } from '../../services/menstrualCycleService';
 import { useAuth } from '../../contexts/AuthContext';
-import { useMenstrualCycle } from '../../hooks';
+import { usePillTracking } from '../../hooks/usePillTracking';
 import CycleDashboard from './components/CycleDashboard';
 import CycleCalendar from './components/CycleCalendar';
 import CycleStatistics from './components/CycleStatistics';
 import PeriodLogger from './components/PeriodLogger';
+import PillSetupForm from './components/PillSetupForm';
+import PillCalendar from './components/PillCalendar';
+import PillSettingsModal from './components/PillSettingsModal';
+import useMenstrualCycle from '../../hooks/useMenstrualCycle';
+import FirstTimeGuideModal from '../../components/menstrual-cycle/FirstTimeGuideModal';
 
 import { toast } from 'react-hot-toast';
 import { 
@@ -18,6 +23,7 @@ import {
   FaCalendarAlt, 
   FaChartBar, 
   FaChartLine, 
+  FaPills,
   FaCog,
   FaLightbulb 
 } from 'react-icons/fa';
@@ -26,9 +32,19 @@ const MenstrualCyclePage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('main');
   const [showPeriodLogger, setShowPeriodLogger] = useState(false);
+  const [showPillSettings, setShowPillSettings] = useState(false);
+  const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
 
-  // Sử dụng custom hook để quản lý data và performance
-  const { todayStatus, cycles, loading, error, refresh } = useMenstrualCycle(user?.id);
+  // Custom hooks
+  const { todayStatus, cycles, loading: cycleLoading, error: cycleError, refresh: refreshCycle } = useMenstrualCycle(user?.id);
+  const { 
+    schedules, 
+    isLoading: pillLoading, 
+    error: pillError, 
+    setupPillSchedule, 
+    markPillAsTaken,
+    updatePillSchedule
+  } = usePillTracking();
 
   const getStatusColor = useCallback((pregnancyChance: string) => {
     switch (pregnancyChance) {
@@ -57,6 +73,21 @@ const MenstrualCyclePage: React.FC = () => {
     };
   }, [cycles]);
 
+  // Combined loading state
+  const isLoading = cycleLoading || pillLoading;
+
+  // Kiểm tra xem người dùng có phải là người mới không
+  const isFirstTimeUser = useMemo(() => {
+    return !isLoading && cycles.length === 0;
+  }, [isLoading, cycles.length]);
+
+  // Hiển thị modal hướng dẫn cho người dùng mới
+  useEffect(() => {
+    if (isFirstTimeUser && user) {
+      setShowFirstTimeGuide(true);
+    }
+  }, [isFirstTimeUser, user]);
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center p-4">
@@ -71,12 +102,37 @@ const MenstrualCyclePage: React.FC = () => {
               Đăng nhập ngay
             </Button>
           </CardContent>
-        </Card>
+        </Card> 
       </div>
     );
   }
 
-  if (loading) {
+  // Error state - chỉ hiển thị khi có lỗi thật sự (network/server error)
+  if (cycleError && !isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl border-0">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Không thể tải dữ liệu</h3>
+            <p className="text-gray-600 mb-6">{cycleError}</p>
+            <Button 
+              onClick={refreshCycle}
+              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+            >
+              Thử lại
+            </Button>
+          </CardContent>
+        </Card> 
+      </div>
+    );
+  }
+
+  if (isLoading && cycles.length === 0 && schedules.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -89,6 +145,8 @@ const MenstrualCyclePage: React.FC = () => {
       </div>
     );
   }
+
+  const hasPillSchedule = schedules && schedules.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
@@ -130,6 +188,16 @@ const MenstrualCyclePage: React.FC = () => {
                       </span>
                     </div>
                   )}
+
+                  {/* Desktop: Thông báo cho người dùng mới */}
+                  {isFirstTimeUser && (
+                    <div className="hidden sm:flex items-center gap-2 bg-yellow-400/20 backdrop-blur rounded-lg px-3 py-1 border border-yellow-300/30">
+                      <FaLightbulb className="text-sm text-yellow-600" />
+                      <span className="text-yellow-800 text-xs font-medium">
+                        Người dùng mới: Xem hướng dẫn
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Mobile: Gợi ý collapsed */}
@@ -141,6 +209,19 @@ const MenstrualCyclePage: React.FC = () => {
                     </div>
                     <p className="text-white/80 text-xs mt-1">
                       {todayStatus.recommendations[0]}
+                    </p>
+                  </div>
+                )}
+
+                {/* Mobile: Thông báo cho người dùng mới */}
+                {isFirstTimeUser && (
+                  <div className="sm:hidden mt-2 bg-yellow-400/20 backdrop-blur rounded-lg p-2 border border-yellow-300/30">
+                    <div className="flex items-center gap-2">
+                      <FaLightbulb className="text-xs text-yellow-600" />
+                      <span className="text-yellow-800 text-xs font-medium">Người dùng mới:</span>
+                    </div>
+                    <p className="text-yellow-700 text-xs mt-1">
+                      Xem hướng dẫn để sử dụng hiệu quả
                     </p>
                   </div>
                 )}
@@ -176,6 +257,19 @@ const MenstrualCyclePage: React.FC = () => {
                   <FaPlus className="mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Ghi nhận</span>
                 </Button>
+
+                {/* Guide Button for First Time Users */}
+                {isFirstTimeUser && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowFirstTimeGuide(true)}
+                    className="bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-800 border-yellow-300/30 backdrop-blur"
+                    variant="outline"
+                  >
+                    <FaLightbulb className="mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Hướng dẫn</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -186,7 +280,7 @@ const MenstrualCyclePage: React.FC = () => {
         {/* Enhanced Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <TabsList className="grid w-full grid-cols-3 sm:w-auto bg-white shadow-md">
+            <TabsList className="grid w-full grid-cols-4 sm:w-auto bg-white shadow-md">
               <TabsTrigger value="main" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white">
                 <FaChartBar className="text-sm" />
                 <span className="hidden sm:inline">Theo Dõi</span>
@@ -202,15 +296,32 @@ const MenstrualCyclePage: React.FC = () => {
                 <span className="hidden sm:inline">Thống Kê</span>
                 <span className="sm:hidden">TK</span>
               </TabsTrigger>
+              <TabsTrigger value="pills" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white">
+                <FaPills className="text-sm" />
+                <span className="hidden sm:inline">Uống Thuốc</span>
+                <span className="sm:hidden">Uống</span>
+              </TabsTrigger>
             </TabsList>
             
-            <Button
-              onClick={() => setShowPeriodLogger(true)}
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 sm:hidden"
-            >
-              <FaPlus className="mr-2" />
-              Ghi nhận chu kì
-            </Button>
+            <div className="flex gap-2 sm:hidden">
+              {isFirstTimeUser && (
+                <Button
+                  onClick={() => setShowFirstTimeGuide(true)}
+                  variant="outline"
+                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                >
+                  <FaLightbulb className="mr-2" />
+                  Hướng dẫn
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowPeriodLogger(true)}
+                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+              >
+                <FaPlus className="mr-2" />
+                Ghi nhận chu kì
+              </Button>
+            </div>
           </div>
 
           {/* Main Dashboard */}
@@ -227,7 +338,9 @@ const MenstrualCyclePage: React.FC = () => {
             <CycleDashboard 
               todayStatus={todayStatus} 
               cycles={cycles} 
-              onRefresh={refresh}
+              onRefresh={refreshCycle}
+              isFirstTimeUser={isFirstTimeUser}
+              onShowGuide={() => setShowFirstTimeGuide(true)}
             />
           </TabsContent>
 
@@ -243,7 +356,7 @@ const MenstrualCyclePage: React.FC = () => {
             </div>
             <CycleCalendar 
               cycles={cycles} 
-              onRefresh={refresh}
+              onRefresh={refreshCycle}
             />
           </TabsContent>
 
@@ -257,21 +370,70 @@ const MenstrualCyclePage: React.FC = () => {
                 <p className="text-sm text-gray-600">Xu hướng và độ đều đặn</p>
               </div>
             </div>
-            <CycleStatistics onRefresh={refresh} />
+            <CycleStatistics onRefresh={refreshCycle} />
+          </TabsContent>
+
+          {/* Pill Tracking Tab */}
+          <TabsContent value="pills" className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                        <FaPills className="text-sm text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900">Theo Dõi Lịch Uống Thuốc</h2>
+                        <p className="text-sm text-gray-600">Quản lý và theo dõi việc uống thuốc tránh thai hàng ngày.</p>
+                    </div>
+                </div>
+                {hasPillSchedule && (
+                    <Button variant="outline" size="sm" onClick={() => setShowPillSettings(true)}>
+                        <FaCog className="mr-2" />
+                        Cài đặt
+                    </Button>
+                )}
+            </div>
+            
+            {pillLoading && <p>Đang tải lịch uống thuốc...</p>}
+            {pillError && <p className="text-red-500">{pillError}</p>}
+            
+            {!pillLoading && !pillError && (
+              hasPillSchedule ? (
+                <PillCalendar 
+                  schedules={schedules}
+                  onTakePill={markPillAsTaken}
+                />
+              ) : (
+                <PillSetupForm 
+                  onSubmit={setupPillSchedule}
+                  isLoading={pillLoading}
+                  latestPeriodStart={cycles && cycles.length ? cycles[0]?.period_days?.[0] : undefined}
+                />
+              )
+            )}
           </TabsContent>
         </Tabs>
-      </div>
 
-      {/* Period Logger Modal */}
-      {showPeriodLogger && (
-        <PeriodLogger
-          onClose={() => setShowPeriodLogger(false)}
-          onSuccess={() => {
-            setShowPeriodLogger(false);
-            refresh();
-          }}
+        <PillSettingsModal 
+          isOpen={showPillSettings} 
+          onClose={() => setShowPillSettings(false)} 
+          onUpdate={updatePillSchedule}
+          currentSchedule={schedules && schedules.length ? schedules[0] : undefined}
+          isLoading={pillLoading}
         />
-      )}
+        
+        {showPeriodLogger && (
+          <PeriodLogger
+            onClose={() => setShowPeriodLogger(false)}
+            onSuccess={refreshCycle}
+          />
+        )}
+
+        {/* First Time Guide Modal */}
+        <FirstTimeGuideModal
+          isOpen={showFirstTimeGuide}
+          onClose={() => setShowFirstTimeGuide(false)}
+        />
+      </div>
     </div>
   );
 };
