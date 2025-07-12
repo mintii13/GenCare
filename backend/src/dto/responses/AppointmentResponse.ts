@@ -26,6 +26,8 @@ export interface AppointmentResponse {
     requiresGoogleAuth?: boolean;
     googleAuthUrl?: string;
     timestamp?: string;
+    errorType?: string; // ✅ THÊM: Support error type
+    details?: any; // ✅ THÊM: Support error details
 }
 
 export interface AppointmentsResponse {

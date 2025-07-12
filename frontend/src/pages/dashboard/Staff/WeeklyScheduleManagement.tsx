@@ -10,6 +10,8 @@ import DataTable from 'react-data-table-component';
 import { format } from 'date-fns';
 import ScheduleEditModal from './components/ScheduleEditModal';
 import CopyScheduleModal from './components/CopyScheduleModal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 
 // Interfaces
 interface Consultant {
@@ -29,6 +31,7 @@ interface Schedule {
 
 const WeeklyScheduleManagement: React.FC = () => {
     const { user } = useAuth();
+    const { modalState, showConfirm, hideConfirm } = useConfirmModal();
     const [consultants, setConsultants] = useState<Consultant[]>([]);
     const [selectedConsultantId, setSelectedConsultantId] = useState<string>('');
     const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -131,22 +134,29 @@ const WeeklyScheduleManagement: React.FC = () => {
     };
 
     const handleDeleteSchedule = async (scheduleId: string) => {
-        if (!window.confirm("Bạn có chắc muốn xóa lịch này không?")) {
-            return;
-        }
-        
-        try {
-            const response: any = await weeklyScheduleService.deleteSchedule(scheduleId);
-            if (response.success) {
-                toast.success("Xóa lịch thành công!");
-                fetchSchedules(); // Reload danh sách
-            } else {
-                toast.error(response.message || "Không thể xóa lịch");
+        showConfirm(
+            {
+                title: "Xác nhận xóa lịch",
+                description: "Bạn có chắc muốn xóa lịch này không? Hành động này không thể hoàn tác.",
+                confirmText: "Xóa",
+                cancelText: "Hủy",
+                confirmVariant: "destructive"
+            },
+            async () => {
+                try {
+                    const response: any = await weeklyScheduleService.deleteSchedule(scheduleId);
+                    if (response.success) {
+                        toast.success("Xóa lịch thành công!");
+                        fetchSchedules(); // Reload danh sách
+                    } else {
+                        toast.error(response.message || "Không thể xóa lịch");
+                    }
+                } catch (error) {
+                    toast.error("Lỗi khi xóa lịch");
+                    console.error(error);
+                }
             }
-        } catch (error) {
-            toast.error("Lỗi khi xóa lịch");
-            console.error(error);
-        }
+        );
     };
 
     const handleOpenCopyModal = (scheduleId: string) => {
@@ -269,6 +279,18 @@ const WeeklyScheduleManagement: React.FC = () => {
                     sourceScheduleId={copyingScheduleId}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={modalState.isOpen}
+                onClose={hideConfirm}
+                onConfirm={modalState.onConfirm}
+                title={modalState.title}
+                description={modalState.description}
+                confirmText={modalState.confirmText}
+                cancelText={modalState.cancelText}
+                confirmVariant={modalState.confirmVariant}
+                isLoading={modalState.isLoading}
+            />
         </div>
     );
 };

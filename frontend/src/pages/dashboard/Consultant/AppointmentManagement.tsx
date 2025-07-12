@@ -9,6 +9,8 @@ import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
 import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
 import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
 import { getGoogleAccessToken, hasGoogleAccessToken } from '../../../utils/authUtils';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { 
   Appointment,
   AppointmentQuery,
@@ -35,10 +37,11 @@ import {
   FaChevronRight,
   FaFilter
 } from 'react-icons/fa';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
 const AppointmentManagement: React.FC = () => {
   const { user } = useAuth();
+  const { modalState, showConfirm, hideConfirm } = useConfirmModal();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -232,13 +235,12 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const showNotification = (type: 'success' | 'error' | 'warning', message: string) => {
-    // Simple notification - có thể thay thế bằng toast library
     if (type === 'error') {
       toast.error(message);
     } else if (type === 'success') {
       toast.success(message);
     } else if (type === 'warning') {
-      toast.warning ? toast.warning(message) : toast(message, { type: 'warning' });
+      toast(message, { icon: '⚠️' });
     }
   };
 
@@ -329,24 +331,33 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
-
-      setActionLoading(appointmentId);
-    try {
-      const data = await appointmentService.cancelAppointment(appointmentId);
-      
-      if (data.success) {
-        showNotification('success', 'Đã hủy lịch hẹn');
-        fetchAppointments();
-      } else {
-        showNotification('error', data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+    showConfirm(
+      {
+        title: "Xác nhận hủy lịch hẹn",
+        description: "Bạn có chắc chắn muốn hủy lịch hẹn này? Khách hàng sẽ được thông báo về việc hủy lịch.",
+        confirmText: "Hủy lịch hẹn",
+        cancelText: "Không",
+        confirmVariant: "destructive"
+      },
+      async () => {
+        setActionLoading(appointmentId);
+        try {
+          const data = await appointmentService.cancelAppointment(appointmentId);
+          
+          if (data.success) {
+            showNotification('success', 'Đã hủy lịch hẹn');
+            fetchAppointments();
+          } else {
+            showNotification('error', data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+          }
+        } catch (err: any) {
+          console.error('Error cancelling appointment:', err);
+          showNotification('error', err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+        } finally {
+          setActionLoading('');
+        }
       }
-    } catch (err: any) {
-      console.error('Error cancelling appointment:', err);
-      showNotification('error', err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-    } finally {
-      setActionLoading('');
-    }
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -1061,6 +1072,18 @@ const AppointmentManagement: React.FC = () => {
       </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={hideConfirm}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+        description={modalState.description}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        confirmVariant={modalState.confirmVariant}
+        isLoading={modalState.isLoading}
+      />
     </div>
   );
 };

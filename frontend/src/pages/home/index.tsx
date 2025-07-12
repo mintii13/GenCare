@@ -50,7 +50,7 @@ const HomePage = () => {
       ),
       title: 'Xét nghiệm STIs',
       desc: 'Đặt lịch xét nghiệm STIs, theo dõi trạng thái và nhận kết quả an toàn, bảo mật trên hệ thống.',
-      link: '/test-packages',
+      link: '/sti-booking/book',
     },
   ];
 
@@ -283,26 +283,27 @@ const HomePage = () => {
                           {testTab==='packages' ? 'Gói' : service.sti_test_type || 'Test'}
                         </span>
                       </div>
-                      <Link
-                        to={testTab === 'packages' 
-                          ? `/sti-booking/book?packageId=${service._id}`
-                          : `/sti-booking/book?testId=${service._id}`}
-                        className="mt-auto block w-full text-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                      >
-                        Đặt lịch ngay
-                      </Link>
+                  
                     </div>
                   ))}
                 </div>
               </div>
             </div>
             <div className="text-center mt-8">
-              <Link
-                to="/test-packages"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                Xem tất cả xét nghiệm
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  to="/sti-assessment"
+                  className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+                >
+                  Đánh giá sàng lọc STI
+                </Link>
+                <Link
+                  to="/sti-booking/book"
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Đặt lịch xét nghiệm
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -448,7 +449,13 @@ const HomePage = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/test-packages"
+              to="/test-packages/sti"
+              className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+            >
+              Xem gói xét nghiệm
+            </Link>
+            <Link
+              to="/sti-booking/book"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               Đặt lịch xét nghiệm

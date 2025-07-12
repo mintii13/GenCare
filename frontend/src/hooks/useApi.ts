@@ -44,7 +44,9 @@ export function useApi<T>(
       });
 
       if (showToast) {
-        toast.error(errorMessage);
+        // Import và sử dụng error utils
+        const { showErrorToast } = await import('@/utils/errorUtils');
+        showErrorToast(error);
       }
 
       throw error;
@@ -172,7 +174,9 @@ export function useAsyncAction<T = any>(showToast: boolean = true) {
       setState({ loading: false, error: errorMessage });
       
       if (showToast) {
-        toast.error(errorMessage);
+        // Import và sử dụng error utils
+        const { showErrorToast } = await import('@/utils/errorUtils');
+        showErrorToast(error);
       }
       
       return null;

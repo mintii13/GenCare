@@ -2,40 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   Button, 
-  Space, 
   Tag, 
   Modal, 
   Form, 
-  Input, 
   Select, 
   DatePicker, 
-  InputNumber, 
-  Row, 
-  Col, 
   message, 
   Tooltip,
-  Switch,
-  TextArea,
   Card,
-  Divider
+  Space,
+  Row,
+  Col,
+  Input,
+  InputNumber,
+  Switch,
 } from 'antd';
 import { 
-  EyeOutlined, 
   EditOutlined, 
   PlusOutlined, 
-  SyncOutlined, 
-  MailOutlined, 
-  DeleteOutlined,
-  DollarOutlined,
   SearchOutlined,
   ClearOutlined,
+  MailOutlined,
   FileTextOutlined,
-  ShoppingCartOutlined
-} from '@ant-design/icons';
+  EyeOutlined,
+      ShoppingCartOutlined,
+    DollarOutlined,
+    SyncOutlined,
+  } from '@ant-design/icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import apiClient from '../../../../services/apiClient';
 import { API } from '../../../../config/apiEndpoints';
 import StiResultService, { StiResult, CreateStiResultRequest, UpdateStiResultRequest } from '../../../../services/stiResultService';
+import StatusUpdateModal from '../../../../components/sti/StatusUpdateModal';
+import { 
+  OrderStatus, 
+  PaymentStatus, 
+  getOrderStatusLabel, 
+  getPaymentStatusLabel, 
+  getOrderStatusColor, 
+  getPaymentStatusColor,
+  getAvailableActions
+} from '../../../../utils/stiStatusUtils';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
@@ -68,9 +75,17 @@ interface StiOrder {
     _id: string;
     full_name: string;
     email: string;
+    phone?: string;
+  };
+  customer?: {
+    _id: string;
+    full_name: string;
+    email: string;
+    phone?: string;
   };
   customer_name?: string;
   customer_email?: string;
+  customer_phone?: string;
   total_amount: number;
   order_status: string;
   payment_status: string;
@@ -118,6 +133,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [statusUpdateModalVisible, setStatusUpdateModalVisible] = useState(false);
   
   // Selected items
   const [selectedOrder, setSelectedOrder] = useState<StiOrder | null>(null);
@@ -182,8 +198,9 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       if (resData?.success) {
         const mapped = (resData.data?.orders || resData.data?.items || []).map((item: any) => ({
           ...item,
-          customer_name: item.customer_id?.full_name,
-          customer_email: item.customer_id?.email
+          customer_name: item.customer?.full_name || item.customer_id?.full_name,
+          customer_email: item.customer?.email || item.customer_id?.email,
+          customer_phone: item.customer?.phone || item.customer_id?.phone
         }));
         setOrders(mapped);
         setTotal(resData.data?.pagination?.total_items || resData.pagination?.total_items || 0);
@@ -472,6 +489,34 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     }
   };
 
+  // Handle status update
+  const handleStatusUpdate = (order: StiOrder) => {
+    setSelectedOrder(order);
+    setStatusUpdateModalVisible(true);
+  };
+
+  const handleStatusUpdateSubmit = async (orderStatus: OrderStatus, paymentStatus: PaymentStatus) => {
+    if (!selectedOrder) return;
+
+    try {
+      const response = await apiClient.patch(`/sti/updateStiOrder/${selectedOrder._id}`, {
+        order_status: orderStatus,
+        payment_status: paymentStatus
+      });
+
+      if ((response as any).data?.success) {
+        message.success('Cập nhật trạng thái thành công');
+        fetchOrders(); // Refresh orders list
+        setStatusUpdateModalVisible(false);
+      } else {
+        message.error((response as any).data?.message || 'Lỗi khi cập nhật trạng thái');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Lỗi khi cập nhật trạng thái';
+      message.error(errorMessage);
+    }
+  };
+
   // Utility functions
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -553,11 +598,16 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       render: (record: StiOrder) => (
         <div>
           <div style={{ fontWeight: 500 }}>
-            {record.customer_name || record.customer_id?.full_name || 'N/A'}
+            {record.customer_name || record.customer?.full_name || record.customer_id?.full_name || 'N/A'}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.customer_email || record.customer_id?.email || 'N/A'}
+            {record.customer_email || record.customer?.email || record.customer_id?.email || 'N/A'}
           </div>
+          {(record.customer_phone || record.customer?.phone) && (
+            <div style={{ fontSize: '12px', color: '#888' }}>
+              {record.customer_phone || record.customer?.phone}
+            </div>
+          )}
         </div>
       )
     },
@@ -663,6 +713,14 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
               size="small"
             />
           </Tooltip>
+          <Tooltip title="Cập nhật trạng thái">
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => handleStatusUpdate(record)}
+              size="small"
+              type="dashed"
+            />
+          </Tooltip>
         </Space>
       )
     }
@@ -709,7 +767,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           {record.is_confirmed && !record.is_notified && (
             <Button
               type="primary"
-              icon={<MailOutlined />}
+              icon={<MailOutlined  />}
               onClick={() => handleNotifyResult(record._id)}
               size="small"
             >
@@ -880,11 +938,16 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 <strong>Mã đơn:</strong> {selectedOrder.order_code || selectedOrder._id}
               </Col>
               <Col span={12}>
-                <strong>Khách hàng:</strong> {selectedOrder.customer_name || selectedOrder.customer_id?.full_name}
+                <strong>Khách hàng:</strong> {selectedOrder.customer_name || selectedOrder.customer?.full_name || selectedOrder.customer_id?.full_name || 'N/A'}
               </Col>
               <Col span={12}>
-                <strong>Email:</strong> {selectedOrder.customer_email || selectedOrder.customer_id?.email}
+                <strong>Email:</strong> {selectedOrder.customer_email || selectedOrder.customer?.email || selectedOrder.customer_id?.email || 'N/A'}
               </Col>
+              {(selectedOrder.customer_phone || selectedOrder.customer?.phone || selectedOrder.customer_id?.phone) && (
+                <Col span={12}>
+                  <strong>Số điện thoại:</strong> {selectedOrder.customer_phone || selectedOrder.customer?.phone || selectedOrder.customer_id?.phone}
+                </Col>
+              )}
               <Col span={12}>
                 <strong>Ngày xét nghiệm:</strong> {dayjs(selectedOrder.order_date).format('DD/MM/YYYY')}
               </Col>
@@ -1109,6 +1172,22 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Status Update Modal */}
+      {selectedOrder && (
+        <StatusUpdateModal
+          visible={statusUpdateModalVisible}
+          onClose={() => setStatusUpdateModalVisible(false)}
+          onUpdate={handleStatusUpdateSubmit}
+          currentOrderStatus={selectedOrder.order_status as OrderStatus}
+          currentPaymentStatus={selectedOrder.payment_status as PaymentStatus}
+          orderId={selectedOrder._id}
+          orderCode={selectedOrder.order_code}
+          customerName={selectedOrder.customer_name || selectedOrder.customer_id?.full_name}
+          userRole={user?.role || 'staff'}
+          loading={loading}
+        />
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
 import LicenseModal from '../../components/sti/LicenseModal';
+import STIAssessmentModal from '../../components/sti/STIAssessmentModal';
 import { toast } from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
 
@@ -37,6 +38,7 @@ const BookSTIPage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
 
   const testId = searchParams.get('testId');
   const packageId = searchParams.get('packageId');
@@ -52,10 +54,8 @@ const BookSTIPage: React.FC = () => {
       fetchTestDetails();
     } else if (packageId) {
       fetchPackageDetails();
-    } else {
-      message.error('Không tìm thấy thông tin xét nghiệm');
-      navigate('/test-packages');
     }
+    // Không cần testId hoặc packageId cho consultation mode
   }, [testId, packageId, user]);
 
   const fetchTestDetails = async () => {
@@ -130,7 +130,8 @@ const BookSTIPage: React.FC = () => {
       return;
     }
 
-    setShowLicenseModal(true);
+    // Hiển thị modal đánh giá STI trước khi đặt lịch
+    setShowAssessmentModal(true);
   };
 
   const handleLicenseAccept = async () => {
@@ -148,7 +149,9 @@ const BookSTIPage: React.FC = () => {
         sti_package_id: selectedPackage?._id || null,
         sti_test_items: selectedTest ? [selectedTest._id] : [],
         order_date: orderDate.format('YYYY-MM-DD'),
-        notes: notes.trim() || undefined
+        notes: isConsultationMode 
+          ? `Tư vấn xét nghiệm STI. ${notes.trim()}` 
+          : notes.trim() || undefined
       };
 
       const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
@@ -170,6 +173,18 @@ const BookSTIPage: React.FC = () => {
 
   const handleLicenseCancel = () => {
     setShowLicenseModal(false);
+  };
+
+  const handleTakeAssessment = () => {
+    setShowAssessmentModal(false);
+    // Chuyển đến trang đánh giá STI
+    navigate('/sti-assessment');
+  };
+
+  const handleSkipAssessment = () => {
+    setShowAssessmentModal(false);
+    // Tiếp tục flow đặt lịch bình thường
+    setShowLicenseModal(true);
   };
 
   const steps = [
@@ -198,32 +213,23 @@ const BookSTIPage: React.FC = () => {
     );
   }
 
-  if (!selectedTest && !selectedPackage) {
-    return (
-      <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-        <Alert
-          message="Không tìm thấy thông tin"
-          description="Không thể tải thông tin xét nghiệm hoặc gói xét nghiệm."
-          type="error"
-          showIcon
-          action={
-            <Button size="small" onClick={() => navigate('/test-packages')}>
-              Quay lại
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
+  // Cho phép consultation mode (không cần test hoặc package cụ thể)
+  const isConsultationMode = !testId && !packageId;
 
   return (
     <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-      <Title level={2}>Đặt lịch xét nghiệm STI</Title>
+      <Title level={2}>
+        {isConsultationMode ? 'Đặt lịch tư vấn xét nghiệm STI' : 'Đặt lịch xét nghiệm STI'}
+      </Title>
 
       {/* Thông báo quy trình mới */}
       <Alert
-        message="Quy trình đặt lịch xét nghiệm"
-        description="Bạn đang xem thông tin về gói/xét nghiệm STI. Chọn ngày xét nghiệm và hoàn tất đặt lịch. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
+        message={isConsultationMode ? "Quy trình đặt lịch tư vấn" : "Quy trình đặt lịch xét nghiệm"}
+        description={
+          isConsultationMode 
+            ? "Bạn sẽ được tư vấn và hướng dẫn chọn gói xét nghiệm phù hợp. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
+            : "Bạn đang xem thông tin về gói/xét nghiệm STI. Chọn ngày xét nghiệm và hoàn tất đặt lịch. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
+        }
         type="info"
         showIcon
         style={{ marginBottom: '24px' }}
@@ -232,85 +238,91 @@ const BookSTIPage: React.FC = () => {
       <Steps current={currentStep} items={steps} style={{ marginBottom: '32px' }} />
 
       {/* Thông tin xét nghiệm/gói (chỉ để tham khảo) */}
-      <Card title="Thông tin tham khảo" style={{ marginBottom: '24px' }}>
-        {selectedTest && (
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <div>
-              <Text strong>Tên xét nghiệm: </Text>
-              <Text>{selectedTest.sti_test_name}</Text>
-            </div>
-            <div>
-              <Text strong>Mã: </Text>
-              <Text>{selectedTest.sti_test_code}</Text>
-            </div>
-            <div>
-              <Text strong>Mô tả: </Text>
-              <Text>{selectedTest.description}</Text>
-            </div>
-            <div>
-              <Text strong>Giá tham khảo: </Text>
-              <Text style={{ color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
-                {formatPrice(selectedTest.price)}
-              </Text>
-            </div>
-            <div>
-              <Tag color="blue">{selectedTest.category}</Tag>
-              <Tag>{selectedTest.sti_test_type}</Tag>
-            </div>
-          </Space>
-        )}
+      {!isConsultationMode && (
+        <Card title="Thông tin tham khảo" style={{ marginBottom: '24px' }}>
+          {selectedTest && (
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <div>
+                <Text strong>Tên xét nghiệm: </Text>
+                <Text>{selectedTest.sti_test_name}</Text>
+              </div>
+              <div>
+                <Text strong>Mã: </Text>
+                <Text>{selectedTest.sti_test_code}</Text>
+              </div>
+              <div>
+                <Text strong>Mô tả: </Text>
+                <Text>{selectedTest.description}</Text>
+              </div>
+              <div>
+                <Text strong>Giá tham khảo: </Text>
+                <Text style={{ color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
+                  {formatPrice(selectedTest.price)}
+                </Text>
+              </div>
+              <div>
+                <Tag color="blue">{selectedTest.category}</Tag>
+                <Tag>{selectedTest.sti_test_type}</Tag>
+              </div>
+            </Space>
+          )}
 
-        {selectedPackage && (
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <div>
-              <Text strong>Tên gói: </Text>
-              <Text>{selectedPackage.sti_package_name}</Text>
-            </div>
-            <div>
-              <Text strong>Mã: </Text>
-              <Text>{selectedPackage.sti_package_code}</Text>
-            </div>
-            <div>
-              <Text strong>Mô tả: </Text>
-              <Text>{selectedPackage.description}</Text>
-            </div>
-            <div>
-              <Text strong>Giá tham khảo: </Text>
-              <Text style={{ color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
-                {formatPrice(selectedPackage.price)}
-              </Text>
-            </div>
-          </Space>
-        )}
-      </Card>
+          {selectedPackage && (
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <div>
+                <Text strong>Tên gói: </Text>
+                <Text>{selectedPackage.sti_package_name}</Text>
+              </div>
+              <div>
+                <Text strong>Mã: </Text>
+                <Text>{selectedPackage.sti_package_code}</Text>
+              </div>
+              <div>
+                <Text strong>Mô tả: </Text>
+                <Text>{selectedPackage.description}</Text>
+              </div>
+              <div>
+                <Text strong>Giá tham khảo: </Text>
+                <Text style={{ color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
+                  {formatPrice(selectedPackage.price)}
+                </Text>
+              </div>
+            </Space>
+          )}
+        </Card>
+      )}
 
       {/* Form đặt lịch tư vấn */}
-      <Card title="Đặt lịch tư vấn">
+      <Card title={isConsultationMode ? "Đặt lịch tư vấn" : "Đặt lịch xét nghiệm"}>
         <Form form={form} layout="vertical">
-          <Form.Item
-            label="Ngày xét nghiệm"
-            required
-            help="Không thể chọn ngày Chủ nhật và ngày đã qua"
-          >
-            <DatePicker
-              style={{ width: '100%' }}
-              format="DD/MM/YYYY"
-              placeholder="Chọn ngày xét nghiệm"
-              disabledDate={disabledDate}
-              value={orderDate}
-              onChange={handleDateChange}
-            />
-          </Form.Item>
+                      <Form.Item
+              label={isConsultationMode ? "Ngày tư vấn" : "Ngày xét nghiệm"}
+              required
+              help="Không thể chọn ngày Chủ nhật và ngày đã qua"
+            >
+              <DatePicker
+                style={{ width: '100%' }}
+                format="DD/MM/YYYY"
+                placeholder={isConsultationMode ? "Chọn ngày tư vấn" : "Chọn ngày xét nghiệm"}
+                disabledDate={disabledDate}
+                value={orderDate}
+                onChange={handleDateChange}
+              />
+            </Form.Item>
 
           <Form.Item label="Ghi chú (tùy chọn)">
-            <TextArea
-              rows={4}
-              placeholder="Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
-              maxLength={500}
-              value={notes}
-              onChange={handleNotesChange}
-              showCount
-            />
+                          <TextArea
+                rows={4}
+                placeholder={
+                  isConsultationMode 
+                    ? "Nhập thông tin về tình trạng sức khỏe, mong muốn tư vấn..." 
+                    : "Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
+                }
+                maxLength={500}
+                value={notes}
+                onChange={handleNotesChange}
+                showCount
+              />
           </Form.Item>
 
           <Form.Item>
@@ -324,7 +336,7 @@ const BookSTIPage: React.FC = () => {
                 onClick={handleSubmit}
                 disabled={!orderDate}
               >
-                Đặt lịch xét nghiệm
+                {isConsultationMode ? 'Đặt lịch tư vấn' : 'Đặt lịch xét nghiệm'}
               </Button>
             </Space>
           </Form.Item>
@@ -334,22 +346,49 @@ const BookSTIPage: React.FC = () => {
       {/* Lưu ý */}
       <Card title="Lưu ý quan trọng" style={{ marginTop: '24px' }}>
         <ul>
-          <li>Buổi tư vấn sẽ diễn ra khoảng 30-45 phút</li>
-          <li>Bác sĩ sẽ tư vấn gói xét nghiệm phù hợp với tình trạng của bạn</li>
-          <li>Vui lòng đến đúng giờ đã hẹn</li>
-          <li>Mang theo CMND/CCCD để xác minh danh tính</li>
-          <li>Chuẩn bị các thông tin về tình trạng sức khỏe hiện tại</li>
-          <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
+          {isConsultationMode ? (
+            <>
+              <li>Buổi tư vấn sẽ diễn ra khoảng 30-45 phút</li>
+              <li>Bác sĩ sẽ tư vấn gói xét nghiệm phù hợp với tình trạng của bạn</li>
+              <li>Vui lòng đến đúng giờ đã hẹn</li>
+              <li>Mang theo CMND/CCCD để xác minh danh tính</li>
+              <li>Chuẩn bị các thông tin về tình trạng sức khỏe hiện tại</li>
+              <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
+            </>
+          ) : (
+            <>
+              <li>Buổi xét nghiệm sẽ diễn ra theo lịch đã đặt</li>
+              <li>Vui lòng đến đúng giờ đã hẹn</li>
+              <li>Mang theo CMND/CCCD để xác minh danh tính</li>
+              <li>Chuẩn bị các thông tin về tình trạng sức khỏe hiện tại</li>
+              <li>Tuân thủ hướng dẫn của nhân viên y tế</li>
+              <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
+            </>
+          )}
         </ul>
       </Card>
+
+      {/* STI Assessment Modal */}
+      <STIAssessmentModal
+        visible={showAssessmentModal}
+        onClose={() => setShowAssessmentModal(false)}
+        onTakeAssessment={handleTakeAssessment}
+        onSkipAssessment={handleSkipAssessment}
+        loading={loading}
+      />
 
       {/* License Modal */}
       <LicenseModal
         visible={showLicenseModal}
         onAccept={handleLicenseAccept}
         onCancel={handleLicenseCancel}
-        title="Điều khoản sử dụng dịch vụ tư vấn xét nghiệm STI"
+        title={
+          isConsultationMode 
+            ? "Điều khoản sử dụng dịch vụ tư vấn STI" 
+            : "Điều khoản sử dụng dịch vụ xét nghiệm STI"
+        }
       />
+      
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );

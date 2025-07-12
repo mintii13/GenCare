@@ -21,7 +21,7 @@ const SelectStiTestPage: React.FC = () => {
   }
 
   const handleBookConsultation = () => {
-    navigate('/sti-booking/consultation');
+    navigate('/sti-booking/book');
   };
 
   return (

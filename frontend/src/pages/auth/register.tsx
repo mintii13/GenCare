@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -413,9 +413,12 @@ const Register: React.FC = () => {
         <CardFooter className="text-center">
           <p className="text-sm text-gray-600">
             Đã có tài khoản?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <button 
+              onClick={() => setShowLoginModal(true)}
+              className="font-medium text-blue-600 hover:text-blue-500 underline"
+            >
               Đăng nhập ngay
-            </Link>
+            </button>
           </p>
         </CardFooter>
       </Card>

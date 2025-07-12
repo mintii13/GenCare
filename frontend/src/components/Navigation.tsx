@@ -119,9 +119,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch hẹn của tôi
                       </Link>
-                      <Link to="/consultants" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Danh sách chuyên gia
-                      </Link>
+
                     </>
                   )}
                 </div>
