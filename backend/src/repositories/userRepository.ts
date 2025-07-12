@@ -61,8 +61,9 @@ export class UserRepository {
         }
     }
 
-    public static async findByIdAndUpdate(userId: ObjectId, updateData: Partial<IUser>): Promise<IUser | null> {
+    public static async findByIdAndUpdate(user_id: string, updateData: Partial<IUser>): Promise<IUser | null> {
         try {
+            const userId = new mongoose.Types.ObjectId(user_id);
             return await User.findByIdAndUpdate(
                 userId,
                 updateData,
@@ -72,6 +73,13 @@ export class UserRepository {
             console.error('Error updating user:', error);
             throw error;
         }
+    }
+
+    public static async updatePasswordByEmail(email: string, hashedPassword: string): Promise<void> {
+        await User.updateOne(
+            { email },
+            { $set: { password: hashedPassword } }
+        );
     }
 
     public static async updateLastLogin(userId: string): Promise<void> {

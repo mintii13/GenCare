@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type UserRole = 'customer' | 'consultant' | 'staff' | 'admin';
 export interface IUser extends Document {
     email: string;
     password?: string;
@@ -12,7 +13,7 @@ export interface IUser extends Document {
     last_login?: Date;
     status: boolean;
     email_verified: boolean;
-    role: 'customer' | 'consultant' | 'staff' | 'admin';
+    role: UserRole;
     avatar?: string;
 }
 

@@ -217,8 +217,14 @@ export class AuthService {
             const existedUser = await UserRepository.findByEmail(email);
             if (existedUser) {
                 if (existedUser.status === true)
-                    return { success: false, message: 'Email is existed. Login please' };
-                else return { success: false, message: 'This email is banned' };
+                    return { 
+                        success: false, 
+                        message: 'Email is existed. Login please' 
+                    };
+                else return { 
+                    success: false, 
+                    message: 'This email is banned' 
+                };
             }
             await redisClient.setEx(`user:${email}`, 600, JSON.stringify(registerRequest));
             const otp = await MailUtils.sendOtpForRegister(email);
@@ -238,12 +244,8 @@ export class AuthService {
     }
 
     // Kiểm tra OTP
-    public static async verifyOTP(email: string, otp: string): Promise<VerificationResponse> {
+    public static async verifyOTPForRegister(email: string, otp: string): Promise<VerificationResponse> {
         try {
-            if (!email || !otp)
-                return {
-                    success: false, message: 'Email or otp is not found'
-                };
             const storedOtp = await redisClient.get(`otp:${email}`);
             if (!storedOtp || storedOtp !== otp)
                 return {
@@ -320,7 +322,7 @@ export class AuthService {
     /**
      * Kiểm tra xem old_password có giống trong db không
      */
-    public static async verifyOldPassword(userId: string, oldPassword: string): Promise<boolean> {
+    private static async verifyOldPassword(userId: string, oldPassword: string): Promise<boolean> {
         try {
             const user = await UserRepository.findById(userId);
             if (!user) {
@@ -335,7 +337,7 @@ export class AuthService {
     /**
      * Hash new password
      */
-    public static async hashPassword(password: string): Promise<string> {
+    private static async hashPassword(password: string): Promise<string> {
         try {
             const salt = await bcrypt.genSalt(10);
             return await bcrypt.hash(password, salt);
@@ -344,20 +346,10 @@ export class AuthService {
         }
     }
 
-    public static async updatePassword(userId: string, hashedPassword: string): Promise<void> {
-        try {
-            const _id = new mongoose.Types.ObjectId(userId);
-            const result = await User.findOneAndUpdate(
-                { _id },
-                { password: hashedPassword },
-                { new: true }
-            );
-
-            if (!result) {
-                throw new Error('User not found');
-            }
-        } catch (error) {
-            throw error;
+    private static async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+        const updatedUser = await UserRepository.findByIdAndUpdate(userId, { password: hashedPassword });
+        if (!updatedUser) {
+            throw new Error('User not found');
         }
     }
 
@@ -367,13 +359,6 @@ export class AuthService {
         newPassword: string,
     ): Promise<ChangePasswordResponse> {
         try {
-            if (!userId) {
-                return {
-                    success: false,
-                    message: 'Unauthorized',
-                };
-            }
-
             const user = await UserRepository.findById(userId);
 
             if (!user) {
@@ -392,10 +377,10 @@ export class AuthService {
                 };
             }
             // 2. Hash new password
-            newPassword = await this.hashPassword(newPassword);
+            const hashedNewPassword = await this.hashPassword(newPassword);
 
             // 3. Update password in database
-            await this.updatePassword(userId, newPassword);
+            await this.updatePassword(userId, hashedNewPassword);
 
             return {
                 success: true,
@@ -412,4 +397,84 @@ export class AuthService {
         }
     }
 
+    public static async forgotPasswordAndSendOTP(email: string): Promise<ChangePasswordResponse> {
+        try {
+            const user = await UserRepository.findByEmail(email);
+            if (!user){
+                return{
+                    success: false,
+                    message: 'Email is not found. Please input again'
+                };
+            }
+            const sendOtp = await MailUtils.sendOtpForRegister(email);
+            await redisClient.setEx(`otp:${email}`, 300, sendOtp);
+            return{
+                success: true,
+                message: 'Send OTP successfully'
+            }
+        } catch (error) {
+            console.error('ForgotPassword error:', error);
+            return {
+                success: false,
+                message: 'System error',
+            };
+        }
+    }
+
+    // Kiểm tra OTP
+    public static async verifyOTPForForgotPassword(email: string, otp: string): Promise<VerificationResponse> {
+        try {
+            const storedOtp = await redisClient.get(`otp:${email}`);
+            if (!storedOtp || storedOtp !== otp)
+                return {
+                    success: false,
+                    message: 'OTP is invalid or expired'
+                };
+            //ensure user verifieds
+            await redisClient.setEx(`otp-verified:${email}`, 300, 'true');
+            await redisClient.del(`otp:${email}`);
+            return {
+                success: true,
+                message: 'OTP verified successfully'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Internal Server error'
+            };
+        }
+    }
+
+    public static async resetPasswordAfterOTP(email: string, newPassword: string): Promise<ChangePasswordResponse> {
+        try {
+            const isVerified = await redisClient.get(`otp-verified:${email}`);
+            if (isVerified !== 'true') {
+                return { 
+                    success: false, 
+                    message: 'OTP not verified or expired' 
+                };
+            }
+
+            const user = await UserRepository.findByEmail(email);
+            if (!user) {
+                return { 
+                    success: false, 
+                    message: 'User not found' 
+                };
+            }
+
+            const hashedPassword = await this.hashPassword(newPassword);
+            await UserRepository.updatePasswordByEmail(email, hashedPassword);
+
+            await redisClient.del(`otp-verified:${email}`);
+
+            return { 
+                success: true, 
+                message: 'Password reset successfully' 
+            };
+        } catch (error) {
+            console.error('Reset password error:', error);
+            return { success: false, message: 'Server error' };
+        }
+    }
 }

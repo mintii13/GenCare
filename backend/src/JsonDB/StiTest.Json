@@ -118,5 +118,17 @@
     "is_active": true,
     "category": "viral",
     "sti_test_type": "dịch tiết"
+  },
+  {
+    "_id": {
+      "$oid": "675e1a2b3c4d5e6f7a8b9012"
+    },
+    "sti_test_name": "Xét nghiệm Trichomonas",
+    "sti_test_code": "STI-PAR-SWB-TRI",
+    "description": "Xác định ký sinh trùng Trichomonas vaginalis bằng mẫu phết âm đạo hoặc nước tiểu. Xét nghiệm chuyên biệt cho bệnh lây truyền qua đường tình dục.",
+    "price": 200000,
+    "is_active": true,
+    "category": "parasitic",
+    "sti_test_type": "dịch tiết"
   }
 ]

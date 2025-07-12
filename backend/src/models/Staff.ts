@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IStaff extends Document {
-    staff_id: string;
     user_id: string;
     manager_id?: string;
     department: string;
@@ -10,7 +9,6 @@ export interface IStaff extends Document {
 }
 
 const staffSchema = new Schema<IStaff>({
-    staff_id: { type: String, required: true, unique: true },
     user_id: { type: String, required: true, ref: 'User' },
     manager_id: { type: String, ref: 'Staff' },
     department: { type: String, required: true },
