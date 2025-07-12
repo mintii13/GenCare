@@ -28,9 +28,8 @@ const STIAssessmentForm = () => {
 
     // Thông tin tình dục
     sexually_active: '',
-    sexual_orientation: '',
+    sexual_orientation: 'heterosexual', // DEFAULT to heterosexual
     actual_orientation: '', // Hidden field for backend
-    number_of_partners: '',
     new_partner_recently: false,
     partner_has_sti: false,
     condom_use: 'sometimes',
@@ -96,19 +95,19 @@ const STIAssessmentForm = () => {
     }
   }, [formData.gender]);
 
-  // Auto-set MSM when male selects homosexual
   useEffect(() => {
-    if (formData.gender === 'male' && formData.sexual_orientation === 'homosexual') {
-      updateFormData('sexual_orientation', 'msm');
+    // Set default orientation if empty
+    if (!formData.sexual_orientation) {
+      updateFormData('sexual_orientation', 'heterosexual');
     }
-  }, [formData.gender, formData.sexual_orientation]);
+  }, []);
 
-  // Auto-set number_of_partners based on sexually_active
   useEffect(() => {
     if (formData.sexually_active === 'not_active') {
-      updateFormData('number_of_partners', 'none');
-    } else if (formData.sexually_active === 'active_single') {
-      updateFormData('number_of_partners', 'one');
+      // Clear sexual orientation when not active
+      updateFormData('sexual_orientation', 'heterosexual');
+      updateFormData('new_partner_recently', false);
+      updateFormData('partner_has_sti', false);
     }
   }, [formData.sexually_active]);
 
@@ -149,6 +148,8 @@ const STIAssessmentForm = () => {
 
       const submissionData = {
         ...formData,
+        number_of_partners: formData.sexually_active === 'not_active' ? 'none' :
+          formData.sexually_active === 'active_single' ? 'one' : 'multiple',
         // Use actual_orientation for backend if it exists, otherwise use sexual_orientation
         sexual_orientation: formData.actual_orientation || formData.sexual_orientation,
         previous_sti_history: formData.previous_sti_history || [],
@@ -366,7 +367,7 @@ const STIAssessmentForm = () => {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Tình trạng hoạt động tình dục *</label>
+          <label className="block text-sm font-medium mb-2">Tình trạng hoạt động tình dục trong 6 tháng qua *</label>
           <select
             value={formData.sexually_active}
             onChange={(e) => updateFormData('sexually_active', e.target.value)}
@@ -374,9 +375,11 @@ const STIAssessmentForm = () => {
           >
             <option value="">Chọn tình trạng</option>
             <option value="not_active">Không hoạt động tình dục</option>
-            <option value="active_single">Có hoạt động - 1 bạn tình</option>
-            <option value="active_multiple">Có hoạt động - nhiều bạn tình</option>
+            <option value="active_single">Có hoạt động - 1 bạn tình cố định</option>
+            <option value="active_multiple">Có hoạt động - nhiều bạn tình (≥2 người)</option>
           </select>
+          <p className="text-xs text-gray-500 mt-1">
+          </p>
         </div>
 
         {formData.sexually_active !== 'not_active' && formData.sexually_active && (
@@ -384,11 +387,10 @@ const STIAssessmentForm = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Xu hướng tình dục</label>
               <select
-                value={formData.sexual_orientation}
+                value={formData.sexual_orientation || 'heterosexual'}
                 onChange={(e) => updateFormData('sexual_orientation', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
               >
-                <option value="">Chọn xu hướng</option>
                 <option value="heterosexual">Dị tính (quan hệ khác giới)</option>
                 {formData.gender === 'male' && (
                   <option value="msm">Nam quan hệ với nam (MSM)</option>
@@ -398,8 +400,19 @@ const STIAssessmentForm = () => {
                 )}
                 <option value="bisexual">Lưỡng tính</option>
               </select>
+
+              {/* ✅ Enhanced MSM information */}
+              {formData.sexual_orientation === 'msm' && (
+                <div className="bg-blue-50 p-3 rounded border border-blue-200 mt-2">
+                  <p className="text-xs text-blue-700">
+                    <strong>Lưu ý MSM:</strong> Nam quan hệ tình dục với nam thuộc nhóm nguy cơ cao theo CDC
+                    và cần sàng lọc toàn diện ít nhất hàng năm, hoặc 3-6 tháng nếu có yếu tố nguy cơ bổ sung.
+                  </p>
+                </div>
+              )}
             </div>
 
+            {/* Keep existing MSM question logic for bisexual males */}
             {showMSMQuestion && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
                 <div className="flex items-center space-x-2">
@@ -409,7 +422,7 @@ const STIAssessmentForm = () => {
                     onChange={(e) => setHasMaleSex(e.target.checked)}
                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
-                  <label className="text-sm font-medium">Đã từng quan hệ tình dục với nam giới</label>
+                  <label className="text-sm font-medium">Đã từng quan hệ tình dục với nam giới trong 6 tháng qua</label>
                 </div>
                 {hasMaleSex && (
                   <p className="text-xs text-blue-600 mt-2">
@@ -419,21 +432,7 @@ const STIAssessmentForm = () => {
               </div>
             )}
 
-            {formData.sexually_active === 'active_multiple' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Số bạn tình trong 6 tháng qua</label>
-                <select
-                  value={formData.number_of_partners}
-                  onChange={(e) => updateFormData('number_of_partners', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-                >
-                  <option value="">Chọn số lượng</option>
-                  <option value="two_to_five">2-5</option>
-                  <option value="multiple">Trên 5</option>
-                </select>
-              </div>
-            )}
-
+            {/* Additional sexual behavior questions - timeframe specific */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
                 <input
@@ -452,22 +451,25 @@ const STIAssessmentForm = () => {
                   onChange={(e) => updateFormData('partner_has_sti', e.target.checked)}
                   className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500"
                 />
-                <label className="text-sm">Bạn tình có/nghi ngờ STI</label>
+                <label className="text-sm">Bạn tình có/nghi ngờ mắc STI (bệnh lây truyền qua đường tình dục)</label>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Tần suất sử dụng bao cao su *</label>
+              <label className="block text-sm font-medium mb-2">Tần suất sử dụng bao cao su trong 6 tháng qua *</label>
               <select
                 value={formData.condom_use}
                 onChange={(e) => updateFormData('condom_use', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
               >
-                <option value="sometimes">Thỉnh thoảng</option>
-                <option value="always">Luôn luôn</option>
-                <option value="rarely">Hiếm khi</option>
-                <option value="never">Không bao giờ</option>
+                <option value="always">Luôn luôn sử dụng</option>
+                <option value="sometimes">Thỉnh thoảng sử dụng</option>
+                <option value="rarely">Hiếm khi sử dụng</option>
+                <option value="never">Không bao giờ sử dụng</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                * CDC coi việc sử dụng bao cao su không thường xuyên là yếu tố nguy cơ quan trọng
+              </p>
             </div>
           </>
         )}
@@ -486,18 +488,31 @@ const STIAssessmentForm = () => {
         <div>
           <label className="block text-sm font-medium mb-3">Tiền sử mắc STI (có thể chọn nhiều)</label>
           <div className="grid grid-cols-2 gap-3">
-            {['HIV', 'Giang mai', 'Lậu', 'Chlamydia', 'Herpes', 'HPV', 'Viêm gan B', 'Viêm gan C'].map(sti => (
-              <div key={sti} className="flex items-center space-x-2">
+            {/* ✅ ENHANCED: Updated STI codes to match backend mapping */}
+            {[
+              { code: 'chlamydia', label: 'Chlamydia' },
+              { code: 'gonorrhea', label: 'Lậu (Gonorrhea)' },
+              { code: 'syphilis', label: 'Giang mai (Syphilis)' },
+              { code: 'herpes', label: 'Herpes (HSV)' },
+              { code: 'hpv', label: 'HPV' },
+              { code: 'hepatitis_b', label: 'Viêm gan B' },
+              { code: 'hepatitis_c', label: 'Viêm gan C' },
+              { code: 'trichomonas', label: 'Trichomonas' }
+            ].map(sti => (
+              <div key={sti.code} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={formData.previous_sti_history.includes(sti)}
-                  onChange={() => handleMultiSelect('previous_sti_history', sti)}
+                  checked={formData.previous_sti_history.includes(sti.code)}
+                  onChange={() => handleMultiSelect('previous_sti_history', sti.code)}
                   className="w-4 h-4 text-gray-600 rounded focus:ring-gray-500"
                 />
-                <label className="text-sm">{sti}</label>
+                <label className="text-sm">{sti.label}</label>
               </div>
             ))}
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            * Tiền sử STI là yếu tố nguy cơ quan trọng trong đánh giá CDC
+          </p>
         </div>
 
         <div>
@@ -508,24 +523,29 @@ const STIAssessmentForm = () => {
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
           >
             <option value="">Chọn tình trạng</option>
-            <option value="unknown">Chưa biết</option>
-            <option value="negative">Âm tính</option>
-            <option value="positive">Dương tính</option>
+            <option value="unknown">Chưa biết/Chưa xét nghiệm</option>
+            <option value="negative">Âm tính (HIV-)</option>
+            <option value="positive">Dương tính (HIV+)</option>
           </select>
+          {formData.hiv_status === 'positive' && (
+            <p className="text-xs text-red-600 mt-1">
+              * Người nhiễm HIV cần sàng lọc STI toàn diện theo khuyến cáo CDC
+            </p>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Lần xét nghiệm STI gần nhất *</label>
+          <label className="block text-sm font-medium mb-2">Lần xét nghiệm STI gần nhất</label>
           <select
             value={formData.last_sti_test}
             onChange={(e) => updateFormData('last_sti_test', e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
           >
-            <option value="never">Chưa từng</option>
-            <option value="within_3months">Trong 3 tháng</option>
+            <option value="never">Chưa từng xét nghiệm</option>
+            <option value="within_3months">Trong 3 tháng qua</option>
             <option value="3_6months">3-6 tháng trước</option>
             <option value="6_12months">6-12 tháng trước</option>
-            <option value="over_1year">Trên 1 năm</option>
+            <option value="over_1year">Hơn 1 năm trước</option>
           </select>
         </div>
       </div>
@@ -539,19 +559,20 @@ const STIAssessmentForm = () => {
         <h3 className="text-lg font-semibold text-red-800">Triệu chứng hiện tại</h3>
       </div>
 
-      <div className="flex items-center space-x-2 mb-3">
-        <input
-          type="checkbox"
-          checked={formData.has_symptoms}
-          onChange={(e) => updateFormData('has_symptoms', e.target.checked)}
-          className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-        />
-        <label className="text-sm font-medium">Hiện có triệu chứng nghi ngờ STI</label>
-      </div>
-
-      {formData.has_symptoms && (
+      <>
         <div className="grid grid-cols-2 gap-2 mt-3">
-          {['Đau rát khi tiểu', 'Tiết dịch bất thường', 'Loét', 'Ngứa', 'Đau vùng kín', 'Phát ban'].map(symptom => (
+          {[
+            'Đau rát khi tiểu',
+            'Tiết dịch bất thường',
+            'Loét vùng sinh dục',
+            'Ngứa vùng sinh dục',
+            'Đau vùng kín',
+            'Phát ban da',
+            'Sưng hạch bẹn',
+            'Chảy máu bất thường',
+            'Đau khi quan hệ',
+            'Mùi hôi bất thường'
+          ].map(symptom => (
             <div key={symptom} className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -563,7 +584,13 @@ const STIAssessmentForm = () => {
             </div>
           ))}
         </div>
-      )}
+        <div className="bg-red-100 p-3 rounded border border-red-300 mt-4">
+          <p className="text-xs text-red-700">
+            <strong>Quan trọng:</strong> Có triệu chứng STI là yếu tố ưu tiên cao nhất trong đánh giá CDC.
+            Bạn sẽ được khuyến cáo xét nghiệm toàn diện ngay lập tức.
+          </p>
+        </div>
+      </>
     </div>
   );
 
@@ -583,8 +610,10 @@ const STIAssessmentForm = () => {
               { key: 'sex_work', label: 'Làm nghề mại dâm' },
               { key: 'incarceration', label: 'Tiền sử bị giam giữ' },
               { key: 'blood_transfusion', label: 'Truyền máu/ghép tạng' },
-              { key: 'prep_user', label: 'Đang dùng PrEP' },
-              { key: 'immunocompromised', label: 'Suy giảm miễn dịch' }
+              { key: 'prep_user', label: 'Đang dùng PrEP (thuốc dự phòng HIV)' },
+              { key: 'immunocompromised', label: 'Suy giảm miễn dịch' },
+              // ✅ NEW: Added geographic risk factor
+              { key: 'geographic_risk', label: 'Sống ở vùng có nguy cơ STI cao theo địa lý' }
             ].map(risk => (
               <div key={risk.key} className="flex items-center space-x-2">
                 <input
@@ -600,15 +629,25 @@ const STIAssessmentForm = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Khu vực sinh sống</label>
+          <label className="block text-sm font-medium mb-2">Khu vực/Môi trường sinh sống</label>
           <select
             value={formData.living_area}
             onChange={(e) => updateFormData('living_area', e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
           >
             <option value="normal">Khu vực bình thường</option>
-            <option value="endemic">Vùng dịch tễ cao STI</option>
+            {/* ✅ ENHANCED: All high-prevalence settings from backend */}
+            <option value="sti_clinic">Phòng khám STI/Sức khỏe tình dục</option>
+            <option value="correctional_facility">Cơ sở giam giữ/Nhà tù</option>
+            <option value="adolescent_clinic">Phòng khám thanh thiếu niên</option>
+            <option value="drug_treatment_center">Trung tâm cai nghiện ma túy</option>
+            <option value="emergency_department">Khoa cấp cứu</option>
+            <option value="family_planning_clinic">Phòng khám kế hoạch hóa gia đình</option>
+            <option value="high_prevalence_area">Khu vực dịch tễ STI cao khác</option>
           </select>
+          <p className="text-xs text-gray-500 mt-1">
+            * Môi trường nguy cơ cao được CDC khuyến cáo sàng lọc tích cực hơn
+          </p>
         </div>
       </div>
     </div>
@@ -856,8 +895,8 @@ const STIAssessmentForm = () => {
 
       {/* Contact Information */}
       <div className="mt-6 text-center text-sm text-gray-600">
-        <p>Cần hỗ trợ? Liên hệ hotline: <span className="font-semibold text-blue-600">1900 xxxx</span></p>
-        <p>Hoặc chat trực tuyến với chuyên gia tư vấn</p>
+        <p>Cần hỗ trợ? Liên hệ hotline: <span className="font-semibold text-blue-600">1900 6789</span></p>
+        <p>Hoặc đặt lịch hẹn trực tuyến với chuyên gia tư vấn</p>
       </div>
     </div>
   );
