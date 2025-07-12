@@ -1355,7 +1355,18 @@ export class StiService {
                     message: "Cannot find the result" 
                 };
             }
-
+            if (!result.is_confirmed) {
+                return {
+                    success: false,
+                    message: 'Result is not confirmed.'
+                };
+            }
+            if (result.is_notified) {
+                return {
+                    success: false,
+                    message: 'Result is sent before.'
+                };
+            }
             const order = result.sti_order_id as any;
             const user = order.customer_id;
             const consultantUser = order.consultant_id?.user_id;
