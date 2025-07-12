@@ -7,6 +7,7 @@ import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
+import LicenseModal from '../../components/sti/LicenseModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -32,6 +33,7 @@ const BookSTIPage: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
   const [orderDate, setOrderDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState('');
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
 
   const testId = searchParams.get('testId');
   const packageId = searchParams.get('packageId');
@@ -125,25 +127,30 @@ const BookSTIPage: React.FC = () => {
       return;
     }
 
+    // Show license modal before submitting
+    setShowLicenseModal(true);
+  };
+
+  const handleLicenseAccept = async () => {
+    setShowLicenseModal(false);
     setLoading(true);
 
     try {
+      if (!orderDate) {
+        message.error('Vui lòng chọn ngày xét nghiệm');
+        return;
+      }
+
       const orderData: any = {
-        order_date: orderDate.toISOString(), // Backend expects Date object/ISO string
-        notes: notes.trim() || undefined // Remove empty notes
+        order_date: orderDate.format('YYYY-MM-DD'),
+        notes: notes.trim()
       };
 
-      // Backend validation: chỉ được có sti_package_id HOẶC sti_test_items (không cả hai)
       if (packageId) {
         orderData.sti_package_id = packageId;
       } else if (testId) {
         orderData.sti_test_items = [testId];
-      } else {
-        message.error('Vui lòng chọn xét nghiệm hoặc gói xét nghiệm');
-        return;
       }
-
-      console.log('Sending order data:', orderData); // Debug log
 
       const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
 
@@ -155,18 +162,15 @@ const BookSTIPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error creating STI order:', error);
-      
-      // Hiển thị lỗi validation chi tiết nếu có
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        message.error(errors.join(', '));
-      } else {
-        const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch xét nghiệm';
-        message.error(errorMessage);
-      }
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch xét nghiệm';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLicenseCancel = () => {
+    setShowLicenseModal(false);
   };
 
   const steps = [
@@ -184,8 +188,33 @@ const BookSTIPage: React.FC = () => {
     },
   ];
 
+  if (loading) {
+    return (
+      <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <Spin size="large" />
+          <p style={{ marginTop: '16px' }}>Đang tải thông tin...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedTest && !selectedPackage) {
-    return <div>Đang tải...</div>;
+    return (
+      <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
+        <Alert
+          message="Không tìm thấy thông tin"
+          description="Không thể tải thông tin xét nghiệm hoặc gói xét nghiệm."
+          type="error"
+          showIcon
+          action={
+            <Button size="small" onClick={() => navigate('/test-packages')}>
+              Quay lại
+            </Button>
+          }
+        />
+      </div>
+    );
   }
 
   return (
@@ -304,6 +333,14 @@ const BookSTIPage: React.FC = () => {
           <li>Kết quả xét nghiệm sẽ có sau 3-7 ngày làm việc</li>
         </ul>
       </Card>
+
+      {/* License Modal */}
+      <LicenseModal
+        visible={showLicenseModal}
+        onAccept={handleLicenseAccept}
+        onCancel={handleLicenseCancel}
+        title="Điều khoản sử dụng dịch vụ xét nghiệm STI"
+      />
     </div>
   );
 };

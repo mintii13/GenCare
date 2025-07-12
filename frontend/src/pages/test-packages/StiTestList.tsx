@@ -148,6 +148,9 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                     <div>Mã: {pkg.sti_package_code}</div>
                     <div>Giá: {pkg.price?.toLocaleString('vi-VN')} VND</div>
                     <div>{pkg.description}</div>
+                    <Tag color={pkg.is_active ? 'success' : 'error'}>
+                      {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
+                    </Tag>
                   </Card>
                 </Col>
               ))}
