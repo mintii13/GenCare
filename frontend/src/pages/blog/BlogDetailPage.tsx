@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Blog, Comment } from '../../types/blog';
 import { blogService } from '../../services/blogService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuillEditor from '../../components/common/QuillEditor';
+import BlogCard from '../../components/blog/BlogCard';
     
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -32,7 +33,8 @@ const BlogDetailPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);  
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [relatedBlogs, setRelatedBlogs] = useState<Blog[]>([]);
 
   const fetchBlogDetail = useCallback(async () => {
     if (!blogId) return;
@@ -77,6 +79,29 @@ const BlogDetailPage: React.FC = () => {
       fetchComments();
     }
   }, [blogId, fetchBlogDetail, fetchComments]);
+
+  useEffect(() => {
+    if (blog?.author_id) {
+      const fetchRelated = async () => {
+        try {
+          const res = await blogService.getBlogs({ 
+            author_id: blog.author_id, 
+            limit: 4, // Lấy tối đa 3 bài + bài hiện tại
+            status: true 
+          });
+          if (res.success) {
+            const filtered = res.data.blogs
+              .filter(b => b.blog_id !== blog.blog_id)
+              .slice(0, 3);
+            setRelatedBlogs(filtered);
+          }
+        } catch (error) {
+          console.error("Failed to fetch related blogs:", error);
+        }
+      };
+      fetchRelated();
+    }
+  }, [blog]);
 
   const handleCommentsUpdate = useCallback(async () => {
     await fetchComments();
@@ -187,7 +212,7 @@ const BlogDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
         <button
           onClick={handleBack}
@@ -197,135 +222,159 @@ const BlogDetailPage: React.FC = () => {
           Quay lại danh sách blog
         </button>
 
-        {/* Blog content */}
-        <article className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {/* Header */}
-          <div className="px-8 py-6 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                blog.status === true
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}>
-                {blog.status === true ? 'Đã xuất bản' : 'Bản nháp'}
-              </span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 xl:gap-12 items-start">
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 lg:order-last">
+            {/* Blog content */}
+            <article className="bg-white rounded-lg shadow-sm border border-gray-200">
+              {/* Header */}
+              <div className="px-8 py-6 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    blog.status === true
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {blog.status === true ? 'Đã xuất bản' : 'Bản nháp'}
+                  </span>
 
-              {/* Actions for author */}
-              {isAuthor && !isEditing && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleEdit}
-                    className="flex items-center px-3 py-1 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Sửa
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="flex items-center px-3 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Xóa
-                  </button>
+                  {/* Actions for author */}
+                  {isAuthor && !isEditing && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEdit}
+                        className="flex items-center px-3 py-1 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="flex items-center px-3 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Xóa
+                      </button>
+                    </div>
+                  )}
+                  {isAuthor && isEditing && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveEdit}
+                        className="flex items-center px-3 py-1 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
+                      >
+                        Lưu
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="flex items-center px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {isAuthor && isEditing && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveEdit}
-                    className="flex items-center px-3 py-1 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
-                  >
-                    Lưu
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="flex items-center px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Hủy
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {isEditing ? (
-              <>
-                <input
-                  className="w-full mb-4 px-3 py-2 border rounded-lg text-xl font-bold"
-                  value={editTitle}
-                  onChange={e => setEditTitle(e.target.value)}
-                />
-                <QuillEditor
-                  value={editContent}
-                  onChange={setEditContent}
-                  readOnly={false}
-                  autoResize={true}
-                />
-              </>
-            ) : (
-              <>
-                <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
-                  {blog.title}
-                </h1>
-                <div className="prose max-w-none mb-4">
-                  <div
-                    className="text-gray-800 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: blog.content }}
+                {isEditing ? (
+                  <>
+                    <input
+                      className="w-full mb-4 px-3 py-2 border rounded-lg text-xl font-bold"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                    />
+                    <QuillEditor
+                      value={editContent}
+                      onChange={setEditContent}
+                      readOnly={false}
+                      autoResize={true}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+                      {blog.title}
+                    </h1>
+                    <div className="prose max-w-none mb-4">
+                      <div
+                        className="text-gray-800 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: blog.content }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Meta info */}
+                <div className="flex items-center text-sm text-gray-600 space-x-6">
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    <span>Đăng {formatDate(blog.publish_date)}</span>
+                  </div>
+                  {blog.updated_date !== blog.publish_date && (
+                    <div className="flex items-center">
+                      <Edit className="w-4 h-4 mr-1" />
+                      <span>Cập nhật {formatDate(blog.updated_date)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <MessageCircle className="w-4 h-4 mr-1" />
+                    <span>{comments.length} bình luận</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Author bio */}
+              <div className="px-8 py-6 bg-gray-50 border-t border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-3">Về tác giả</h4>
+                <div className="flex items-start">
+                  <img
+                    src={blog.author.avatar}
+                    alt={blog.author.full_name}
+                    className="w-16 h-16 rounded-full object-cover mr-4"
                   />
+                  <div>
+                    <h5 className="font-medium text-gray-900">{blog.author.full_name}</h5>
+                    <p className="text-gray-600 mb-2">{blog.author.qualifications}</p>
+                    <p className="text-sm text-gray-600">
+                      Chuyên khoa: {blog.author.specialization} • 
+                      Kinh nghiệm: {blog.author.experience_years} năm • 
+                      Đánh giá: {blog.author.consultation_rating}/5 sao
+                    </p>
+                  </div>
                 </div>
-              </>
-            )}
-
-
-
-            {/* Meta info */}
-            <div className="flex items-center text-sm text-gray-600 space-x-6">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                <span>Đăng {formatDate(blog.publish_date)}</span>
               </div>
-              {blog.updated_date !== blog.publish_date && (
-                <div className="flex items-center">
-                  <Edit className="w-4 h-4 mr-1" />
-                  <span>Cập nhật {formatDate(blog.updated_date)}</span>
-                </div>
-              )}
-              <div className="flex items-center">
-                <MessageCircle className="w-4 h-4 mr-1" />
-                <span>{comments.length} bình luận</span>
-              </div>
-            </div>
-          </div>
+            </article>
 
-          {/* Author bio */}
-          <div className="px-8 py-6 bg-gray-50 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-3">Về tác giả</h4>
-            <div className="flex items-start">
-              <img
-                src={blog.author.avatar}
-                alt={blog.author.full_name}
-                className="w-16 h-16 rounded-full object-cover mr-4"
+            {/* Comments Section */}
+            <div className="mt-8">
+              <CommentSection
+                blogId={blog?.blog_id || ''}
+                comments={comments}
+                onCommentsUpdate={handleCommentsUpdate}
+                onLoginRequired={() => setShowLoginModal(true)}
               />
-              <div>
-                <h5 className="font-medium text-gray-900">{blog.author.full_name}</h5>
-                <p className="text-gray-600 mb-2">{blog.author.qualifications}</p>
-                <p className="text-sm text-gray-600">
-                  Chuyên khoa: {blog.author.specialization} • 
-                  Kinh nghiệm: {blog.author.experience_years} năm • 
-                  Đánh giá: {blog.author.consultation_rating}/5 sao
-                </p>
-              </div>
             </div>
           </div>
-        </article>
-
-        {/* Comments Section */}
-        <div className="mt-8">
-          <CommentSection
-            blogId={blog?.blog_id || ''}
-            comments={comments}
-            onCommentsUpdate={handleCommentsUpdate}
-            onLoginRequired={() => setShowLoginModal(true)}
-          />
+          
+          {/* Sidebar Column */}
+          <aside className="lg:col-span-1 lg:order-first">
+            {/* Related Blogs Section - Grid Layout */}
+            {relatedBlogs.length > 0 && (
+              <div className="sticky top-24">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  Bài viết khác từ chuyên gia
+                </h2>
+                <div className="space-y-6">
+                  {relatedBlogs.map(relatedBlog => (
+                    <BlogCard 
+                      key={relatedBlog.blog_id} 
+                      blog={relatedBlog} 
+                      onClick={() => navigate(`/blogs/${relatedBlog.blog_id}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       </div>
 

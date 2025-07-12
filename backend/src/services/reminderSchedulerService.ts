@@ -113,8 +113,77 @@ export class ReminderSchedulerService {
                 console.log('No appointments found needing reminders at this time');
             }
 
+            // Check for completed appointments needing feedback reminders
+            await this.checkAndSendFeedbackReminders();
+
         } catch (error) {
             console.error('Error in checkAndSendReminders:', error);
+        }
+    }
+
+    /**
+     * Check for completed appointments that need feedback reminders
+     * Send reminder if appointment was completed 24 hours ago and no feedback yet
+     */
+    private static async checkAndSendFeedbackReminders(): Promise<void> {
+        try {
+            console.log('Checking for completed appointments needing feedback reminders...');
+
+            const now = new Date();
+            
+            // Look for appointments completed 24-48 hours ago (1 day reminder window)
+            const startTime = new Date(now.getTime() - 48 * 60 * 60 * 1000); // 48 hours ago
+            const endTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);   // 24 hours ago
+
+            // Find completed appointments without feedback in the time range
+            const appointments = await AppointmentRepository.findAll(
+                'completed',
+                startTime,
+                endTime
+            );
+
+            console.log(`Found ${appointments.length} completed appointments needing feedback reminders`);
+
+            let feedbackRemindersProcessed = 0;
+            let feedbackRemindersSent = 0;
+
+            for (const appointment of appointments) {
+                try {
+                    // Check if we already sent a feedback reminder
+                    if (appointment.feedback) {
+                        continue;
+                    }
+
+                    console.log(`Sending feedback reminder for appointment ${appointment._id}`);
+
+                    const result = await AppointmentService.sendFeedbackReminderForAppointment(appointment._id.toString());
+
+                    feedbackRemindersProcessed++;
+
+                    if (result.success) {
+                        feedbackRemindersSent++;
+                        console.log(`✅ Feedback reminder sent successfully for appointment ${appointment._id}`);
+                        
+                        // Mark reminder as sent to avoid duplicate sends
+                        await AppointmentRepository.updateById(appointment._id.toString(), {
+                            feedback_reminder_sent: true
+                        });
+                    } else {
+                        console.error(`❌ Failed to send feedback reminder for appointment ${appointment._id}:`, result.message);
+                    }
+                } catch (error) {
+                    console.error(`Error processing feedback reminder for appointment ${appointment._id}:`, error);
+                }
+            }
+
+            if (feedbackRemindersProcessed > 0) {
+                console.log(`Feedback reminder check completed: ${feedbackRemindersSent}/${feedbackRemindersProcessed} feedback reminders sent successfully`);
+            } else {
+                console.log('No completed appointments found needing feedback reminders at this time');
+            }
+
+        } catch (error) {
+            console.error('Error in checkAndSendFeedbackReminders:', error);
         }
     }
 

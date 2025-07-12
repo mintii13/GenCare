@@ -1081,4 +1081,23 @@ router.post('/:appointmentId/send-reminder', authenticateToken, authorizeRoles('
     }
 });
 
+// Send feedback reminder for appointment (manual trigger)
+router.post('/:appointmentId/send-feedback-reminder', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
+    try {
+        const appointmentId = req.params.appointmentId;
+        const result = await AppointmentService.sendFeedbackReminderForAppointment(appointmentId);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 export default router;

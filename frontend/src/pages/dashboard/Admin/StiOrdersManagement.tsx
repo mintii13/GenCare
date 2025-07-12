@@ -114,13 +114,23 @@ const StiOrdersManagement: React.FC = () => {
       });
       
       const response = await apiClient.get<any>(`${API.STI.GET_ALL_ORDERS_PAGINATED}?${params.toString()}`);
-      
-      if ((response as any).success) {
-        setOrders((response as any).data?.items || []);
-        setTotal((response as any).data?.pagination?.total_items || 0);
-        setCurrentPage((response as any).data?.pagination?.current_page || 1);
+
+      // Axios trả về object dạng { data, status, ... } nên cần lấy response.data trước
+      const resData = (response as any).data;
+
+      if (resData?.success) {
+        // API chuẩn
+        const mapped = (resData.data?.items || []).map((item: any) => ({ ...item, status: item.order_status }));
+        setOrders(mapped);
+        setTotal(resData.data?.pagination?.total_items || 0);
+        setCurrentPage(resData.data?.pagination?.current_page || 1);
+      } else if (resData?.items) {
+        // Fallback cho response kiểu cũ không bọc data
+        setOrders((resData.items || []).map((item: any) => ({ ...item, status: item.order_status })));
+        setTotal(resData.pagination?.total_items || 0);
+        setCurrentPage(resData.pagination?.current_page || 1);
       } else {
-        message.error('Không thể tải danh sách đơn hàng');
+        message.error(resData?.message || 'Không thể tải danh sách đơn hàng');
       }
     } catch (error: any) {
       console.error('Error fetching STI orders:', error);
@@ -197,15 +207,18 @@ const StiOrdersManagement: React.FC = () => {
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const response = await apiClient.patch(`${API.STI.UPDATE_ORDER(orderId)}`, {
-        status: newStatus
+        order_status: newStatus
       });
-      
-        if ((response as any).success) {
+
+      // Axios trả về { data, status, ... }
+      const resData = (response as any).data;
+
+      if (resData?.success) {
         message.success('Cập nhật trạng thái thành công');
         fetchOrders();
         setEditModalVisible(false);
       } else {
-        message.error((response as any).message || 'Không thể cập nhật trạng thái');
+        message.error(resData?.message || 'Không thể cập nhật trạng thái');
       }
     } catch (error: any) {
       console.error('Error updating order status:', error);
@@ -262,6 +275,17 @@ const StiOrdersManagement: React.FC = () => {
       Failed: 'Thanh toán thất bại'
     };
     return texts[status] || status;
+  };
+
+  // Map allowed transitions (should sync with backend)
+  const VALID_TRANSITIONS: Record<string, string[]> = {
+    Booked: ['Accepted', 'Canceled'],
+    Accepted: ['Processing', 'Canceled'],
+    Processing: ['SpecimenCollected'],
+    SpecimenCollected: ['Testing'],
+    Testing: ['Completed'],
+    Completed: [],
+    Canceled: []
   };
 
   const columns = [
@@ -457,7 +481,7 @@ const StiOrdersManagement: React.FC = () => {
             <RangePicker
               style={{ width: '100%' }}
               value={dateRange}
-                onChange={(dates: [dayjs.Dayjs, dayjs.Dayjs] | null) => handleDateRangeChange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
+              onChange={(dates, _strings) => handleDateRangeChange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
               format="DD/MM/YYYY"
               placeholder={['Từ ngày', 'Đến ngày']}
             />
@@ -590,13 +614,16 @@ const StiOrdersManagement: React.FC = () => {
                   }
                 }}
               >
-                <Select.Option value="Booked">Đã đặt lịch</Select.Option>
-                <Select.Option value="Accepted">Đã chấp nhận</Select.Option>
-                <Select.Option value="Processing">Đang xử lý</Select.Option>
-                <Select.Option value="SpecimenCollected">Đã lấy mẫu</Select.Option>
-                <Select.Option value="Testing">Đang xét nghiệm</Select.Option>
-                <Select.Option value="Completed">Hoàn thành</Select.Option>
-                <Select.Option value="Canceled">Đã hủy</Select.Option>
+                {/* current status option (disabled) */}
+                <Select.Option value={selectedOrder.status || 'Booked'} disabled>
+                  {getStatusText(selectedOrder.status || 'Booked')}
+                </Select.Option>
+                {/* allowed next statuses */}
+                {VALID_TRANSITIONS[selectedOrder.status || 'Booked'].map((status) => (
+                  <Select.Option key={status} value={status}>
+                    {getStatusText(status)}
+                  </Select.Option>
+                ))}
               </Select>
             </div>
           </div>

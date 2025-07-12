@@ -30,6 +30,8 @@ const userSchema = new Schema<IUser>({
     email_verified: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'consultant', 'staff', 'admin'], required: true },
     avatar: { type: String }
+}, {
+    collection: 'users' // Explicitly set collection name
 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

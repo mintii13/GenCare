@@ -15,21 +15,37 @@ import {
   Clock
 } from 'lucide-react';
 import QuillEditor from '../../components/common/QuillEditor';
-import toast from 'react-hot-toast';
+import { Button } from '../../components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import { Label } from '../../components/ui/label';
+import apiClient from '../../services/apiClient';
+import { API } from '../../config/apiEndpoints';
+import { toast } from 'react-hot-toast';
+
+interface BlogFormData {
+  title: string;
+  content: string;
+}
 
 const BlogFormPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  // Removed useToast - using react-hot-toast directly
   
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [originalBlog, setOriginalBlog] = useState<Blog | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState<BlogFormData>({
+    title: '',
+    content: ''
+  });
+
+  // Form errors
+  const [formErrors, setFormErrors] = useState<Partial<BlogFormData>>({});
 
   const isEdit = !!blogId;
   const isConsultant = user?.role === 'consultant';
@@ -45,7 +61,7 @@ const BlogFormPage: React.FC = () => {
     if (isEdit) {
       fetchBlogData();
     }
-  }, [blogId, isConsultant]);
+  }, [blogId, isConsultant, navigate]);
 
   const fetchBlogData = async () => {
     if (!blogId) return;
@@ -54,7 +70,7 @@ const BlogFormPage: React.FC = () => {
     setError(null);
     try {
       const response = await blogService.getBlogById(blogId);
-        if ((response as any).success && (response as any).data.blog) {
+      if ((response as any).success && (response as any).data.blog) {
         const blog = (response as any).data.blog;
         
         // Kiểm tra quyền chỉnh sửa (chỉ tác giả)
@@ -64,16 +80,12 @@ const BlogFormPage: React.FC = () => {
         }
 
         setOriginalBlog(blog);
-        setTitle(blog.title);
         
-        // Kiểm tra và xử lý nội dung
-        if (blog.content) {
-          console.log('Setting valid content:', blog.content);
-          setContent(blog.content);
-        } else {
-          console.warn('Invalid content, using default state');
-          setContent('');
-        }
+        // Set form data
+        setFormData({
+          title: blog.title || '',
+          content: blog.content || ''
+        });
       } else {
         setError('Không tìm thấy bài viết');
       }
@@ -85,62 +97,91 @@ const BlogFormPage: React.FC = () => {
     }
   };
 
+  const validateForm = (): boolean => {
+    const errors: Partial<BlogFormData> = {};
+
+    if (!formData.title.trim()) {
+      errors.title = 'Tiêu đề là bắt buộc';
+    } else if (formData.title.length > 200) {
+      errors.title = 'Tiêu đề không được vượt quá 200 ký tự';
+    }
+
+    if (!formData.content.trim()) {
+      errors.content = 'Nội dung là bắt buộc';
+    }
+
+
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (field: keyof BlogFormData, value: string | string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: undefined
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate title
-    if (!title.trim()) {
-      setError('Vui lòng nhập tiêu đề');
-      return;
-    }
-    if (title.length < 5) {
-      setError('Tiêu đề phải có ít nhất 5 ký tự');
-      return;
-    }
-    if (title.length > 200) {
-      setError('Tiêu đề không được quá 200 ký tự');
+    if (!validateForm()) {
+      toast.error('Vui lòng kiểm tra và sửa các lỗi trong form');
       return;
     }
 
-    // Validate content
-    if (!content.trim()) {
-      setError('Vui lòng nhập nội dung');
-      return;
-    }
-    if (content.length < 10) {
-      setError('Nội dung phải có ít nhất 10 ký tự');
-      return;
-    }
-
-    setSaving(true);
+    setSubmitting(true);
     setError(null);
 
     try {
       let response;
       if (isEdit) {
-        response = await blogService.updateBlog(blogId!, title, content);
-        if ((response as any).success) {
+        // Update existing blog
+        response = await apiClient.put(`${API.Blog.BASE}/${blogId}`, {
+          title: formData.title,
+          content: formData.content
+        });
+        
+        if ((response.data as any)?.success) {
           toast.success('Cập nhật bài viết thành công!'); 
           navigate(`/blogs/${blogId}`);
         }
       } else {
-        response = await blogService.createBlog(title, content);
-        if ((response as any).success) {
+        // Create new blog
+        response = await apiClient.post(API.Blog.CREATE, {
+          title: formData.title,
+          content: formData.content
+        });
+        
+        if ((response.data as any)?.success) {
           toast.success('Tạo bài viết thành công!');
-          navigate(`/blogs/${(response as any).data.blog.blog_id}`);
+          navigate(`/blogs/${(response.data as any).data.blog.blog_id}`);
         }
       }
 
-      if (!((response as any).success)) {
-        toast.error((response as any).message || 'Có lỗi xảy ra');
-        setError((response as any).message || 'Có lỗi xảy ra');
+      if (!((response.data as any)?.success)) {
+        const errorMessage = (response.data as any)?.message || 'Có lỗi xảy ra';
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving blog:', error);
-      toast.error('Có lỗi xảy ra khi lưu bài viết');
-      setError('Có lỗi xảy ra khi lưu bài viết');
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.details || 
+                          'Có lỗi xảy ra khi lưu bài viết';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
@@ -153,7 +194,7 @@ const BlogFormPage: React.FC = () => {
   };
 
   const handlePreview = () => {
-    if (!title.trim() || !content.trim()) {
+    if (!formData.title.trim() || !formData.content.trim()) {
       toast.error('Vui lòng nhập tiêu đề và nội dung trước khi xem trước');
       return;
     }
@@ -191,7 +232,7 @@ const BlogFormPage: React.FC = () => {
             <div className="p-8">
               {/* Blog Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">{title}</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{formData.title}</h1>
                 
                 {/* Meta information */}
                 <div className="flex items-center gap-6 text-sm text-gray-600 mb-6">
@@ -201,66 +242,20 @@ const BlogFormPage: React.FC = () => {
                   </div>
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2" />
-                    <span>{estimateReadingTime(content)}</span>
+                    <span>{estimateReadingTime(formData.content || '')}</span>
                   </div>
                   <div className="flex items-center">
-                    <Eye className="w-4 h-4 mr-2" />
-                    <span>0 lượt xem</span>
-                  </div>
-                </div>
-
-                {/* Author */}
-                <div className="flex items-center gap-4 pb-6 border-b border-gray-200">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white font-semibold">
-                      {user?.full_name?.charAt(0).toUpperCase() || 'A'}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{user?.full_name || 'Chuyên gia tư vấn'}</h3>
-                    <p className="text-sm text-gray-600">Chuyên gia tư vấn sức khỏe</p>
+                    <FileText className="w-4 h-4 mr-2" />
+                    <span>Tác giả: {user?.full_name}</span>
                   </div>
                 </div>
               </div>
 
               {/* Blog Content */}
-              <div className="prose prose-lg max-w-none">
-                <div 
-                  className="text-gray-800 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: content }}
-                />
-              </div>
-
-              {/* Preview Notice */}
-              <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <Eye className="w-5 h-5 text-blue-600 mr-2" />
-                  <p className="text-blue-800 text-sm">
-                    Đây là bản xem trước. Bài viết sẽ hiển thị như thế này sau khi đăng.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Modal Footer */}
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowPreview(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Đóng
-              </button>
-              <button
-                onClick={() => {
-                  setShowPreview(false);
-                  document.getElementById('blog-form')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Tiếp tục chỉnh sửa
-              </button>
+              <div 
+                className="prose prose-lg max-w-none prose-gray"
+                dangerouslySetInnerHTML={{ __html: formData.content || '' }}
+              />
             </div>
           </div>
         </div>
@@ -268,188 +263,146 @@ const BlogFormPage: React.FC = () => {
     );
   };
 
-  // Redirect nếu không phải consultant
-  if (!isConsultant) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto">
-          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Truy cập bị từ chối
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Chỉ có chuyên gia tư vấn mới có thể tạo và chỉnh sửa bài viết blog.
-          </p>
-          <button
-            onClick={() => navigate('/blogs')}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại danh sách blog
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Đang tải dữ liệu...</p>
         </div>
       </div>
     );
   }
 
-  if (error && isEdit) {
+  // Error state
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto">
-          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Không thể tải bài viết
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/blogs')}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại danh sách blog
-          </button>
-        </div>
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Có lỗi xảy ra</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button 
+              onClick={() => navigate('/blogs')}
+              variant="outline"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại danh sách
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation */}
-        <button
-          onClick={handleCancel}
-          className="flex items-center text-blue-600 hover:text-blue-800 transition-colors mb-6"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {isEdit ? 'Quay lại bài viết' : 'Quay lại danh sách blog'}
-        </button>
-
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {isEdit ? 'Chỉnh sửa bài viết' : 'Tạo bài viết mới'}
-            </h1>
-            <p className="text-gray-600">
-              {isEdit 
-                ? 'Cập nhật nội dung bài viết của bạn'
-                : 'Chia sẻ kiến thức chuyên môn với cộng đồng'
-              }
-            </p>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="flex items-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isEdit ? 'Chỉnh sửa bài viết' : 'Tạo bài viết mới'}
+              </h1>
+              <p className="text-gray-600">
+                {isEdit ? 'Cập nhật nội dung bài viết' : 'Viết và chia sẻ kiến thức của bạn'}
+              </p>
+            </div>
           </div>
-          <FileText className="w-12 h-12 text-blue-600" />
+          
+          <div className="flex items-center space-x-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePreview}
+              disabled={!formData.title.trim() || !formData.content.trim()}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Xem trước
+            </Button>
+          </div>
         </div>
 
         {/* Form */}
-        <form id="blog-form" onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {/* Error message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-                  <p className="text-red-800">{error}</p>
-                </div>
-              </div>
-            )}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Main Content */}
+            <div className="space-y-6">
+              <Card className="border-2 border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Nội dung bài viết</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Tiêu đề <span className="text-red-500">*</span>
+                    </Label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      placeholder="Tiêu đề bài viết..."
+                      className={`w-full text-lg font-medium px-3 py-2 border-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        formErrors.title ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {formErrors.title && (
+                      <p className="text-sm text-red-600">{formErrors.title}</p>
+                    )}
+                  </div>
 
-            {/* Title */}
-            <div className="mb-6">
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Tiêu đề bài viết *
-              </label>
-              <input
-                type="text"
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Nhập tiêu đề bài viết..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-                required
-                maxLength={200}
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                {title.length}/200 ký tự
-              </p>
-            </div>
-
-            {/* Content */}
-            <div className="mb-6">
-              <label className="block font-medium text-gray-700 mb-2">Nội dung bài viết *</label>
-              <div className="border border-gray-300 rounded-lg overflow-hidden">
-                <QuillEditor
-                  value={content}
-                  onChange={setContent}
-                  placeholder="Nhập nội dung bài viết... Hãy chia sẻ kiến thức chuyên môn của bạn một cách chi tiết và dễ hiểu."
-                  autoResize={true}
-                />
-              </div>
-              <p className="mt-2 text-sm text-gray-500">
-                Sử dụng các công cụ định dạng để làm nổi bật nội dung quan trọng
-              </p>
-            </div>
-
-            {/* Writing tips */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h4 className="font-medium text-blue-900 mb-2">Gợi ý viết bài:</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Sử dụng ngôn ngữ dễ hiểu, tránh thuật ngữ y khoa phức tạp</li>
-                <li>• Cung cấp thông tin chính xác và có căn cứ khoa học</li>
-                <li>• Chia nhỏ nội dung thành các đoạn để dễ đọc</li>
-                <li>• Thêm ví dụ thực tế để minh họa</li>
-                <li>• Kết thúc bằng lời khuyên hoặc kêu gọi hành động</li>
-              </ul>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={handlePreview}
-                className="flex items-center px-6 py-3 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Xem trước
-              </button>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !title.trim() || !content.trim()}
-                  className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {saving ? (
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  {saving 
-                    ? 'Đang lưu...' 
-                    : isEdit 
-                      ? 'Cập nhật bài viết' 
-                      : 'Đăng bài viết'
-                  }
-                </button>
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Nội dung <span className="text-red-500">*</span>
+                    </Label>
+                    <QuillEditor
+                      value={formData.content}
+                      onChange={(value) => handleInputChange('content', value)}
+                      placeholder="Viết nội dung bài viết của bạn..."
+                    />
+                    {formErrors.content && (
+                      <p className="text-sm text-red-600">{formErrors.content}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Action Buttons */}
+              <Card className="border-2 border-gray-200 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex justify-end space-x-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={submitting}
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {submitting 
+                        ? (isEdit ? 'Đang cập nhật...' : 'Đang tạo...') 
+                        : (isEdit ? 'Cập nhật bài viết' : 'Tạo bài viết')
+                      }
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </form>
@@ -461,4 +414,4 @@ const BlogFormPage: React.FC = () => {
   );
 };
 
-export default BlogFormPage;
+export default BlogFormPage; 

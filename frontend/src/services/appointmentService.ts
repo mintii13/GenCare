@@ -25,11 +25,13 @@ export const appointmentService = {
   // Lấy appointments với pagination cho customer
   getMyAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
     try {
+      console.log('📝 Calling API with cleaned query:', cleanQuery(query));
       const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.MY_APPOINTMENTS, {
         params: cleanQuery(query)
-      });
+      }, { attempts: 1 }); // Disable retry temporarily
       return response.data;
     } catch (error) {
+      console.error('❌ API call failed:', error);
       throw error;
     }
   },

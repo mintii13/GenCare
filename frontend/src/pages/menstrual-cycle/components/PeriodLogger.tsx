@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/Input';
 import { Label } from '../../../components/ui/label';
 import { FaTimes, FaCalendarAlt, FaPlus, FaMinus } from 'react-icons/fa';
-import { menstrualCycleService } from '../../../services/menstrualCycleService';
+import { menstrualCycleService, ProcessCycleRequest } from '../../../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
 
 interface PeriodLoggerProps {
@@ -57,20 +57,41 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
 
     try {
       setLoading(true);
-      const response = await menstrualCycleService.processCycle({
-        period_days: validDates,
-        notes: notes.trim() || undefined
-      });
+      
+      // Chuẩn bị dữ liệu gửi lên server
+      const trimmedNotes = notes.trim();
+      const requestData: ProcessCycleRequest = {
+        period_days: validDates.map(date => new Date(date).toISOString()),
+        // Chỉ thêm notes nếu có nội dung
+        ...(trimmedNotes && { notes: trimmedNotes })
+      };
+
+      const response = await menstrualCycleService.processCycle(requestData);
 
       if (response.success) {
         toast.success('Đã ghi nhận thành công');
         onSuccess();
       } else {
+        console.error('API error response:', response);
         toast.error(response.message || 'Có lỗi xảy ra');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Network error:', error);
       
-      toast.error('Lỗi khi lưu dữ liệu');
+      // Hiển thị lỗi chi tiết từ server nếu có
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data?.errors) {
+        // Hiển thị lỗi validation từ Joi
+        const errorMessages = Array.isArray(error.response.data.errors) 
+          ? error.response.data.errors.join(', ')
+          : error.response.data.errors;
+        toast.error(`Dữ liệu không hợp lệ: ${errorMessages}`);
+      } else if (error.message) {
+        toast.error(`Lỗi: ${error.message}`);
+      } else {
+        toast.error('Lỗi khi lưu dữ liệu');
+      }
     } finally {
       setLoading(false);
     }

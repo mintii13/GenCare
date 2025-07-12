@@ -78,9 +78,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     console.log('AuthContext: Logging out user');
-    await authService.logout();
+    // Clear user state immediately for faster UX
     setUser(null);
-    // clearAllTokens() đã được gọi trong authService.logout()
+    
+    // Call logout service but don't wait for it
+    authService.logout();
+    // Note: clearAllTokens() and redirect are handled in authService.logout()
   };
 
   const updateUserInfo = (userData: User) => {

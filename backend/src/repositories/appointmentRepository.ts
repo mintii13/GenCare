@@ -703,6 +703,58 @@ export class AppointmentRepository {
     }
 
     /**
+     * Find completed appointments without feedback within time range for reminder
+     */
+    public static async findCompletedWithoutFeedback(
+        startTime: Date,
+        endTime: Date
+    ): Promise<IAppointment[]> {
+        try {
+            return await Appointment.find({
+                status: 'completed',
+                feedback: { $exists: false },
+                updatedAt: { $gte: startTime, $lte: endTime }, // completed within time range
+                feedback_reminder_sent: { $ne: true } // haven't sent reminder yet
+            })
+                .populate('customer_id', 'full_name email')
+                .populate({
+                    path: 'consultant_id',
+                    select: 'user_id',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name'
+                    }
+                })
+                .sort({ updatedAt: 1 })
+                .lean();
+        } catch (error) {
+            console.error('Error finding completed appointments without feedback:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mark feedback reminder as sent
+     */
+    public static async markFeedbackReminderSent(appointmentId: string): Promise<boolean> {
+        try {
+            const result = await Appointment.updateOne(
+                { _id: appointmentId },
+                { 
+                    $set: { 
+                        feedback_reminder_sent: true,
+                        feedback_reminder_sent_at: new Date()
+                    }
+                }
+            );
+            return result.modifiedCount > 0;
+        } catch (error) {
+            console.error('Error marking feedback reminder as sent:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get average rating for all consultants
      */
     public static async getAverageRatingByConsultant(): Promise<Array<{
