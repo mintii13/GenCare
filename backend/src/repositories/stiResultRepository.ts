@@ -80,10 +80,17 @@ export class StiResultRepository {
                     .populate({
                         path: 'sti_order_id',
                         populate: [
-                            { path: 'customer_id', select: 'full_name email gender date_of_birth' }, // user
+                            { path: 'customer_id', select: 'full_name email gender date_of_birth' },
                             { path: 'consultant_id', populate: { path: 'user_id', select: 'full_name' } },
                             { path: 'staff_id', populate: { path: 'user_id', select: 'full_name' } },
-                            { path: 'sti_test_items', select: 'sti_test_name' }
+                            { path: 'sti_test_items', select: 'sti_test_name' },
+                            {
+                                path: 'sti_package_item',
+                                populate: {
+                                    path: 'sti_test_ids',
+                                    select: 'sti_test_name'
+                                }
+                            }
                         ]
                     });
         } catch (error) {
