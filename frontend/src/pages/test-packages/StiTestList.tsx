@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Button, Tag, Typography, Space, Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const { Title, Text } = Typography;
 
@@ -25,9 +26,15 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
     fetchPackages();
   }, []);
 
+  useEffect(() => {
+    if (user && user.role !== 'customer') {
+      toast('Chức năng đặt lịch xét nghiệm chỉ dành cho khách hàng', { icon: 'ℹ️', id: 'role-warning' });
+    }
+  }, [user]);
+
   const fetchTests = async () => {
     try {
-      const response = await api.get('/sti/getAllStiTest');
+      const response = await apiClient.get<any>('/sti/getAllStiTest');
       if (response.data.success && Array.isArray(response.data.stitest)) {
         const mapped = response.data.stitest.map((item: any) => ({
           ...item,
@@ -44,7 +51,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
 
   const fetchPackages = async () => {
     try {
-      const response = await api.get('/sti/getAllStiPackage');
+      const response = await apiClient.get<any>('/sti/getAllStiPackage');
       if (response.data.success && Array.isArray(response.data.stipackage)) {
         setPackages(response.data.stipackage.filter((item: any) => item.is_active));
       } else {
@@ -73,7 +80,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await api.put(`/sti/deleteStiTest/${id}`);
+      const response = await apiClient.put<any>(`/sti/deleteStiTest/${id}`);
       if (response.data.success) {
         fetchTests();
       }
@@ -109,10 +116,26 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                 <Col xs={24} sm={24} md={12} lg={8} xl={6} key={pkg._id} style={{ display: 'flex' }}>
                   <Card 
                     hoverable 
-                    title={pkg.sti_package_name}
-                                          style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
-                      styles={{ body: { flex: 1 } }}
-                    actions={[
+                    title={
+                      <div style={{ 
+                        whiteSpace: 'normal', 
+                        wordBreak: 'break-word',
+                        lineHeight: '1.4',
+                        minHeight: '48px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        {pkg.sti_package_name}
+                      </div>
+                    }
+                    extra={
+                      <Tag color={pkg.is_active ? 'success' : 'error'}>
+                        {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
+                      </Tag>
+                    }
+                    style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                    styles={{ body: { flex: 1 } }}
+                    actions={user?.role === 'customer' ? [
                       <Button 
                         type="primary" 
                         onClick={() => handleBookSTIPackage(pkg)}
@@ -120,7 +143,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                       >
                         Đặt lịch xét nghiệm
                       </Button>
-                    ]}
+                    ] : undefined}
                   >
                     <div>Mã: {pkg.sti_package_code}</div>
                     <div>Giá: {pkg.price?.toLocaleString('vi-VN')} VND</div>
@@ -160,7 +183,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
             </div>
             <Row gutter={[16, 16]}>
               {Array.isArray(tests) && tests
-                .filter(test => test.isActive)
+                .filter(test => test.is_active)
                 .map((test) => (
                   <Col 
                     xs={24} 
@@ -186,8 +209,8 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         </div>
                       }
                       extra={
-                        <Tag color={test.isActive ? 'success' : 'error'}>
-                          {test.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
+                        <Tag color={test.is_active ? 'success' : 'error'}>
+                          {test.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
                         </Tag>
                       }
                       style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
@@ -196,7 +219,7 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                         <Button 
                           type="primary" 
                           onClick={() => handleBookSTITest(test)}
-                          disabled={!test.isActive}
+                          disabled={!test.is_active}
                         >
                           Đặt lịch xét nghiệm
                         </Button>

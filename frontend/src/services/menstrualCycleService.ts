@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { API } from '../config/apiEndpoints';
 
 // This is a placeholder. We will define the actual types and API calls later.
 export interface MenstrualCycleData {
@@ -15,17 +16,17 @@ export const getMenstrualCycleData = async (userId: string): Promise<MenstrualCy
 };
 
 export const addMenstrualCycleData = async (data: Omit<MenstrualCycleData, 'id'>): Promise<MenstrualCycleData> => {
-  const response = await apiClient.post('/menstrual-cycle', data);
+  const response = await apiClient.post(API.MenstrualCycle.BASE, data);
   return response.data as MenstrualCycleData;
 };
 
 export const updateMenstrualCycleData = async (id: string, data: Partial<MenstrualCycleData>): Promise<MenstrualCycleData> => {
-    const response = await apiClient.put(`/menstrual-cycle/${id}`, data);
+    const response = await apiClient.put(`${API.MenstrualCycle.BASE}/${id}`, data);
     return response.data as MenstrualCycleData;
 };
 
 export const deleteMenstrualCycleData = async (id: string): Promise<void> => {
-    await apiClient.delete(`/menstrual-cycle/${id}`);
+    await apiClient.delete(`${API.MenstrualCycle.BASE}/${id}`);
 };
 
 export interface ProcessCycleRequest {
@@ -88,37 +89,37 @@ export interface ApiResponse<T> {
 export const menstrualCycleService = {
   // Xử lý và lưu dữ liệu chu kì
   async processCycle(data: ProcessCycleRequest): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.post('/menstrual-cycle/processMenstrualCycle', data);
+    const response = await apiClient.post(API.MenstrualCycle.PROCESS, data);
     return response.data as ApiResponse<CycleData[]>;
   },
 
   // Lấy tất cả chu kì của user
   async getCycles(): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.get('/menstrual-cycle/getCycles');
+    const response = await apiClient.get(API.MenstrualCycle.GET_CYCLES);
     return response.data as ApiResponse<CycleData[]>;
   },
 
   // Lấy chu kì theo tháng
   async getCyclesByMonth(year: number, month: number): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.get(`/menstrual-cycle/getCyclesByMonth/${year}/${month}`);
+    const response = await apiClient.get(API.MenstrualCycle.GET_CYCLES_MONTH(year, month));
     return response.data as ApiResponse<CycleData[]>;
   },
 
   // Lấy trạng thái hôm nay
   async getTodayStatus(): Promise<ApiResponse<TodayStatus>> {
-    const response = await apiClient.get('/menstrual-cycle/getTodayStatus');
+    const response = await apiClient.get(API.MenstrualCycle.TODAY_STATUS);
     return response.data as ApiResponse<TodayStatus>;
   },
 
   // Lấy thống kê chu kì
   async getCycleStatistics(): Promise<ApiResponse<CycleStatistics>> {
-    const response = await apiClient.get('/menstrual-cycle/getCycleStatistics');
+    const response = await apiClient.get(API.MenstrualCycle.CYCLE_STATS);
     return response.data as ApiResponse<CycleStatistics>;
   },
 
   // Lấy thống kê kinh nguyệt
   async getPeriodStatistics(): Promise<ApiResponse<PeriodStatistics>> {
-    const response = await apiClient.get('/menstrual-cycle/getPeriodStatistics');
+    const response = await apiClient.get(API.MenstrualCycle.PERIOD_STATS);
     return response.data as ApiResponse<PeriodStatistics>;
   },
 
@@ -127,7 +128,14 @@ export const menstrualCycleService = {
     notification_enabled: boolean;
     notification_types: string[];
   }): Promise<ApiResponse<any>> {
-    const response = await apiClient.patch('/menstrual-cycle/updateNotificationStatus', settings);
+    const response = await apiClient.patch(API.MenstrualCycle.UPDATE_NOTIFICATION, settings);
+    return response.data as ApiResponse<any>;
+  },
+
+  // Dọn dẹp dữ liệu trùng lặp
+  async cleanupDuplicates(): Promise<ApiResponse<any>> {
+    const response = await apiClient.get(API.MenstrualCycle.CLEANUP);
     return response.data as ApiResponse<any>;
   }
 };
+

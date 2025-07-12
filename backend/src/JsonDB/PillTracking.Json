@@ -1,0 +1,692 @@
+[
+    {
+    "_id": {
+        "$oid": "68598cc3330538635dd522fe"
+    },
+    "user_id": {
+        "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+    },
+    "pill_date": {
+        "$date": "2025-06-23T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 5,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "createdAt": {
+        "$date": "2025-06-23T17:20:03.831Z"
+    },
+    "__v": 0
+    },
+    {
+    "_id": {
+        "$oid": "68598d5b330538635dd52302"
+    },
+    "user_id": {
+        "$oid": "675e1a2b3c4d5e6f7a8b9c0f"
+    },
+    "pill_date": {
+        "$date": "2025-07-24T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 5,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "createdAt": {
+        "$date": "2025-06-23T17:22:35.526Z"
+    },
+    "__v": 0
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6875"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-24T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 1,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6876"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-25T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 2,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6877"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-26T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 3,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6878"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-27T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 4,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6879"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-28T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 5,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c687a"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-29T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 6,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c687b"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-30T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 7,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c687c"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-07-31T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 8,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.525Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c687d"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-01T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 9,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c687e"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-02T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 10,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c687f"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-03T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 11,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6880"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-04T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 12,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6881"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-05T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 13,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6882"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-06T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 14,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6883"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-07T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 15,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6884"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-08T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 16,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6885"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-09T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 17,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6886"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-10T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 18,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6887"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-11T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 19,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6888"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-12T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 20,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6889"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-13T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 21,
+    "pill_type": "21+7",
+    "pill_status": "active",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c688a"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-14T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 22,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c688b"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-15T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 23,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c688c"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-16T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 24,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c688d"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-17T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 25,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c688e"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-18T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 26,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c688f"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-19T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 27,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    },
+    {
+    "_id": {
+        "$oid": "68639e86e161e508a04c6890"
+    },
+    "user_id": {
+        "$oid": "6846a7f7103fa089556cea82"
+    },
+    "pill_start_date": {
+        "$date": "2025-08-20T00:00:00.000Z"
+    },
+    "is_taken": false,
+    "taken_time": null,
+    "pill_number": 28,
+    "pill_type": "21+7",
+    "pill_status": "placebo",
+    "reminder_enabled": true,
+    "reminder_time": "08:00",
+    "reminder_sent": false,
+    "__v": 0,
+    "createdAt": {
+        "$date": "2025-07-01T08:38:30.526Z"
+    }
+    }
+]

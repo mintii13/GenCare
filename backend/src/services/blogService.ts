@@ -4,6 +4,9 @@ import { Blog } from '../models/Blog';
 import { BlogComment } from '../models/BlogComment';
 import { User } from '../models/User';
 import { Customer } from '../models/Customer';
+import { PaginationUtils } from '../utils/paginationUtils';
+import { BlogQuery } from '../dto/requests/PaginationRequest';
+import { BlogCommentQuery } from '../dto/requests/PaginationRequest';
 
 export class BlogService {
     public static async getAllBlogs() {
@@ -505,6 +508,163 @@ export class BlogService {
         } catch (error) {
             console.error('Error finding comment by id:', error);
             return null;
+        }
+    }
+
+    public static async getBlogsWithPagination(query: BlogQuery) {
+        try {
+            // Validate và normalize pagination parameters
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validatePagination(query);
+
+            // Build filter query
+            const filters = PaginationUtils.buildBlogFilter(query);
+
+            // Sanitize search nếu có
+            if (query.search) {
+                query.search = PaginationUtils.sanitizeSearch(query.search);
+            }
+
+            // Get data từ repository
+            const result = await BlogRepository.findWithPagination(
+                filters,
+                page,
+                limit,
+                sort_by,
+                sort_order
+            );
+
+            // Calculate pagination info
+            const pagination = PaginationUtils.calculatePagination(
+                result.total,
+                page,
+                limit
+            );
+
+            // Build filters_applied object để track các filter đã dùng
+            const filters_applied: any = {};
+            if (query.search) filters_applied.search = query.search;
+            if (query.author_id) filters_applied.author_id = query.author_id;
+            if (query.status !== undefined) filters_applied.status = query.status;
+            if (query.date_from) filters_applied.date_from = query.date_from;
+            if (query.date_to) filters_applied.date_to = query.date_to;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            return {
+                success: true,
+                message: result.blogs.length > 0
+                    ? 'Blogs retrieved successfully'
+                    : 'No blogs found matching the criteria',
+                data: {
+                    blogs: result.blogs,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Blog service pagination error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting blogs'
+            };
+        }
+    }
+
+    /**
+     * THÊM METHOD MỚI: Get blogs count by author (useful cho stats)
+     */
+    public static async getBlogCountByAuthor(authorId: string) {
+        try {
+            const published = await Blog.countDocuments({
+                author_id: authorId,
+                status: true
+            });
+
+            const draft = await Blog.countDocuments({
+                author_id: authorId,
+                status: false
+            });
+
+            return {
+                success: true,
+                data: {
+                    published,
+                    draft,
+                    total: published + draft
+                }
+            };
+        } catch (error) {
+            console.error('Get blog count by author error:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
+    /**
+     * THÊM METHOD MỚI: Get blog comments với pagination và filtering
+     */
+    public static async getBlogCommentsWithPagination(query: BlogCommentQuery) {
+        try {
+            // Validate và normalize pagination parameters
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validatePagination(query);
+
+            // Build filter query
+            const filters = PaginationUtils.buildBlogCommentFilter(query);
+
+            // Sanitize search nếu có
+            if (query.search) {
+                query.search = PaginationUtils.sanitizeSearch(query.search);
+            }
+
+            // Get data từ repository
+            const result = await BlogCommentRepository.findWithPagination(
+                filters,
+                page,
+                limit,
+                sort_by || 'comment_date',
+                sort_order
+            );
+
+            // Calculate pagination info
+            const pagination = PaginationUtils.calculatePagination(
+                result.total,
+                page,
+                limit
+            );
+
+            // Build filters_applied object
+            const filters_applied: any = {};
+            if (query.search) filters_applied.search = query.search;
+            if (query.blog_id) filters_applied.blog_id = query.blog_id;
+            if (query.customer_id) filters_applied.customer_id = query.customer_id;
+            if (query.status !== undefined) filters_applied.status = query.status;
+            if (query.is_anonymous !== undefined) filters_applied.is_anonymous = query.is_anonymous;
+            if (query.parent_comment_id !== undefined) filters_applied.parent_comment_id = query.parent_comment_id;
+            if (query.date_from) filters_applied.date_from = query.date_from;
+            if (query.date_to) filters_applied.date_to = query.date_to;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            return {
+                success: true,
+                message: result.comments.length > 0
+                    ? 'Comments retrieved successfully'
+                    : 'No comments found matching the criteria',
+                data: {
+                    comments: result.comments,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Blog comment service pagination error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when getting comments'
+            };
         }
     }
 }

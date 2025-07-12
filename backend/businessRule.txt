@@ -55,7 +55,7 @@ Soft Delete Display: User bị xóa mềm sẽ không được hiển thị thô
 Constant Fields of Profile: Email không được thay đổi
 
 STI SERVICE
-Patient Identification and Data Confidentiality Rule: Mỗi xét nghiệm phải gắn liền với một bệnh nhân có danh tính rõ ràng và được bảo mật thông tin theo quy định. (Nghị định 117/2020/NĐ-CP tại Việt Nam).
+Patient Identification and Data Confidentiality Rule: Mỗi xét nghiệm phải gắn liền với một bệnh nhân có danh tính rõ ràng và được bảo mật thông tin theo quy định. (Luật sửa đổi 15/2023/QH15 tại Việt Nam).
 Authorized Test Initiation Rule: Mỗi xét nghiệm chỉ được thực hiện nếu có đơn yêu cầu hợp lệ từ bác sĩ hoặc từ quy trình tự đăng ký đã xác minh. (Thông tư 49/2018/TT/BYT tại Việt Nam).
 Sample Collection with User Identification: Trước khi lấy mẫu, cần xác minh danh tính bệnh nhân và loại mẫu cần lấy.
 Banned Update Result: Không được thay đổi thông tin mẫu hoặc kết quả sau khi đã xác nhận.
@@ -65,3 +65,26 @@ Children in STI Test: Trẻ vị thành niên cần được sự chấp nhận 
 Processing in Order: Pending -> (Accepted, Canceled), Accepted -> (Processing, Canceled), Processing -> SpecimenCollected -> Testing -> Completed, Canceled và Completed là trạng thái cuối cùng, nên không được thay đổi status sau đó.
 History and Audit Log mechanism for Admin: Cần có cơ chế để ghi lại lịch sử các thao tác để đảm bảo tính pháp lý, và truy vết minh bạch
 Canceled Order Rule: Đơn đã ở trạng thái Canceled thì không được sử dụng lại ở bất kỳ trường hợp nào
+
+MENSTRUAL CYCLE
+Period Grouping Rule: Nếu giữa thời gian hành kinh cách nhau không quá 2 ngày thì gộp thành 1 chuỗi hành kinh
+Cycle Length Calculation Rule: Chu kỳ được tính là số ngày giữa ngày bắt đầu kỳ kinh hiện tại và ngày bắt đầu kỳ kinh trước đó.
+Algorithms for Prediction: 
+- Ovulation date(ov) = cycle_start + (cycle_len - 14): https://www.pharmacity.vn/kham-pha-ve-fertile-window-va-cach-xac-dinh-chinh-xac-thoi-gian-thu-thai.htm
+- Fertile window = [ov - 5; ov + 1]: https://www.hopkinsmedicine.org/health/wellness-and-prevention/calculating-your-monthly-fertility-window
+Validation in Cycle:
+- Range of cycle = [21, 35], Time of periods: https://www.pharmacity.vn/kham-pha-ve-fertile-window-va-cach-xac-dinh-chinh-xac-thoi-gian-thu-thai.htm
+- Regularity Classification: 'regular' if σ ≤ 3.95: Chiazze, Leonard, et al. "The length and variability of the human menstrual cycle." Jama 203.6 (1968): 377-380. (Reliability: https://www.scimagojr.com/journalsearch.php?q=85291&tip=sid&clean=0)
+Trend Detection Rule: 
+- Chỉ tính trend khi có từ ba chu kỳ trở lên. Nếu chỉ có từ 2 chu kỳ trở xuống, xác định là 'stable'
+- Nếu có từ ba chu kỳ trở lên, lấy độ dài của 3 chu kỳ đó. Chia nửa, tính trung bình mỗi bên. Nếu trung bình sau lớn hơn trung bình đầu từ 1 đơn vị trở lên thì là 'lengthening', nhỏ hơn thì là 'shortening'. Còn lại thì là 'stable'
+Pregnancy Chance Estimation: Phân 3 cấp độ
+- 'high' if ovulation date
+- 'medium' if in fertile-window (khác ovulation date)
+- 'low': normal date
+
+
+Personal STI test Screening: 
+- Các gói test: https://www.glinkvn.com/cac-goi-xet-nghiem-nhiem-trung-qua-duong-tinh-duc-stis-tai-glink/?gidzl=EpNbVr9c2rOr8kL-Nda3L3OZwtf6VW1LAoVfA4Dy1b4g8BfyGdzS02aXvobFBGvGT2BZTc9UQjyVLsaDKG
+- Triệu chứng: https://www.cdc.gov/std/treatment-guidelines/screening-recommendations.htm
+

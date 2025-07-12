@@ -1,19 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from "axios";
-import { config } from "../config/constants.js";  
+import { authService } from '../services/auth'; 
+import { User } from '../services/userService';
+import apiClient from '../services/apiClient';
+import { API } from '../config/apiEndpoints';
+import { clearAllTokens } from '../utils/authUtils';
 
-const AUTH_TOKEN_KEY = config.auth.tokenKey;
-
-interface User {
-  phone: string;  
-  avatar: string;
-  status: boolean;
-  id: string;
-  email: string;
-  full_name?: string;
-  role?: string;
-  date_of_birth?: string;
-  gender?: string;
+interface GetUserProfileResponse {
+  success: boolean;
+  user: User;
 }
 
 interface AuthContextType {
@@ -28,56 +22,39 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // Đảm bảo axios luôn có Authorization header nếu đã có token
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  if (token) {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  }
-
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const validateToken = async () => {
-      console.log("AuthContext: Starting token validation...");
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      
+      const token = authService.getToken();
       if (token) {
-        console.log("AuthContext: Token found in localStorage.", token);
         try {
-          const apiUrl = `${config.api.url}/auth/getUserProfile`;
-          console.log(`AuthContext: Sending request to ${apiUrl}`);
-          const res = await axios.get(apiUrl, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          console.log("AuthContext: API response received:", res.data);
-          if (res.data.success) {
-            const userData = res.data.user;
-            console.log("AuthContext: Profile fetch successful. Setting user:", userData);
-            setUser(userData);
-            localStorage.setItem('user', JSON.stringify(userData));
+          console.log('AuthContext: Validating token...');
+          // Sử dụng endpoint đúng từ apiEndpoints
+          const response = await apiClient.get<GetUserProfileResponse>(API.Profile.GET);
+          if (response.data.success && response.data.user) {
+            console.log('AuthContext: Token validation successful');
+            setUser(response.data.user);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
           } else {
-            throw new Error('API returned success: false');
+            throw new Error('Invalid API response format');
           }
         } catch (error) {
-          console.error("AuthContext: Token validation API call failed.", error);
+          console.error("AuthContext: Token validation failed.", error);
+          // Xóa token không hợp lệ
+          await authService.logout(); 
           setUser(null);
-          localStorage.removeItem('user');
-          localStorage.removeItem(AUTH_TOKEN_KEY);
         }
-      } else {
-        console.log("AuthContext: No token found in localStorage.");
       }
-      
-      console.log("AuthContext: Finished token validation. Setting isLoading to false.");
       setIsLoading(false);
     };
     
     validateToken();
 
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === AUTH_TOKEN_KEY || event.key === 'user') {
+      // Dùng key của authService thay vì key cục bộ
+      if (event.key === 'gencare_auth_token' || event.key === 'user') {
         validateToken();
       }
     };
@@ -91,31 +68,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = (userData: User, token: string) => {
-    console.log("AuthContext: login function called. Storing user and token.");
+    console.log('AuthContext: Logging in user:', userData.email);
     setUser(userData);
+    authService.setToken(token);
     localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // apiClient interceptor sẽ tự động xử lý header
   };
 
   const logout = async () => {
-    console.log("AuthContext: logout function called.");
-    try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        await axios.post(`${config.api.url}/auth/logout`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      delete axios.defaults.headers.common['Authorization'];
-      window.location.href = '/';
-    }
+    console.log('AuthContext: Logging out user');
+    await authService.logout();
+    setUser(null);
+    // clearAllTokens() đã được gọi trong authService.logout()
   };
 
   const updateUserInfo = (userData: User) => {

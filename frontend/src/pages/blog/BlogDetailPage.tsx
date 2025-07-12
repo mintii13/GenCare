@@ -9,9 +9,6 @@ import { vi } from 'date-fns/locale';
 import { 
   ArrowLeft, 
   Calendar, 
-  User, 
-  Star, 
-  Eye, 
   MessageCircle,
   Loader,
   AlertCircle,
@@ -21,7 +18,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuillEditor from '../../components/common/QuillEditor';
-import LoginModal from '../../components/auth/LoginModal';
     
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -45,8 +41,8 @@ const BlogDetailPage: React.FC = () => {
     setError(null);
     try {
       const response = await blogService.getBlogById(blogId);
-      if (response.success && response.data.blogs.length > 0) {
-        const blogData = response.data.blogs[0];
+      if (response.success && response.data.blog) {
+        const blogData = response.data.blog;
         setBlog(blogData);
         setEditTitle(blogData.title);
         setEditContent(blogData.content);
@@ -262,6 +258,7 @@ const BlogDetailPage: React.FC = () => {
                   value={editContent}
                   onChange={setEditContent}
                   readOnly={false}
+                  autoResize={true}
                 />
               </>
             ) : (
@@ -278,24 +275,7 @@ const BlogDetailPage: React.FC = () => {
               </>
             )}
 
-            {/* Author info */}
-            <div className="flex items-center mb-4">
-              <img
-                src={blog.author.avatar}
-                alt={blog.author.full_name}
-                className="w-12 h-12 rounded-full object-cover mr-4"
-              />
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{blog.author.full_name}</h3>
-                <div className="flex items-center text-sm text-gray-600">
-                  <User className="w-4 h-4 mr-1" />
-                  <span>{blog.author.specialization}</span>
-                  <Star className="w-4 h-4 ml-3 mr-1 text-yellow-500" />
-                  <span>{blog.author.consultation_rating}/5</span>
-                  <span className="ml-2">({blog.author.total_consultations} tư vấn)</span>
-                </div>
-              </div>
-            </div>
+
 
             {/* Meta info */}
             <div className="flex items-center text-sm text-gray-600 space-x-6">

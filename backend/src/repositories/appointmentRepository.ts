@@ -794,4 +794,83 @@ export class AppointmentRepository {
             throw error;
         }
     }
+
+    /**
+ * Find appointments với pagination và filtering
+ */
+    public static async findWithPagination(
+        filters: any,
+        page: number,
+        limit: number,
+        sortBy: string = 'appointment_date',
+        sortOrder: 1 | -1 = -1
+    ): Promise<{
+        appointments: any[];
+        total: number;
+    }> {
+        try {
+            // Build sort object
+            const sortObj: any = {};
+            sortObj[sortBy] = sortOrder;
+
+            // Get total count với cùng filter
+            const total = await Appointment.countDocuments(filters);
+
+            // Get paginated appointments với populate
+            const appointments = await Appointment.find(filters)
+                .populate('customer_id', 'full_name email phone')
+                .populate({
+                    path: 'consultant_id',
+                    populate: {
+                        path: 'user_id',
+                        select: 'full_name email phone'
+                    }
+                })
+                .sort(sortObj)
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+
+            return { appointments, total };
+        } catch (error) {
+            console.error('Error finding appointments with pagination:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get appointments stats by status
+     */
+    public static async getAppointmentStats(filters: any = {}): Promise<any> {
+        try {
+            const stats = await Appointment.aggregate([
+                { $match: filters },
+                {
+                    $group: {
+                        _id: '$status',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            const result = {
+                total: 0,
+                pending: 0,
+                confirmed: 0,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0
+            };
+
+            stats.forEach(stat => {
+                result[stat._id as keyof typeof result] = stat.count;
+                result.total += stat.count;
+            });
+
+            return result;
+        } catch (error) {
+            console.error('Error getting appointment stats:', error);
+            throw error;
+        }
+    }
 }

@@ -14,9 +14,7 @@ export interface LoginResponse {
         registration_date: Date;
         updated_date: Date;
         last_login?: Date | null;
-        email_verified: boolean;
-        googleId?: string; // Thêm googleId nếu có
-        
+        email_verified: boolean;        
     };
     accessToken?: string;
 }
@@ -47,7 +45,6 @@ export interface ProfileResponse {
         email_verified: boolean;
         role: 'customer' | 'consultant' | 'staff' | 'admin';
         avatar?: string; // Thêm avatar
-        googleId?: string;
     };
     accessToken?: string;
 }

@@ -3,7 +3,7 @@ import {authenticateToken, authorizeRoles} from '../middlewares/jwtMiddleware';
 import {upload} from '../configs/avatarUpload';
 import { ProfileService } from '../services/profileService';
 import { ProfileRequest } from '../dto/requests/ProfileRequest';
-import { ProfileResponse } from '../dto/responses/ProfileResponse';
+import { ProfileResponse, UpdateProfileResponse } from '../dto/responses/ProfileResponse';
 import { IUser, User } from '../models/User';
 const router = Router();
 
@@ -11,41 +11,19 @@ const router = Router();
 router.get('/getUserProfile', authenticateToken, async (req, res) => {
   try {
     // req.jwtUser được gán từ middleware authenticateToken
-    const userId = req.jwtUser?.userId;
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "Cannot verify user" 
-      });
+    const userId = (req.user as any)?.userId;
+    const role = (req.user as any)?.role;
+    const result = await ProfileService.getProfile(userId, role);
+    if (result.success){
+      res.status(200).json(result);
     }
-
-    const user = await User.findById(userId).lean<IUser>();
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Cannot find user" 
-      });
-    }
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        date_of_birth: user.date_of_birth,
-        gender: user.gender,
-        role: user.role,
-        status: user.status,
-        avatar: user.avatar
-      }
-    });
+    else res.status(404).json(result);
+    
   } catch (error) {
     console.error('Profile endpoint error:', error);
     res.status(500).json({ 
       success: false, 
-      message: "Lỗi hệ thống" 
+      message: "Internal server error" 
     });
   }
 });
@@ -55,20 +33,21 @@ router.get('/getUserProfile', authenticateToken, async (req, res) => {
 router.put('/updateUserProfile', authenticateToken, upload.single('avatar'), async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req.user as any)?.userId;
-        const profileRequest: ProfileRequest  = req.body;
+        const role = (req.user as any)?.role;
+        const profileRequest: ProfileRequest = req.body;
 
         let avatarError: string;
         if ((req as any).fileValidationError){
             avatarError = (req as any).fileValidationError;
         }
-        const result: ProfileResponse = await ProfileService.updateProfile(userId, profileRequest, avatarError, req.file);
+        const result: UpdateProfileResponse = await ProfileService.updateProfile(userId, role, profileRequest, avatarError, req.file);
         if (result.success)
             res.status(200).json(result);
         else res.status(401).json(result);
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Server error when updating profile',
+            message: 'Internal server error when updating profile',
         });
     }
 });
@@ -85,7 +64,7 @@ router.put('/deleteUserProfile', authenticateToken, async (req: Request, res: Re
     } catch (error) {
         res.status(500).json({ 
             success: false, 
-            message: 'Server error while deleting profile.' 
+            message: 'Internal server error while deleting profile.' 
         });
     }
 });

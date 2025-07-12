@@ -36,21 +36,17 @@ const TestPackages: React.FC = () => {
     <PageTransition>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
         <TabsList className="grid w-full grid-cols-2 bg-white shadow-md">
-          <TabsTrigger value="package" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+          <TabsTrigger value="package" className="text-blue-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white hover:bg-blue-50">
             Gói xét nghiệm
           </TabsTrigger>
-          <TabsTrigger value="sti" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+          <TabsTrigger value="sti" className="text-blue-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white hover:bg-blue-50">
             Xét nghiệm STI
           </TabsTrigger>
         </TabsList>
       </Tabs>
       {activeTab === 'package' && <StiTestList mode="package" onSelectPackage={handleSelectPackage} />}
       {activeTab === 'sti' && (
-        <StiTestList
-          mode="single"
-          selectedTests={selectedTests}
-          onToggleTestSelect={handleToggleTestSelect}
-        />
+        <StiTestList mode="single" />
       )}
       <Routes>
         <Route path="create" element={<StiTestForm />} />

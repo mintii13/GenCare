@@ -22,4 +22,4 @@ const stiPackageSchema: Schema<IStiPackage> = new Schema({
   }
 );
 
-export const StiPackage = mongoose.model<IStiPackage>('STIPackage', stiPackageSchema);
+export const StiPackage = mongoose.model<IStiPackage>('StiPackage', stiPackageSchema);

@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { appointmentService, Appointment, AppointmentResponse } from '../../../services/appointmentService';
+import { appointmentService } from '../../../services/appointmentService';
 import { consultantService } from '../../../services/consultantService';
 import WeeklySlotPicker from '../../consultation/WeeklySlotPicker';
-
 import FeedbackModal from '../../../components/feedback/FeedbackModal';
 import FeedbackService from '../../../services/feedbackService';
-import { FaCalendarAlt, FaSpinner, FaTimes } from 'react-icons/fa';
-
-// Remove duplicate interface since we're importing from service
+import {
+  Appointment,
+  AppointmentQuery,
+  PaginationInfo
+} from '../../../types/appointment';
+import { 
+  FaCalendarAlt, 
+  FaSpinner, 
+  FaTimes, 
+  FaSearch,
+  FaChevronLeft, 
+  FaChevronRight,
+  FaFilter,
+  FaSortAmountDown
+} from 'react-icons/fa';
 
 const MyAppointments: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [filter, setFilter] = useState<string>('all');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [editForm, setEditForm] = useState({
@@ -27,6 +37,24 @@ const MyAppointments: React.FC = () => {
   const [consultantDetails, setConsultantDetails] = useState<{[key: string]: any}>({});
   const [canFeedback, setCanFeedback] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
+  // Pagination states
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    items_per_page: 10,
+    has_next: false,
+    has_prev: false
+  });
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [query, setQuery] = useState<AppointmentQuery>({
+    page: 1,
+    limit: 10,
+    sort_by: 'appointment_date',
+    sort_order: 'desc'
+  });
 
   const statusLabels = {
     pending: 'Chờ xác nhận',
@@ -44,9 +72,22 @@ const MyAppointments: React.FC = () => {
     cancelled: 'bg-red-100 text-red-800'
   };
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery(prev => ({
+        ...prev,
+        page: 1,
+        search: searchTerm.trim() || undefined
+      }));
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     fetchAppointments();
-  }, [filter]);
+  }, [query]);
 
   // Re-render khi consultant details được cập nhật
   useEffect(() => {
@@ -71,29 +112,23 @@ const MyAppointments: React.FC = () => {
       setLoading(true);
       setError('');
       
-      // Convert 'all' filter to undefined for API call
-      const statusFilter = filter === 'all' ? undefined : filter;
-      console.log('Fetching appointments with filter:', statusFilter);
+      console.log('🔍 Fetching appointments with query:', query);
+      const response = await appointmentService.getMyAppointmentsPaginated(query);
       
-      const data = await appointmentService.getMyAppointments(statusFilter);
-      
-      if (data.success) {
-        console.log('Appointments data:', data.data.appointments);
-        // Debug first appointment
-        if (data.data.appointments.length > 0) {
-          console.log('First appointment consultant_id:', data.data.appointments[0].consultant_id);
-        }
-        setAppointments(data.data.appointments);
+      if (response.success) {
+        console.log('✅ Appointments loaded:', response.data.appointments.length);
+        setAppointments(response.data.appointments);
+        setPagination(response.data.pagination);
         
         // Fetch chi tiết chuyên gia cho tất cả appointments
-        data.data.appointments.forEach((appointment: Appointment) => {
+        response.data.appointments.forEach((appointment: Appointment) => {
           const consultantId = appointment.consultant_id?._id;
           if (consultantId && !consultantDetails[consultantId]) {
             fetchConsultantDetails(consultantId);
           }
         });
       } else {
-        setError(data.message);
+        setError(response.message);
       }
     } catch (err: any) {
       console.error('Error fetching appointments:', err);
@@ -101,6 +136,38 @@ const MyAppointments: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setQuery(prev => ({ ...prev, page }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setQuery(prev => ({
+      ...prev,
+      page: 1,
+      status: status === 'all' ? undefined : status
+    }));
+  };
+
+  const handleSortChange = (sort_by: string, sort_order: 'asc' | 'desc') => {
+    setQuery(prev => ({
+      ...prev,
+      page: 1,
+      sort_by: sort_by as any,
+      sort_order
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setQuery({
+      page: 1,
+      limit: 10,
+      sort_by: 'appointment_date',
+      sort_order: 'desc'
+    });
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -197,470 +264,445 @@ const MyAppointments: React.FC = () => {
     return timeString;
   };
 
-
-
   const getConsultantSpecialization = (appointment: Appointment) => {
     const consultantId = appointment.consultant_id?._id;
-    
-    // Lấy từ cached data nếu có
-    if (consultantId && consultantDetails[consultantId]) {
-      return consultantDetails[consultantId].specialization || appointment.consultant_id?.specialization;
+    if (consultantDetails[consultantId]) {
+      return consultantDetails[consultantId].specialization || 'Tư vấn chung';
     }
-    
-    return appointment.consultant_id?.specialization || 'Không có thông tin';
+    return appointment.consultant_id?.specialization || 'Tư vấn chung';
   };
 
   const fetchConsultantDetails = async (consultantId: string) => {
-    if (consultantDetails[consultantId]) {
-      return consultantDetails[consultantId];
-    }
-
-    console.log('Fetching consultant details for ID:', consultantId);
     try {
-      const response = await consultantService.getConsultantById(consultantId);
-      console.log('Consultant API response:', response);
+      if (consultantDetails[consultantId]) return;
       
-      if (response) {
-        const consultantData = response;
-        console.log('Consultant data:', consultantData);
-        
+      const response = await consultantService.getConsultantById(consultantId) as any;
+      if (response && response.data && response.data.consultant) {
         setConsultantDetails(prev => ({
           ...prev,
-          [consultantId]: consultantData
+          [consultantId]: response.data.consultant
         }));
-        return consultantData;
       }
     } catch (error) {
       console.error('Error fetching consultant details:', error);
     }
-    return null;
   };
 
   const getConsultantNameWithFetch = (appointment: Appointment) => {
     const consultantId = appointment.consultant_id?._id;
-    
-    // Kiểm tra nếu user_id là object có full_name
-    if (typeof appointment.consultant_id?.user_id === 'object' && appointment.consultant_id.user_id?.full_name) {
-      return appointment.consultant_id.user_id.full_name;
+    if (consultantDetails[consultantId]) {
+      return consultantDetails[consultantId].full_name || 'Chuyên gia';
     }
     
-    // Nếu có cached data từ API getConsultantById
-    if (consultantId && consultantDetails[consultantId]) {
-      const consultantData = consultantDetails[consultantId];
-      return consultantData.full_name || consultantData.user_id?.full_name || 'Chuyên gia';
+    // Fallback to appointment data
+    return appointment.consultant_id?.user_id?.full_name || 'Chuyên gia';
+  };
+
+  // Generate page numbers for pagination
+  const generatePageNumbers = (): number[] => {
+    const pages: number[] = [];
+    const { current_page, total_pages } = pagination;
+    
+    if (total_pages <= 1) return pages;
+    
+    // Always show first page
+    pages.push(1);
+    
+    // Add pages around current page
+    for (let i = Math.max(2, current_page - 1); i <= Math.min(total_pages - 1, current_page + 1); i++) {
+      if (!pages.includes(i)) pages.push(i);
     }
     
-    // Fetch thông tin chuyên gia nếu chưa có
-    if (consultantId && !consultantDetails[consultantId]) {
-      fetchConsultantDetails(consultantId);
-                      return <span className="flex items-center"><FaSpinner className="animate-spin mr-1" /> Đang tải...</span>;
+    // Always show last page
+    if (total_pages > 1 && !pages.includes(total_pages)) {
+      pages.push(total_pages);
     }
     
-    // Fallback cuối cùng
-    if (consultantId) {
-      return `Chuyên gia (${consultantId.slice(-6)})`;
-    }
-    
-    return 'Không có thông tin';
+    return pages;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Đang tải dữ liệu...</p>
+          <FaSpinner className="animate-spin text-4xl text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Đang tải lịch hẹn...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Lịch Hẹn Của Tôi</h1>
-          <p className="text-gray-600">Quản lý và theo dõi các lịch hẹn tư vấn</p>
-        </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch hẹn của tôi</h1>
+        <p className="text-gray-600">Quản lý và theo dõi các cuộc hẹn tư vấn của bạn</p>
+      </div>
 
-        {/* Filter */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+      {/* Search and Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          {/* Search */}
+          <div className="lg:col-span-5">
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên chuyên gia, ghi chú..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Status Filter */}
+          <div className="lg:col-span-3">
+            <select
+              value={query.status || 'all'}
+              onChange={(e) => handleStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              Tất cả
-            </button>
-            <button
-              onClick={() => setFilter('pending')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              <option value="all">Tất cả trạng thái</option>
+              <option value="pending">Chờ xác nhận</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="in_progress">Đang tư vấn</option>
+              <option value="completed">Đã hoàn thành</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div className="lg:col-span-3">
+            <select
+              value={`${query.sort_by}_${query.sort_order}`}
+              onChange={(e) => {
+                const [sort_by, sort_order] = e.target.value.split('_');
+                handleSortChange(sort_by, sort_order as 'asc' | 'desc');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              Chờ xác nhận
-            </button>
+              <option value="appointment_date_desc">Ngày hẹn mới nhất</option>
+              <option value="appointment_date_asc">Ngày hẹn cũ nhất</option>
+              <option value="created_date_desc">Tạo mới nhất</option>
+              <option value="created_date_asc">Tạo cũ nhất</option>
+            </select>
+          </div>
+
+          {/* Clear Filters */}
+          <div className="lg:col-span-1">
             <button
-              onClick={() => setFilter('confirmed')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'confirmed' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onClick={handleClearFilters}
+              className="w-full px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Xóa bộ lọc"
             >
-              Đã xác nhận
-            </button>
-            <button
-              onClick={() => setFilter('completed')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Đã hoàn thành
+              <FaFilter className="w-4 h-4 mx-auto" />
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <FaTimes className="w-5 h-5 text-red-600 mr-2" />
             <p className="text-red-800">{error}</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Appointments List */}
-        <div className="space-y-4">
-          {appointments.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <div className="text-gray-400 text-6xl mb-4">
-                <div className="mx-auto text-6xl text-gray-300"><FaCalendarAlt /></div>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Không có lịch hẹn nào</h3>
-              <p className="text-gray-600">Bạn chưa có lịch hẹn nào. Hãy đặt lịch tư vấn mới!</p>
-            </div>
-          ) : (
-            appointments.map((appointment) => (
-              <div key={appointment._id} className="bg-white rounded-lg shadow-sm p-6">
+      {/* Appointments List */}
+      {appointments.length > 0 ? (
+        <>
+          <div className="space-y-6 mb-8">
+            {appointments.map((appointment) => (
+              <div key={appointment._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="font-semibold text-lg text-gray-900">
-                        {getConsultantNameWithFetch(appointment)}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[appointment.status]}`}>
-                        {statusLabels[appointment.status]}
-                      </span>
+                    <div className="flex items-center gap-4 mb-3">
+                      {/* Avatar */}
+                      <div className="flex-shrink-0">
+                        <img
+                          src={consultantDetails[appointment.consultant_id?._id]?.avatar || '/default-avatar.png'}
+                          alt={getConsultantNameWithFetch(appointment)}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/default-avatar.png';
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {getConsultantNameWithFetch(appointment)}
+                        </h3>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[appointment.status]}`}>
+                          {statusLabels[appointment.status]}
+                        </span>
+                      </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div>
-                        <span className="font-medium">Chuyên khoa:</span>
-                                                  <p>{getConsultantSpecialization(appointment)}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <FaCalendarAlt className="w-4 h-4 mr-2" />
+                        <span>
+                          {formatDate(appointment.appointment_date)} • {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
+                        </span>
                       </div>
                       <div>
-                        <span className="font-medium">Ngày hẹn:</span>
-                        <p>{formatDate(appointment.appointment_date)}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium">Thời gian:</span>
-                        <p>{formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}</p>
+                        <span className="font-medium">Chuyên khoa:</span> {getConsultantSpecialization(appointment)}
                       </div>
                     </div>
 
                     {appointment.customer_notes && (
-                      <div className="mt-3">
-                        <span className="font-medium text-sm text-gray-600">Ghi chú của bạn:</span>
-                        <p className="text-sm text-gray-700 mt-1">{appointment.customer_notes}</p>
+                      <div className="mt-3 text-sm text-gray-600">
+                        <span className="font-medium">Ghi chú:</span> {appointment.customer_notes}
                       </div>
                     )}
 
                     {appointment.consultant_notes && (
-                      <div className="mt-3">
-                        <span className="font-medium text-sm text-gray-600">Ghi chú từ chuyên gia:</span>
-                        <p className="text-sm text-gray-700 mt-1">{appointment.consultant_notes}</p>
+                      <div className="mt-2 text-sm text-gray-600">
+                        <span className="font-medium">Ghi chú từ chuyên gia:</span> {appointment.consultant_notes}
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex flex-col gap-2 ml-4">
                     <button
                       onClick={() => setSelectedAppointment(appointment)}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-3 py-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
                       Chi tiết
                     </button>
                     
                     {appointment.status === 'pending' && (
-                      <button
-                        onClick={() => handleEditAppointment(appointment)}
-                        className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Đổi lịch
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleEditAppointment(appointment)}
+                          className="px-3 py-1 text-green-600 hover:text-green-800 text-sm font-medium"
+                        >
+                          Đổi lịch
+                        </button>
+                        <button
+                          onClick={() => handleCancelAppointment(appointment._id)}
+                          className="px-3 py-1 text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          Hủy hẹn
+                        </button>
+                      </>
                     )}
-                    
-                    {(appointment.status === 'pending' || appointment.status === 'confirmed') && (
+
+                    {appointment.status === 'completed' && canFeedback && (
                       <button
-                        onClick={() => handleCancelAppointment(appointment._id)}
-                        className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                        onClick={() => setShowFeedbackModal(true)}
+                        className="px-3 py-1 text-purple-600 hover:text-purple-800 text-sm font-medium"
                       >
-                        Hủy lịch
+                        Đánh giá
                       </button>
                     )}
                   </div>
                 </div>
               </div>
-            ))
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {pagination.total_pages > 1 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Hiển thị <span className="font-medium">{(pagination.current_page - 1) * pagination.items_per_page + 1}</span> - <span className="font-medium">{Math.min(pagination.current_page * pagination.items_per_page, pagination.total_items)}</span> trong tổng số <span className="font-medium">{pagination.total_items}</span> lịch hẹn
+                </p>
+                
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                    disabled={!pagination.has_prev}
+                    className="flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    <FaChevronLeft className="w-4 h-4 mr-1" />
+                    Trước
+                  </button>
+
+                  {generatePageNumbers().map((page, index, array) => (
+                    <React.Fragment key={page}>
+                      {index > 0 && array[index - 1] < page - 1 && (
+                        <span className="px-2 text-gray-400">...</span>
+                      )}
+                      <button
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 rounded-md font-medium transition-colors ${
+                          page === pagination.current_page
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-100 border border-gray-300'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  ))}
+
+                  <button
+                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                    disabled={!pagination.has_next}
+                    className="flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Sau
+                    <FaChevronRight className="w-4 h-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : !loading && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaCalendarAlt className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Chưa có lịch hẹn nào
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {query.search || query.status 
+              ? 'Không tìm thấy lịch hẹn nào phù hợp với bộ lọc.'
+              : 'Bạn chưa có lịch hẹn nào. Hãy đặt lịch với chuyên gia ngay!'
+            }
+          </p>
+          {(query.search || query.status) && (
+            <button
+              onClick={handleClearFilters}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Xóa bộ lọc
+            </button>
           )}
         </div>
+      )}
 
-        {/* Enhanced Reschedule Modal */}
-        {editingAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Đổi Lịch Hẹn</h2>
-                    <p className="text-gray-600 mt-1">Chọn thời gian mới phù hợp với bạn</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingAppointment(null);
-                      setSelectedNewSlot(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600 p-2"
-                  >
-                    <FaTimes />
-                  </button>
+      {/* Detail Modal */}
+      {selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">Chi tiết lịch hẹn</h3>
+              <button 
+                onClick={() => setSelectedAppointment(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <span className="font-medium text-gray-700">Chuyên gia:</span>
+                <p className="text-gray-900">{getConsultantNameWithFetch(selectedAppointment)}</p>
+              </div>
+              
+              <div>
+                <span className="font-medium text-gray-700">Chuyên khoa:</span>
+                <p className="text-gray-900">{getConsultantSpecialization(selectedAppointment)}</p>
+              </div>
+              
+              <div>
+                <span className="font-medium text-gray-700">Ngày giờ:</span>
+                <p className="text-gray-900">
+                  {formatDate(selectedAppointment.appointment_date)} • {formatTime(selectedAppointment.start_time)} - {formatTime(selectedAppointment.end_time)}
+                </p>
+              </div>
+              
+              <div>
+                <span className="font-medium text-gray-700">Trạng thái:</span>
+                <span className={`ml-2 px-2 py-1 rounded-full text-sm ${statusColors[selectedAppointment.status]}`}>
+                  {statusLabels[selectedAppointment.status]}
+                </span>
+              </div>
+              
+              {selectedAppointment.customer_notes && (
+                <div>
+                  <span className="font-medium text-gray-700">Ghi chú của bạn:</span>
+                  <p className="text-gray-900">{selectedAppointment.customer_notes}</p>
                 </div>
-
-                {/* Current appointment info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <h3 className="font-medium text-blue-900 mb-2">
-          
-                    Lịch hẹn hiện tại
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <span className="font-medium text-blue-800">Chuyên gia:</span>
-                      <p className="text-blue-700">{getConsultantNameWithFetch(editingAppointment)}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-blue-800">Ngày:</span>
-                      <p className="text-blue-700">{formatDate(editingAppointment.appointment_date)}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-blue-800">Giờ:</span>
-                      <p className="text-blue-700">{formatTime(editingAppointment.start_time)} - {formatTime(editingAppointment.end_time)}</p>
-                    </div>
-                  </div>
+              )}
+              
+              {selectedAppointment.consultant_notes && (
+                <div>
+                  <span className="font-medium text-gray-700">Ghi chú từ chuyên gia:</span>
+                  <p className="text-gray-900">{selectedAppointment.consultant_notes}</p>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-                {/* New slot selection */}
-                {selectedNewSlot && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                    <h3 className="font-medium text-green-900 mb-2">
-                      Lịch hẹn mới
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <span className="font-medium text-green-800">Chuyên gia:</span>
-                        <p className="text-green-700">{getConsultantNameWithFetch(editingAppointment)}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-green-800">Ngày:</span>
-                        <p className="text-green-700">{formatDate(selectedNewSlot.date)}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-green-800">Giờ:</span>
-                        <p className="text-green-700">{formatTime(selectedNewSlot.startTime)} - {formatTime(selectedNewSlot.endTime)}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+      {/* Edit Modal */}
+      {editingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Đổi lịch hẹn</h3>
+                <button 
+                  onClick={() => setEditingAppointment(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-600">
+                  Chọn khung giờ mới để đổi lịch hẹn với {getConsultantNameWithFetch(editingAppointment)}
+                </p>
+              </div>
 
-                {/* Instructions */}
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-amber-800">Hướng dẫn</h3>
-                      <div className="mt-1 text-sm text-amber-700">
-                        <p>• Chọn một khung giờ có sẵn (màu xanh) từ lịch bên dưới</p>
-                        <p>• Lịch hẹn phải được đặt tối thiểu là ngày mai</p>
-                        <p>• Thay đổi lịch có thể cần chuyên gia xác nhận lại</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <WeeklySlotPicker
+                consultantId={editingAppointment.consultant_id._id}
+                onSlotSelect={handleSlotSelect}
+                selectedSlot={selectedNewSlot}
+              />
 
-                {/* Weekly slot picker */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Chọn thời gian mới</h3>
-                  <WeeklySlotPicker 
-                    consultantId={editingAppointment.consultant_id._id}
-                    onSlotSelect={handleSlotSelect}
-                    selectedSlot={selectedNewSlot}
-                  />
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
-                  <button
-                    onClick={() => {
-                      setEditingAppointment(null);
-                      setSelectedNewSlot(null);
-                    }}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    onClick={handleUpdateAppointment}
-                    disabled={!selectedNewSlot}
-                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      selectedNewSlot 
-                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {selectedNewSlot ? (
-                      'Xác nhận đổi lịch'
-                    ) : (
-                      'Vui lòng chọn thời gian mới'
-                    )}
-                  </button>
-                </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setEditingAppointment(null)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleUpdateAppointment}
+                  disabled={!selectedNewSlot}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Xác nhận đổi lịch
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Detail Modal */}
-        {selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Chi Tiết Lịch Hẹn</h2>
-                  <button
-                    onClick={() => setSelectedAppointment(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <span className="font-medium">Chuyên gia:</span>
-                    <p>{getConsultantNameWithFetch(selectedAppointment)}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Chuyên khoa:</span>
-                    <p>{getConsultantSpecialization(selectedAppointment)}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Ngày hẹn:</span>
-                    <p>{formatDate(selectedAppointment.appointment_date)}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Thời gian:</span>
-                    <p>{formatTime(selectedAppointment.start_time)} - {formatTime(selectedAppointment.end_time)}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Trạng thái:</span>
-                    <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${statusColors[selectedAppointment.status]}`}>
-                      {statusLabels[selectedAppointment.status]}
-                    </span>
-                  </div>
-                  {selectedAppointment.customer_notes && (
-                    <div>
-                      <span className="font-medium">Ghi chú của bạn:</span>
-                      <p className="mt-1">{selectedAppointment.customer_notes}</p>
-                    </div>
-                  )}
-                  {selectedAppointment.consultant_notes && (
-                    <div>
-                      <span className="font-medium">Ghi chú từ chuyên gia:</span>
-                      <p className="mt-1">{selectedAppointment.consultant_notes}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="font-medium">Ngày đặt:</span>
-                    <p>{formatDate(selectedAppointment.created_date)}</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => setSelectedAppointment(null)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                  >
-                    Đóng
-                  </button>
-                  {selectedAppointment.status === 'pending' && (
-                    <button
-                      onClick={() => {
-                        handleEditAppointment(selectedAppointment);
-                        setSelectedAppointment(null);
-                      }}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Chỉnh sửa
-                    </button>
-                  )}
-                  {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'confirmed') && (
-                    <button
-                      onClick={() => {
-                        handleCancelAppointment(selectedAppointment._id);
-                        setSelectedAppointment(null);
-                      }}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Hủy lịch hẹn
-                    </button>
-                  )}
-                  {canFeedback && (
-                    <button
-                      onClick={() => setShowFeedbackModal(true)}
-                      className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-                    >
-                      Đánh giá
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showFeedbackModal && selectedAppointment && (
-          <FeedbackModal
-            isOpen={showFeedbackModal}
-            onClose={() => setShowFeedbackModal(false)}
-            appointmentInfo={{
-              consultant_name: getConsultantNameWithFetch(selectedAppointment),
-              appointment_date: formatDate(selectedAppointment.appointment_date),
-              start_time: formatTime(selectedAppointment.start_time),
-              end_time: formatTime(selectedAppointment.end_time)
-            }}
-            onSubmit={async (formData) => {
-              await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
-              setShowFeedbackModal(false);
-              setSelectedAppointment(null);
-              fetchAppointments();
-            }}
-          />
-        )}
-      </div>
+             {/* Feedback Modal */}
+       {showFeedbackModal && selectedAppointment && (
+         <FeedbackModal
+           isOpen={showFeedbackModal}
+           onClose={() => setShowFeedbackModal(false)}
+           appointmentInfo={{
+             consultant_name: getConsultantNameWithFetch(selectedAppointment),
+             appointment_date: formatDate(selectedAppointment.appointment_date),
+             start_time: formatTime(selectedAppointment.start_time),
+             end_time: formatTime(selectedAppointment.end_time)
+           }}
+           onSubmit={async (formData) => {
+             await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
+             setShowFeedbackModal(false);
+             setCanFeedback(false);
+           }}
+         />
+       )}
     </div>
   );
 };

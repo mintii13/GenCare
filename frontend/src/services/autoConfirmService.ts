@@ -2,7 +2,7 @@ import { appointmentService } from './appointmentService';
 
 export class AutoConfirmService {
   private static intervalId: NodeJS.Timeout | null = null;
-  private static readonly CHECK_INTERVAL = 5 * 60 * 1000; // 5 phút kiểm tra 1 lần
+  private static readonly CHECK_INTERVAL = 15 * 60 * 1000; // 5 phút kiểm tra 1 lần
   private static readonly AUTO_CONFIRM_THRESHOLD = 30 * 60 * 1000; // 30 phút trước giờ hẹn
 
   /**

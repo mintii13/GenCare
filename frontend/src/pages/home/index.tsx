@@ -1,30 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Banner from "./components/Banner";
-import About from "./components/About";
-import Services from "./components/Services";
-import Blog from "./components/Blog";
 import BlogCard from '../../components/blog/BlogCard';
 import PeriodLogger from '../menstrual-cycle/components/PeriodLogger';
-import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { blogService } from '../../services/blogService';
 import { consultantService } from '../../services/consultantService';
 import { StiTest } from '../../types/sti';
 import { Blog as BlogType } from '../../types/blog';
 
+
 const HomePage = () => {
   const navigate = useNavigate();
 
-  const [services, setServices] = useState<StiTest[]>([]);
+  const [packagesData, setPackagesData] = useState<StiTest[]>([]);
+  const [singleTests, setSingleTests] = useState<StiTest[]>([]);
   const [blogs, setBlogs] = useState<BlogType[]>([]);
   const [consultants, setConsultants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentService, setCurrentService] = useState(0);
   const [showPeriodLogger, setShowPeriodLogger] = useState(false);
+  const [testTab, setTestTab] = useState<'packages' | 'single'>('packages');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,20 +29,27 @@ const HomePage = () => {
       setError(null);
       try {
         // Fetch data from real backend endpoints
-        const [stiResponse, blogResponse, consultantResponse] = await Promise.all([
-          api.get('/sti/getAllStiTest'),
-          blogService.getBlogs(),
+        const [testRes, packageRes, blogResponse, consultantResponse] = await Promise.all([
+          apiClient.get<any>('/sti/getAllStiTest'),
+          apiClient.get<any>('/sti/getAllStiPackage'),
+          blogService.getBlogs({ limit: 6, status: true, sort_by: 'publish_date', sort_order: 'desc' }),
           consultantService.getAllConsultants()
         ]);
 
-        // Handle STI tests
-        if (stiResponse.data.success && Array.isArray(stiResponse.data.stitest)) {
-          setServices(stiResponse.data.stitest.filter((test: StiTest) => test.isActive));
-        } else {
-          setServices([]);
+        // Handle single tests
+        if (testRes.data.success) {
+          const testsArr = testRes.data.stitest ?? testRes.data.tests ?? [];
+          setSingleTests(testsArr.filter((t:any)=> t.is_active!==false));
         }
 
-        // Handle blogs
+        // Handle packages
+        if (packageRes.data.success) {
+          // Backend có thể trả về "stipackage" (số ít) hoặc "stipackages" (số nhiều)
+          const pkgsArr = packageRes.data.stipackage ?? packageRes.data.stipackages ?? packageRes.data.data ?? packageRes.data.packages ?? [];
+          setPackagesData(pkgsArr.filter((p: any) => p.is_active !== false));
+        }
+
+        // Handle blogs - sử dụng pagination response mới
         if (blogResponse.success && Array.isArray(blogResponse.data.blogs)) {
           setBlogs(blogResponse.data.blogs.filter((blog: BlogType) => blog.status));
         } else {
@@ -71,12 +75,12 @@ const HomePage = () => {
 
   // Auto-play chuyển cặp dịch vụ mỗi 4s
   useEffect(() => {
-    if (services.length === 0) return;
+    if (packagesData.length === 0 && singleTests.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentService((prev) => (prev + 2) % services.length);
+      setCurrentService((prev) => (prev + 2) % (packagesData.length + singleTests.length));
     }, 4000);
     return () => clearInterval(timer);
-  }, [services]);
+  }, [packagesData, singleTests]);
 
   const serviceCards = [
     {
@@ -174,16 +178,16 @@ const HomePage = () => {
       {consultants.length > 0 && (
         <section className="py-20 bg-blue-50">
           <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center mb-12">
-              <div className="text-left">
-                <h2 className="text-4xl font-bold text-blue-700 mb-4">Chuyên gia hàng đầu</h2>
-                <p className="text-lg text-blue-700/80 max-w-2xl">
-                  Đội ngũ chuyên gia giàu kinh nghiệm sẵn sàng hỗ trợ bạn
-                </p>
-              </div>
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-blue-700 mb-4">
+                Chuyên gia hàng đầu
+              </h2>
+              <p className="text-lg text-blue-700/80 max-w-2xl mx-auto">
+                Đội ngũ chuyên gia giàu kinh nghiệm sẵn sàng hỗ trợ bạn
+              </p>
               <Link
                 to="/consultants"
-                className="px-4 py-2 text-blue-700 border border-blue-300 rounded hover:bg-blue-50 transition-colors text-sm font-medium"
+                className="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
                 Xem tất cả chuyên gia
               </Link>
@@ -221,44 +225,70 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* STI Test Packages Section - Sử dụng data thật từ API */}
-      {services.length > 0 && (
+      {/* STI Test Packages / Single Tests Section */}
+      {(
         <section className="py-20 bg-white">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-blue-700 mb-4">Gói xét nghiệm STI</h2>
-              <p className="text-lg text-blue-700/80 mb-8 max-w-2xl mx-auto">
-                Các gói xét nghiệm được thiết kế phù hợp với nhu cầu của bạn
+            <div className="text-center mb-8">
+              <h2 className="text-4xl font-bold text-blue-700 mb-4">Dịch vụ xét nghiệm</h2>
+              <p className="text-lg text-blue-700/80 max-w-2xl mx-auto mb-8">
+                Chọn gói tổng hợp hoặc xét nghiệm đơn lẻ phù hợp nhu cầu của bạn
               </p>
+              {/* Tabs */}
+              <div className="inline-flex bg-blue-100 rounded-lg overflow-hidden shadow-sm">
+                <button
+                  onClick={() => setTestTab('packages')}
+                  className={`px-6 py-2 font-medium transition-colors ${testTab==='packages' ? 'bg-blue-600 text-white' : 'text-blue-600 hover:bg-blue-200'}`}
+                >
+                  Gói xét nghiệm
+                </button>
+                <button
+                  onClick={() => setTestTab('single')}
+                  className={`px-6 py-2 font-medium transition-colors ${testTab==='single' ? 'bg-blue-600 text-white' : 'text-blue-600 hover:bg-blue-200'}`}
+                >
+                  Xét nghiệm lẻ
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                             {services.slice(0, 6).map((service) => (
-                 <div key={service._id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
-                   <h3 className="text-lg font-semibold text-gray-900 mb-2">{service.sti_test_name}</h3>
-                   <p className="text-gray-600 text-sm mb-4">{service.description}</p>
-                   <div className="flex justify-between items-center mb-4">
-                     <span className="text-2xl font-bold text-blue-600">
-                       {service.price?.toLocaleString('vi-VN')}đ
-                     </span>
-                     <span className="text-sm text-gray-500">
-                       {service.sti_test_type}
-                     </span>
-                   </div>
-                  <Link
-                    to={`/test-packages/sti`}
-                    className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                  >
-                    Đặt lịch ngay
-                  </Link>
+
+            {/* Content - thanh cuộn ngang giống Blog */}
+            <div className="relative">
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                  {(testTab === 'packages' ? packagesData : singleTests).map(service => (
+                    <div key={service._id} className="w-80 h-50 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition flex flex-col">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_test_name}>
+                        {service.sti_test_name}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{service.description}</p>
+                      <div className="flex-grow" />
+                      <div className="flex justify-between items-center mb-4 mt-auto">
+                        <span className="text-2xl font-bold text-blue-600">
+                          {service.price?.toLocaleString('vi-VN')}đ
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {service.sti_test_type || 'Gói'}
+                        </span>
+                      </div>
+                      <Link
+                        to={testTab === 'packages' 
+                          ? `/sti-booking/book?packageId=${service._id}`
+                          : `/sti-booking/book?testId=${service._id}`}
+                        className="mt-auto block w-full text-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                      >
+                        Đặt lịch ngay
+                      </Link>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
             <div className="text-center mt-8">
               <Link
                 to="/test-packages"
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
-                Xem tất cả gói xét nghiệm
+                Xem tất cả xét nghiệm
               </Link>
             </div>
           </div>

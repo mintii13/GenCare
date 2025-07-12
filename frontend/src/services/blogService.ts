@@ -1,5 +1,14 @@
-import api from './api';
-import { BlogsResponse, CommentsResponse, BlogFilters, Comment } from '../types/blog';
+import apiClient from './apiClient';
+import { API } from '../config/apiEndpoints';
+import { 
+  BlogsPaginatedResponse, 
+  BlogResponse, 
+  CommentsResponse, 
+  BlogFilters, 
+  BlogQuery,
+  BlogStatsResponse,
+  Comment 
+} from '../types/blog';
 
 export interface Blog {
   _id: string;
@@ -12,96 +21,76 @@ export interface Blog {
 }
 
 export const blogService = {
-  // Lấy danh sách blog với filter
-  getBlogs: async (filters?: BlogFilters): Promise<BlogsResponse> => {
-    try {
-      const params = new URLSearchParams();
-      if (filters?.searchQuery) params.append('search', filters.searchQuery);
-      if (filters?.authorId) params.append('author_id', filters.authorId.toString());
-      if (filters?.specialization) params.append('specialization', filters.specialization);
-      if (filters?.sortBy) params.append('sort_by', filters.sortBy);
-      if (filters?.sortOrder) params.append('sort_order', filters.sortOrder);
-      const response = await api.get(`/blogs?${params.toString()}`);
-      return response.data;
-    } catch (error) {
-      throw error;
+  // Lấy danh sách blog với pagination mới
+  getBlogs: async (query?: BlogQuery): Promise<BlogsPaginatedResponse> => {
+    // Validate sort_order before building params
+    if (query?.sort_order && !['asc', 'desc'].includes(query.sort_order)) {
+
+      throw new Error(`Invalid sort_order: ${query.sort_order}. Must be 'asc' or 'desc'`);
     }
+    
+    const response = await apiClient.get<BlogsPaginatedResponse>(API.Blog.LIST, { params: query });
+    return response.data;
+  },
+
+  // Search blogs với pagination - sử dụng endpoint chính với search param
+  searchBlogs: async (searchQuery: string, query?: Omit<BlogQuery, 'search'>): Promise<BlogsPaginatedResponse> => {
+    return await blogService.getBlogs({
+      search: searchQuery,
+      ...query
+    });
+  },
+
+  // Lấy thống kê blog theo author
+  getBlogStats: async (authorId: string): Promise<BlogStatsResponse> => {
+    const response = await apiClient.get<BlogStatsResponse>(`${API.Blog.LIST}/author/${authorId}/stats`);
+    return response.data;
   },
 
   // Lấy chi tiết blog theo ID
-  getBlogById: async (blogId: string): Promise<BlogsResponse> => {
-    try {
-      const response = await api.get(`/blogs/${blogId}`);
-      if (response.data.success && response.data.data.blog) {
-        return {
-          ...response.data,
-          data: { blogs: [response.data.data.blog] }
-        };
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  getBlogById: async (blogId: string): Promise<BlogResponse> => {
+    const response = await apiClient.get<BlogResponse>(API.Blog.DETAIL(blogId));
+    return response.data;
   },
 
   // Lấy danh sách comment của blog
   getBlogComments: async (blogId: string): Promise<CommentsResponse> => {
-    try {
-      const response = await api.get(`/blogs/${blogId}/comments`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.get<CommentsResponse>(API.Blog.COMMENTS_FOR_BLOG(blogId));
+    return response.data;
   },
 
   // Đăng comment mới (chỉ customer)
   createComment: async (blogId: string, content: string, isAnonymous: boolean = false, parentCommentId?: string) => {
-    try {
-      const response = await api.post(`/blogs/${blogId}/comments`, {
-        content,
-        is_anonymous: isAnonymous,
-        parent_comment_id: parentCommentId
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.post(API.Blog.POST_COMMENT(blogId), {
+      content,
+      is_anonymous: isAnonymous,
+      parent_comment_id: parentCommentId
+    });
+    return response.data;
   },
 
   // Tạo blog mới (chỉ consultant)
   createBlog: async (title: string, content: string) => {
-    try {
-      const response = await api.post('/blogs', {
-        title,
-        content
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.post(API.Blog.CREATE, {
+      title,
+      content
+    });
+    return response.data;
   },
 
   // Cập nhật blog (chỉ consultant và chỉ blog của mình)
   updateBlog: async (blogId: string, title: string, content: string) => {
-    try {
-      const response = await api.put(`/blogs/${blogId}`, {
-        title,
-        content
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.put(API.Blog.UPDATE(blogId), {
+      title,
+      content
+    });
+    return response.data;
   },
 
   // Xóa blog (chỉ consultant và chỉ blog của mình)
   deleteBlog: async (blogId: string) => {
-    try {
-      const response = await api.delete(`/blogs/${blogId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.delete(API.Blog.DELETE(blogId));
+    return response.data;
   },
 
   // Lấy danh sách chuyên khoa để filter
@@ -112,68 +101,81 @@ export const blogService = {
 
   // Sửa bình luận
   updateComment: async (blogId: string, commentId: string, content: string, isAnonymous?: boolean) => {
-    try {
-      const response = await api.put(`/blogs/${blogId}/comments/${commentId}`, {
-        content,
-        ...(typeof isAnonymous !== 'undefined' ? { is_anonymous: isAnonymous } : {})
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.put(API.Blog.UPDATE_COMMENT(commentId), {
+      content,
+      ...(typeof isAnonymous !== 'undefined' ? { is_anonymous: isAnonymous } : {})
+    });
+    return response.data;
   },
 
   // Xóa bình luận
   deleteComment: async (blogId: string, commentId: string) => {
+    const response = await apiClient.delete(API.Blog.DELETE_COMMENT(commentId));
+    return response.data;
+  },
+
+  // Backward compatibility methods
+  getAllBlogs: async (): Promise<Blog[]> => {
     try {
-      const response = await api.delete(`/blogs/${blogId}/comments/${commentId}`);
-      return response.data;
+      const response = await blogService.getBlogs({ page: 1, limit: 100, status: true });
+      if (response && response.data && Array.isArray(response.data.blogs)) {
+        return response.data.blogs.map(blog => ({
+          _id: blog.blog_id,
+          title: blog.title,
+          content: blog.content,
+          authorId: blog.author_id,
+          tags: [],
+          createdAt: blog.publish_date,
+          updatedAt: blog.updated_date
+        }));
+      }
+      return [];
     } catch (error) {
       throw error;
     }
   },
 
-  async getAllBlogs(): Promise<Blog[]> {
+  getBlogsByAuthor: async (authorId: string): Promise<Blog[]> => {
     try {
-      const response = await api.get('/blogs');
-      return response.data.data.blogs || [];
+      const response = await blogService.getBlogs({ author_id: authorId, limit: 100 });
+      if (response && response.data && Array.isArray(response.data.blogs)) {
+        return response.data.blogs.map(blog => ({
+          _id: blog.blog_id,
+          title: blog.title,
+          content: blog.content,
+          authorId: blog.author_id,
+          tags: [],
+          createdAt: blog.publish_date,
+          updatedAt: blog.updated_date
+        }));
+      }
+      return [];
     } catch (error) {
       throw error;
     }
   },
 
-  async getBlogsByAuthor(authorId: string): Promise<Blog[]> {
+  getBlogsByTag: async (tag: string): Promise<Blog[]> => {
     try {
-      const response = await api.get(`/blogs/author/${authorId}`);
-      return response.data.data.blogs || [];
+      const response = await blogService.searchBlogs(tag);
+      if (response && response.data && Array.isArray(response.data.blogs)) {
+        return response.data.blogs.map(blog => ({
+          _id: blog.blog_id,
+          title: blog.title,
+          content: blog.content,
+          authorId: blog.author_id,
+          tags: [],
+          createdAt: blog.publish_date,
+          updatedAt: blog.updated_date
+        }));
+      }
+      return [];
     } catch (error) {
       throw error;
     }
   },
 
-  async searchBlogs(query: string): Promise<Blog[]> {
-    try {
-      const response = await api.get(`/blogs/search?q=${encodeURIComponent(query)}`);
-      return response.data.data.blogs || [];
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async getBlogsByTag(tag: string): Promise<Blog[]> {
-    try {
-      const response = await api.get(`/blogs/tag/${encodeURIComponent(tag)}`);
-      return response.data.data.blogs || [];
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async likeBlog(id: string): Promise<void> {
-    try {
-      await api.post(`/blogs/${id}/like`);
-    } catch (error) {
-      throw error;
-    }
+  likeBlog: async (id: string): Promise<void> => {
+    await apiClient.post(`${API.Blog.DETAIL(id)}/like`);
   }
 };

@@ -1,5 +1,6 @@
 export interface EnvironmentConfig {
   API_BASE_URL: string;
+  VITE_CHATBOX_API: string;
   NODE_ENV: string;
   isDevelopment: boolean;
   isProduction: boolean;
@@ -23,7 +24,8 @@ const createEnvironmentConfig = (): EnvironmentConfig => {
   const isTest = nodeEnv === 'test';
 
   return {
-    API_BASE_URL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api',
+    API_BASE_URL: import.meta.env.VITE_API_URL ,
+    VITE_CHATBOX_API: import.meta.env.VITE_CHATBOX_API || '',
     NODE_ENV: nodeEnv,
     isDevelopment,
     isProduction,
@@ -52,6 +54,11 @@ export const getEnvVar = (key: string, defaultValue?: string): string => {
   return value || defaultValue || '';
 };
 
+// Helper function để lấy n8n webhook URL
+export const getN8nWebhookUrl = (): string => {
+  return env.VITE_CHATBOX_API;
+};
+
 // Validation helper
 export const validateEnvironment = (): void => {
   const requiredVars = ['VITE_API_URL'];
@@ -59,6 +66,11 @@ export const validateEnvironment = (): void => {
   
   if (missingVars.length > 0) {
     console.warn('Missing required environment variables:', missingVars);
+  }
+
+  // Cảnh báo nếu không có webhook URL
+  if (!env.VITE_CHATBOX_API) {
+    console.warn('⚠️ VITE_CHATBOX_API chưa được cấu hình. Chatbot sẽ không hoạt động.');
   }
 };
 

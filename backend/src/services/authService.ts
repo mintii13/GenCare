@@ -9,8 +9,9 @@ import { User, IUser } from '../models/User';
 import nodemailer from 'nodemailer'
 import redisClient from '../configs/redis';
 import { ChangePasswordResponse } from '../dto/responses/ChangePasswordResponse';
-import { ObjectId } from 'mongoose';
+import mongoose, { ObjectId } from 'mongoose';
 import { RandomUtils } from '../utils/randomUtils';
+import { MailUtils } from '../utils/mailUtils';
 
 export class AuthService {
     public static async login(loginRequest: LoginRequest): Promise<LoginResponse> {
@@ -79,7 +80,6 @@ export class AuthService {
                     updated_date: user.updated_date,
                     last_login: user.last_login || null,
                     email_verified: user.email_verified,
-                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -122,7 +122,6 @@ export class AuthService {
                     updated_date: user.updated_date,
                     last_login: user.last_login || null,
                     email_verified: user.email_verified,
-                    googleId: user.googleId || null
                 },
                 accessToken: accessToken
             };
@@ -136,41 +135,6 @@ export class AuthService {
         }
     }
 
-    public static async sendPassword(emailSendTo: string, password: string) {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_FOR_VERIFY ?? '',
-                pass: process.env.EMAIL_APP_PASSWORD ?? ''
-            }
-        })
-
-        const mailContent = {
-            from: `"Mật khẩu đăng nhập GenCare" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
-            to: emailSendTo,
-            subject: `Mật khẩu hiện tại của email ${emailSendTo} là:`,
-            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                            <h2>Mật khẩu của bạn là: <strong style="color:#2a9d8f;">${password}</strong></h2>
-                            <p>Mật khẩu này sẽ được sử dụng để đăng nhập trong hệ thống GenCare của chúng tôi</p>
-                            <p>Đường dẫn đến trang web là: http://localhost:5173</p>
-                            <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>
-                        </div>
-                    </body>`
-        }
-        if (!emailSendTo) {
-            return {
-                success: false,
-                message: "Mail does not exist"
-            }
-        }
-        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
-        return {
-            success: true,
-            message: "Send mail successfully"
-        }
-    }
 
     public static async insertGoogle(profile: any): Promise<IUser> {
         try {
@@ -178,7 +142,6 @@ export class AuthService {
 
             const email = profile.emails[0]?.value ?? null;
             const full_name = [profile.name.givenName, profile.name.familyName].filter(Boolean).join(" ");
-            const googleId = profile.id;
             const avatar = profile.photos?.[0]?.value || null;
 
             // Tìm user bằng email - SỬA: Không dùng lean() để có full mongoose document
@@ -186,17 +149,12 @@ export class AuthService {
 
             if (user) {
                 console.log('Existing user found:', user.email);
-                // User đã tồn tại - cập nhật googleId và avatar nếu chưa có
+                // User đã tồn tại - cập nhật avatar nếu chưa có
                 let needUpdate = false;
                 const updateData: any = {
                     updated_date: new Date(),
                     last_login: new Date()
                 };
-
-                if (!user.googleId) {
-                    updateData.googleId = googleId;
-                    needUpdate = true;
-                }
 
                 if (!user.avatar && avatar) {
                     updateData.avatar = avatar;
@@ -217,10 +175,10 @@ export class AuthService {
 
             // User chưa tồn tại - tạo mới
             console.log('Creating new user for:', email);
-            const password = RandomUtils.generateRandomPassword();
+            const password = RandomUtils.generateRandomString(8, true);
 
             // Gửi password qua email (non-blocking)
-            this.sendPassword(email, password).catch(error => {
+            await MailUtils.sendPasswordForGoogle(email, password).catch(error => {
                 console.error('Error sending password email:', error);
             });
 
@@ -233,7 +191,6 @@ export class AuthService {
                 status: true,
                 email_verified: true,
                 role: 'customer' as const,
-                googleId,
                 phone: null,
                 date_of_birth: null,
                 last_login: new Date(),
@@ -252,38 +209,6 @@ export class AuthService {
         }
     }
 
-    public static async sendOTP(emailSendTo: string) {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_FOR_VERIFY ?? '',
-                pass: process.env.EMAIL_APP_PASSWORD ?? ''
-            }
-        })
-
-        const otpGenerator = RandomUtils.generateRandomOTP(100000, 999999);
-
-        const mailContent = {
-            from: `"Xác thực OTP" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
-            to: emailSendTo,
-            subject: "Mã xác thực OTP của bạn là: ",
-            html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-                        <div style="max-width: 500px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                            <h2>Mã OTP của bạn là: <strong style="color:#2a9d8f;">${otpGenerator}</strong></h2>
-                            <p>OTP sẽ hết hạn trong 5 phút.</p>
-                            <p>Trân trọng,</p>
-                            <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>
-                        </div>
-                    </body>`
-        }
-        if (!emailSendTo) {
-            console.error("Không có email người nhận!");
-        }
-        await transporter.sendMail(mailContent);            //gửi mail với content đã thiết lập
-        return otpGenerator;
-
-    }
-
     // Đăng ký
     public static async register(registerRequest: RegisterRequest): Promise<RegisterResponse> {
         try {
@@ -292,11 +217,17 @@ export class AuthService {
             const existedUser = await UserRepository.findByEmail(email);
             if (existedUser) {
                 if (existedUser.status === true)
-                    return { success: false, message: 'Email is existed. Login please' };
-                else return { success: false, message: 'This email is banned' };
+                    return { 
+                        success: false, 
+                        message: 'Email is existed. Login please' 
+                    };
+                else return { 
+                    success: false, 
+                    message: 'This email is banned' 
+                };
             }
             await redisClient.setEx(`user:${email}`, 600, JSON.stringify(registerRequest));
-            const otp = await AuthService.sendOTP(email);
+            const otp = await MailUtils.sendOtpForRegister(email);
             await redisClient.setEx(`otp:${email}`, 300, otp);
             return {
                 success: true,
@@ -305,17 +236,16 @@ export class AuthService {
             }
         } catch (error) {
             console.error('Register error:', error);
-            return { success: false, message: 'Lỗi hệ thống' };
+            return {
+                success: false,
+                message: 'Server error'
+            };
         }
     }
 
     // Kiểm tra OTP
-    public static async verifyOTP(email: string, otp: string): Promise<VerificationResponse> {
+    public static async verifyOTPForRegister(email: string, otp: string): Promise<VerificationResponse> {
         try {
-            if (!email || !otp)
-                return {
-                    success: false, message: 'Email or otp is not found'
-                };
             const storedOtp = await redisClient.get(`otp:${email}`);
             if (!storedOtp || storedOtp !== otp)
                 return {
@@ -344,22 +274,22 @@ export class AuthService {
                 status: true,
                 email_verified: true,
                 role: 'customer',
-                googleId: null,
                 avatar: null
             };
 
-            const insertedUser = await UserRepository.insertUser(user);
+            // const insertedUser = await UserRepository.insertUser(user);
+            const insertedUser = await UserRepository.saveUser(user);
             await redisClient.del(`user:${email}`);
             await redisClient.del(`otp:${email}`);
 
-            
+
             // Tạo access token luôn để tự động đăng nhập
             const accessToken = JWTUtils.generateAccessToken({
                 userId: insertedUser._id.toString(),
                 role: insertedUser.role
             });
 
-            return { 
+            return {
                 success: true,
                 message: 'Register successfully',
                 user: {
@@ -376,7 +306,6 @@ export class AuthService {
                     updated_date: insertedUser.updated_date,
                     last_login: insertedUser.last_login,
                     email_verified: insertedUser.email_verified,
-                    googleId: insertedUser.googleId
                 },
                 accessToken: accessToken // Thêm access token
             };
@@ -393,7 +322,7 @@ export class AuthService {
     /**
      * Kiểm tra xem old_password có giống trong db không
      */
-    public static async verifyOldPassword(userId: ObjectId, oldPassword: string): Promise<boolean> {
+    private static async verifyOldPassword(userId: string, oldPassword: string): Promise<boolean> {
         try {
             const user = await UserRepository.findById(userId);
             if (!user) {
@@ -408,7 +337,7 @@ export class AuthService {
     /**
      * Hash new password
      */
-    public static async hashPassword(password: string): Promise<string> {
+    private static async hashPassword(password: string): Promise<string> {
         try {
             const salt = await bcrypt.genSalt(10);
             return await bcrypt.hash(password, salt);
@@ -417,35 +346,19 @@ export class AuthService {
         }
     }
 
-    public static async updatePassword(_id: ObjectId, hashedPassword: string): Promise<void> {
-        try {
-            const result = await User.findOneAndUpdate(
-                { _id },
-                { password: hashedPassword },
-                { new: true }
-            );
-
-            if (!result) {
-                throw new Error('User not found');
-            }
-        } catch (error) {
-            throw error;
+    private static async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+        const updatedUser = await UserRepository.findByIdAndUpdate(userId, { password: hashedPassword });
+        if (!updatedUser) {
+            throw new Error('User not found');
         }
     }
 
     public static async changePasswordForUsers(
-        userId: ObjectId,
+        userId: string,
         oldPassword: string,
         newPassword: string,
     ): Promise<ChangePasswordResponse> {
         try {
-            if (!userId) {
-                return {
-                    success: false,
-                    message: 'Unauthorized',
-                };
-            }
-
             const user = await UserRepository.findById(userId);
 
             if (!user) {
@@ -464,10 +377,10 @@ export class AuthService {
                 };
             }
             // 2. Hash new password
-            newPassword = await this.hashPassword(newPassword);
+            const hashedNewPassword = await this.hashPassword(newPassword);
 
             // 3. Update password in database
-            await this.updatePassword(userId, newPassword);
+            await this.updatePassword(userId, hashedNewPassword);
 
             return {
                 success: true,
@@ -484,4 +397,84 @@ export class AuthService {
         }
     }
 
+    public static async forgotPasswordAndSendOTP(email: string): Promise<ChangePasswordResponse> {
+        try {
+            const user = await UserRepository.findByEmail(email);
+            if (!user){
+                return{
+                    success: false,
+                    message: 'Email is not found. Please input again'
+                };
+            }
+            const sendOtp = await MailUtils.sendOtpForRegister(email);
+            await redisClient.setEx(`otp:${email}`, 300, sendOtp);
+            return{
+                success: true,
+                message: 'Send OTP successfully'
+            }
+        } catch (error) {
+            console.error('ForgotPassword error:', error);
+            return {
+                success: false,
+                message: 'System error',
+            };
+        }
+    }
+
+    // Kiểm tra OTP
+    public static async verifyOTPForForgotPassword(email: string, otp: string): Promise<VerificationResponse> {
+        try {
+            const storedOtp = await redisClient.get(`otp:${email}`);
+            if (!storedOtp || storedOtp !== otp)
+                return {
+                    success: false,
+                    message: 'OTP is invalid or expired'
+                };
+            //ensure user verifieds
+            await redisClient.setEx(`otp-verified:${email}`, 300, 'true');
+            await redisClient.del(`otp:${email}`);
+            return {
+                success: true,
+                message: 'OTP verified successfully'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Internal Server error'
+            };
+        }
+    }
+
+    public static async resetPasswordAfterOTP(email: string, newPassword: string): Promise<ChangePasswordResponse> {
+        try {
+            const isVerified = await redisClient.get(`otp-verified:${email}`);
+            if (isVerified !== 'true') {
+                return { 
+                    success: false, 
+                    message: 'OTP not verified or expired' 
+                };
+            }
+
+            const user = await UserRepository.findByEmail(email);
+            if (!user) {
+                return { 
+                    success: false, 
+                    message: 'User not found' 
+                };
+            }
+
+            const hashedPassword = await this.hashPassword(newPassword);
+            await UserRepository.updatePasswordByEmail(email, hashedPassword);
+
+            await redisClient.del(`otp-verified:${email}`);
+
+            return { 
+                success: true, 
+                message: 'Password reset successfully' 
+            };
+        } catch (error) {
+            console.error('Reset password error:', error);
+            return { success: false, message: 'Server error' };
+        }
+    }
 }

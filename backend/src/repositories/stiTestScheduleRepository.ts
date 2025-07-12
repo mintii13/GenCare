@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { StiTestSchedule, IStiTestSchedule } from '../models/StiTestSchedule';
 
 export class StiTestScheduleRepository{
@@ -10,6 +11,14 @@ export class StiTestScheduleRepository{
         }
     }
 
+    public static async findById(id: mongoose.Types.ObjectId){
+        try {
+            return await StiTestSchedule.findById(id)
+        } catch (error) {
+            console.error(error);
+            throw(error);
+        }
+    }
     public static async insertStiTestSchedule(stiTestSchedule: IStiTestSchedule): Promise<IStiTestSchedule | null>{
         try {
             return await stiTestSchedule.save();

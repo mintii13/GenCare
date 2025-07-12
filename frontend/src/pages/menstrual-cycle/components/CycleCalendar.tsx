@@ -1,31 +1,31 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/Input';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaSave, FaTrash, FaEdit, FaBug } from 'react-icons/fa';
-import { HiSparkles } from 'react-icons/hi';
 import { CycleData, menstrualCycleService } from '../../../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
 import MoodModal from './MoodModal';
+import { 
+  FaHeart, 
+  FaCircle, 
+  FaTimes, 
+  FaSave, 
+  FaEye, 
+  FaEgg,
+  FaBullseye,
+  FaVenus,
+  FaSmile,
+  FaFrown,
+  FaMeh,
+  FaRegCircle
+} from 'react-icons/fa';
 
 interface CycleCalendarProps {
   cycles: CycleData[];
   onRefresh: () => void;
-}
-
-interface CalendarDay {
-  date: Date;
-  isCurrentMonth: boolean;
-  isPeriodDay: boolean;
-  isOvulationDay: boolean;
-  isFertileDay: boolean;
-  isPredictedPeriod: boolean;
-  isPredictedOvulation: boolean;
-  isPredictedFertile: boolean;
-  isToday: boolean;
-  isSelected: boolean; // For new period tracking
-  intensity?: 'light' | 'medium' | 'heavy';
 }
 
 interface MoodData {
@@ -36,47 +36,45 @@ interface MoodData {
 }
 
 const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<Date[]>([]);
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [selectedDateForMood, setSelectedDateForMood] = useState<Date | null>(null);
-  const [dayMoodData, setDayMoodData] = useState<{[key: string]: MoodData}>({});
-  const [debugMode, setDebugMode] = useState(false);
-  const [testResult, setTestResult] = useState<string>('');
+  const [dayMoodData, setDayMoodData] = useState<{ [key: string]: MoodData }>({});
   const [moodModalSavedSuccessfully, setMoodModalSavedSuccessfully] = useState(false);
-  const [lastClickTime, setLastClickTime] = useState<{[key: string]: number}>({});
-  const [pendingRemoval, setPendingRemoval] = useState<Date | null>(null);
+  
+  // Hover mood tooltip state
+  const [hoverMoodData, setHoverMoodData] = useState<{ data: MoodData; date: Date; position: { x: number; y: number } } | null>(null);
 
-  const currentCycle = cycles.length > 0 ? cycles[0] : null;
+  // Current cycle for predictions
+  const currentCycle = cycles && cycles.length > 0 ? cycles[0] : null;
 
-  // Helper function to parse notes with mood data
+  // Helper function to convert date to local date string (fix timezone issue)
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const parseNotesWithMood = (notes?: string) => {
-    if (!notes) return { userNotes: '', moodData: null };
+    if (!notes) return { cleanNotes: '', moodData: null };
     
-    try {
-      const parsed = JSON.parse(notes);
-      if (parsed.user_notes !== undefined && parsed.mood_data) {
-        return {
-          userNotes: parsed.user_notes || '',
-          moodData: parsed.mood_data
-        };
-      }
-    } catch (e) {
-      // If not JSON, treat as regular notes
+    const moodDataIndex = notes.indexOf('MOOD_DATA:');
+    if (moodDataIndex === -1) {
+      return { cleanNotes: notes, moodData: null };
     }
     
-    return { userNotes: notes, moodData: null };
-  };
-
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const cleanNotes = notes.substring(0, moodDataIndex).trim();
+    const moodDataStr = notes.substring(moodDataIndex + 10);
+    
+    try {
+      const moodData = JSON.parse(moodDataStr);
+      return { cleanNotes, moodData };
+    } catch (error) {
+      return { cleanNotes: notes, moodData: null };
+    }
   };
 
   const isSameDay = (date1: Date, date2: Date) => {
@@ -85,133 +83,168 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
            date1.getDate() === date2.getDate();
   };
 
-  const isDateInRange = (date: Date, startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-    date.setHours(12, 0, 0, 0);
-    return date >= start && date <= end;
-  };
-
   const isDateSelected = (date: Date) => {
     return selectedPeriodDays.some(selectedDate => isSameDay(selectedDate, date));
   };
 
-  const handleDayClick = (date: Date) => {
-    const dateKey = date.toISOString().split('T')[0];
-    
-    // Kiểm tra xem ngày này có phải là ngày period hiện có không
-    const isExistingPeriodDay = cycles.some(cycle => cycle.period_days.includes(dateKey));
-    const isSelectedDay = selectedPeriodDays.some(selectedDate => selectedDate.toISOString().split('T')[0] === dateKey);
-    const currentTime = Date.now();
-    
-    if (isExistingPeriodDay) {
-      // Xử lý double click cho ngày period đã lưu
-      if (lastClickTime && dateKey === Object.keys(lastClickTime)[0] && currentTime - lastClickTime[dateKey] < 400) {
-        // Double-click detected - xóa ngày khỏi database
-        setPendingRemoval(date);
-        setShowMoodModal(true);
-      } else {
-        // Single click - hiển thị instruction
-        setPendingRemoval(date);
-        setTimeout(() => setPendingRemoval(null), 3000);
-      }
-    } else if (isSelectedDay) {
-      // Xử lý double click cho ngày đã chọn (chưa lưu)
-      if (lastClickTime && dateKey === Object.keys(lastClickTime)[0] && currentTime - lastClickTime[dateKey] < 400) {
-        // Double-click detected - xóa khỏi selection
-        setSelectedPeriodDays(prev => prev.filter(d => d.toISOString().split('T')[0] !== dateKey));
-        
-        // Xóa mood data nếu có
+  const isPeriodDay = (date: Date) => {
+    return cycles.some(cycle => 
+      cycle.period_days.some(periodDay => {
+        const periodDate = new Date(periodDay);
+        return isSameDay(date, periodDate);
+      })
+    );
+  };
+
+  const isPredictedPeriodDay = (date: Date) => {
+    if (!currentCycle?.predicted_cycle_end) {
+      return false;
+    }
+    const predictedDate = new Date(currentCycle.predicted_cycle_end);
+    const isSame = isSameDay(date, predictedDate);
+    const isFuture = date > new Date();
+    return isSame && isFuture;
+  };
+
+  const isOvulationDay = (date: Date) => {
+    if (!currentCycle?.predicted_ovulation_date) {
+      return false;
+    }
+    const ovulationDate = new Date(currentCycle.predicted_ovulation_date);
+    return isSameDay(date, ovulationDate);
+  };
+
+  const isFertileDay = (date: Date) => {
+    if (!currentCycle?.predicted_fertile_start || !currentCycle?.predicted_fertile_end) {
+      return false;
+    }
+    const fertileStart = new Date(currentCycle.predicted_fertile_start);
+    const fertileEnd = new Date(currentCycle.predicted_fertile_end);
+    return date >= fertileStart && date <= fertileEnd;
+  };
+
+  const handleDateClick = (date: Date) => {
+    if (isPeriodDay(date)) {
+      return;
+    }
+
+    if (isDateSelected(date)) {
+      const dateKey = getLocalDateString(date);
+      
+      // Remove from mood data if exists
+      if (dayMoodData[dateKey]) {
         setDayMoodData(prev => {
           const newData = { ...prev };
           delete newData[dateKey];
           return newData;
         });
-      } else {
-        // Single click - hiển thị instruction
-        setPendingRemoval(date);
-        setTimeout(() => setPendingRemoval(null), 3000);
       }
+      
+      // Remove from selected dates
+      setSelectedPeriodDays(prev => 
+        prev.filter(selectedDate => !isSameDay(selectedDate, date))
+      );
     } else {
-      // Ngày mới - thêm vào selection và mở mood modal
       setSelectedPeriodDays(prev => [...prev, date]);
+      
+      // Open mood modal for this date
       setSelectedDateForMood(date);
+      setMoodModalSavedSuccessfully(false);
       setShowMoodModal(true);
     }
-    
-    setLastClickTime(prev => ({
-      ...prev,
-      [dateKey]: currentTime
-    }));
-  };
-
-  const clearSelection = () => {
-    setSelectedPeriodDays([]);
-    setNotes('');
-    setSelectedDay(null);
-    setDayMoodData({});
-    setLastClickTime({});
-    setPendingRemoval(null);
   };
 
   const handleRemoveFromDatabase = async (dateToRemove: Date) => {
+    if (!confirm(`Bạn có chắc muốn xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} khỏi chu kì?`)) {
+      return;
+    }
+
     setIsSaving(true);
     
     try {
-      const dateToRemoveStr = dateToRemove.toISOString().split('T')[0];
+      let allExistingPeriodDays: string[] = [];
       
-      const existingCyclesResponse = await menstrualCycleService.getCycles();
-      
-      if (!existingCyclesResponse.success || !existingCyclesResponse.data) {
-        toast.error('Không thể tải dữ liệu chu kì hiện tại');
+      try {
+        const existingResponse = await menstrualCycleService.getCycles();
+        
+        if (existingResponse.success && existingResponse.data && existingResponse.data.length > 0) {
+          allExistingPeriodDays = existingResponse.data
+            .flatMap(cycle => cycle.period_days)
+            .filter((v, i, arr) => arr.indexOf(v) === i);
+        }
+      } catch (error) {
+        toast.error('Không thể lấy dữ liệu chu kì hiện tại');
         return;
       }
 
-      let allExistingPeriodDays: string[] = [];
-      existingCyclesResponse.data.forEach(cycle => {
-        if (cycle.period_days && Array.isArray(cycle.period_days)) {
-          cycle.period_days.forEach(day => {
-            const dayStr = new Date(day).toISOString().split('T')[0];
-            if (!allExistingPeriodDays.includes(dayStr)) {
-              allExistingPeriodDays.push(dayStr);
-            }
-          });
-        }
-      });
-
-      const updatedPeriodDays = allExistingPeriodDays.filter(day => day !== dateToRemoveStr);
-
+      const dateToRemoveStr = getLocalDateString(dateToRemove);
+      
+      // Debug: Hiển thị dữ liệu để kiểm tra
+      console.log('Debug xóa ngày:');
+      console.log('Ngày cần xóa:', dateToRemoveStr);
+      console.log('Danh sách ngày hiện có:', allExistingPeriodDays);
+      
+      // Kiểm tra với nhiều format khác nhau
+      const dateToRemoveISOStr = dateToRemove.toISOString().split('T')[0];
+      console.log('Ngày cần xóa (ISO):', dateToRemoveISOStr);
+      
+      // Tạo Vietnam time zone date để tránh lỗi múi giờ
+      const vietnamDate = new Date(dateToRemove.getTime() - (dateToRemove.getTimezoneOffset() * 60000));
+      const vietnamDateStr = vietnamDate.toISOString().split('T')[0];
+      console.log('Ngày cần xóa (Vietnam):', vietnamDateStr);
+      
+      // Thử filter với tất cả các format
+      let updatedPeriodDays = allExistingPeriodDays.filter(day => 
+        day !== dateToRemoveStr && 
+        day !== dateToRemoveISOStr && 
+        day !== vietnamDateStr
+      );
+      
+      // Nếu vẫn không tìm thấy, thử so sánh theo Date object
       if (updatedPeriodDays.length === allExistingPeriodDays.length) {
-        toast.error('Không tìm thấy ngày cần xóa trong dữ liệu');
+        console.log('Thử so sánh Date objects...');
+        updatedPeriodDays = allExistingPeriodDays.filter(day => {
+          const dayDate = new Date(day);
+          const isSame = isSameDay(dayDate, dateToRemove);
+          console.log(`So sánh ${day} với ${dateToRemoveStr}: ${isSame}`);
+          return !isSame;
+        });
+      }
+
+      console.log('Danh sách sau khi filter:', updatedPeriodDays);
+      console.log('Số lượng trước/sau:', allExistingPeriodDays.length, '/', updatedPeriodDays.length);
+
+      // Kiểm tra xem có xóa được ngày nào không
+      if (updatedPeriodDays.length === allExistingPeriodDays.length) {
+        toast.error(`Không tìm thấy ngày ${dateToRemoveStr} trong dữ liệu chu kì`);
+        console.warn('Không tìm thấy ngày để xóa');
+        return;
+      }
+
+      // Nếu xóa hết ngày thì xóa toàn bộ chu kì
+      if (updatedPeriodDays.length === 0) {
+        console.log('Xóa hết ngày trong chu kì - sẽ xóa toàn bộ chu kì');
+        // Có thể gọi API xóa chu kì hoặc để trống
+        toast.success(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} - chu kì đã trống`);
+        onRefresh();
         return;
       }
 
       const requestData = {
         period_days: updatedPeriodDays,
-        notes: undefined // Giữ notes cũ hoặc để undefined
+        notes: undefined
       };
 
       const response = await menstrualCycleService.processCycle(requestData);
 
       if (response && response.success) {
         toast.success(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} khỏi chu kì`);
-        
-        // Reset pending removal state
-        setPendingRemoval(null);
-        setLastClickTime(prev => {
-          const newTimes = { ...prev };
-          delete newTimes[dateToRemoveStr];
-          return newTimes;
-        });
-        
-        // Refresh data
         onRefresh();
       } else {
         toast.error('Có lỗi khi xóa ngày khỏi chu kì');
       }
     } catch (error: any) {
+      console.error('Lỗi khi xóa ngày:', error);
       toast.error('Lỗi khi xóa ngày khỏi chu kì');
     } finally {
       setIsSaving(false);
@@ -221,18 +254,12 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
   const handleMoodSave = (moodData: MoodData) => {
     if (!selectedDateForMood) return;
     
-    const dateKey = selectedDateForMood.toISOString().split('T')[0];
-    
-    // Cập nhật mood data
-    setDayMoodData(prev => {
-      const newData = {
+    const dateKey = getLocalDateString(selectedDateForMood);
+    setDayMoodData(prev => ({
         ...prev,
         [dateKey]: moodData
-      };
-      return newData;
-    });
+    }));
     
-    // Đánh dấu là đã lưu thành công TRƯỚC KHI đóng modal
     setMoodModalSavedSuccessfully(true);
     setShowMoodModal(false);
     setSelectedDateForMood(null);
@@ -240,17 +267,13 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
 
   const handleMoodModalClose = () => {
     if (!moodModalSavedSuccessfully && selectedDateForMood) {
-      // User cancelled without saving - remove day from selection
-      const dateKey = selectedDateForMood.toISOString().split('T')[0];
-      setSelectedPeriodDays(prev => prev.filter(d => d.toISOString().split('T')[0] !== dateKey));
-    } else if (moodModalSavedSuccessfully) {
-      // User saved successfully - keeping day in selection
+      const dateKey = getLocalDateString(selectedDateForMood);
+      setSelectedPeriodDays(prev => prev.filter(d => getLocalDateString(d) !== dateKey));
     }
     
-    // Reset all modal-related state
     setShowMoodModal(false);
     setSelectedDateForMood(null);
-    setMoodModalSavedSuccessfully(false); // Reset flag
+    setMoodModalSavedSuccessfully(false);
   };
 
   const saveCycle = async () => {
@@ -262,541 +285,275 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
     setIsSaving(true);
     
     try {
-      // Lấy dữ liệu cũ từ API
       let allExistingPeriodDays: string[] = [];
       let combinedNotes = notes;
       
-             try {
-         const existingResponse = await menstrualCycleService.getCycles();
-         if (existingResponse.success && existingResponse.data && existingResponse.data.length > 0) {
-           // Lấy từ cycle đầu tiên
-           const firstCycle = existingResponse.data[0];
-           allExistingPeriodDays = firstCycle.period_days || [];
-           combinedNotes = firstCycle.notes || notes;
-         }
-       } catch (error) {
-         // Nếu chưa có dữ liệu cũ thì bỏ qua
-       }
-      
-      // Thêm ngày mới vào danh sách cũ
-      const newPeriodDays = selectedPeriodDays
-        .sort((a, b) => a.getTime() - b.getTime())
-        .map(date => date.toISOString().split('T')[0]);
-      const allPeriodDays = [...new Set([...allExistingPeriodDays, ...newPeriodDays])].sort();
-      
-      const requestData = {
-        period_days: allPeriodDays,
-        notes: combinedNotes,
-        dayMoodData: {
-          ...dayMoodData
+      try {
+        const existingResponse = await menstrualCycleService.getCycles();
+        
+        if (existingResponse.success && existingResponse.data && existingResponse.data.length > 0) {
+          allExistingPeriodDays = existingResponse.data
+            .flatMap(cycle => cycle.period_days)
+            .filter((v, i, arr) => arr.indexOf(v) === i);
+          combinedNotes = existingResponse.data
+            .map(cycle => cycle.notes)
+            .filter((v, i, arr) => arr.indexOf(v) === i)
+            .join('\n');
         }
+      } catch (error) {
+        // No existing cycles found, creating new one
+      }
+
+      const newPeriodDays = selectedPeriodDays.map(date => {
+        const localDateString = getLocalDateString(date);
+        return localDateString;
+      });
+
+      newPeriodDays.forEach(newDay => {
+        if (!allExistingPeriodDays.includes(newDay)) {
+          allExistingPeriodDays.push(newDay);
+        }
+      });
+
+      allExistingPeriodDays.sort();
+
+      let finalNotes = combinedNotes;
+      if (Object.keys(dayMoodData).length > 0) {
+        const moodDataStr = JSON.stringify(dayMoodData, null, 2);
+        finalNotes = finalNotes ? `${finalNotes}\nMOOD_DATA:${moodDataStr}` : `MOOD_DATA:${moodDataStr}`;
+      }
+
+      const requestData = {
+        period_days: allExistingPeriodDays,
+        notes: finalNotes || undefined
       };
-      
+
       const response = await menstrualCycleService.processCycle(requestData);
-      
+
       if (response && response.success) {
-        clearSelection();
-        onRefresh();
-        toast.success('Đã ghi nhận chu kì thành công!');
+        toast.success('Đã lưu chu kì thành công!');
+        setSelectedPeriodDays([]);
+        setNotes('');
+        setDayMoodData({});
+        
+        await onRefresh();
       } else {
-        const errorMsg = response?.message || 'Có lỗi xảy ra khi lưu chu kì';
-        toast.error(errorMsg);
+        toast.error(`Lỗi khi lưu chu kì: ${response.message || 'Unknown error'}`);
       }
     } catch (error: any) {
-      let errorMessage = 'Có lỗi xảy ra khi lưu chu kì';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      } else if (error.code === 'ECONNREFUSED') {
-        errorMessage = 'Không thể kết nối đến server';
-      }
-      
-      toast.error(errorMessage);
+      toast.error('Lỗi khi lưu chu kì');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Debug API Test Function
-  const testApiConnection = async () => {
-    setTestResult('Đang test API connection...');
-    
-    try {
-      // Test 1: Check API endpoint availability
-      
-      // Test với dữ liệu sample
-      const testData = {
-        period_days: [new Date().toISOString().split('T')[0]],
-        notes: 'Test API connection'
-      };
-      
-      setTestResult('Đang gửi request test...');
-      
-      const response = await menstrualCycleService.processCycle(testData);
-      
-      
-      if (response && response.success) {
-        setTestResult('✅ API hoạt động bình thường! Response: ' + JSON.stringify(response, null, 2));
-        onRefresh(); // Refresh to see test data
-      } else {
-        setTestResult('⚠️ API phản hồi nhưng không thành công: ' + JSON.stringify(response, null, 2));
-      }
-    } catch (error: any) {
-
-      let errorDetails = '';
-      if (error?.response) {
-        errorDetails = `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`;
-      } else if (error?.request) {
-        errorDetails = 'Không nhận được phản hồi từ server. Server có thể không chạy.';
-      } else {
-        errorDetails = error.message || 'Unknown error';
-      }
-    
-      setTestResult(`❌ API Test thất bại: ${errorDetails}`);
-    }
+  const clearSelection = () => {
+    setSelectedPeriodDays([]);
+    setNotes('');
+    setDayMoodData({});
   };
 
-  // Detailed Flow Analysis Function
-  const analyzeUpdateFlow = () => {
-    const flowAnalysis = `
-🔍 LUỒNG UPDATE LỊCH CHU KÌ - PHÂN TÍCH CHI TIẾT:
+  const getTileClassName = ({ date, view }: { date: Date; view: string }) => {
+    if (view !== 'month') return '';
 
-📋 FRONTEND FLOW:
-1. User chọn ngày trong lịch (handleDayClick)
-2. Ngày được thêm vào selectedPeriodDays state
-3. MoodModal hiển thị để người dùng nhập tâm trạng
-4. User nhấn "Lưu chu kì" → gọi saveCycle()
-5. saveCycle() chuẩn bị dữ liệu và gọi API
-
-📤 API CALL:
-- Endpoint: POST /api/menstrual-cycle/processMenstrualCycle  
-- Headers: Authorization Bearer token
-- Body: { period_days: ['2025-06-25'], notes: 'mood data...' }
-
-🔧 BACKEND FLOW:
-1. Controller: menstrualCycleController.ts
-   - Authenticate user (JWT middleware)
-   - Extract user_id from token
-   - Parse period_days và notes
-   - Call MenstrualCycleService.processPeriodDays()
-
-2. Service: menstrualCycleService.ts  
-   - Sort và group period_days theo ngày liên tiếp
-   - Tính cycle_length dựa trên chu kì trước
-   - Predict ovulation, fertile window, next period
-   - Delete old cycles của user
-   - Insert new cycles vào database
-
-3. Repository: menstrualCycleRepository.ts
-   - deleteCyclesByUser() - xóa data cũ
-   - insertCycles() - lưu data mới
-
-📥 RESPONSE FLOW:
-- Backend trả về: { success: true, data: cycles[] }
-- Frontend nhận response
-- Gọi onRefresh() để reload data
-- CycleCalendar re-render với data mới
-
-🚨 POTENTIAL ISSUES:
-- Auth token expired/missing
-- Backend server not running  
-- Database connection issues
-- Date format mismatch
-- Network connectivity
-- CORS configuration
-
-💡 CURRENT STATE:
-- Selected Days: ${selectedPeriodDays.length}
-- Auth Token: ${localStorage.getItem('gencare_auth_token') ? 'Present' : 'Missing'}
-- Current Cycles: ${cycles.length}
-- Backend URL: /api/menstrual-cycle/processMenstrualCycle
-    `;
+    const classes = [];
     
-    setTestResult(flowAnalysis);
+    if (isDateSelected(date)) {
+      classes.push('selected-period');
+    } else if (isPeriodDay(date)) {
+      classes.push('period-day');
+    } else if (isOvulationDay(date)) {
+      classes.push('ovulation-day');
+    } else if (isFertileDay(date)) {
+      classes.push('fertile-day');
+    } else if (isPredictedPeriodDay(date)) {
+      classes.push('predicted-period');
+    }
+
+    return classes.join(' ');
   };
 
-  const calendarDays = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const today = new Date();
-
-    const days: CalendarDay[] = [];
-
-    // Previous month days
-    const prevMonth = new Date(year, month - 1, 0);
-    const daysInPrevMonth = prevMonth.getDate();
+  const getMoodDataForDate = (date: Date) => {
+    const dateKey = getLocalDateString(date);
     
-    for (let i = firstDay - 1; i >= 0; i--) {
-      const date = new Date(year, month - 1, daysInPrevMonth - i);
-      days.push({
-        date,
-        isCurrentMonth: false,
-        isPeriodDay: false,
-        isOvulationDay: false,
-        isFertileDay: false,
-        isPredictedPeriod: false,
-        isPredictedOvulation: false,
-        isPredictedFertile: false,
-        isToday: isSameDay(date, today),
-        isSelected: isDateSelected(date)
-      });
+    // Check in current selection
+    if (dayMoodData[dateKey]) {
+      return dayMoodData[dateKey];
     }
-
-    // Current month days
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      
-      let isPeriodDay = false;
-      let isOvulationDay = false;
-      let isFertileDay = false;
-      let isPredictedPeriod = false;
-      let isPredictedOvulation = false;
-      let isPredictedFertile = false;
-
-      // Check actual data from cycles
-      cycles.forEach(cycle => {
-        cycle.period_days.forEach(periodDay => {
-          if (isSameDay(date, new Date(periodDay))) {
-            isPeriodDay = true;
-          }
-        });
-      });
-
-      // Check predictions from current cycle
-      if (currentCycle) {
-        if (currentCycle.predicted_ovulation_date && 
-            isSameDay(date, new Date(currentCycle.predicted_ovulation_date))) {
-          if (date > today) {
-            isPredictedOvulation = true;
-          } else {
-            isOvulationDay = true;
-          }
-        }
-
-        if (currentCycle.predicted_fertile_start && currentCycle.predicted_fertile_end &&
-            isDateInRange(date, currentCycle.predicted_fertile_start, currentCycle.predicted_fertile_end)) {
-          if (date > today) {
-            isPredictedFertile = true;
-          } else {
-            isFertileDay = true;
-          }
-        }
-
-        if (currentCycle.predicted_cycle_end && 
-            isSameDay(date, new Date(currentCycle.predicted_cycle_end))) {
-          if (date > today) {
-            isPredictedPeriod = true;
-          }
-        }
-      }
-
-      days.push({
-        date,
-        isCurrentMonth: true,
-        isPeriodDay,
-        isOvulationDay,
-        isFertileDay,
-        isPredictedPeriod,
-        isPredictedOvulation,
-        isPredictedFertile,
-        isToday: isSameDay(date, today),
-        isSelected: isDateSelected(date)
-      });
-    }
-
-    // Next month days
-    const remainingDays = 42 - days.length;
-    for (let day = 1; day <= remainingDays; day++) {
-      const date = new Date(year, month + 1, day);
-      days.push({
-        date,
-        isCurrentMonth: false,
-        isPeriodDay: false,
-        isOvulationDay: false,
-        isFertileDay: false,
-        isPredictedPeriod: false,
-        isPredictedOvulation: false,
-        isPredictedFertile: false,
-        isToday: isSameDay(date, today),
-        isSelected: isDateSelected(date)
-      });
-    }
-
-    return days;
-  }, [currentDate, cycles, currentCycle, selectedPeriodDays]);
-
-  const getDayStyles = (day: CalendarDay) => {
-    let baseClasses = "w-full h-10 sm:h-12 flex items-center justify-center text-sm rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden border-2 border-transparent touch-manipulation ";
     
-    if (!day.isCurrentMonth) {
-      baseClasses += "text-gray-300 hover:bg-gray-50 ";
-    } else {
-      baseClasses += "text-gray-900 hover:scale-105 active:scale-95 ";
-    }
-
-    // Check if this day is pending removal (user clicked once)
-    const isPendingRemoval = pendingRemoval && isSameDay(day.date, pendingRemoval);
-
-    // Selected for new period (highest priority)
-    if (day.isSelected) {
-      if (isPendingRemoval) {
-        baseClasses += "bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-lg ring-2 ring-orange-300 ring-offset-2 animate-pulse ";
-      } else {
-        baseClasses += "bg-gradient-to-br from-pink-500 to-purple-600 text-white shadow-lg ring-2 ring-pink-300 ring-offset-2 ";
+    // Check in existing cycle notes
+    if (currentCycle?.notes) {
+      const { moodData } = parseNotesWithMood(currentCycle.notes);
+      if (moodData && moodData[dateKey]) {
+        return moodData[dateKey];
       }
     }
-    // Existing period days
-    else if (day.isPeriodDay) {
-      if (isPendingRemoval) {
-        baseClasses += "bg-gradient-to-br from-red-500 to-orange-600 text-white shadow-lg ring-2 ring-red-300 ring-offset-2 animate-pulse hover:shadow-xl ";
-      } else {
-        baseClasses += "bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg hover:shadow-xl ";
-      }
-    } else if (day.isOvulationDay) {
-      baseClasses += "bg-gradient-to-br from-purple-400 to-indigo-500 text-white shadow-lg hover:shadow-xl ";
-    } else if (day.isFertileDay) {
-      baseClasses += "bg-gradient-to-br from-purple-200 to-pink-300 text-purple-800 shadow-md hover:shadow-lg ";
-    } 
-    // Predictions with dotted styles
-    else if (day.isPredictedPeriod) {
-      baseClasses += "bg-gradient-to-br from-pink-50 to-rose-50 text-pink-700 border-2 border-dashed border-pink-400 hover:bg-pink-100 ";
-    } else if (day.isPredictedOvulation) {
-      baseClasses += "bg-gradient-to-br from-purple-50 to-indigo-50 text-purple-700 border-2 border-dashed border-purple-400 hover:bg-purple-100 ";
-    } else if (day.isPredictedFertile) {
-      baseClasses += "bg-gradient-to-br from-purple-25 to-pink-25 text-purple-600 border border-dashed border-purple-300 hover:bg-purple-50 ";
-    } else {
-      baseClasses += "hover:bg-gradient-to-br hover:from-pink-50 hover:to-purple-50 hover:border-pink-300 hover:bg-pink-50 ";
-    }
-
-    // Today highlight
-    if (day.isToday) {
-      baseClasses += "ring-3 ring-pink-400 ring-offset-2 ";
-    }
-
-    return baseClasses;
+    
+    return null;
   };
 
-  const getDayContent = (day: CalendarDay) => {
-    return (
-      <div className="relative w-full h-full flex items-center justify-center group">
-        <span className="relative z-10 font-medium">{day.date.getDate()}</span>
-        
-        {/* Sparkle effect for special days */}
-        {(day.isPeriodDay || day.isOvulationDay || day.isSelected) && (
-          <HiSparkles className="absolute top-1 right-1 h-2 w-2 text-white/70" />
-        )}
-        
-        {/* Prediction indicator */}
-        {(day.isPredictedPeriod || day.isPredictedOvulation || day.isPredictedFertile) && (
-          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-current rounded-full opacity-60"></div>
-        )}
+  const getTileContent = ({ date, view }: { date: Date; view: string }) => {
+    if (view !== 'month') return null;
 
-        {/* Selection indicator */}
-        {day.isSelected && (
-          <div className="absolute inset-0 border-2 border-white/50 rounded-xl"></div>
-        )}
+    const handleMoodHover = (e: React.MouseEvent, data: MoodData) => {
+      e.stopPropagation();
+      setHoverMoodData({
+        data,
+        date,
+        position: { x: e.clientX, y: e.clientY }
+      });
+    };
 
-        {/* Hover tooltip */}
-        {day.isCurrentMonth && (
-          <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20">
-            {getTooltipContent(day)}
+    const handleMoodLeave = () => {
+      setHoverMoodData(null);
+    };
+
+    const content = [];
+    
+    if (isPeriodDay(date)) {
+      content.push(
+        <div key="period" className="absolute inset-0 flex items-center justify-center">
+          <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
+               onClick={(e) => {
+                 e.stopPropagation();
+                 handleRemoveFromDatabase(date);
+               }}>
+            <FaTimes className="text-white text-xs cursor-pointer" />
           </div>
-        )}
-
-        {/* Click indicator */}
-        <div className="absolute inset-0 bg-pink-200 opacity-0 group-active:opacity-30 transition-opacity duration-150 rounded-xl"></div>
-      </div>
-    );
-  };
-
-  const getTooltipContent = (day: CalendarDay) => {
-    const isPendingRemoval = pendingRemoval && isSameDay(day.date, pendingRemoval);
-    
-    if (day.isSelected) {
-      if (isPendingRemoval) {
-        return 'Nhấn đúp để bỏ chọn ngày này';
-      }
-      return 'Ngày đã chọn - Nhấn đúp để bỏ chọn';
+        </div>
+      );
+    } else if (isDateSelected(date)) {
+      content.push(
+        <div key="selected" className="absolute inset-0 flex items-center justify-center">
+          <FaCircle className="text-pink-500 text-lg" />
+        </div>
+      );
+    } else if (isOvulationDay(date)) {
+      content.push(
+        <div key="ovulation" className="absolute top-0 right-0">
+          <FaEgg className="text-yellow-500 text-xs" />
+        </div>
+      );
+    } else if (isFertileDay(date)) {
+      content.push(
+        <div key="fertile" className="absolute top-0 right-0">
+          <FaVenus className="text-blue-400 text-xs" />
+        </div>
+      );
+    } else if (isPredictedPeriodDay(date)) {
+      content.push(
+        <div key="predicted" className="absolute top-0 right-0">
+          <FaRegCircle className="text-pink-300 text-xs" />
+        </div>
+      );
     }
-    if (day.isPeriodDay) {
-      if (isPendingRemoval) {
-        return 'Nhấn đúp để xóa ngày này khỏi chu kì';
-      }
-      return 'Ngày có kinh - Nhấn đúp để xóa';
+
+    // Add mood indicator with React Icons
+    const moodData = getMoodDataForDate(date);
+    if (moodData) {
+      const MoodIcon = moodData.mood === 'happy' ? FaSmile : 
+                      moodData.mood === 'sad' ? FaFrown :
+                      moodData.mood === 'neutral' ? FaMeh : FaMeh;
+      
+      const moodColor = moodData.mood === 'happy' ? 'text-green-500' : 
+                       moodData.mood === 'sad' ? 'text-red-500' :
+                       moodData.mood === 'neutral' ? 'text-gray-500' : 'text-gray-500';
+      
+      content.push(
+        <div key="mood" 
+             className={`absolute bottom-0 left-0 text-xs cursor-pointer ${moodColor}`}
+             onMouseEnter={(e) => handleMoodHover(e, moodData)}
+             onMouseLeave={handleMoodLeave}>
+          <MoodIcon />
+        </div>
+      );
     }
-    if (day.isOvulationDay) return 'Ngày rụng trứng';
-    if (day.isFertileDay) return 'Cửa sổ sinh sản';
-    if (day.isPredictedPeriod) return 'Dự đoán kinh nguyệt';
-    if (day.isPredictedOvulation) return 'Dự đoán rụng trứng';
-    if (day.isPredictedFertile) return 'Dự đoán cửa sổ sinh sản';
-    return 'Click để chọn ngày có kinh';
-  };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev);
-      if (direction === 'prev') {
-        newDate.setMonth(prev.getMonth() - 1);
-      } else {
-        newDate.setMonth(prev.getMonth() + 1);
-      }
-      return newDate;
-    });
-  };
-
-  const goToToday = () => {
-    setCurrentDate(new Date());
+    return content.length > 0 ? <div className="relative w-full h-full">{content}</div> : null;
   };
 
   return (
     <div className="space-y-6">
-      {/* Calendar Header - Always Active */}
       <Card className="overflow-hidden border-0 shadow-lg">
-        <div className={`bg-gradient-to-r ${selectedPeriodDays.length > 0 ? 'from-pink-600 via-purple-500 to-indigo-700' : 'from-pink-500 via-purple-500 to-indigo-600'} p-6`}>
-          <div className="flex items-center justify-between text-white">
+        <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <FaCalendarAlt className="h-6 w-6" />
+              <CardTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <FaHeart className="text-pink-500" />
                 Lịch Chu Kì
-                {selectedPeriodDays.length > 0 && (
-                  <Badge className="bg-white/20 text-white border-white/30 ml-2">
-                    <FaEdit className="h-3 w-3 mr-1" />
-                    {selectedPeriodDays.length} ngày đã chọn
-                  </Badge>
-                )}
-              </h2>
-              <p className="text-white/90 mt-1">
-                {currentDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
-                {selectedPeriodDays.length === 0 && (
-                  <span className="ml-2">• Click vào ngày để ghi nhận chu kì</span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigateMonth('prev')}
-                className="text-white hover:bg-white/20 border border-white/20"
-              >
-                <FaChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goToToday}
-                className="text-white hover:bg-white/20 border border-white/20 px-4"
-              >
-                Hôm nay
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigateMonth('next')}
-                className="text-white hover:bg-white/20 border border-white/20"
-              >
-                <FaChevronRight className="h-4 w-4" />
-              </Button>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Click vào ngày để ghi nhận chu kì
+              </CardDescription>
             </div>
           </div>
         </div>
 
-        {/* Debug Button - Fixed Position */}
-        <div className="fixed top-20 right-4 z-50">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setDebugMode(!debugMode)}
-            className="border-yellow-300 text-yellow-600 hover:bg-yellow-50 bg-yellow-50 shadow-lg"
-          >
-            <FaBug className="h-3 w-3 mr-1" />
-            {debugMode ? 'Ẩn Debug' : 'Debug API'}
-          </Button>
-        </div>
-
-        {/* Period Input Controls - Always Visible */}
         {selectedPeriodDays.length > 0 && (
-          <div className="p-4 bg-pink-50 border-b space-y-4">
-            {/* Period Selection Info */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-pink-800">Ghi nhận chu kì mới</h3>
-                <p className="text-sm text-pink-600">
-                  Đã chọn: {selectedPeriodDays.length} ngày kinh
-                </p>
+          <div className="px-6 py-4 bg-pink-50 border-b border-pink-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-wrap gap-2">
+                <span className="text-sm font-medium text-pink-700">Ngày đã chọn:</span>
+                {selectedPeriodDays
+                  .sort((a, b) => a.getTime() - b.getTime())
+                  .map((date, index) => {
+                    const dateKey = getLocalDateString(date);
+                    const hasMoodData = dayMoodData[dateKey];
+                    return (
+                      <Badge key={index} className={`${hasMoodData ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-pink-100 text-pink-800 border-pink-200'}`}>
+                        {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                        {hasMoodData && <FaSmile className="ml-1 text-xs" />}
+                      </Badge>
+                    );
+                  })
+                }
               </div>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={clearSelection}
-                  className="border-gray-300"
-                >
-                  <FaTrash className="h-3 w-3 mr-1" />
-                  Xóa
-                </Button>
-                <Button 
+                <Button
                   onClick={saveCycle}
-                  disabled={selectedPeriodDays.length === 0 || isSaving}
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                  disabled={isSaving}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white flex items-center gap-2"
                 >
-                  <FaSave className="h-3 w-3 mr-1" />
+                  <FaSave />
                   {isSaving ? 'Đang lưu...' : 'Lưu chu kì'}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setDebugMode(!debugMode)}
-                  className="border-yellow-300 text-yellow-600 hover:bg-yellow-50"
+                <Button
+                  onClick={clearSelection}
+                  variant="outline"
+                  className="border-purple-300 text-purple-600 hover:bg-purple-50 flex items-center gap-2"
                 >
-                  <FaBug className="h-3 w-3 mr-1" />
-                  Debug
+                  <FaTimes />
+                  Xóa chọn
                 </Button>
               </div>
-            </div>
-
-            {/* Notes Input */}
-            <div>
-              <Input
-                placeholder="Ghi chú cho chu kì này (tùy chọn)..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="border-pink-200 focus:border-pink-400"
-              />
-            </div>
-
-            {/* Selected dates preview */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-pink-700">Ngày đã chọn:</span>
-              {selectedPeriodDays
-                .sort((a, b) => a.getTime() - b.getTime())
-                .map((date, index) => {
-                  const dateKey = date.toISOString().split('T')[0];
-                  const hasMoodData = dayMoodData[dateKey];
-                  return (
-                    <Badge key={index} className={`${hasMoodData ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-pink-100 text-pink-800 border-pink-200'}`}>
-                      {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
-                      {hasMoodData && ' 💝'}
-                    </Badge>
-                  );
-                })
-              }
             </div>
           </div>
         )}
 
         <CardContent className="p-6">
-          {/* Enhanced Legend */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-pink-50 rounded-xl">
-            <h4 className="font-semibold mb-3 text-gray-800">Hướng dẫn sử dụng:</h4>
+
+          <div className="calendar-container">
+            <Calendar
+              onClickDay={handleDateClick}
+              tileClassName={getTileClassName}
+              tileContent={getTileContent}
+              showNeighboringMonth={false}
+              locale="vi-VN"
+              prev2Label={null}
+              next2Label={null}
+            />
+          </div>
+        </CardContent>
+      </Card>
+      <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 rounded-xl border border-purple-100">
+            <h4 className="font-semibold mb-3 text-gray-800 flex items-center gap-2">
+              <FaEye className="text-purple-500" />
+              Hướng dẫn sử dụng:
+            </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
               {selectedPeriodDays.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg shadow-sm ring-1 ring-pink-300"></div>
+                  <FaCircle className="text-pink-500 text-sm" />
                   <span className="font-medium">Đang chọn</span>
                 </div>
               )}
@@ -805,333 +562,254 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
                 <span className="font-medium">Kinh nguyệt</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-lg shadow-sm"></div>
+                <FaEgg className="text-yellow-500 text-sm" />
                 <span className="font-medium">Rụng trứng</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-gradient-to-br from-purple-200 to-pink-300 rounded-lg shadow-sm"></div>
+                <FaVenus className="text-blue-400 text-sm" />
                 <span className="font-medium">Cửa sổ sinh sản</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-pink-50 border-2 border-dashed border-pink-400 rounded-lg"></div>
+                <FaRegCircle className="text-pink-300 text-sm" />
                 <span className="font-medium">Dự đoán</span>
               </div>
             </div>
+
             <div className="text-xs text-gray-600 space-y-1">
-              <p>💡 <strong>Mẹo sử dụng:</strong></p>
+              <p><strong>Mẹo sử dụng:</strong></p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li><strong>Click</strong> vào ngày để chọn kinh nguyệt mới</li>
-                <li><strong>Nhấn đúp</strong> vào ngày đã chọn để bỏ chọn</li>
-                <li><strong>Nhấn đúp</strong> vào ngày đã lưu để xóa khỏi database</li>
+                <li><strong>Click</strong> vào ngày đã chọn để bỏ chọn</li>
+                <li><strong>Click</strong> vào ngày đã lưu để xóa khỏi database</li>
               </ul>
             </div>
           </div>
 
-          {/* Calendar Grid */}
-          <div className="w-full">
-            {/* Days of week header */}
-            <div className="grid grid-cols-7 gap-2 mb-3">
-              {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
-                <div key={day} className="h-10 flex items-center justify-center text-sm font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map((day, index) => (
-                <div
-                  key={index}
-                  className={getDayStyles(day)}
-                  title={getTooltipContent(day)}
-                  onClick={() => handleDayClick(day.date)}
-                >
-                  {getDayContent(day)}
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Current Cycle Info - Always Visible */}
+      {/* Cycle Summary */}
       {currentCycle && selectedPeriodDays.length === 0 && (
-        <Card className="overflow-hidden border-0 shadow-lg">
-          <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Chu Kì Hiện Tại</h3>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="bg-white/50 backdrop-blur rounded-lg p-4">
-                  <h4 className="font-semibold mb-3 text-gray-800">Dữ liệu đã ghi nhận:</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full"></div>
-                      <span className="text-sm font-medium">
-                        Ngày có kinh: {currentCycle.period_days.length} ngày
-                      </span>
+        <Card className="border-0 shadow-md">
+          <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-pink-600">{currentCycle.period_days.length}</div>
+                  <div className="text-xs text-gray-600">Ngày kinh</div>
+                </div>
+                {currentCycle.cycle_length && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{currentCycle.cycle_length}</div>
+                    <div className="text-xs text-gray-600">Chu kì (ngày)</div>
+                  </div>
+                )}
+                {currentCycle.predicted_ovulation_date && (
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-indigo-600">
+                      {new Date(currentCycle.predicted_ovulation_date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                     </div>
-                    {currentCycle.cycle_length && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full"></div>
-                        <span className="text-sm font-medium">
-                          Độ dài chu kì: {currentCycle.cycle_length} ngày
-                        </span>
-                      </div>
-                    )}
+                    <div className="text-xs text-gray-600">Rụng trứng</div>
                   </div>
-                </div>
+                )}
+                {currentCycle.predicted_cycle_end && (
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-pink-600">
+                      {new Date(currentCycle.predicted_cycle_end).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                    </div>
+                    <div className="text-xs text-gray-600">Kì tiếp theo</div>
+                  </div>
+                )}
+                
               </div>
-
-              <div className="space-y-4">
-                <div className="bg-white/50 backdrop-blur rounded-lg p-4">
-                  <h4 className="font-semibold mb-3 text-gray-800">Dự đoán:</h4>
-                  <div className="space-y-2 text-sm">
-                    {currentCycle.predicted_ovulation_date && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-gradient-to-br from-purple-400 to-indigo-500 border-2 border-dashed border-purple-300 rounded-full"></div>
-                        <span className="font-medium">
-                          Rụng trứng: {new Date(currentCycle.predicted_ovulation_date).toLocaleDateString('vi-VN')}
-                        </span>
-                      </div>
-                    )}
-                    {currentCycle.predicted_fertile_start && currentCycle.predicted_fertile_end && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-gradient-to-br from-purple-200 to-pink-300 border-2 border-dashed border-purple-300 rounded-full"></div>
-                        <span className="font-medium">
-                          Cửa sổ sinh sản: {new Date(currentCycle.predicted_fertile_start).toLocaleDateString('vi-VN')} - {new Date(currentCycle.predicted_fertile_end).toLocaleDateString('vi-VN')}
-                        </span>
-                      </div>
-                    )}
-                    {currentCycle.predicted_cycle_end && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-gradient-to-br from-pink-200 to-rose-300 border-2 border-dashed border-pink-300 rounded-full"></div>
-                        <span className="font-medium">
-                          Chu kì tiếp theo: {new Date(currentCycle.predicted_cycle_end).toLocaleDateString('vi-VN')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <FaEye />
+                Di chuột qua ngày có kinh để xem tâm trạng
               </div>
             </div>
-
-            {currentCycle.notes && (
-              <div className="mt-4 space-y-4">
-                {(() => {
-                  const { userNotes, moodData } = parseNotesWithMood(currentCycle.notes);
-                  return (
-                    <>
-                      {userNotes && (
-                        <div className="p-4 bg-yellow-100/50 backdrop-blur rounded-lg border border-yellow-200">
-                          <p className="text-sm text-yellow-800">
-                            <strong>Ghi chú:</strong> {userNotes}
-                          </p>
-                        </div>
-                      )}
-                      {moodData && (
-                        <div className="p-4 bg-purple-100/50 backdrop-blur rounded-lg border border-purple-200">
-                          <h4 className="font-semibold text-purple-800 mb-3">Dữ liệu tâm trạng:</h4>
-                          <div className="space-y-3">
-                            {Object.entries(moodData).map(([date, mood]: [string, any]) => (
-                              <div key={date} className="bg-white/50 p-3 rounded-lg">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="font-medium text-purple-700">
-                                    {new Date(date).toLocaleDateString('vi-VN')}
-                                  </span>
-                                  <div className="flex gap-2">
-                                    {mood.mood && (
-                                      <Badge className="bg-pink-100 text-pink-800 text-xs">
-                                        {mood.mood}
-                                      </Badge>
-                                    )}
-                                    {mood.energy && (
-                                      <Badge className="bg-purple-100 text-purple-800 text-xs">
-                                        {mood.energy}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                {mood.symptoms && mood.symptoms.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-2">
-                                    {mood.symptoms.map((symptom: string, idx: number) => (
-                                      <Badge key={idx} className="bg-gray-100 text-gray-700 text-xs">
-                                        {symptom}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-                                {mood.notes && (
-                                  <p className="text-xs text-purple-600 italic">"{mood.notes}"</p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            )}
           </div>
         </Card>
+        
       )}
 
-      {/* Selected Day Details */}
-      {selectedDay && selectedPeriodDays.length === 0 && (
-        <Card className="border-2 border-pink-200 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HiSparkles className="h-5 w-5 text-pink-500" />
-              Chi tiết ngày {selectedDay.date.toLocaleDateString('vi-VN')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 bg-pink-50 rounded-lg">
-              <p className="text-pink-800 font-medium">
-                {getTooltipContent(selectedDay)}
-              </p>
-              {selectedDay.isToday && (
-                <Badge className="mt-2 bg-pink-100 text-pink-800">
-                  Hôm nay
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Debug Panel */}
-      {debugMode && (
-        <Card className="border-2 border-yellow-300 shadow-lg">
-          <CardHeader className="bg-yellow-50">
-            <CardTitle className="flex items-center gap-2 text-yellow-800">
-              <FaBug className="h-5 w-5" />
-              Debug Panel - API Testing
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  onClick={testApiConnection}
-                  size="sm"
-                  className="bg-yellow-600 hover:bg-yellow-700"
-                >
-                  Test API Connection
-                </Button>
-                <Button 
-                  onClick={analyzeUpdateFlow}
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Analyze Update Flow
-                </Button>
-                <Button 
-                  onClick={() => setTestResult('')}
-                  size="sm"
-                  variant="outline"
-                >
-                  Clear Results
-                </Button>
-              </div>
-              
-              {testResult && (
-                <div className="bg-white p-3 rounded border border-gray-300">
-                  <strong className="text-sm">Test Result:</strong>
-                  <pre className="mt-2 whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-40 overflow-y-auto">
-                    {testResult}
-                  </pre>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                  <strong className="text-blue-800">Current State:</strong>
-                  <ul className="mt-1 space-y-1 text-blue-700">
-                    <li>Selected Days: {selectedPeriodDays.length}</li>
-                    <li>Notes: {notes ? 'Yes' : 'No'}</li>
-                    <li>Mood Data: {Object.keys(dayMoodData).length} entries</li>
-                    <li>Current Cycles: {cycles.length}</li>
-                    <li>Today Status: {selectedPeriodDays.length > 0 ? 'Adding new cycle' : 'Normal view'}</li>
-                  </ul>
-                </div>
-                <div className="bg-green-50 p-3 rounded border border-green-200">
-                  <strong className="text-green-800">API Info:</strong>
-                  <ul className="mt-1 space-y-1 text-green-700">
-                    <li>Base URL: /api</li>
-                    <li>Endpoint: /menstrual-cycle/processMenstrualCycle</li>
-                    <li>Auth Token: {localStorage.getItem('gencare_auth_token') ? 'Present' : 'Missing'}</li>
-                    <li>User: {localStorage.getItem('user') ? 'Logged in' : 'Not logged in'}</li>
-                    <li>Current Time: {new Date().toLocaleTimeString('vi-VN')}</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-amber-50 p-3 rounded border border-amber-200 text-xs">
-                  <strong className="text-amber-800">🔧 Troubleshooting Steps:</strong>
-                  <ol className="mt-2 space-y-1 text-amber-700 list-decimal list-inside">
-                    <li><strong>Backend:</strong> Check server running on port 3000</li>
-                    <li><strong>Auth:</strong> Verify login status and token validity</li>
-                    <li><strong>Network:</strong> Check browser DevTools Network tab</li>
-                    <li><strong>Console:</strong> Look for error messages in browser console</li>
-                    <li><strong>Data:</strong> Try "Analyze Update Flow" button above</li>
-                  </ol>
-                </div>
-
-                <div className="bg-red-50 p-3 rounded border border-red-200 text-xs">
-                  <strong className="text-red-800">🚨 Common Issues & Solutions:</strong>
-                  <div className="mt-2 space-y-2 text-red-700">
-                    <div><strong>401 Unauthorized:</strong> Đăng nhập lại để refresh token</div>
-                    <div><strong>Network Error:</strong> Kiểm tra backend server chạy chưa</div>
-                    <div><strong>404 Not Found:</strong> Check API endpoint URL in browser network tab</div>
-                    <div><strong>No response:</strong> CORS hoặc network connectivity issue</div>
-                    <div><strong>Success: false:</strong> Check backend logs for detailed error</div>
-                  </div>
-                </div>
-
-                <div className="bg-green-50 p-3 rounded border border-green-200 text-xs">
-                  <strong className="text-green-800">✅ Expected Flow:</strong>
-                  <div className="mt-2 space-y-1 text-green-700">
-                    <div>1. Chọn ngày → Popup mood modal</div>
-                    <div>2. Lưu mood → Add to selected days</div>
-                    <div>3. Nhấn "Lưu chu kì" → API call</div>
-                    <div>4. API success → Auto refresh calendar</div>
-                    <div>5. Calendar shows new cycle data</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mood Modal */}
       <MoodModal
         isOpen={showMoodModal}
         selectedDate={selectedDateForMood || new Date()}
         onClose={handleMoodModalClose}
         onSave={handleMoodSave}
       />
-      
-      {/* Debug: Current State */}
-      {debugMode && (
-        <div className="fixed top-4 right-4 bg-yellow-100 p-3 rounded-lg border border-yellow-300 text-xs z-40 max-w-xs">
-          <strong>Debug State:</strong>
-                     <ul className="mt-1 space-y-1">
-             <li>Selected Days: {selectedPeriodDays.length}</li>
-             <li>Show Modal: {showMoodModal ? 'Yes' : 'No'}</li>
-             <li>Selected Date: {selectedDateForMood?.toDateString() || 'None'}</li>
-             <li>Saved Successfully: {moodModalSavedSuccessfully ? 'Yes' : 'No'}</li>
-             <li>Mood Data Entries: {Object.keys(dayMoodData).length}</li>
-             <li>Pending Removal: {pendingRemoval?.toLocaleDateString('vi-VN') || 'None'}</li>
-             <li>Click Times: {Object.keys(lastClickTime).length} tracked</li>
-           </ul>
+
+      {/* Mood Hover Tooltip */}
+      {hoverMoodData && (
+        <div 
+          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-xs"
+          style={{ 
+            left: hoverMoodData.position.x + 10,
+            top: hoverMoodData.position.y - 50
+          }}
+        >
+          <div className="text-sm">
+            <div className="font-medium">
+              {hoverMoodData.date.toLocaleDateString('vi-VN')}
+            </div>
+            <div className="text-gray-600">
+              Tâm trạng: {hoverMoodData.data.mood}
+            </div>
+            <div className="text-gray-600">
+              Năng lượng: {hoverMoodData.data.energy}
+            </div>
+            {hoverMoodData.data.symptoms.length > 0 && (
+              <div className="text-gray-600">
+                Triệu chứng: {hoverMoodData.data.symptoms.join(', ')}
+              </div>
+            )}
+          </div>
+          
         </div>
       )}
+
+      <style>{`
+        .calendar-container .react-calendar {
+          width: 100%;
+          border: none;
+          border-radius: 20px;
+          background: linear-gradient(135deg, #fdf7ff 0%, #fef7f7 50%, #f0f9ff 100%);
+          font-family: 'Inter', sans-serif;
+          line-height: 1.4;
+          padding: 20px;
+          box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);
+        }
+        
+        .calendar-container .react-calendar__tile {
+          position: relative;
+          height: 65px;
+          border: none;
+          background: rgba(255, 255, 255, 0.7);
+          color: #6b7280;
+          font-size: 14px;
+          font-weight: 500;
+          padding: 8px;
+          margin: 3px;
+          border-radius: 16px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 2px 8px rgba(168, 85, 247, 0.05);
+        }
+        
+        .calendar-container .react-calendar__tile:hover {
+          background: rgba(255, 255, 255, 0.9);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 8px 25px rgba(168, 85, 247, 0.15);
+        }
+        
+        .calendar-container .react-calendar__tile.period-day {
+          background: linear-gradient(135deg, #fecaca 0%, #f9a8d4 50%, #ec4899 100%);
+          color: white;
+          font-weight: 600;
+          box-shadow: 0 8px 20px rgba(236, 72, 153, 0.25);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .calendar-container .react-calendar__tile.selected-period {
+          background: linear-gradient(135deg, #e9d5ff 0%, #c4b5fd 50%, #a855f7 100%);
+          color: white;
+          font-weight: 600;
+          box-shadow: 0 8px 20px rgba(168, 85, 247, 0.25);
+          border: 2px solid rgba(255, 255, 255, 0.4);
+          animation: pulse 2s infinite;
+        }
+        
+        .calendar-container .react-calendar__tile.ovulation-day {
+          background: linear-gradient(135deg, #fef7ff 0%, #f3e8ff 50%, #d8b4fe 100%);
+          color: #7c3aed;
+          font-weight: 600;
+          box-shadow: 0 8px 20px rgba(168, 85, 247, 0.25);
+          border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        
+        .calendar-container .react-calendar__tile.fertile-day {
+          background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #3b82f6 100%);
+          color: white;
+          font-weight: 600;
+          box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .calendar-container .react-calendar__tile.predicted-period {
+          background: linear-gradient(135deg, #f3e8ff 0%, #ddd6fe 50%, #c084fc 100%);
+          color: #7c3aed;
+          font-weight: 600;
+          box-shadow: 0 6px 15px rgba(192, 132, 252, 0.2);
+          border: 2px solid rgba(168, 85, 247, 0.2);
+        }
+        
+        .calendar-container .react-calendar__tile--active {
+          background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+          color: #4f46e5;
+          font-weight: 600;
+          border: 2px solid #a5b4fc;
+        }
+        
+        .calendar-container .react-calendar__tile--now {
+          background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+          color: #ea580c;
+          font-weight: 600;
+          border: 2px solid #fdba74;
+          box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+        }
+        
+        .calendar-container .react-calendar__navigation {
+          margin-bottom: 20px;
+          padding: 0 10px;
+        }
+        
+        .calendar-container .react-calendar__navigation button {
+          color: #7c3aed;
+          background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+          font-size: 16px;
+          font-weight: 600;
+          border: none;
+          padding: 12px 16px;
+          border-radius: 12px;
+          margin: 4px;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+        }
+        
+        .calendar-container .react-calendar__navigation button:hover {
+          background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(124, 58, 237, 0.2);
+        }
+        
+        .calendar-container .react-calendar__month-view__weekdays {
+          text-align: center;
+          text-transform: uppercase;
+          font-weight: 600;
+          font-size: 12px;
+          color: #a855f7;
+          padding: 15px 0;
+          letter-spacing: 1px;
+        }
+        
+        .calendar-container .react-calendar__month-view__weekdays__weekday {
+          padding: 10px;
+          background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+          border-radius: 10px;
+          margin: 2px;
+        }
+        
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        
+        .calendar-container .react-calendar__tile.period-day:hover,
+        .calendar-container .react-calendar__tile.selected-period:hover,
+        .calendar-container .react-calendar__tile.ovulation-day:hover,
+        .calendar-container .react-calendar__tile.fertile-day:hover {
+          transform: translateY(-3px) scale(1.03);
+          box-shadow: 0 12px 30px rgba(168, 85, 247, 0.3);
+        }
+      `}</style>
     </div>
   );
 };

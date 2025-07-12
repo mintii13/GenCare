@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import WeeklySlotPicker from './WeeklySlotPicker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,6 +41,7 @@ interface ValidationErrors {
 const BookAppointment: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   // Notification methods using toast
   const showSuccess = (title: string, message?: string) => {
     toast.success(`${title}${message ? ': ' + message : ''}`);
@@ -225,7 +226,7 @@ const BookAppointment: React.FC = () => {
         // Success feedback
         showSuccess(
           'Đặt lịch thành công!',
-          'Chúng tôi sẽ xác nhận thông tin và liên hệ với bạn sớm nhất có thể.'
+          'Chúng tôi sẽ xác nhận thông tin và liên hệ với bạn sớm nhất có thể. Đang chuyển đến trang lịch sử tư vấn...'
         );
         
         // Reset form
@@ -234,6 +235,11 @@ const BookAppointment: React.FC = () => {
         setNotes('');
         setErrors({});
         setStep(1);
+        
+        // Chuyển đến trang lịch sử tư vấn sau 2 giây
+        setTimeout(() => {
+          navigate('/my-appointments');
+        }, 2000);
       } else {
         showError('Không thể đặt lịch', response.message || 'Có lỗi xảy ra khi đặt lịch hẹn');
         setErrors({ consultant: response.message || 'Có lỗi xảy ra khi đặt lịch hẹn' });
@@ -542,41 +548,135 @@ const BookAppointment: React.FC = () => {
   const ConfirmationDialog = () => {
     if (!showConfirmDialog) return null;
 
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Xác nhận đặt lịch</h3>
-          
-          <div className="space-y-3 mb-6">
-            <div>
-              <span className="text-gray-600">Chuyên gia:</span>
-              <p className="font-medium">{getSelectedConsultantInfo()?.full_name}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Thời gian:</span>
-              <p className="font-medium">
-                {selectedSlot && new Date(selectedSlot.date).toLocaleDateString('vi-VN')} 
-                {selectedSlot && `, ${selectedSlot.startTime} - ${selectedSlot.endTime}`}
-              </p>
-            </div>
+    const consultantInfo = getSelectedConsultantInfo();
 
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-0 transform animate-slideUp">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white bg-opacity-20 rounded-full p-2">
+                <FaCalendarAlt className="text-xl" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Xác nhận đặt lịch tư vấn</h3>
+                <p className="text-blue-100 text-sm">Vui lòng kiểm tra thông tin trước khi xác nhận</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex space-x-3">
-            <button
-              onClick={() => setShowConfirmDialog(false)}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              disabled={loading}
-            >
-              Hủy
-            </button>
-            <button
-              onClick={handleConfirmSubmit}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Đang xử lý...' : 'Xác nhận'}
-            </button>
+          {/* Content */}
+          <div className="p-6">
+            <div className="space-y-4 mb-6">
+              {/* Consultant Info */}
+              <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-600 font-medium">Chuyên gia tư vấn</p>
+                    <p className="font-semibold text-gray-800">{consultantInfo?.full_name}</p>
+                    <p className="text-sm text-gray-600">{consultantInfo?.specialization}</p>
+                    {consultantInfo?.experience_years && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Kinh nghiệm: {consultantInfo.experience_years} năm
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Date & Time Info */}
+              <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-green-100 rounded-full p-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-green-600 font-medium">Thời gian hẹn</p>
+                    <p className="font-semibold text-gray-800">
+                      {selectedSlot && new Date(selectedSlot.date).toLocaleDateString('vi-VN', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedSlot && `${selectedSlot.startTime} - ${selectedSlot.endTime}`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {notes.trim() && (
+                <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-yellow-100 rounded-full p-2">
+                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-yellow-600 font-medium">Ghi chú của bạn</p>
+                      <p className="text-sm text-gray-700 mt-1 italic">"{notes.trim()}"</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Important Notice */}
+              <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <div className="text-sm text-amber-700">
+                    <p className="font-medium">Lưu ý quan trọng:</p>
+                    <ul className="mt-1 space-y-1 text-xs">
+                      <li>• Chuyên gia sẽ xác nhận lịch hẹn trong vòng 24 giờ</li>
+                      <li>• Bạn có thể hủy lịch trước 2 giờ mà không mất phí</li>
+                      <li>• Vui lòng chuẩn bị sẵn các câu hỏi muốn tư vấn</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+                disabled={loading}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium flex items-center justify-center space-x-2"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <span>Đang xử lý...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaCalendarAlt className="text-sm" />
+                    <span>Xác nhận đặt lịch</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

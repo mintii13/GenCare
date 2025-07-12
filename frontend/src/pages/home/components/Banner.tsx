@@ -106,7 +106,7 @@ const Banner: React.FC = () => {
                  Xem gói xét nghiệm
                </Link>
                <AuthRequiredButton
-                 redirectTo="/dashboard/customer"
+                 redirectTo="/consultants"
                  message="Vui lòng đăng nhập để sử dụng dịch vụ tư vấn!"
                  successMessage="Đăng nhập thành công! Chuyển đến trang tư vấn..."
                  className="group inline-flex items-center justify-center gap-3 border-2 border-white/80 hover:bg-white/10 backdrop-blur-sm text-white font-semibold px-8 py-4 rounded-xl text-lg transition-all duration-300 transform hover:-translate-y-1"

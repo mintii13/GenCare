@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Checkbox, Row, Col, Divider } from 'antd';
 import { CalendarOutlined, FileTextOutlined, CheckCircleOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import apiClient from '../../services/apiClient';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
 
@@ -38,7 +38,7 @@ const MultipleTestBooking: React.FC = () => {
 
   const fetchAllTests = async () => {
     try {
-      const response = await api.get('/sti/getAllStiTest');
+      const response = await apiClient.get<any>('/sti/getAllStiTest');
       if (response.data.success && Array.isArray(response.data.stitest)) {
         const tests = response.data.stitest
           .filter((test: any) => test.is_active)
@@ -130,7 +130,9 @@ const MultipleTestBooking: React.FC = () => {
         notes: notes.trim()
       };
 
-      const response = await api.post('/sti/createStiOrder', orderData);
+      const response = await apiClient.post<any>('/sti/book-multiple', {
+        testIds: selectedTests,
+      });
 
       if (response.data.success) {
         message.success('Đặt lịch xét nghiệm thành công!');
@@ -185,9 +187,12 @@ const MultipleTestBooking: React.FC = () => {
                   size="small"
                   style={{ 
                     border: checked ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                    backgroundColor: checked ? '#f6ffed' : 'white'
+                    backgroundColor: checked ? '#f6ffed' : 'white',
+                    height: '260px',
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}
-                  styles={{ body: { padding: '12px' } }}
+                  styles={{ body: { padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 } }}
                 >
                   <div style={{ marginBottom: '8px' }}>
                     <Checkbox
@@ -199,7 +204,7 @@ const MultipleTestBooking: React.FC = () => {
                     </Checkbox>
                   </div>
                   
-                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Space direction="vertical" size="small" style={{ width: '100%', flex: 1 }}>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
                       Mã: {test.sti_test_code}
                     </Text>
@@ -209,7 +214,7 @@ const MultipleTestBooking: React.FC = () => {
                     <Text strong style={{ color: '#1890ff' }}>
                       {formatPrice(test.price)}
                     </Text>
-                    <div>
+                    <div style={{ marginTop: 'auto' }}>
                       <Tag color={getCategoryColor(test.category)}>
                         {test.category}
                       </Tag>
