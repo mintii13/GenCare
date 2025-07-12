@@ -659,6 +659,33 @@ router.get('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant
     }
 });
 
+router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const stiResultId = req.query.result_id;
+
+        if (!stiResultId) {
+            res.status(400).json({
+                success: false,
+                message: 'Result id is not found'
+            });
+            return;
+        }
+
+        const result = await StiService.sendStiResultNotificationFromDB(stiResultId.toString());
+
+        if (!result.success) {
+            res.status(400).json(result);
+            return;
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
 //api lấy từ sti_result_id
 router.get('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant', 'customer'), async (req: Request, res: Response): Promise<void> => {
     try {
