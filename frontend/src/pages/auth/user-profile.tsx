@@ -107,6 +107,7 @@ const UserProfilePage: React.FC = () => {
       
       if (avatar) {
         formDataToSend.append('avatar', avatar);
+ 
       }
       
       // Use apiClient with FormData and custom headers
