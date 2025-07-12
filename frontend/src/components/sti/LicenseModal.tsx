@@ -73,7 +73,19 @@ const LicenseModal: React.FC<LicenseModalProps> = ({
             <Paragraph>
               • Mỗi xét nghiệm chỉ được thực hiện nếu có đơn yêu cầu hợp lệ từ bác sĩ hoặc từ quy trình tự đăng ký đã xác minh (theo Thông tư 49/2018/TT/BYT).
               <br />
-              • Quy trình xét nghiệm bao gồm: Đăng ký và chờ xử lý, Xác nhận đơn hàng, Tiến hành xét nghiệm, Thu thập mẫu, Thực hiện phân tích, Hoàn thành và trả kết quả.
+              • Quy trình xét nghiệm chi tiết bao gồm: 
+              <br />
+              - Bước 1: Đăng ký và chờ xử lý - Khách hàng đăng ký xét nghiệm và hệ thống xác minh thông tin
+              <br />
+              - Bước 2: Xác nhận đơn hàng - Phòng xét nghiệm xác nhận và lên lịch hẹn
+              <br />
+              - Bước 3: Tiến hành xét nghiệm - Khách hàng đến phòng xét nghiệm theo lịch hẹn
+              <br />
+              - Bước 4: Thu thập mẫu - Nhân viên y tế thu thập mẫu xét nghiệm theo quy trình chuẩn
+              <br />
+              - Bước 5: Thực hiện phân tích - Mẫu được phân tích trong phòng thí nghiệm với thiết bị hiện đại
+              <br />
+              - Bước 6: Hoàn thành và trả kết quả - Kết quả được kiểm tra, xác nhận và gửi cho khách hàng
               <br />
               • Đơn hàng có thể bị hủy ở bất kỳ giai đoạn nào trước khi hoàn thành.
             </Paragraph>
