@@ -661,7 +661,7 @@ router.get('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant
 
 router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
     try {
-        const stiResultId = req.query.result_id;
+        const stiResultId = req.query.result_id.toString();
 
         if (!stiResultId) {
             res.status(400).json({
@@ -671,12 +671,15 @@ router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'con
             return;
         }
 
-        const result = await StiService.sendStiResultNotificationFromDB(stiResultId.toString());
+        const result = await StiService.sendStiResultNotificationFromDB(stiResultId);
 
         if (!result.success) {
             res.status(400).json(result);
             return;
         }
+        await StiResultRepository.updateById(stiResultId, {
+            is_notified: true
+        });
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
