@@ -73,7 +73,7 @@ const LicenseModal: React.FC<LicenseModalProps> = ({
             <Paragraph>
               • Mỗi xét nghiệm chỉ được thực hiện nếu có đơn yêu cầu hợp lệ từ bác sĩ hoặc từ quy trình tự đăng ký đã xác minh (theo Thông tư 49/2018/TT/BYT).
               <br />
-              • Quy trình xét nghiệm: <Text strong>Pending → Accepted → Processing → SpecimenCollected → Testing → Completed</Text>
+              • Quy trình xét nghiệm bao gồm: Đăng ký và chờ xử lý, Xác nhận đơn hàng, Tiến hành xét nghiệm, Thu thập mẫu, Thực hiện phân tích, Hoàn thành và trả kết quả.
               <br />
               • Đơn hàng có thể bị hủy ở bất kỳ giai đoạn nào trước khi hoàn thành.
             </Paragraph>

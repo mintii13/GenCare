@@ -57,16 +57,18 @@ const LicensePage: React.FC = () => {
                     </Paragraph>
                   </div>
 
-                  <div>
-                    <Title level={5}>2. Tuân thủ quy trình xét nghiệm</Title>
-                    <Paragraph style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                      • Khách hàng phải tuân thủ nghiêm ngặt các hướng dẫn trước, trong và sau khi xét nghiệm theo quy định của phòng xét nghiệm.
-                      <br />
-                      • Khách hàng phải đến đúng giờ hẹn và mang theo giấy tờ tùy thân hợp lệ để xác minh danh tính.
-                      <br />
-                      • Khách hàng phải ký cam kết đồng ý thực hiện xét nghiệm trước khi tiến hành.
-                    </Paragraph>
-                  </div>
+                                     <div>
+                     <Title level={5}>2. Tuân thủ quy trình xét nghiệm</Title>
+                     <Paragraph style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                       • Khách hàng phải tuân thủ nghiêm ngặt các hướng dẫn trước, trong và sau khi xét nghiệm theo quy định của phòng xét nghiệm.
+                       <br />
+                       • Khách hàng phải đến đúng giờ hẹn và mang theo giấy tờ tùy thân hợp lệ để xác minh danh tính.
+                       <br />
+                       • Khách hàng phải ký cam kết đồng ý thực hiện xét nghiệm trước khi tiến hành.
+                       <br />
+                       • Quy trình xét nghiệm bao gồm: Đăng ký và chờ xử lý, Xác nhận đơn hàng, Tiến hành xét nghiệm, Thu thập mẫu, Thực hiện phân tích, Hoàn thành và trả kết quả.
+                     </Paragraph>
+                   </div>
 
                   <div>
                     <Title level={5}>3. Bảo mật thông tin</Title>
