@@ -360,7 +360,9 @@ export class AppointmentRepository {
         try {
             const query: any = {};
 
-            if (status) query.status = status;
+            if (typeof status === 'string' && status.trim() !== '') {
+                query.status = status;
+            }
             if (consultantId) query.consultant_id = consultantId;
             if (customerId) query.customer_id = customerId;
 

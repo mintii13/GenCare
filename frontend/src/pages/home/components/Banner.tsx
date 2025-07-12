@@ -99,11 +99,11 @@ const Banner: React.FC = () => {
                          {/* Call to Action */}
              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                <Link
-                 to="/test-packages"
+                 to="/test-packages/sti"
                  className="group inline-flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-blue-700 font-semibold px-8 py-4 rounded-xl shadow-lg text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl"
                >
                  <TestTube className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                 Xem gói xét nghiệm
+                 Đặt lịch xét nghiệm
                </Link>
                <AuthRequiredButton
                  redirectTo="/consultants"

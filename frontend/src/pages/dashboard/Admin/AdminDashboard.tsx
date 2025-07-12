@@ -12,7 +12,7 @@ import {
   FaPlus,
   FaEye,
   FaUserMd,
-  FaClipboardList,
+    FaClipboardList,
   FaBell,
   FaArrowUp,
   FaArrowDown,

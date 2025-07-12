@@ -11,6 +11,7 @@ import AutoConfirmService from './services/autoConfirmService';
 import AutoConfirmNotification from './components/notifications/AutoConfirmNotification';
 import RoleGuard from './components/guards/RoleGuard';
 import DashboardRedirect from './components/common/DashboardRedirect';
+import LoginRedirect from './components/common/LoginRedirect';
 
 // Lazy load all major pages for better performance
 const HomePage = lazy(() => import('./pages/home'));
@@ -22,7 +23,6 @@ const AboutUs = lazy(() => import('./pages/about/AboutUs'));
 // STI Booking imports - Keep lazy
 const BookSTIPage = lazy(() => import('./pages/sti-booking/BookSTIPage'));
 const OrdersPage = lazy(() => import('./pages/sti-booking/OrdersPage'));
-const MultipleTestBooking = lazy(() => import('./pages/sti-booking/MultipleTestBooking'));
 
 // STI Assessment imports - Keep lazy
 const STIAssessmentForm = lazy(() => import('./pages/sti-assessment/STIAssessmentForm'));
@@ -61,11 +61,16 @@ const StaffAppointmentManagement = lazy(() => import('./pages/dashboard/Staff/co
 const StaffBlogManagement = lazy(() => import('./pages/dashboard/Staff/StaffBlogManagement'));
 const AdminBlogManagement = lazy(() => import('./pages/dashboard/Admin/AdminBlogManagement'));
 const UserManagement = lazy(() => import('./pages/dashboard/Admin/UserManagement'));
+const AdminSTIManagement = lazy(() => import('./pages/dashboard/Admin/STIManagement'));
 const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
-// Add new lazy import for Staff STI Orders Management component
+// Add new lazy import for Staff STI Management components
 const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrdersManagement'));
+const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
+const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
+
+const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
 
 interface AppContentProps {
   showLogin: boolean;
@@ -117,8 +122,9 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             <Route path="/test-packages/sti" element={<STITestPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/login" element={<LoginRedirect onShowLogin={() => setShowLogin(true)} />} />
             <Route path="/user/profile" element={
-              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} showError={true}>
                 <UserProfilePage />
               </RoleGuard>
             } />
@@ -126,14 +132,14 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             
             {/* Generic dashboard route - redirect to role-specific dashboard */}
             <Route path="/dashboard" element={
-              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} showError={true}>
                 <DashboardRedirect />
               </RoleGuard>
             } />
             
             {/* Profile route accessible to all authenticated users */}
             <Route path="/profile" element={
-              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} showError={true}>
                 <UserProfilePage />
               </RoleGuard>
             } />
@@ -156,6 +162,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
               <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
               <Route path="blogs" element={<ConsultantBlogList />} />
+              <Route path="sti-results" element={<StiResultsManagement />} />
               <Route path="documents" element={<div>Tài liệu chuyên môn</div>} />
               <Route path="training" element={<div>Đào tạo & Cập nhật</div>} />
               <Route path="consultation-stats" element={<ConsultationStats />} />
@@ -165,56 +172,57 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
 
                         {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}
             <Route path="/my-appointments" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <MyAppointments />
               </RoleGuard>
             } />
             <Route path="/consultants" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <ConsultantList />
               </RoleGuard>
             } />
             <Route path="/my-feedback" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <CustomerFeedbackPage />
               </RoleGuard>
             } />
             <Route path="/menstrual-cycle" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <MenstrualCyclePage />
               </RoleGuard>
             } />
               {/* STI Booking routes */}
               <Route path="/sti-booking/book" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <BookSTIPage />
               </RoleGuard>
             } />
             <Route path="/sti-booking/orders" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <OrdersPage />
               </RoleGuard>
             } />
             <Route path="/sti-booking/multiple" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
-                <MultipleTestBooking />
-              </RoleGuard>
+              <Navigate to="/sti-booking/book" replace />
+            } />
+            <Route path="/sti-booking/consultation" element={
+              <Navigate to="/sti-booking/book" replace />
             } />
             
             {/* STI Assessment routes */}
             <Route path="/sti-assessment" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <STIAssessmentForm />
               </RoleGuard>
             } />
             <Route path="/sti-assessment/history" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <STIAssessmentHistory />
               </RoleGuard>
             } />
             {/* Appointment routes - Bảo vệ bằng RoleGuard */}
             <Route path="/appointment" element={
-              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']} showError={true}>
                 <Navigate to="/my-appointments" replace />
               </RoleGuard>
             } />
@@ -222,7 +230,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             {/* Consultation routes - Bảo vệ bằng RoleGuard */}
             <Route path="/consultation/book" element={<Navigate to="/consultation/book-appointment" replace />} />
             <Route path="/consultation/book-appointment" element={
-              <RoleGuard allowedRoles={['customer']} redirectTo="/login" showError={true}>
+              <RoleGuard allowedRoles={['customer']} showError={true}>
                 <BookAppointment />
               </RoleGuard>
             } />
@@ -235,6 +243,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="blogs" element={<AdminBlogManagement />} />
               <Route path="revenue" element={<div>Thống kê doanh thu</div>} />
               <Route path="appointments" element={<AdminAppointmentManagement />} />
+              <Route path="sti-management" element={<AdminSTIManagement />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
             </Route>
@@ -244,7 +253,9 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
               <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
+              <Route path="sti-management" element={<STIManagement />} />
               <Route path="sti-orders" element={<StiOrdersManagement />} />
+              <Route path="sti-results" element={<StiResultsManagement />} />
               <Route path="test-schedules" element={<TestScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
@@ -255,6 +266,9 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             {/* Catch deprecated customer dashboard routes and redirect */}
             <Route path="/dashboard/customer" element={<Navigate to="/my-appointments" replace />} />
             <Route path="/dashboard/customer/*" element={<Navigate to="/my-appointments" replace />} />
+            <Route path="/dashboard/customer/my-appointments" element={<MyAppointments />} />
+            <Route path="/dashboard/customer/my-sti-results" element={<MySTIResults />} />
+            <Route path="/dashboard/customer/consultants" element={<ConsultantList />} />
           </Routes>
         </Suspense>
         <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />

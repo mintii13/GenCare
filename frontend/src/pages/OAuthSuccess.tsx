@@ -26,12 +26,7 @@ function OAuthSuccess() {
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const googleToken = params.get("googleToken");
-        
-        console.log("OAuth callback received:", { 
-          hasToken: !!token, 
-          hasGoogleToken: !!googleToken,
-          token: token?.substring(0, 20) + "..."
-        });
+
         
         if (!token) {
           setError("Không tìm thấy token xác thực từ server");
@@ -40,17 +35,13 @@ function OAuthSuccess() {
         }
 
         // Bước 1: Lưu cả hai token ngay lập tức
-        console.log("Saving tokens to localStorage...");
         localStorage.setItem(AUTH_TOKEN_KEY, token);
-        console.log("AUTH_TOKEN_KEY saved:", localStorage.getItem(AUTH_TOKEN_KEY) ? "✓" : "✗");
         
         if (googleToken) {
           setGoogleAccessToken(googleToken);
-          console.log("Google access token saved:", localStorage.getItem("google_access_token") ? "✓" : "✗");
         }
 
         // Bước 2: Gọi API với Authorization header rõ ràng
-        console.log("Fetching user profile...");
         const response = await apiClient.get<GetUserProfileResponse>(
           API.Profile.GET,
           {
@@ -60,30 +51,22 @@ function OAuthSuccess() {
           }
         );
 
-        console.log("API response:", response.data);
 
         if (response.data.success) {
           // Bước 3: Đăng nhập qua AuthContext (sẽ lưu token một lần nữa, nhưng không sao)
-          console.log("Calling AuthContext.login...");
           login(response.data.user, token);
           
           // Bước 4: Redirect
-          console.log("Redirecting based on user role:", response.data.user.role);
           navigateAfterLogin(response.data.user, navigate);
         } else {
           throw new Error("API trả về success=false");
         }
       } catch (error: any) {
-        console.error("OAuth error details:", {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
+
         
         setError("Đăng nhập thất bại: " + (error.response?.data?.message || error.message));
         
         // Vẫn giữ token trong localStorage để user có thể thử lại
-        console.log("Keeping tokens in localStorage for retry");
         
         // Redirect về home sau 5 giây (tăng thời gian để user đọc được lỗi)
         setTimeout(() => navigate("/"), 5000);
@@ -116,4 +99,4 @@ function OAuthSuccess() {
   );
 }
 
-export default OAuthSuccess;    
+export default OAuthSuccess;  

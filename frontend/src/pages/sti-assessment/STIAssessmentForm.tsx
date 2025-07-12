@@ -108,6 +108,7 @@ const STIAssessmentForm = () => {
       updateFormData('sexual_orientation', 'heterosexual');
       updateFormData('new_partner_recently', false);
       updateFormData('partner_has_sti', false);
+      updateFormData('condom_use', 'never'); // Set condom_use to 'never' when not sexually active
     }
   }, [formData.sexually_active]);
 
@@ -790,7 +791,7 @@ const STIAssessmentForm = () => {
               setRecommendation(null);
               setFormData({
                 age: '', gender: '', is_pregnant: false, pregnancy_trimester: '',
-                sexually_active: '', sexual_orientation: '', actual_orientation: '', number_of_partners: '',
+                sexually_active: '', sexual_orientation: 'heterosexual', actual_orientation: '',
                 new_partner_recently: false, partner_has_sti: false, condom_use: 'sometimes',
                 previous_sti_history: [], hiv_status: '', last_sti_test: 'never',
                 has_symptoms: false, symptoms: [], risk_factors: [],

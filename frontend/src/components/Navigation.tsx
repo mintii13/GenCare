@@ -119,9 +119,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch hẹn của tôi
                       </Link>
-                      <Link to="/consultants" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Danh sách chuyên gia
-                      </Link>
+
                     </>
                   )}
                 </div>
@@ -176,6 +174,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     </Link>
                     <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử xét nghiệm
+                    </Link>
+                    <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Kết quả xét nghiệm STI
                     </Link>
                     <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử tư vấn
@@ -324,6 +325,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
                   <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử xét nghiệm
+                  </Link>
+                  <Link to="/dashboard/customer/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                    Kết quả xét nghiệm STI
                   </Link>
                   <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử tư vấn

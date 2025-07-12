@@ -22,8 +22,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   // If roles are specified, check if user has required role
   if (allowedRoles && (!user.role || !allowedRoles.includes(user.role))) {
-    console.log('User role:', user.role);
-    console.log('Allowed roles:', allowedRoles);
+
     return <Navigate to="/" replace />;
   }
 

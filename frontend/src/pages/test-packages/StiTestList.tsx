@@ -89,31 +89,13 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
     } catch (error) {}
   };
 
-  const handleBookSTITest = (test: StiTest) => {
-    if (user?.role === 'customer') {
-      navigate(`/sti-booking/book?testId=${test._id}`);
-    } else {
-      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
-      setShowLoginModal(true);
-    }
-  };
-
-  const handleBookSTIPackage = (pkg: any) => {
-    if (user?.role === 'customer') {
-      navigate(`/sti-booking/book?packageId=${pkg._id}`);
-    } else {
-      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
-      setShowLoginModal(true);
-    }
-  };
-
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {mode === 'package' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Title level={2}>Danh sách gói xét nghiệm STI</Title>
+              <Title level={2}>Thông tin tham khảo - Gói xét nghiệm STI</Title>
             </div>
             <Row gutter={[16, 16]}>
               {Array.isArray(packages) && packages.map((pkg) => (
@@ -139,18 +121,9 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                     }
                     style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
                     styles={{ body: { flex: 1 } }}
-                    actions={user?.role === 'customer' ? [
-                      <Button 
-                        type="primary" 
-                        onClick={() => handleBookSTIPackage(pkg)}
-                        disabled={!pkg.is_active}
-                      >
-                        Đặt lịch xét nghiệm
-                      </Button>
-                    ] : undefined}
                   >
                     <div>Mã: {pkg.sti_package_code}</div>
-                    <div>Giá: {pkg.price?.toLocaleString('vi-VN')} VND</div>
+                    <div>Giá tham khảo: {pkg.price?.toLocaleString('vi-VN')} VND</div>
                     <div>{pkg.description}</div>
                     <Tag color={pkg.is_active ? 'success' : 'error'}>
                       {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
@@ -164,16 +137,8 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
         {mode === 'single' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Title level={2}>Danh sách xét nghiệm STI lẻ</Title>
+              <Title level={2}>Thông tin tham khảo - Xét nghiệm STI lẻ</Title>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {user?.role === 'customer' && (
-                  <Button 
-                    type="dashed"
-                    onClick={() => navigate('/sti-booking/multiple')}
-                  >
-                    Chọn nhiều xét nghiệm
-                  </Button>
-                )}
                 {(user?.role === 'staff' || user?.role === 'admin') && (
                   <Button 
                     type="primary" 
@@ -217,49 +182,34 @@ const StiTestList: React.FC<StiTestListProps> = ({ onSelectTest, onSelectPackage
                           {test.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
                         </Tag>
                       }
-                      style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                      style={{ 
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
                       styles={{ body: { flex: 1 } }}
-                      actions={user?.role === 'customer' ? [
-                        <Button 
-                          type="primary" 
-                          onClick={() => handleBookSTITest(test)}
-                          disabled={!test.is_active}
-                        >
-                          Đặt lịch xét nghiệm
-                        </Button>
-                      ] : undefined}
                     >
                       <Space direction="vertical" style={{ width: '100%' }}>
-                        <Text type="secondary">Mã: {test.sti_test_code}</Text>
-                        <Text style={{ display: 'block', whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {test.description}
-                        </Text>
-                        <Text strong>Giá: {formatPrice(test.price)}</Text>
-                        <Space wrap>
+                        <div>
+                          <Text strong>Mã: </Text>
+                          <Text>{test.sti_test_code}</Text>
+                        </div>
+                        <div>
+                          <Text strong>Giá tham khảo: </Text>
+                          <Text style={{ color: '#1890ff', fontWeight: 'bold' }}>
+                            {formatPrice(test.price)}
+                          </Text>
+                        </div>
+                        <div>
+                          <Text strong>Mô tả: </Text>
+                          <Text>{test.description}</Text>
+                        </div>
+                        <div>
                           <Tag color={getCategoryColor(test.category)}>
                             {test.category}
                           </Tag>
                           <Tag>{test.sti_test_type}</Tag>
-                        </Space>
-                        {(user?.role === 'staff' || user?.role === 'admin') && (
-                          <Space>
-                            <Button 
-                              type="link"
-                              size="small"
-                              onClick={() => navigate(`/test-packages/edit/${test._id}`)}
-                            >
-                              Sửa
-                            </Button>
-                            <Button 
-                              type="link"
-                              size="small"
-                              danger
-                              onClick={() => handleDelete(test._id)}
-                            >
-                              Xóa
-                            </Button>
-                          </Space>
-                        )}
+                        </div>
                       </Space>
                     </Card>
                   </Col>

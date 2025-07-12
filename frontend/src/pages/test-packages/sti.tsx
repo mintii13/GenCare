@@ -1,39 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Tag, Typography, Space, Button, Tabs, Collapse, Divider } from 'antd';
-import { AppstoreOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Tag, Typography, Button, Steps, Modal, Space, Spin, Empty } from 'antd';
+import { AppstoreOutlined, ExperimentOutlined, ArrowRightOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
 import { message } from 'antd';
 import { StiTest, StiPackage } from '../../types/sti';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
-const { Panel } = Collapse;
+const { Step } = Steps;
 
 const STITestPage = () => {
   const [tests, setTests] = useState<StiTest[]>([]);
   const [packages, setPackages] = useState<StiPackage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<StiTest | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<StiPackage | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch tests
-        const testsResponse = await apiClient.get<any>('/sti/getAllStiTest');
-        if (testsResponse.data.success && Array.isArray(testsResponse.data.stitest)) {
-          setTests(testsResponse.data.stitest);
-        } else {
-          setTests([]);
-        }
-
         // Fetch packages
         const packagesResponse = await apiClient.get<any>('/sti/getAllStiPackage');
         if (packagesResponse.data.success && Array.isArray(packagesResponse.data.stipackage)) {
           setPackages(packagesResponse.data.stipackage);
         } else {
           setPackages([]);
+        }
+
+        // Fetch tests
+        const testsResponse = await apiClient.get<any>('/sti/getAllStiTest');
+        if (testsResponse.data.success && Array.isArray(testsResponse.data.stitest)) {
+          setTests(testsResponse.data.stitest);
+        } else {
+          setTests([]);
         }
       } catch (error) {
         console.error('Error fetching STI data:', error);
@@ -47,230 +48,269 @@ const STITestPage = () => {
     fetchData();
   }, []);
 
-  const handleSelectTest = (test: any) => {
-    setSelectedTest(test);
-    setSelectedPackage(null);
-  };
-
-  const handleBooking = async () => {
-    if (!selectedTest && !selectedPackage) {
-      message.error('Vui lòng chọn một xét nghiệm hoặc một gói');
-      return;
-    }
-
-    const bookingData = selectedTest 
-      ? { testId: selectedTest._id }
-      : selectedPackage 
-        ? { packageId: selectedPackage._id }
-        : null;
-
-    if (!bookingData) {
-      message.error('Dữ liệu đặt lịch không hợp lệ');
-      return;
-    }
-
-    try {
-      await apiClient.post('/sti/book', bookingData);
-      message.success('Đặt lịch thành công');
-    } catch (error) {
-      message.error('Đặt lịch thất bại');
+  const handleNext = () => {
+    if (currentStep === 0) {
+      // Từ step xem gói -> step xem test đơn lẻ
+      setCurrentStep(1);
+    } else if (currentStep === 1) {
+      // Từ step xem test -> hiện modal hỏi assessment
+      setShowAssessmentModal(true);
     }
   };
 
-  const renderTestCard = (test: StiTest) => (
-    <Col 
-      xs={24} 
-      sm={24} 
-      md={12} 
-      lg={8} 
-      xl={6}
-      key={test._id}
-      style={{ display: 'flex' }}
-    >
-      <Card
-        hoverable
-        onClick={() => handleSelectTest(test)}
-        title={
-          <div style={{ 
-            whiteSpace: 'normal', 
-            wordBreak: 'break-word',
-            lineHeight: '1.4',
-            minHeight: '48px',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <ExperimentOutlined style={{ marginRight: 8 }} />
-            {test.sti_test_name}
-          </div>
-        }
-        extra={
-          <Tag color={test.is_active ? 'success' : 'error'}>
-            {test.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
-          </Tag>
-        }
-        style={{ 
-          width: '100%', 
-          display: 'flex', 
-          flexDirection: 'column',
-          border: selectedTest?._id === test._id ? '2px solid #1890ff' : undefined
-        }}
-        bodyStyle={{ flex: 1 }}
-      >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Text type="secondary">Mã: {test.sti_test_code}</Text>
-          <Text style={{ display: 'block', whiteSpace: 'normal', wordBreak: 'break-word' }}>
-            {test.description}
-          </Text>
-          <Text strong style={{ color: '#1890ff' }}>
-            Giá: {test.price.toLocaleString('vi-VN')} VND
-          </Text>
-          <Tag color="blue">{test.sti_test_type}</Tag>
-          <Tag color="green">{test.category}</Tag>
-        </Space>
-      </Card>
-    </Col>
-  );
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleAssessmentChoice = (doAssessment: boolean) => {
+    setShowAssessmentModal(false);
+    
+    if (doAssessment) {
+      // Chuyển đến trang sàng lọc
+      navigate('/sti-assessment');
+    } else {
+      // Chuyển đến trang đặt lịch (consultation mode)
+      navigate('/sti-booking/book');
+    }
+  };
 
   const renderPackageCard = (pkg: StiPackage) => (
-    <Col 
-      xs={24} 
-      sm={24} 
-      md={12} 
-      lg={8}
-      key={pkg._id}
-      style={{ display: 'flex' }}
-    >
+    <Col xs={24} sm={12} md={8} key={pkg._id}>
       <Card
-        hoverable
-        onClick={() => {
-          setSelectedPackage(pkg);
-          setSelectedTest(null);
-        }}
-        title={
-          <div style={{ 
-            whiteSpace: 'normal', 
-            wordBreak: 'break-word',
-            lineHeight: '1.4',
-            minHeight: '48px',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <AppstoreOutlined style={{ marginRight: 8 }} />
-            {pkg.sti_package_name}
-          </div>
-        }
-        extra={
-          <Tag color={pkg.is_active ? 'success' : 'error'}>
-            {pkg.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
-          </Tag>
-        }
         style={{ 
-          width: '100%', 
-          display: 'flex', 
-          flexDirection: 'column',
-          border: selectedPackage?._id === pkg._id ? '2px solid #1890ff' : undefined
+          height: '100%',
+          borderRadius: '8px',
         }}
-        bodyStyle={{ flex: 1 }}
+        bodyStyle={{ padding: '16px' }}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Text type="secondary">Mã: {pkg.sti_package_code}</Text>
-          <Text style={{ display: 'block', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+        <div style={{ textAlign: 'center' }}>
+          <AppstoreOutlined style={{ fontSize: '32px', color: '#1890ff', marginBottom: '12px' }} />
+          <Title level={4} style={{ margin: '0 0 8px 0', fontSize: '16px' }}>
+            {pkg.sti_package_name}
+          </Title>
+          <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '8px' }}>
+            {pkg.sti_package_code}
+          </Text>
+          <Text style={{ fontSize: '14px', marginBottom: '12px', display: 'block' }}>
             {pkg.description}
           </Text>
-          <Text strong style={{ color: '#52c41a', fontSize: '16px' }}>
-            Giá gói: {pkg.price.toLocaleString('vi-VN')} VND
-          </Text>
+          <div style={{ marginBottom: '12px' }}>
+            <Text strong style={{ fontSize: '18px', color: '#52c41a' }}>
+              {pkg.price.toLocaleString('vi-VN')} VNĐ
+            </Text>
+          </div>
           {pkg.tests && pkg.tests.length > 0 && (
-            <div>
-              <Text strong>Bao gồm {pkg.tests.length} xét nghiệm:</Text>
-              <div style={{ marginTop: 8 }}>
-                {pkg.tests.map(test => (
-                  <Tag key={test._id} style={{ margin: 2 }}>
-                    {test.sti_test_name}
-                  </Tag>
-                ))}
+            <div style={{ marginBottom: '12px' }}>
+              <Text style={{ fontSize: '12px', color: '#666', marginBottom: '8px', display: 'block' }}>
+                Bao gồm {pkg.tests.length} xét nghiệm:
+              </Text>
+              <div style={{ maxHeight: '80px', overflowY: 'auto' }}>
+                <Space wrap size={[4, 4]}>
+                  {pkg.tests.map(test => (
+                    <Tag key={test._id} style={{ fontSize: '11px', margin: '2px' }}>
+                      {test.sti_test_name}
+                    </Tag>
+                  ))}
+                </Space>
               </div>
             </div>
           )}
-        </Space>
+          <div style={{ marginTop: '8px' }}>
+            <Tag color={pkg.is_active ? 'success' : 'error'}>
+              {pkg.is_active ? 'Hoạt động' : 'Không hoạt động'}
+            </Tag>
+          </div>
+        </div>
       </Card>
     </Col>
   );
 
-  return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>Dịch vụ xét nghiệm STI</Title>
-      
-      <Tabs defaultActiveKey="packages" size="large">
-        <TabPane 
-          tab={
-            <span>
-              <AppstoreOutlined />
-              Gói xét nghiệm ({packages.length})
-            </span>
-          } 
-          key="packages"
-        >
-          <div style={{ marginBottom: 16 }}>
-            <Text type="secondary">
-              Các gói xét nghiệm tổng hợp với giá ưu đãi, phù hợp cho kiểm tra sức khỏe định kỳ
+  const renderTestCard = (test: StiTest) => (
+    <Col xs={24} sm={12} md={8} key={test._id}>
+      <Card
+        style={{ 
+          height: '100%',
+          borderRadius: '8px',
+        }}
+        bodyStyle={{ padding: '16px' }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <ExperimentOutlined style={{ fontSize: '32px', color: '#52c41a', marginBottom: '12px' }} />
+          <Title level={4} style={{ margin: '0 0 8px 0', fontSize: '16px' }}>
+            {test.sti_test_name}
+          </Title>
+          <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '8px' }}>
+            {test.sti_test_code}
+          </Text>
+          <Text style={{ fontSize: '14px', marginBottom: '12px', display: 'block' }}>
+            {test.description}
+          </Text>
+          <div style={{ marginBottom: '12px' }}>
+            <Text strong style={{ fontSize: '18px', color: '#52c41a' }}>
+              {test.price.toLocaleString('vi-VN')} VNĐ
             </Text>
           </div>
-          <Row gutter={[16, 16]}>
-            {packages.map(renderPackageCard)}
-            {packages.length === 0 && !loading && (
-              <Col span={24}>
-                <Text type="secondary">Không có gói xét nghiệm nào</Text>
-              </Col>
-            )}
-          </Row>
-        </TabPane>
-
-        <TabPane 
-          tab={
-            <span>
-              <ExperimentOutlined />
-              Xét nghiệm đơn lẻ ({tests.length})
-            </span>
-          } 
-          key="tests"
-        >
-          <div style={{ marginBottom: 16 }}>
-            <Text type="secondary">
-              Các xét nghiệm riêng lẻ, phù hợp cho nhu cầu kiểm tra cụ thể
-            </Text>
-          </div>
-          <Row gutter={[16, 16]}>
-            {tests.map(renderTestCard)}
-            {tests.length === 0 && !loading && (
-              <Col span={24}>
-                <Text type="secondary">Không có xét nghiệm nào</Text>
-              </Col>
-            )}
-          </Row>
-        </TabPane>
-      </Tabs>
-
-      {(selectedTest || selectedPackage) && (
-        <>
-          <Divider />
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <Space direction="vertical" size="middle">
-              <Text strong>
-                Đã chọn: {selectedTest ? selectedTest.sti_test_name : selectedPackage?.sti_package_name}
-              </Text>
-              <Button 
-                type="primary" 
-                size="large"
-                onClick={handleBooking}
-                loading={loading}
-              >
-                Đặt lịch xét nghiệm
-              </Button>
+          <div style={{ marginBottom: '8px' }}>
+            <Space>
+              <Tag color="blue">{test.sti_test_type}</Tag>
+              <Tag color="green">{test.category}</Tag>
             </Space>
           </div>
-        </>
-      )}
+          <div>
+            <Tag color={test.is_active ? 'success' : 'error'}>
+              {test.is_active ? 'Hoạt động' : 'Không hoạt động'}
+            </Tag>
+          </div>
+        </div>
+      </Card>
+    </Col>
+  );
+
+  const steps = [
+    {
+      title: 'Xem gói xét nghiệm',
+      content: (
+        <div>
+          <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+            <Title level={3}>Các gói xét nghiệm STI</Title>
+            <Text type="secondary">
+              Tham khảo các gói xét nghiệm tổng hợp với giá ưu đãi
+            </Text>
+          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <Spin size="large" />
+            </div>
+          ) : packages.length === 0 ? (
+            <Empty description="Không có gói xét nghiệm nào" />
+          ) : (
+            <Row gutter={[16, 16]}>
+              {packages.map(renderPackageCard)}
+            </Row>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'Xem xét nghiệm đơn lẻ',
+      content: (
+        <div>
+          <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+            <Title level={3}>Các xét nghiệm đơn lẻ</Title>
+            <Text type="secondary">
+              Tham khảo các xét nghiệm riêng lẻ theo nhu cầu cụ thể
+            </Text>
+          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <Spin size="large" />
+            </div>
+          ) : tests.length === 0 ? (
+            <Empty description="Không có xét nghiệm nào" />
+          ) : (
+            <Row gutter={[16, 16]}>
+              {tests.map(renderTestCard)}
+            </Row>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <Title level={1}>Dịch vụ Xét nghiệm STI</Title>
+        <Text style={{ fontSize: '16px', color: '#666' }}>
+          Tham khảo thông tin các gói xét nghiệm và xét nghiệm đơn lẻ
+        </Text>
+      </div>
+
+      {/* Steps */}
+      <div style={{ marginBottom: '32px' }}>
+        <Steps current={currentStep} style={{ maxWidth: '600px', margin: '0 auto' }}>
+          {steps.map((step, index) => (
+            <Step key={index} title={step.title} />
+          ))}
+        </Steps>
+      </div>
+
+      {/* Content */}
+      <div style={{ marginBottom: '32px' }}>
+        {steps[currentStep].content}
+      </div>
+
+      {/* Navigation */}
+      <div style={{ textAlign: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '24px' }}>
+        <Space size="middle">
+          {currentStep > 0 && (
+            <Button onClick={handlePrevious}>
+              Quay lại
+            </Button>
+          )}
+          
+          <Button type="primary" onClick={handleNext}>
+            {currentStep === 1 ? 'Đặt lịch xét nghiệm' : 'Tiếp theo'} <ArrowRightOutlined />
+          </Button>
+        </Space>
+      </div>
+
+      {/* Assessment Modal */}
+      <Modal
+        title={
+          <div style={{ textAlign: 'center' }}>
+            <QuestionCircleOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
+            Bài test sàng lọc STI
+          </div>
+        }
+        open={showAssessmentModal}
+        onCancel={() => setShowAssessmentModal(false)}
+        footer={null}
+        width={500}
+        centered
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <Title level={4} style={{ color: '#1890ff', marginBottom: '8px' }}>
+              Bạn có muốn làm bài test sàng lọc STI không?
+            </Title>
+            <Text type="secondary" style={{ fontSize: '14px' }}>
+              Bài test sàng lọc sẽ giúp bác sĩ tư vấn gói xét nghiệm phù hợp nhất cho bạn (3-5 phút)
+            </Text>
+          </div>
+          
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ background: '#f6ffed', padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
+              <Text style={{ fontSize: '13px', color: '#52c41a' }}>
+                ✓ Đánh giá dựa trên hướng dẫn CDC 2021<br/>
+                ✓ Tư vấn gói xét nghiệm phù hợp<br/>
+                ✓ Thông tin được bảo mật tuyệt đối
+              </Text>
+            </div>
+          </div>
+          
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Button 
+              type="primary" 
+              size="large" 
+              onClick={() => handleAssessmentChoice(true)}
+              style={{ width: '100%', height: '48px' }}
+            >
+              Có, tôi muốn làm bài test sàng lọc
+            </Button>
+            <Button 
+              size="large" 
+              onClick={() => handleAssessmentChoice(false)}
+              style={{ width: '100%', height: '48px' }}
+            >
+              Không, tư vấn trực tiếp với bác sĩ
+            </Button>
+          </Space>
+        </div>
+      </Modal>
     </div>
   );
 };

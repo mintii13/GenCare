@@ -14,6 +14,7 @@ import { API } from '../../config/apiEndpoints';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
+import { AxiosResponse } from 'axios';
 
 interface UserProfile {
   id: string;
@@ -46,7 +47,6 @@ const UserProfilePage: React.FC = () => {
   const { user, updateUserInfo } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(() => {
     if (user) {
-      console.log('User data:', user);
       return convertToUserProfile(user);
     }
     return null;
@@ -70,6 +70,25 @@ const UserProfilePage: React.FC = () => {
       gender: ''
     }
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res: AxiosResponse<any> = await apiClient.get(API.Profile.GET);
+        if (res.data.success) {
+          setProfile(res.data.user);
+          toast.success('Profile loaded');
+        }
+      } catch (error: any) {
+        if (error.response?.data?.message?.includes('Google')) {
+          toast.error('Lỗi Google login, hãy thử lại');
+        } else {
+          toast.error('Lỗi lấy profile');
+        }
+      }
+    };
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -98,7 +117,6 @@ const UserProfilePage: React.FC = () => {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      console.log('Starting form submission...');
       const formDataToSend = new FormData();
       
       // Append form data fields
@@ -109,7 +127,7 @@ const UserProfilePage: React.FC = () => {
       
       if (avatar) {
         formDataToSend.append('avatar', avatar);
-        console.log('Avatar file added to FormData');
+ 
       }
       
       // Use apiClient with FormData and custom headers
@@ -133,7 +151,6 @@ const UserProfilePage: React.FC = () => {
         toast.error((response.data as any)?.message || 'Có lỗi xảy ra');
       }
     } catch (error: any) {
-      console.error('Profile update error:', error);
       const errorMessage = error?.response?.data?.message || 
                           error?.response?.data?.details || 
                           'Có lỗi xảy ra khi cập nhật thông tin';

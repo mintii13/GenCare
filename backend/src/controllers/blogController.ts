@@ -32,8 +32,6 @@ router.get('/comments/',
                 sort_order: req.query.sort_order as any || 'desc'
             };
 
-            console.log('Blog comment pagination query:', query);
-
             const result = await BlogService.getBlogCommentsWithPagination(query);
 
             if (result.success) {
@@ -42,7 +40,6 @@ router.get('/comments/',
                 res.status(500).json(result);
             }
         } catch (error) {
-            console.error('Get blog comments with pagination controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -81,8 +78,7 @@ router.get('/comments/search',
             const result = await BlogService.getBlogCommentsWithPagination(query);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Search blog comments controller error:', error);
-            res.status(500).json({
+                res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
             });
@@ -118,7 +114,6 @@ router.get('/comments/user/:userId',
             const result = await BlogService.getBlogCommentsWithPagination(query);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Get comments by user controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -172,7 +167,6 @@ router.get('/:blogId/comments',
                 res.status(500).json(result);
             }
         } catch (error) {
-            console.error('Get blog comments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'

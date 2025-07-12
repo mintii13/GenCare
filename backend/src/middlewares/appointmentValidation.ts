@@ -40,13 +40,20 @@ const bookAppointmentSchema = Joi.object({
 
 
 export const validateBookAppointment = (req: Request, res: Response, next: NextFunction): void => {
-    const { error } = bookAppointmentSchema.validate(req.body);
+    const { error } = bookAppointmentSchema.validate(req.body, { abortEarly: false });
 
     if (error) {
         res.status(400).json({
             success: false,
-            message: 'Validation error',
-            details: error.details[0].message
+            message: 'Dữ liệu đặt lịch không hợp lệ',
+            type: 'VALIDATION_ERROR',
+            details: 'Vui lòng kiểm tra lại thông tin đặt lịch',
+            errors: error.details.map(detail => ({
+                field: detail.path.join('.'),
+                message: detail.message,
+                value: detail.context?.value
+            })),
+            timestamp: new Date().toISOString()
         });
         return;
     }
@@ -63,8 +70,15 @@ export const validateBookAppointment = (req: Request, res: Response, next: NextF
     if (startMinutes >= endMinutes) {
         res.status(400).json({
             success: false,
-            message: 'Validation error',
-            details: 'Start time must be before end time'
+            message: 'Thời gian không hợp lệ',
+            type: 'VALIDATION_ERROR',
+            details: 'Thời gian bắt đầu phải trước thời gian kết thúc',
+            errors: [{
+                field: 'time_range',
+                message: 'Thời gian bắt đầu phải trước thời gian kết thúc',
+                value: { start_time, end_time }
+            }],
+            timestamp: new Date().toISOString()
         });
         return;
     }
@@ -74,8 +88,15 @@ export const validateBookAppointment = (req: Request, res: Response, next: NextF
     if (duration < 15) {
         res.status(400).json({
             success: false,
-            message: 'Validation error',
-            details: 'Appointment duration must be at least 15 minutes'
+            message: 'Thời gian tư vấn không hợp lệ',
+            type: 'VALIDATION_ERROR',
+            details: 'Thời gian tư vấn phải ít nhất 15 phút',
+            errors: [{
+                field: 'duration',
+                message: 'Thời gian tư vấn phải ít nhất 15 phút',
+                value: `${duration} phút`
+            }],
+            timestamp: new Date().toISOString()
         });
         return;
     }
@@ -83,8 +104,15 @@ export const validateBookAppointment = (req: Request, res: Response, next: NextF
     if (duration > 240) {
         res.status(400).json({
             success: false,
-            message: 'Validation error',
-            details: 'Appointment duration cannot exceed 4 hours'
+            message: 'Thời gian tư vấn quá dài',
+            type: 'VALIDATION_ERROR',
+            details: 'Thời gian tư vấn không được vượt quá 4 giờ',
+            errors: [{
+                field: 'duration',
+                message: 'Thời gian tư vấn không được vượt quá 4 giờ',
+                value: `${duration} phút`
+            }],
+            timestamp: new Date().toISOString()
         });
         return;
     }

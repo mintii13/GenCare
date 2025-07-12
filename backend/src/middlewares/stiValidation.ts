@@ -1,6 +1,15 @@
 import Joi, { valid } from 'joi';
 import { Request, Response, NextFunction } from 'express';
-import { OrderStatus } from '../models/StiOrder';
+import { OrderStatus, IStiOrder } from '../models/StiOrder';
+
+// Extend Request interface để thêm currentOrder
+declare global {
+    namespace Express {
+        interface Request {
+            currentOrder?: IStiOrder;
+        }
+    }
+}
 
 const objectId = Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
@@ -102,14 +111,18 @@ export const validateStiTest = (req: Request, res: Response, next: NextFunction)
 }
 
 export const stiOrderSchema = Joi.object({
-    // sti_package_id: objectId.optional().messages({
-    //   'any.required': 'STI Package ID là bắt buộc trong sti_package_item'
-    // }),
+    sti_package_id: Joi.alternatives().try(
+        Joi.string().allow(null, '', 'null'),
+        objectId
+    ).optional().messages({
+        'any.required': 'STI Package ID là bắt buộc trong sti_package_item'
+    }),
 
-    // sti_test_items: Joi.array().items(objectId.required()).optional().messages({
-    //   'array.base': 'sti_test_items phải là một mảng',
-    //   'any.required': 'Mỗi phần tử trong sti_test_items là bắt buộc'
-    // }),
+    sti_test_items: Joi.array().items(objectId).optional().messages({
+        'array.base': 'sti_test_items phải là một mảng',
+        'any.required': 'Mỗi phần tử trong sti_test_items là bắt buộc'
+    }),
+    
     order_date: Joi.date().required().messages({
       'date.base': 'Ngày đặt không hợp lệ',
       'any.required': 'Ngày đặt là bắt buộc'
@@ -119,9 +132,6 @@ export const stiOrderSchema = Joi.object({
       'string.max': 'Ghi chú không được vượt quá 500 ký tự'
     })
   });
-  // .xor('sti_package_id', 'sti_test_items').messages({
-  //   'object.missing': 'Phải cung cấp ít nhất một trong sti_package_id hoặc sti_test_items'
-  // });
 
 export const validateStiOrder = (req: Request, res: Response, next: NextFunction) => {
     const { error } = stiOrderSchema.validate(req.body, { abortEarly: false });
@@ -135,6 +145,11 @@ export const validateStiOrder = (req: Request, res: Response, next: NextFunction
     next();
 }
 
+// ====================== LOGIC RÀNG BUỘC TRẠNG THÁI ======================
+
+/**
+ * Các trạng thái đơn hàng có thể chuyển đổi
+ */
 export const validTransitions: Record<OrderStatus, OrderStatus[]> = {
     Booked: ['Accepted', 'Canceled'],
     Accepted: ['Processing', 'Canceled'],
@@ -143,4 +158,178 @@ export const validTransitions: Record<OrderStatus, OrderStatus[]> = {
     Testing: ['Completed'],
     Completed: [],
     Canceled: [],
+};
+
+/**
+ * Ràng buộc giữa trạng thái đơn hàng và trạng thái thanh toán
+ */
+export const orderPaymentConstraints = {
+    // Trạng thái thanh toán bắt buộc theo từng trạng thái đơn hàng
+    requiredPaymentStatus: {
+        'Booked': ['Pending'],
+        'Accepted': ['Pending', 'Paid'],
+        'Processing': ['Paid'], // Phải thanh toán mới được xử lý
+        'SpecimenCollected': ['Paid'],
+        'Testing': ['Paid'],
+        'Completed': ['Paid'],
+        'Canceled': ['Pending', 'Paid', 'Failed']
+    },
+    
+    // Trạng thái thanh toán có thể chuyển đổi
+    validPaymentTransitions: {
+        'Pending': ['Paid', 'Failed'],
+        'Paid': [], // Không thể chuyển từ Paid sang trạng thái khác
+        'Failed': ['Pending', 'Paid']
+    },
+    
+    // Ràng buộc đặc biệt
+    specialRules: {
+        // Không thể hủy đơn hàng đã thanh toán thành công
+        cannotCancelPaidOrder: true,
+        // Phải thanh toán trước khi chuyển sang Processing
+        mustPayBeforeProcessing: true,
+        // Đơn hàng Completed không thể thay đổi payment status
+        completedOrderPaymentLocked: true
+    }
+};
+
+/**
+ * Kiểm tra tính hợp lệ của việc chuyển đổi trạng thái đơn hàng
+ */
+export const validateOrderStatusTransition = (
+    currentStatus: OrderStatus,
+    newStatus: OrderStatus,
+    currentPaymentStatus: string,
+    newPaymentStatus?: string
+): { valid: boolean; message?: string } => {
+    // Kiểm tra chuyển đổi trạng thái đơn hàng
+    const allowedTransitions = validTransitions[currentStatus];
+    if (!allowedTransitions.includes(newStatus)) {
+        return {
+            valid: false,
+            message: `Không thể chuyển từ trạng thái "${currentStatus}" sang "${newStatus}". Chỉ có thể chuyển sang: ${allowedTransitions.join(', ')}`
+        };
+    }
+    
+    // Kiểm tra ràng buộc thanh toán
+    const finalPaymentStatus = newPaymentStatus || currentPaymentStatus;
+    const allowedPaymentStatuses = orderPaymentConstraints.requiredPaymentStatus[newStatus];
+    
+    if (!allowedPaymentStatuses.includes(finalPaymentStatus)) {
+        return {
+            valid: false,
+            message: `Trạng thái đơn hàng "${newStatus}" yêu cầu trạng thái thanh toán phải là: ${allowedPaymentStatuses.join(' hoặc ')}. Hiện tại: ${finalPaymentStatus}`
+        };
+    }
+    
+    // Kiểm tra rule đặc biệt: Không thể hủy đơn hàng đã thanh toán
+    if (newStatus === 'Canceled' && currentPaymentStatus === 'Paid' && orderPaymentConstraints.specialRules.cannotCancelPaidOrder) {
+        return {
+            valid: false,
+            message: 'Không thể hủy đơn hàng đã thanh toán thành công'
+        };
+    }
+    
+    return { valid: true };
+};
+
+/**
+ * Kiểm tra tính hợp lệ của việc chuyển đổi trạng thái thanh toán
+ */
+export const validatePaymentStatusTransition = (
+    currentPaymentStatus: string,
+    newPaymentStatus: string,
+    orderStatus: OrderStatus
+): { valid: boolean; message?: string } => {
+    // Kiểm tra chuyển đổi trạng thái thanh toán
+    const allowedTransitions = orderPaymentConstraints.validPaymentTransitions[currentPaymentStatus as keyof typeof orderPaymentConstraints.validPaymentTransitions];
+    if (!allowedTransitions.includes(newPaymentStatus)) {
+        return {
+            valid: false,
+            message: `Không thể chuyển trạng thái thanh toán từ "${currentPaymentStatus}" sang "${newPaymentStatus}". Chỉ có thể chuyển sang: ${allowedTransitions.join(', ')}`
+        };
+    }
+    
+    // Kiểm tra rule đặc biệt: Đơn hàng Completed không thể thay đổi payment status
+    if (orderStatus === 'Completed' && orderPaymentConstraints.specialRules.completedOrderPaymentLocked) {
+        return {
+            valid: false,
+            message: 'Không thể thay đổi trạng thái thanh toán của đơn hàng đã hoàn thành'
+        };
+    }
+    
+    // Kiểm tra ràng buộc với trạng thái đơn hàng
+    const allowedPaymentStatuses = orderPaymentConstraints.requiredPaymentStatus[orderStatus];
+    if (!allowedPaymentStatuses.includes(newPaymentStatus)) {
+        return {
+            valid: false,
+            message: `Trạng thái đơn hàng "${orderStatus}" không cho phép trạng thái thanh toán "${newPaymentStatus}". Chỉ cho phép: ${allowedPaymentStatuses.join(', ')}`
+        };
+    }
+    
+    return { valid: true };
+};
+
+/**
+ * Middleware validation cho việc cập nhật trạng thái đơn hàng
+ */
+export const validateStatusUpdate = (req: Request, res: Response, next: NextFunction) => {
+    const { order_status, payment_status } = req.body;
+    const currentOrder = req.currentOrder; // Giả định order hiện tại được attach vào req
+    
+    if (!currentOrder) {
+        return res.status(400).json({
+            success: false,
+            message: 'Không tìm thấy thông tin đơn hàng hiện tại'
+        });
+    }
+    
+    // Kiểm tra nếu có thay đổi trạng thái đơn hàng
+    if (order_status && order_status !== currentOrder.order_status) {
+        const orderValidation = validateOrderStatusTransition(
+            currentOrder.order_status,
+            order_status,
+            currentOrder.payment_status,
+            payment_status
+        );
+        
+        if (!orderValidation.valid) {
+            return res.status(400).json({
+                success: false,
+                message: orderValidation.message
+            });
+        }
+    }
+    
+    // Kiểm tra nếu có thay đổi trạng thái thanh toán
+    if (payment_status && payment_status !== currentOrder.payment_status) {
+        const paymentValidation = validatePaymentStatusTransition(
+            currentOrder.payment_status,
+            payment_status,
+            order_status || currentOrder.order_status
+        );
+        
+        if (!paymentValidation.valid) {
+            return res.status(400).json({
+                success: false,
+                message: paymentValidation.message
+            });
+        }
+    }
+    
+    next();
+};
+
+/**
+ * Lấy các trạng thái có thể chuyển đổi tiếp theo
+ */
+export const getAvailableTransitions = (currentOrderStatus: OrderStatus, currentPaymentStatus: string) => {
+    const availableOrderStatuses = validTransitions[currentOrderStatus];
+    const availablePaymentStatuses = orderPaymentConstraints.validPaymentTransitions[currentPaymentStatus as keyof typeof orderPaymentConstraints.validPaymentTransitions];
+    
+    return {
+        orderStatuses: availableOrderStatuses,
+        paymentStatuses: availablePaymentStatuses,
+        constraints: orderPaymentConstraints.requiredPaymentStatus
+    };
 };

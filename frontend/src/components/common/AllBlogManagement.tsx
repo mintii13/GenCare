@@ -23,12 +23,12 @@ const AllBlogManagement: React.FC = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       if (!user) {
-        console.log('AllBlogManagement: No user found');
+
         setLoading(false);
         return;
       }
       
-      console.log('AllBlogManagement: Fetching all blogs for', user.role);
+
       setLoading(true);
       setError(null);
       
@@ -42,7 +42,7 @@ const AllBlogManagement: React.FC = () => {
           sort_order: 'desc'
         });
         
-        console.log('AllBlogManagement: API response:', res);
+
         
         if (res.success && res.data.blogs) {
           setBlogs(res.data.blogs);
@@ -50,7 +50,7 @@ const AllBlogManagement: React.FC = () => {
           setTotalPages(res.data.pagination.total_pages);
           setTotalItems(res.data.pagination.total_items);
         } else {
-          console.log('AllBlogManagement: API returned no blogs or failed');
+
           setBlogs([]);
         }
 
@@ -61,7 +61,7 @@ const AllBlogManagement: React.FC = () => {
             setStats(statsRes.data);
           }
         } catch (statsError) {
-          console.error('Error fetching all blog stats:', statsError);
+
           // Fallback: tính stats từ dữ liệu hiện có
           const published = res.data.blogs?.filter((blog: Blog) => blog.status).length || 0;
           const total = res.data.blogs?.length || 0;
@@ -69,7 +69,6 @@ const AllBlogManagement: React.FC = () => {
         }
         
       } catch (err: any) {
-        console.error('AllBlogManagement: Error fetching blogs:', err);
         setError(err.message || 'Không thể tải danh sách blog');
       } finally {
         setLoading(false);

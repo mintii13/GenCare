@@ -81,7 +81,6 @@ router.get('/',
                 }
                 // Staff/Admin có thể thấy tất cả (không override filters)
 
-                console.log('Appointment query:', query);
 
                 const result = await AppointmentService.getAppointmentsWithPagination(query);
 
@@ -129,7 +128,6 @@ router.get('/',
                 res.status(200).json(result);
             }
         } catch (error) {
-            console.error('Get appointments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -159,9 +157,7 @@ router.get('/my',
             const startDate = date_from || start_date;
             const endDate = date_to || end_date;
 
-            console.log(`[MY APPOINTMENTS] User: ${user.userId}, Role: ${user.role}`);
-            console.log(`[MY APPOINTMENTS] Filters - Status: ${status}, DateFrom: ${startDate}, DateTo: ${endDate}`);
-
+         
             let result;
 
             if (user.role === 'customer') {
@@ -262,7 +258,6 @@ router.get('/search',
             const result = await AppointmentService.getAppointmentsWithPagination(query);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Search appointments controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -301,7 +296,6 @@ router.get('/statistics',
             const result = await AppointmentService.getAppointmentStatistics(filters);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Get appointment statistics controller error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'
@@ -337,7 +331,6 @@ router.post('/book', authenticateToken, authorizeRoles('customer'), validateBook
             res.status(400).json(result);
         }
     } catch (error) {
-        console.error('Book appointment controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -471,7 +464,6 @@ router.put('/:id/confirm', authenticateToken, authorizeRoles('consultant'), asyn
             }
         }
     } catch (error: any) {
-        console.error('Confirm appointment error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error when confirming appointment',
@@ -506,7 +498,6 @@ router.put('/:id/cancel', authenticateToken, async (req: Request, res: Response)
             res.status(400).json(result);
         }
     } catch (error) {
-        console.error('Cancel appointment controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -563,7 +554,6 @@ router.put('/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin
             }
         }
     } catch (error: any) {
-        console.error('Update appointment error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error when updating appointment'
@@ -833,7 +823,6 @@ router.put('/:appointmentId/feedback', authenticateToken, authorizeRoles('custom
                 new_data: { feedback: updatedFeedback }
             });
         } catch (historyError) {
-            console.error('Failed to log feedback update in history:', historyError);
         }
 
         // Get consultant info for response
@@ -933,7 +922,6 @@ router.delete('/:appointmentId/feedback', authenticateToken, authorizeRoles('cus
                 new_data: { feedback: null }
             });
         } catch (historyError) {
-            console.error('Failed to log feedback deletion in history:', historyError);
         }
 
         res.json({
@@ -1099,5 +1087,89 @@ router.post('/:appointmentId/send-feedback-reminder', authenticateToken, authori
         });
     }
 });
+
+/**
+ * POST /api/appointments/:appointmentId/create-sti-order
+ * Tạo STI order sau khi hoàn thành tư vấn STI
+ */
+router.post('/:appointmentId/create-sti-order',
+    authenticateToken,
+    authorizeRoles('consultant', 'staff', 'admin'),
+    async (req: Request, res: Response) => {
+        try {
+            const { appointmentId } = req.params;
+            const { sti_package_id, sti_test_items, order_date, notes } = req.body;
+            const user = req.jwtUser as JWTPayload;
+
+            // Kiểm tra appointment có tồn tại và đã completed
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Appointment not found'
+                });
+            }
+
+            if (appointment.status !== 'completed') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Can only create STI order for completed appointments'
+                });
+            }
+
+            // Kiểm tra quyền (consultant chỉ tạo order cho appointment của mình)
+            if (user.role === 'consultant') {
+                const consultant = await Consultant.findOne({ user_id: user.userId });
+                if (!consultant || consultant._id.toString() !== appointment.consultant_id.toString()) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'You can only create STI orders for your own appointments'
+                    });
+                }
+            }
+
+            // Import StiService
+            const { StiService } = require('../services/stiService');
+            
+            // Tạo STI order
+            const result = await StiService.createStiOrder(
+                appointment.customer_id.toString(),
+                sti_package_id,
+                sti_test_items || [],
+                new Date(order_date),
+                notes || `STI order từ tư vấn ${appointmentId}`
+            );
+
+            if (result.success) {
+                // Log appointment history
+                await AppointmentHistoryService.createHistory({
+                    appointment_id: appointmentId,
+                    action: 'updated',
+                    performed_by_user_id: user.userId,
+                    performed_by_role: user.role as any,
+                    old_data: appointment,
+                    new_data: { sti_order_created: true, sti_order_id: result.stiorder._id }
+                });
+
+                res.status(201).json({
+                    success: true,
+                    message: 'STI order created successfully',
+                    data: {
+                        appointment_id: appointmentId,
+                        sti_order: result.stiorder
+                    }
+                });
+            } else {
+                res.status(400).json(result);
+            }
+        } catch (error) {
+            console.error('Create STI order error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
+);
 
 export default router;

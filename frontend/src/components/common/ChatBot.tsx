@@ -51,7 +51,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
     setIsLoading(true);
 
     try {
-      console.log(' Gửi tin nhắn đến webhook:', webhookUrl);
+
       
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -98,7 +98,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
       setMessages(prev => [...prev, botMessage]);
       
     } catch (error) {
-      console.error(' Lỗi gửi tin nhắn:', error);
+      
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

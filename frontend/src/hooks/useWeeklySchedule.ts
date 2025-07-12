@@ -67,35 +67,24 @@ export const useWeeklySchedule = ({
     
     try {
       const { weekStart } = getWeekRange(currentWeek);
-      console.log('🔍 Fetching schedule for week:', weekStart, 'mode:', mode);
       
             let response: any;
       if (mode === 'my-schedule') {
-        console.log('📅 Calling getMySchedules...');
         response = await weeklyScheduleService.getMySchedules(weekStart, weekStart);
-        console.log('📊 getMySchedules response:', response);
       } else if (mode === 'consultant-schedule' && consultantId) {
-        console.log('👨‍⚕️ Calling getConsultantSchedules for:', consultantId, 'week:', weekStart);
         response = await weeklyScheduleService.getConsultantSchedules(consultantId, weekStart, weekStart);
-        console.log('📊 getConsultantSchedules response:', response);
       } else {
-        console.log('❌ No valid mode or consultantId');
         return;
       }
 
-      console.log('📋 Processing response:', response);
-
       if ((response as any).success && (response as any).data?.schedules?.length > 0) {
         const targetWeekStart = weekStart;
-        console.log('🎯 Looking for schedule with week_start_date:', targetWeekStart);
         
         const matchingSchedule = (response as any).data.schedules.find((schedule: Schedule) => {
-          console.log('🔍 Checking schedule:', schedule.week_start_date, 'vs target:', targetWeekStart);
           return schedule.week_start_date === targetWeekStart;
         });
 
         if (matchingSchedule) {
-          console.log('✅ Found matching schedule:', matchingSchedule);
           setExistingSchedule(matchingSchedule);
           setScheduleData({
             working_days: matchingSchedule.working_days || {},
@@ -103,7 +92,6 @@ export const useWeeklySchedule = ({
             notes: matchingSchedule.notes || ''
           });
         } else {
-          console.log('⚠️ No matching schedule for this week - creating empty schedule');
           setExistingSchedule(null);
           setScheduleData({
             working_days: {},
@@ -112,7 +100,6 @@ export const useWeeklySchedule = ({
           });
         }
       } else {
-        console.log('⚠️ No schedules found in response - creating empty schedule');
         setExistingSchedule(null);
         setScheduleData({
           working_days: {},
@@ -121,7 +108,6 @@ export const useWeeklySchedule = ({
         });
       }
     } catch (err) {
-      console.error('❌ Error fetching schedule:', err);
       setError('Có lỗi xảy ra khi tải lịch làm việc');
       log.error('useWeeklySchedule', 'Error fetching schedule', err);
     }
@@ -155,7 +141,6 @@ export const useWeeklySchedule = ({
         setError(null);
       }
     } catch (err) {
-      console.error('Error fetching weekly slots:', err);
       const { weekStart, weekEnd } = getWeekRange(currentWeek);
       setWeeklySlotData({
         week_start_date: weekStart,
@@ -180,8 +165,7 @@ export const useWeeklySchedule = ({
       } else {
         await fetchScheduleForWeek();
       }
-    } catch (err) {
-      console.error('Error fetching week data:', err);
+    } catch (err) { 
       setError('Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
@@ -219,7 +203,6 @@ export const useWeeklySchedule = ({
         return false;
       }
     } catch (err) {
-      console.error('Error saving schedule:', err);
       setError('Có lỗi xảy ra khi lưu lịch làm việc');
       return false;
     } finally {
@@ -242,7 +225,6 @@ export const useWeeklySchedule = ({
         return false;
       }
     } catch (err) {
-      console.error('Error copying schedule:', err);
       setError('Có lỗi xảy ra khi sao chép lịch');
       return false;
     }

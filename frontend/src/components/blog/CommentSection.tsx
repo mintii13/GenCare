@@ -269,9 +269,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     const isReply = level > 0;
     const marginLeft = level * 24;
 
-    // For root comments, get their replies
+    // Ẩn comment đã xóa (không user, không ẩn danh)
+    if (!comment.is_anonymous && !comment.user) return null;
+
+    // For root comments, get their replies (chỉ lấy reply chưa bị xóa)
     const replies = level === 0 
-      ? localComments.filter(reply => reply.parent_comment_id === comment.comment_id)
+      ? localComments.filter(reply => reply.parent_comment_id === comment.comment_id && (reply.is_anonymous || reply.user))
       : [];
     
     const visibleRepliesCount = repliesVisibleCount[comment.comment_id] || INITIAL_REPLIES_SHOW;
@@ -430,12 +433,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="bg-gray-100 rounded-2xl">
+                  <div className="bg-white rounded-2xl flex items-center border border-gray-200 px-2">
                     <textarea
                       value={replyContent}
                       onChange={(e) => setReplyContent(e.target.value)}
                       placeholder={`Trả lời ${comment.is_anonymous ? 'người dùng ẩn danh' : comment.user?.full_name}...`}
-                      className="w-full px-3 py-2 bg-transparent text-sm resize-none focus:outline-none placeholder-gray-500"
+                      className="w-full px-3 py-2 bg-transparent text-sm resize-none focus:outline-none placeholder-gray-500 border-0 shadow-none"
                       rows={1}
                       style={{ minHeight: '32px' }}
                       onInput={(e) => {
@@ -443,9 +446,27 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                         e.currentTarget.style.height = Math.max(32, e.currentTarget.scrollHeight) + 'px';
                       }}
                     />
+                    <button
+                      onClick={() => {
+                        const parentId = level === 1 && comment.parent_comment_id 
+                          ? comment.parent_comment_id 
+                          : comment.comment_id;
+                        handleSubmitComment(replyContent, parentId);
+                      }}
+                      disabled={!replyContent.trim() || isSubmitting}
+                      className="ml-2 px-2 py-1 text-blue-600 hover:text-blue-700 disabled:opacity-50 flex items-center justify-center rounded-full transition-colors bg-white border border-gray-200 hover:bg-gray-100"
+                      style={{ minHeight: '32px' }}
+                      title="Gửi"
+                    >
+                      {isSubmitting ? (
+                        <span className="text-xs">Đang gửi...</span>
+                      ) : (
+                        <Send className="w-5 h-5" />
+                      )}
+                    </button>
                   </div>
-                                      <div className="flex items-center justify-between mt-3">
-                      <label className="flex items-center text-xs text-gray-500">
+                  <div className="flex items-center justify-between mt-2">
+                    <label className="flex items-center text-xs text-gray-500">
                       <input
                         type="checkbox"
                         checked={isAnonymous}
@@ -455,26 +476,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                       <EyeOff className="w-3 h-3 mr-1" />
                       Ẩn danh
                     </label>
-                                          <div className="flex space-x-3">
-                        <button
-                          onClick={() => setReplyingTo(null)}
-                          className="text-xs text-gray-500 hover:text-gray-700"
-                        >
-                          Hủy
-                        </button>
-                      <button
-                        onClick={() => {
-                          const parentId = level === 1 && comment.parent_comment_id 
-                            ? comment.parent_comment_id 
-                            : comment.comment_id;
-                          handleSubmitComment(replyContent, parentId);
-                        }}
-                        disabled={!replyContent.trim() || isSubmitting}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                      >
-                        {isSubmitting ? 'Đang gửi...' : 'Gửi'}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Hủy
+                    </button>
                   </div>
                 </div>
               </div>
@@ -550,8 +557,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     );
   };
 
-  // Lấy comments gốc (không phải reply)
-  const rootComments = localComments.filter(comment => !comment.parent_comment_id);
+  // Lấy comments gốc (không phải reply, không bị xóa)
+  const rootComments = localComments.filter(comment => !comment.parent_comment_id && (comment.is_anonymous || comment.user));
   
   // Pagination logic
   const totalPages = Math.ceil(rootComments.length / pageSize);
@@ -570,7 +577,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
       {/* Header */}
       <div className="border-b border-gray-200 pb-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900">
-          Bình luận • {localComments.length}
+          Bình luận • {localComments.filter(c => (c.is_anonymous || c.user)).length}
         </h3>
       </div>
 

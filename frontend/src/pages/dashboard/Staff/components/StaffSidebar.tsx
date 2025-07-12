@@ -25,8 +25,7 @@ const StaffSidebar: React.FC = () => {
     {
       title: 'Quản lý Xét nghiệm',
       items: [
-        { name: 'Đơn hàng STI', path: '/staff/sti-orders', icon: FaFlask },
-        { name: 'Lịch lấy mẫu', path: '/staff/test-schedules', icon: FaCalendarAlt },
+        { name: 'Quản lý STI', path: '/staff/sti-management', icon: FaFlask },
       ]
     },
     {

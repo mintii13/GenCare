@@ -6,6 +6,9 @@ import { consultantService } from '../../../services/consultantService';
 import WeeklySlotPicker from '../../consultation/WeeklySlotPicker';
 import FeedbackModal from '../../../components/feedback/FeedbackModal';
 import FeedbackService from '../../../services/feedbackService';
+import toast from 'react-hot-toast';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import {
   Appointment,
   AppointmentQuery,
@@ -23,6 +26,7 @@ import {
 } from 'react-icons/fa';
 
 const MyAppointments: React.FC = () => {
+  const { modalState, showConfirm, hideConfirm } = useConfirmModal();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -170,38 +174,47 @@ const MyAppointments: React.FC = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
-
-    try {
-      console.log('Starting cancel appointment for ID:', appointmentId);
-      const data = await appointmentService.cancelAppointment(appointmentId);
-      
-      console.log('Cancel appointment response:', data);
-      
-      if (data.success) {
-        alert('Hủy lịch hẹn thành công');
-        fetchAppointments();
-      } else {
-        console.error('Cancel failed with message:', data.message);
-        alert(data.message);
+    showConfirm(
+      {
+        title: "Xác nhận hủy lịch hẹn",
+        description: "Bạn có chắc chắn muốn hủy lịch hẹn này? Hành động này không thể hoàn tác.",
+        confirmText: "Hủy lịch hẹn",
+        cancelText: "Không",
+        confirmVariant: "destructive"
+      },
+      async () => {
+        try {
+          console.log('Starting cancel appointment for ID:', appointmentId);
+          const data = await appointmentService.cancelAppointment(appointmentId);
+          
+          console.log('Cancel appointment response:', data);
+          
+          if (data.success) {
+            toast.success('Hủy lịch hẹn thành công!');
+            fetchAppointments();
+          } else {
+            console.error('Cancel failed with message:', data.message);
+            toast.error(data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+          }
+        } catch (err: any) {
+          console.error('Error cancelling appointment:', err);
+          
+          // Detailed error handling
+          if (err.response?.status === 400) {
+            const errorMsg = err.response?.data?.message || err.response?.data?.details || 'Yêu cầu không hợp lệ';
+            toast.error(`Lỗi: ${errorMsg}`);
+          } else if (err.response?.status === 401) {
+            toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+          } else if (err.response?.status === 403) {
+            toast.error('Bạn không có quyền hủy lịch hẹn này.');
+          } else if (err.response?.status === 404) {
+            toast.error('Không tìm thấy lịch hẹn này.');
+          } else {
+            toast.error(err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+          }
+        }
       }
-    } catch (err: any) {
-      console.error('Error cancelling appointment:', err);
-      
-      // Detailed error handling
-      if (err.response?.status === 400) {
-        const errorMsg = err.response?.data?.message || err.response?.data?.details || 'Yêu cầu không hợp lệ';
-        alert(`Lỗi: ${errorMsg}`);
-      } else if (err.response?.status === 401) {
-        alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-      } else if (err.response?.status === 403) {
-        alert('Bạn không có quyền hủy lịch hẹn này.');
-      } else if (err.response?.status === 404) {
-        alert('Không tìm thấy lịch hẹn này.');
-      } else {
-        alert(err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-      }
-    }
+    );
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -242,16 +255,16 @@ const MyAppointments: React.FC = () => {
       );
       
       if (data.success) {
-        alert('Đổi lịch hẹn thành công! Chuyên gia sẽ xác nhận lại trong thời gian sớm nhất.');
+        toast.success('Đổi lịch hẹn thành công! Chuyên gia sẽ xác nhận lại trong thời gian sớm nhất.');
         setEditingAppointment(null);
         setSelectedNewSlot(null);
         fetchAppointments();
       } else {
-        alert(data.message);
+        toast.error(data.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
       }
     } catch (err: any) {
       console.error('Error updating appointment:', err);
-      alert(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
+      toast.error(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
     }
   };
 
@@ -729,6 +742,18 @@ const MyAppointments: React.FC = () => {
            }}
          />
        )}
+
+       <ConfirmModal
+         isOpen={modalState.isOpen}
+         onClose={hideConfirm}
+         onConfirm={modalState.onConfirm}
+         title={modalState.title}
+         description={modalState.description}
+         confirmText={modalState.confirmText}
+         cancelText={modalState.cancelText}
+         confirmVariant={modalState.confirmVariant}
+         isLoading={modalState.isLoading}
+       />
     </div>
   );
 };

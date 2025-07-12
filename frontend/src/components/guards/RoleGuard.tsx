@@ -34,6 +34,8 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
   const handleCloseModal = () => {
     setShowLoginModal(false);
     setToastShown(false);
+    // Redirect về homepage khi user đóng modal (không muốn đăng nhập)
+    window.location.href = '/';
   };
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
