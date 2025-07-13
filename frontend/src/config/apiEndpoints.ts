@@ -33,9 +33,6 @@ export const API = {
     VERIFY_EMAIL: '/auth/verify-email',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
-    FORGOT_PASSWORD_REQUEST: '/auth/forgot-password/request',
-    FORGOT_PASSWORD_VERIFY: '/auth/forgot-password/verify',
-    FORGOT_PASSWORD_RESET: '/auth/forgot-password/reset',
   },
 
   // ---------------------- APPOINTMENTS ----------------

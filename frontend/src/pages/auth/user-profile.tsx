@@ -15,7 +15,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
 import { AxiosResponse } from 'axios';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface UserProfile {
   id: string;
@@ -55,11 +54,6 @@ const UserProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [changePwdLoading, setChangePwdLoading] = useState(false);
 
   // React Hook Form setup
   const {
@@ -185,39 +179,6 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!oldPassword || !newPassword || !confirmNewPassword) {
-      toast.error('Vui lòng nhập đầy đủ thông tin');
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      toast.error('Mật khẩu mới không khớp');
-      return;
-    }
-    setChangePwdLoading(true);
-    try {
-      const res = await apiClient.put(API.Auth.CHANGE_PASSWORD, {
-        old_password: oldPassword,
-        new_password: newPassword
-      });
-      const data = res.data as any;
-      if (data.success) {
-        toast.success('Đổi mật khẩu thành công!');
-        setShowChangePassword(false);
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-      } else {
-        toast.error(data.message || 'Đổi mật khẩu thất bại');
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Đổi mật khẩu thất bại');
-    } finally {
-      setChangePwdLoading(false);
-    }
-  };
-
   if (!profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -235,12 +196,6 @@ const UserProfilePage: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1890ff' }}>Hồ sơ cá nhân</h1>
           <p className="text-gray-600">Quản lý thông tin cá nhân của bạn</p>
-        </div>
-        {/* Nút đổi mật khẩu */}
-        <div className="mb-6">
-          <Button variant="outline" onClick={() => setShowChangePassword(true)}>
-            Đổi mật khẩu
-          </Button>
         </div>
 
         {/* Profile Card */}
@@ -513,45 +468,6 @@ const UserProfilePage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        {/* Modal đổi mật khẩu */}
-        <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Đổi mật khẩu</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <Input
-                type="password"
-                placeholder="Mật khẩu hiện tại"
-                value={oldPassword}
-                onChange={e => setOldPassword(e.target.value)}
-                required
-              />
-              <Input
-                type="password"
-                placeholder="Mật khẩu mới"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                required
-              />
-              <Input
-                type="password"
-                placeholder="Xác nhận mật khẩu mới"
-                value={confirmNewPassword}
-                onChange={e => setConfirmNewPassword(e.target.value)}
-                required
-              />
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowChangePassword(false)}>
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={changePwdLoading}>
-                  {changePwdLoading ? 'Đang đổi...' : 'Đổi mật khẩu'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
