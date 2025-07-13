@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -16,40 +17,51 @@ import LoginModal from '../../components/auth/LoginModal';
 
 const Register: React.FC = () => {
   const [step, setStep] = useState(1);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [registerEmail, setRegisterEmail] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOTP] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [otpError, setOTPError] = useState('');
-  const [emailChecked, setEmailChecked] = useState(false);
-  const [emailCheckError, setEmailCheckError] = useState('');
   const [resendCountdown, setResendCountdown] = useState(60);
   const [resendLoading, setResendLoading] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // React Hook Form setup
+  // State cho form bước 1
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  // Form cho bước 2 (thông tin chi tiết)
   const {
     control,
     handleSubmit,
     getValues,
+    setValue,
     trigger,
     formState: { errors, isSubmitting }
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(validationSchemas.registerSchema) as any,
+  } = useForm({
+    resolver: zodResolver(z.object({
+      fullName: z.string().min(1, 'Họ tên là bắt buộc').min(2, 'Họ tên phải có ít nhất 2 ký tự'),
+      password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+      confirmPassword: z.string().min(1, 'Xác nhận mật khẩu là bắt buộc'),
+      phone: z.string().optional(),
+      dateOfBirth: z.string().optional(),
+      gender: z.enum(['male', 'female', 'other', '']).optional()
+    }).refine((data) => data.password === data.confirmPassword, {
+      message: "Mật khẩu không khớp",
+      path: ["confirmPassword"],
+    })),
     defaultValues: {
       fullName: '',
-      email: '',
       password: '',
       confirmPassword: '',
       phone: '',
       dateOfBirth: '',
-      gender: '',
-      role: 'customer'
+      gender: ''
     },
     mode: 'onChange'
   });
@@ -76,46 +88,46 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleNextStep = async () => {
-    // Validate step 1 fields
-    const step1Valid = await trigger(['email', 'password', 'confirmPassword']);
-    
-    if (step1Valid) {
-      const values = getValues();
-      const emailExists = await checkEmailExists(values.email);
-      
-      if (emailExists) {
-        setEmailCheckError('Email này đã được sử dụng');
-        toast.error('Email này đã được sử dụng');
-      } else {
-        setEmailCheckError('');
-        setStep(2);
-      }
+  // Bước 1: chỉ nhập email
+  const handleEmailStep = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setEmailError('Vui lòng nhập email');
+      return;
+    }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Email không hợp lệ');
+      return;
+    }
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      setEmailError('Email này đã được sử dụng');
+      toast.error('Email này đã được sử dụng');
+    } else {
+      setEmailError('');
+      setRegisterEmail(email);
+      setStep(2);
     }
   };
 
-  const onSubmit = async (data: RegisterFormData) => {
-    if (step === 1) {
-      await handleNextStep();
-      return;
-    }
-
+  // Bước 2: nhập các trường còn lại
+  const onSubmit = async (data: any) => {
+    if (step === 1) return; // Không cho submit ở bước 1
     try {
-      // Register API call
+      // Register API call - không gửi role vì backend không chấp nhận
       const response = await apiClient.post(API.Auth.REGISTER, {
-        email: data.email,
+        email: registerEmail,
         password: data.password,
         confirm_password: data.confirmPassword,
         full_name: data.fullName,
         phone: data.phone,
         date_of_birth: data.dateOfBirth,
-        gender: data.gender,
-        role: data.role
+        gender: data.gender
       });
-
       if ((response.data as any)?.success) {
         setShowOTP(true);
-        setRegisterEmail(data.email);
         setRegisterPassword(data.password);
         toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực.');
       } else {
@@ -153,9 +165,14 @@ const Register: React.FC = () => {
           if ((loginResponse.data as any)?.success) {
             login((loginResponse.data as any).user, (loginResponse.data as any).accessToken);
             toast.success('Xác thực thành công! Chào mừng bạn đến với GenCare!');
-            navigate('/dashboard');
+            navigate('/');
+          } else {
+            // Nếu auto login thất bại, vẫn thông báo thành công và cho user login thủ công
+            toast.success('Xác thực thành công! Vui lòng đăng nhập.');
+            navigate('/');
           }
         } catch (loginError) {
+          // Nếu auto login bị lỗi, vẫn thông báo thành công và cho user login thủ công
           toast.success('Xác thực thành công! Vui lòng đăng nhập.');
           navigate('/');
         }
@@ -164,9 +181,29 @@ const Register: React.FC = () => {
         toast.error((response.data as any)?.message || 'OTP không hợp lệ');
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.details || 
-                          error?.response?.data?.message || 
-                          'Xác thực thất bại';
+      console.error('OTP verification error:', error);
+      let errorMessage = 'Xác thực thất bại';
+      
+      if (error?.response?.data?.details) {
+        errorMessage = error.response.data.details;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Xử lý các loại lỗi cụ thể
+      if (errorMessage.includes('save is not a function') || errorMessage.includes('TypeError')) {
+        errorMessage = 'Có lỗi hệ thống khi xác thực. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.';
+      } else if (errorMessage === 'Server error') {
+        errorMessage = 'Có lỗi máy chủ khi xác thực OTP. Vui lòng thử lại sau.';
+      } else if (error?.response?.status === 400) {
+        // Nếu là lỗi 400 nhưng không có message cụ thể
+        if (!error?.response?.data?.message || error?.response?.data?.message === 'Server error') {
+          errorMessage = 'Mã OTP không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại.';
+        }
+      }
+      
       setOTPError(errorMessage);
       toast.error(errorMessage);
     }
@@ -178,20 +215,18 @@ const Register: React.FC = () => {
 
   const handleCheckEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    const values = getValues();
     
-    if (!values.email) {
-      setEmailCheckError('Vui lòng nhập email');
+    if (!email) {
+      setEmailError('Vui lòng nhập email');
       return;
     }
 
-    const emailExists = await checkEmailExists(values.email);
+    const emailExists = await checkEmailExists(email);
     if (emailExists) {
-      setEmailCheckError('Email này đã được sử dụng');
+      setEmailError('Email này đã được sử dụng');
       toast.error('Email này đã được sử dụng');
     } else {
-      setEmailChecked(true);
-      setEmailCheckError('');
+      setEmailError('');
       toast.success('Email có thể sử dụng');
     }
   };
@@ -241,7 +276,20 @@ const Register: React.FC = () => {
                   className="text-center text-2xl tracking-widest"
                   maxLength={6}
                 />
-                {otpError && <p className="text-red-500 text-sm mt-1">{otpError}</p>}
+                {otpError && (
+                  <div className="mt-2">
+                    <p className="text-red-500 text-sm">{otpError}</p>
+                    {otpError.includes('Server error') || otpError.includes('hệ thống') ? (
+                      <p className="text-gray-500 text-xs mt-1">
+                         Gợi ý: Hãy thử gửi lại OTP hoặc liên hệ hỗ trợ nếu vấn đề vẫn tiếp tục.
+                      </p>
+                    ) : (
+                      <p className="text-gray-500 text-xs mt-1">
+                         Gợi ý: Kiểm tra email (kể cả thư mục spam) và nhập đúng 6 chữ số.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               
               <Button type="submit" className="w-full">
@@ -285,109 +333,117 @@ const Register: React.FC = () => {
         </CardHeader>
         
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {step === 1 && (
-              <>
-                <FormField
-                  name="email"
-                  control={control}
+          {step === 1 && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Kiểm tra email</h3>
+              <form onSubmit={handleEmailStep} className="space-y-4" autoComplete="off">
+                <Input
                   type="email"
-                  placeholder="Email"
-                  error={errors.email?.message || emailCheckError}
-                  className="w-full"
+                  name="register-email"
+                  placeholder="Nhập email của bạn"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  error={emailError}
+                  disabled={isCheckingEmail}
+                  autoComplete="new-email"
                 />
-                
-                <FormField
-                  name="password"
-                  control={control}
-                  type="password"
-                  placeholder="Mật khẩu"
-                  error={errors.password?.message}
-                  className="w-full"
-                />
-                
-                <FormField
-                  name="confirmPassword"
-                  control={control}
-                  type="password"
-                  placeholder="Xác nhận mật khẩu"
-                  error={errors.confirmPassword?.message}
-                  className="w-full"
-                />
-                
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting || isCheckingEmail}
-                >
-                  {isCheckingEmail ? 'Đang kiểm tra...' : 'Tiếp tục'}
-                </Button>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <FormField
+                {emailError && <div className="text-red-500 text-sm">{emailError}</div>}
+                <Button type="submit" className="w-full" disabled={isCheckingEmail}>Tiếp tục</Button>
+              </form>
+            </div>
+          )}
+          {step === 2 && !showOTP && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Thông tin đăng ký</h3>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
+                <Controller
                   name="fullName"
                   control={control}
-                  type="text"
-                  placeholder="Họ và tên"
-                  error={errors.fullName?.message}
-                  className="w-full"
+                  render={({ field }) => (
+                    <Input 
+                      {...field} 
+                      name="register-fullname"
+                      placeholder="Nhập họ và tên" 
+                      error={errors.fullName?.message}
+                      autoComplete="new-name"
+                    />
+                  )}
                 />
-                
-                <FormField
+                <Controller
+                  name="password"
+                  control={control}
+                  render={({ field }) => (
+                    <Input 
+                      {...field} 
+                      type="password" 
+                      name="register-password"
+                      placeholder="Nhập mật khẩu" 
+                      error={errors.password?.message}
+                      autoComplete="new-password"
+                    />
+                  )}
+                />
+                <Controller
+                  name="confirmPassword"
+                  control={control}
+                  render={({ field }) => (
+                    <Input 
+                      {...field} 
+                      type="password" 
+                      name="register-confirm-password"
+                      placeholder="Nhập lại mật khẩu" 
+                      error={errors.confirmPassword?.message}
+                      autoComplete="new-password"
+                    />
+                  )}
+                />
+                <Controller
                   name="phone"
                   control={control}
-                  type="tel"
-                  placeholder="Số điện thoại (tùy chọn)"
-                  error={errors.phone?.message}
-                  className="w-full"
+                  render={({ field }) => (
+                    <Input 
+                      {...field} 
+                      name="register-phone"
+                      placeholder="Nhập số điện thoại" 
+                      error={errors.phone?.message}
+                      autoComplete="new-tel"
+                    />
+                  )}
                 />
-                
-                <FormField
+                <Controller
                   name="dateOfBirth"
                   control={control}
-                  type="date"
-                  placeholder="Ngày sinh (tùy chọn)"
-                  error={errors.dateOfBirth?.message}
-                  className="w-full"
+                  render={({ field }) => (
+                    <Input 
+                      {...field} 
+                      type="date" 
+                      name="register-dob"
+                      placeholder="Chọn ngày sinh" 
+                      error={errors.dateOfBirth?.message}
+                      autoComplete="new-bday"
+                    />
+                  )}
                 />
-                
-                <FormSelect
+                <Controller
                   name="gender"
                   control={control}
-                  placeholder="Giới tính (tùy chọn)"
-                  error={errors.gender?.message}
-                  options={[
-                    { value: 'male', label: 'Nam' },
-                    { value: 'female', label: 'Nữ' },
-                    { value: 'other', label: 'Khác' }
-                  ]}
-                  className="w-full"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn giới tính" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Nam</SelectItem>
+                        <SelectItem value="female">Nữ</SelectItem>
+                        <SelectItem value="other">Khác</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
-                
-                <div className="flex space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                    className="flex-1"
-                  >
-                    Quay lại
-                  </Button>
-                  
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
-                  </Button>
-                </div>
-              </>
-            )}
-          </form>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>Đăng ký</Button>
+              </form>
+            </div>
+          )}
           
           <div className="mt-4">
             <div className="relative">

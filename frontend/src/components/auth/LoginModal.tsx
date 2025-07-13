@@ -20,6 +20,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
   const navigate = useNavigate();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOTP, setForgotOTP] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   // React Hook Form setup
   const {
@@ -81,6 +87,68 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
     onClose();
   };
 
+  // Forgot password handlers
+  const handleForgotEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      const res = await apiClient.post(API.Auth.FORGOT_PASSWORD_REQUEST, { email: forgotEmail });
+      const data = res.data as { success: boolean; message?: string };
+      if (data.success) {
+        toast.success('Đã gửi OTP về email!');
+        setForgotStep(2);
+      } else {
+        toast.error(data.message || 'Không gửi được OTP');
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không gửi được OTP');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      const res = await apiClient.post(API.Auth.FORGOT_PASSWORD_VERIFY, { email: forgotEmail, otp: forgotOTP });
+      const data = res.data as { success: boolean; message?: string };
+      if (data.success) {
+        toast.success('Xác thực OTP thành công!');
+        setForgotStep(3);
+      } else {
+        toast.error(data.message || 'OTP không đúng');
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'OTP không đúng');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      const res = await apiClient.post(API.Auth.FORGOT_PASSWORD_RESET, { email: forgotEmail, new_password: forgotNewPassword });
+      const data = res.data as { success: boolean; message?: string };
+      if (data.success) {
+        toast.success('Đặt lại mật khẩu thành công!');
+        setShowForgot(false);
+        setForgotStep(1);
+        setForgotEmail('');
+        setForgotOTP('');
+        setForgotNewPassword('');
+      } else {
+        toast.error(data.message || 'Đặt lại mật khẩu thất bại');
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Đặt lại mật khẩu thất bại');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop với blur effect */}
@@ -115,79 +183,142 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
         
         {/* Body */}
         <div className="px-8 pb-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Email</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                  </svg>
+          {!showForgot ? (
+            <>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      </svg>
+                    </div>
+                    <FormField
+                      name="email"
+                      control={control}
+                      type="email"
+                      placeholder="your@email.com"
+                      error={errors.email?.message}
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                    />
+                  </div>
                 </div>
-                <FormField
-                  name="email"
-                  control={control}
-                  type="email"
-                  placeholder="your@email.com"
-                  error={errors.email?.message}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                />
-              </div>
-            </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <FormField
+                      name="password"
+                      control={control}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      error={errors.password?.message}
+                      className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <FormField
-                  name="password"
-                  control={control}
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  error={errors.password?.message}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                />
+
+                {/* Submit Button */}
                 <button
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={isSubmitting}
                 >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                    </svg>
+                  {isSubmitting ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Đang đăng nhập...</span>
+                    </div>
                   ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
+                    'Đăng nhập'
                   )}
+                </button>
+              </form>
+              {/* Forgot password link */}
+              <div className="mt-4 text-center">
+                <button type="button" className="text-primary-600 hover:underline text-sm" onClick={() => setShowForgot(true)}>
+                  Quên mật khẩu?
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              {forgotStep === 1 && (
+                <form onSubmit={handleForgotEmail} className="space-y-4">
+                  <input
+                    type="email"
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="Nhập email của bạn"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    required
+                  />
+                  <button type="submit" className="w-full bg-primary-600 text-white py-2 rounded" disabled={forgotLoading}>
+                    {forgotLoading ? 'Đang gửi...' : 'Gửi OTP'}
+                  </button>
+                </form>
+              )}
+              {forgotStep === 2 && (
+                <form onSubmit={handleForgotVerify} className="space-y-4">
+                  <input
+                    type="text"
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="Nhập mã OTP"
+                    value={forgotOTP}
+                    onChange={e => setForgotOTP(e.target.value)}
+                    required
+                  />
+                  <button type="submit" className="w-full bg-primary-600 text-white py-2 rounded" disabled={forgotLoading}>
+                    {forgotLoading ? 'Đang xác thực...' : 'Xác thực OTP'}
+                  </button>
+                </form>
+              )}
+              {forgotStep === 3 && (
+                <form onSubmit={handleForgotReset} className="space-y-4">
+                  <input
+                    type="password"
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="Nhập mật khẩu mới"
+                    value={forgotNewPassword}
+                    onChange={e => setForgotNewPassword(e.target.value)}
+                    required
+                  />
+                  <button type="submit" className="w-full bg-primary-600 text-white py-2 rounded" disabled={forgotLoading}>
+                    {forgotLoading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
+                  </button>
+                </form>
+              )}
+              <div className="text-center mt-2">
+                <button type="button" className="text-gray-500 hover:underline text-xs" onClick={() => { setShowForgot(false); setForgotStep(1); }}>
+                  Quay lại đăng nhập
                 </button>
               </div>
             </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Đang đăng nhập...</span>
-                </div>
-              ) : (
-                'Đăng nhập'
-              )}
-            </button>
-          </form>
+          )}
 
           {/* Divider */}
           <div className="relative my-6">
