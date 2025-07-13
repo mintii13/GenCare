@@ -105,6 +105,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
     } catch (error) {
       
       
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: 'Xin lỗi, có lỗi xảy ra khi kết nối. Vui lòng thử lại sau.',
