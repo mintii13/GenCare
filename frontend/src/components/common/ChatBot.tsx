@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { CHATBOT_CONFIG } from '../../config/chatbot';
 
 interface Message {
   id: string;
@@ -26,7 +27,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const webhookUrl = "http://n8n-swo.duckdns.org:5678/webhook/af68b43e-c9f5-46d7-9ad1-dc059baf2984/chat";
+  // Dùng config file thay vì environment variable
+  const webhookUrl = CHATBOT_CONFIG.getWebhookUrl();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,6 +40,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
+
+    // Kiểm tra webhook URL trước khi gửi
+    if (!webhookUrl) {
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -51,8 +58,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
     setIsLoading(true);
 
     try {
-
-      
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -98,6 +103,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
       setMessages(prev => [...prev, botMessage]);
       
     } catch (error) {
+      
       
       
       const errorMessage: Message = {

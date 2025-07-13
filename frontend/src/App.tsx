@@ -191,6 +191,11 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
                 <MenstrualCyclePage />
               </RoleGuard>
             } />
+            <Route path="/my-sti-results" element={
+              <RoleGuard allowedRoles={['customer']} showError={true}>
+                <MySTIResults />
+              </RoleGuard>
+            } />
               {/* STI Booking routes */}
               <Route path="/sti-booking/book" element={
               <RoleGuard allowedRoles={['customer']} showError={true}>

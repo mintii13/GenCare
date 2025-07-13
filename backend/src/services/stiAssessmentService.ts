@@ -616,17 +616,61 @@ export class StiAssessmentService {
     public static async getAssessmentStats(startDate?: Date, endDate?: Date): Promise<AssessmentResponse> {
         try {
             const stats = await StiAssessmentRepository.getStatistics(startDate, endDate);
-
+            
             return {
                 success: true,
-                message: 'Assessment statistics retrieved successfully',
+                message: 'Thống kê đánh giá STI được lấy thành công',
                 data: stats
             };
         } catch (error) {
             console.error('Error getting assessment stats:', error);
             return {
                 success: false,
-                message: 'Failed to retrieve assessment statistics'
+                message: 'Lỗi khi lấy thống kê đánh giá STI'
+            };
+        }
+    }
+
+    public static async getPackageInfo(): Promise<AssessmentResponse> {
+        try {
+            // Import StiService để lấy thông tin gói xét nghiệm
+            const { StiService } = require('./stiService');
+            
+            // Lấy tất cả gói xét nghiệm STI
+            const packagesResult = await StiService.getAllStiPackage();
+            const testsResult = await StiService.getAllStiTest();
+            
+            if (!packagesResult.success || !testsResult.success) {
+                return {
+                    success: false,
+                    message: 'Không thể lấy thông tin gói xét nghiệm'
+                };
+            }
+
+            const packages = packagesResult.stipackage || packagesResult.packages || [];
+            const tests = testsResult.stitest || testsResult.tests || [];
+
+            // Lọc chỉ những gói và test đang hoạt động
+            const activePackages = packages.filter((pkg: any) => pkg.is_active !== false);
+            const activeTests = tests.filter((test: any) => test.is_active !== false);
+
+            return {
+                success: true,
+                message: 'Thông tin gói xét nghiệm được lấy thành công',
+                data: {
+                    packages: activePackages,
+                    tests: activeTests,
+                    stats: {
+                        total_packages: activePackages.length,
+                        total_tests: activeTests.length
+                    }
+                }
+            };
+        } catch (error) {
+            console.error('Error getting package info:', error);
+            return {
+                success: false,
+                message: 'Lỗi khi lấy thông tin gói xét nghiệm'
             };
         }
     }

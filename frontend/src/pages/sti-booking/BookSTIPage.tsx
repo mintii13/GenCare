@@ -25,23 +25,53 @@ interface STIPackage {
 }
 
 const BookSTIPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [form] = Form.useForm();
-  
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedTest, setSelectedTest] = useState<StiTest | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
   const [orderDate, setOrderDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState('');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
+  const [selectedTest, setSelectedTest] = useState<StiTest | null>(null);
+  const [packageLoading, setPackageLoading] = useState(false);
 
-  const testId = searchParams.get('testId');
+  // Get query parameters
   const packageId = searchParams.get('packageId');
+  const testId = searchParams.get('testId');
+  const recommendedPackage = searchParams.get('recommendedPackage');
+
+  // Cho phép consultation mode (không cần test hoặc package cụ thể)
+  const isConsultationMode = !testId && !packageId;
+
+  // Fetch package info if packageId is provided
+  useEffect(() => {
+    const fetchPackageInfo = async () => {
+      if (packageId) {
+        setPackageLoading(true);
+        try {
+          const response = await apiClient.get(`${API.STI.GET_PACKAGE(packageId)}`);
+          const data = response.data as any;
+          if (data.success) {
+            setSelectedPackage(data.stipackage);
+          } else {
+            toast.error('Không thể tải thông tin gói xét nghiệm');
+          }
+        } catch (error) {
+          console.error('Error fetching package info:', error);
+          toast.error('Lỗi khi tải thông tin gói xét nghiệm');
+        } finally {
+          setPackageLoading(false);
+        }
+      }
+    };
+
+    fetchPackageInfo();
+  }, [packageId]);
 
   useEffect(() => {
     if (!user || user.role !== 'customer') {
@@ -104,24 +134,19 @@ const BookSTIPage: React.FC = () => {
   };
 
   const disabledDate = (current: dayjs.Dayjs) => {
-    // Không cho chọn ngày quá khứ và chủ nhật
     const today = dayjs().startOf('day');
-    const isWeekend = current.day() === 0; // 0 = Sunday
+    const isWeekend = current.day() === 0;
     return current && (current < today || isWeekend);
   };
 
   const handleDateChange = (date: dayjs.Dayjs | null) => {
     setOrderDate(date);
-    if (date) {
-      setCurrentStep(1);
-    }
+    if (date) setCurrentStep(1);
   };
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNotes(e.target.value);
-    if (e.target.value.trim() && currentStep === 1) {
-      setCurrentStep(2);
-    }
+    if (e.target.value.trim() && currentStep === 1) setCurrentStep(2);
   };
 
   const handleSubmit = async () => {
@@ -130,17 +155,21 @@ const BookSTIPage: React.FC = () => {
       return;
     }
 
-    // Hiển thị modal đánh giá STI trước khi đặt lịch
-    setShowAssessmentModal(true);
+    // Nếu đã có selectedPackage (từ STI Assessment), bỏ qua assessment modal và license modal
+    if (selectedPackage && packageId) {
+      setShowLicenseModal(false);
+      setLoading(true);
+      await createOrder();
+    } else {
+      // Hiển thị modal đánh giá STI trước khi đặt lịch
+      setShowAssessmentModal(true);
+    }
   };
 
-  const handleLicenseAccept = async () => {
-    setShowLicenseModal(false);
-    setLoading(true);
-
+  const createOrder = async () => {
     try {
       if (!orderDate) {
-        message.error('Vui lòng chọn ngày xét nghiệm');
+        message.error('Vui lòng chọn ngày tư vấn');
         return;
       }
 
@@ -155,9 +184,11 @@ const BookSTIPage: React.FC = () => {
       };
 
       const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
-
       if (response.data.success) {
-        message.success('Đặt lịch xét nghiệm thành công!');
+        const successMessage = selectedPackage 
+          ? `Đặt lịch xét nghiệm ${selectedPackage.sti_package_name} thành công!`
+          : 'Đặt lịch tư vấn thành công!';
+        message.success(successMessage);
         navigate('/sti-booking/orders');
       } else {
         message.error(response.data.message || 'Có lỗi xảy ra khi đặt lịch');
@@ -171,10 +202,14 @@ const BookSTIPage: React.FC = () => {
     }
   };
 
-  const handleLicenseCancel = () => {
+  const handleLicenseAccept = async () => {
     setShowLicenseModal(false);
+    setLoading(true);
+    await createOrder();
   };
 
+  const handleLicenseCancel = () => setShowLicenseModal(false);
+  
   const handleTakeAssessment = () => {
     setShowAssessmentModal(false);
     // Chuyển đến trang đánh giá STI
@@ -188,41 +223,177 @@ const BookSTIPage: React.FC = () => {
   };
 
   const steps = [
-    {
-      title: 'Chọn ngày',
-      icon: <CalendarOutlined />,
-    },
-    {
-      title: 'Ghi chú',
-      icon: <FileTextOutlined />,
-    },
-    {
-      title: 'Xác nhận',
-      icon: <CheckCircleOutlined />,
-    },
+    { title: 'Chọn ngày', icon: <CalendarOutlined /> },
+    { title: 'Ghi chú', icon: <FileTextOutlined /> },
+    { title: 'Xác nhận', icon: <CheckCircleOutlined /> },
   ];
 
   if (loading) {
     return (
-      <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '50px' }}>
+      <div style={{ 
+        padding: '24px', 
+        maxWidth: '900px', 
+        margin: '0 auto',
+        minHeight: '100vh',
+        backgroundColor: '#fafafa'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          padding: '64px 32px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          textAlign: 'center'
+        }}>
           <Spin size="large" />
-          <p style={{ marginTop: '16px' }}>Đang tải thông tin...</p>
+          <p style={{ marginTop: '16px', fontSize: '16px', color: '#666' }}>
+            Đang tải thông tin...
+          </p>
         </div>
       </div>
     );
   }
 
-  // Cho phép consultation mode (không cần test hoặc package cụ thể)
-  const isConsultationMode = !testId && !packageId;
+  if (packageLoading) {
+    return (
+      <div style={{ 
+        padding: '24px', 
+        maxWidth: '900px', 
+        margin: '0 auto',
+        minHeight: '100vh',
+        backgroundColor: '#fafafa'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          padding: '64px 32px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          textAlign: 'center'
+        }}>
+          <Spin size="large" />
+          <p style={{ marginTop: '16px', fontSize: '16px', color: '#666' }}>
+            Đang tải thông tin gói xét nghiệm...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-      <Title level={2}>
-        {isConsultationMode ? 'Đặt lịch tư vấn xét nghiệm STI' : 'Đặt lịch xét nghiệm STI'}
-      </Title>
-
-      {/* Thông báo quy trình mới */}
+    <div style={{ 
+      padding: '24px', 
+      maxWidth: '900px', 
+      margin: '0 auto',
+      minHeight: '100vh',
+      backgroundColor: '#fafafa'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        padding: '32px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        marginBottom: '24px'
+      }}>
+        <Title 
+          level={2}
+          style={{
+            textAlign: 'center',
+            color: '#1f1f1f',
+            marginBottom: '24px',
+            fontSize: '28px',
+            fontWeight: 700
+          }}
+        >
+          {isConsultationMode ? 'Đặt lịch tư vấn xét nghiệm STI' : 'Đặt lịch xét nghiệm STI'}
+        </Title>
+      
+      {selectedPackage && (
+        <Card 
+          style={{ 
+            marginBottom: '24px', 
+            backgroundColor: '#f6ffed', 
+            borderColor: '#b7eb8f',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} sm={16} md={18}>
+              <div>
+                <Title 
+                  level={4} 
+                  style={{ 
+                    margin: '0 0 8px 0', 
+                    color: '#389e0d',
+                    fontWeight: 600,
+                    lineHeight: 1.2
+                  }}
+                >
+                  {selectedPackage.sti_package_name}
+                </Title>
+                <Text 
+                  type="secondary" 
+                  style={{ 
+                    fontSize: '14px',
+                    lineHeight: 1.5,
+                    display: 'block',
+                    marginBottom: '4px'
+                  }}
+                >
+                  {selectedPackage.description}
+                </Text>
+              </div>
+            </Col>
+            <Col xs={24} sm={8} md={6}>
+              <div 
+                style={{ 
+                  textAlign: 'right',
+                  padding: '12px 16px',
+                  backgroundColor: 'rgba(56, 158, 13, 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(56, 158, 13, 0.2)'
+                }}
+              >
+                <Text 
+                  style={{ 
+                    fontSize: '12px', 
+                    color: '#666',
+                    display: 'block',
+                    marginBottom: '2px'
+                  }}
+                >
+                  Giá gói
+                </Text>
+                <Text 
+                  strong 
+                  style={{ 
+                    fontSize: '20px', 
+                    color: '#389e0d',
+                    whiteSpace: 'nowrap',
+                    fontWeight: 700,
+                    display: 'block'
+                  }}
+                >
+                  {selectedPackage.price?.toLocaleString('vi-VN')} VNĐ
+                </Text>
+              </div>
+            </Col>
+          </Row>
+          
+          {recommendedPackage && (
+            <Alert
+              message="Gói xét nghiệm được đề xuất"
+              description="Gói xét nghiệm này được đề xuất dựa trên kết quả đánh giá STI của bạn"
+              type="info"
+              showIcon
+              style={{ 
+                marginTop: '16px',
+                borderRadius: '8px'
+              }}
+            />
+          )}
+        </Card>
+      )}
+      
       <Alert
         message={isConsultationMode ? "Quy trình đặt lịch tư vấn" : "Quy trình đặt lịch xét nghiệm"}
         description={
@@ -232,13 +403,32 @@ const BookSTIPage: React.FC = () => {
         }
         type="info"
         showIcon
-        style={{ marginBottom: '24px' }}
+        style={{ 
+          marginBottom: '24px',
+          borderRadius: '12px',
+          border: '1px solid #1890ff20',
+          backgroundColor: '#f0f9ff'
+        }}
       />
-
-      <Steps current={currentStep} items={steps} style={{ marginBottom: '32px' }} />
+      
+      <Card 
+        style={{ 
+          marginBottom: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}
+      >
+        <Steps 
+          current={currentStep} 
+          items={steps} 
+          style={{ 
+            padding: '8px 0'
+          }} 
+        />
+      </Card>
 
       {/* Thông tin xét nghiệm/gói (chỉ để tham khảo) */}
-      {!isConsultationMode && (
+      {!isConsultationMode && (selectedTest || selectedPackage) && (
         <Card title="Thông tin tham khảo" style={{ marginBottom: '24px' }}>
           {selectedTest && (
             <Space direction="vertical" style={{ width: '100%' }}>
@@ -292,39 +482,47 @@ const BookSTIPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Form đặt lịch tư vấn */}
-      <Card title={isConsultationMode ? "Đặt lịch tư vấn" : "Đặt lịch xét nghiệm"}>
+      <Card 
+        title={isConsultationMode ? "Đặt lịch tư vấn" : "Đặt lịch xét nghiệm"}
+        style={{
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}
+        headStyle={{
+          borderBottom: '1px solid #f0f0f0',
+          fontSize: '18px',
+          fontWeight: 600
+        }}
+      >
         <Form form={form} layout="vertical">
-                      <Form.Item
-              label={isConsultationMode ? "Ngày tư vấn" : "Ngày xét nghiệm"}
-              required
-              help="Không thể chọn ngày Chủ nhật và ngày đã qua"
-            >
-              <DatePicker
-                style={{ width: '100%' }}
-                format="DD/MM/YYYY"
-                placeholder={isConsultationMode ? "Chọn ngày tư vấn" : "Chọn ngày xét nghiệm"}
-                disabledDate={disabledDate}
-                value={orderDate}
-                onChange={handleDateChange}
-              />
-            </Form.Item>
-
-          <Form.Item label="Ghi chú (tùy chọn)">
-                          <TextArea
-                rows={4}
-                placeholder={
-                  isConsultationMode 
-                    ? "Nhập thông tin về tình trạng sức khỏe, mong muốn tư vấn..." 
-                    : "Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
-                }
-                maxLength={500}
-                value={notes}
-                onChange={handleNotesChange}
-                showCount
-              />
+          <Form.Item 
+            label={isConsultationMode ? "Ngày tư vấn" : "Ngày xét nghiệm"} 
+            required 
+            help="Không thể chọn ngày Chủ nhật và ngày đã qua"
+          >
+            <DatePicker
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+              placeholder={isConsultationMode ? "Chọn ngày tư vấn" : "Chọn ngày xét nghiệm"}
+              disabledDate={disabledDate}
+              value={orderDate}
+              onChange={handleDateChange}
+            />
           </Form.Item>
-
+          <Form.Item label="Ghi chú (tùy chọn)">
+            <TextArea
+              rows={4}
+              placeholder={
+                isConsultationMode 
+                  ? "Nhập thông tin về tình trạng sức khỏe, mong muốn tư vấn..." 
+                  : "Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
+              }
+              maxLength={500}
+              value={notes}
+              onChange={handleNotesChange}
+              showCount
+            />
+          </Form.Item>
           <Form.Item>
             <Space>
               <Button onClick={() => navigate('/test-packages')}>
@@ -342,9 +540,19 @@ const BookSTIPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Card>
-
-      {/* Lưu ý */}
-      <Card title="Lưu ý quan trọng" style={{ marginTop: '24px' }}>
+      <Card 
+        title="Lưu ý quan trọng" 
+        style={{ 
+          marginTop: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}
+        headStyle={{
+          borderBottom: '1px solid #f0f0f0',
+          fontSize: '16px',
+          fontWeight: 600
+        }}
+      >
         <ul>
           {isConsultationMode ? (
             <>
@@ -390,6 +598,7 @@ const BookSTIPage: React.FC = () => {
       />
       
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+      </div>
     </div>
   );
 };

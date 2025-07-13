@@ -14,6 +14,10 @@ interface FeedbackModalProps {
     end_time: string;
   };
   loading?: boolean;
+  existingFeedback?: {
+    rating: number;
+    comment?: string;
+  };
 }
 
 const FeedbackModal: React.FC<FeedbackModalProps> = ({
@@ -21,13 +25,29 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   onClose,
   onSubmit,
   appointmentInfo,
-  loading = false
+  loading = false,
+  existingFeedback
 }) => {
   const [formData, setFormData] = useState<FeedbackFormData>({
-    rating: 5,
-    comment: ''
+    rating: (existingFeedback?.rating || 5) as RatingValue,
+    comment: existingFeedback?.comment || ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Cập nhật form data khi existingFeedback thay đổi
+  React.useEffect(() => {
+    if (existingFeedback) {
+      setFormData({
+        rating: existingFeedback.rating as RatingValue,
+        comment: existingFeedback.comment || ''
+      });
+    } else {
+      setFormData({
+        rating: 5,
+        comment: ''
+      });
+    }
+  }, [existingFeedback]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +60,10 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-      // Reset form after successful submission
-      setFormData({ rating: 5, comment: '' });
+      // Reset form after successful submission chỉ khi không phải edit mode
+      if (!existingFeedback) {
+        setFormData({ rating: 5, comment: '' });
+      }
       onClose();
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -74,7 +96,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              Đánh giá cuộc tư vấn
+              {existingFeedback ? 'Sửa đánh giá cuộc tư vấn' : 'Đánh giá cuộc tư vấn'}
             </h3>
             <button
               onClick={onClose}
@@ -158,7 +180,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Gửi đánh giá
+                    {existingFeedback ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
                   </>
                 )}
               </button>

@@ -529,7 +529,7 @@ const MyAppointments: React.FC = () => {
                       </>
                     )}
 
-                    {appointment.status === 'completed' && !appointment.feedback && (
+                    {appointment.status === 'completed' && (
                       <button
                         onClick={() => {
                           setSelectedAppointment(appointment);
@@ -537,7 +537,7 @@ const MyAppointments: React.FC = () => {
                         }}
                         className="px-3 py-1 text-purple-600 hover:text-purple-800 text-sm font-medium"
                       >
-                        Đánh giá
+                        {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
                       </button>
                     )}
                   </div>
@@ -728,17 +728,56 @@ const MyAppointments: React.FC = () => {
        {showFeedbackModal && selectedAppointment && (
          <FeedbackModal
            isOpen={showFeedbackModal}
-           onClose={() => setShowFeedbackModal(false)}
+           onClose={() => {
+             setShowFeedbackModal(false);
+             setSelectedAppointment(null);
+           }}
            appointmentInfo={{
              consultant_name: getConsultantNameWithFetch(selectedAppointment),
              appointment_date: formatDate(selectedAppointment.appointment_date),
              start_time: formatTime(selectedAppointment.start_time),
              end_time: formatTime(selectedAppointment.end_time)
            }}
+           existingFeedback={selectedAppointment.feedback ? {
+             rating: selectedAppointment.feedback.rating,
+             comment: selectedAppointment.feedback.comment
+           } : undefined}
            onSubmit={async (formData) => {
-             await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
-             setShowFeedbackModal(false);
-             // No need to set canFeedback here, it will be re-fetched on next appointment load
+             try {
+               const response = await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
+               if (response.success) {
+                 // Hiển thị toast thành công
+                 toast.success(selectedAppointment.feedback 
+                   ? 'Đánh giá đã được cập nhật thành công!' 
+                   : 'Đánh giá đã được gửi thành công! Cảm ơn bạn đã chia sẻ.'
+                 );
+                 
+                 // Cập nhật state appointment để thay đổi nút
+                 setAppointments(prevAppointments => 
+                   prevAppointments.map(apt => 
+                     apt._id === selectedAppointment._id 
+                       ? { 
+                           ...apt, 
+                           feedback: { 
+                             rating: formData.rating as number, 
+                             comment: formData.comment,
+                             feedback_date: new Date().toISOString()
+                           } 
+                         } as Appointment
+                       : apt
+                   )
+                 );
+                 
+                 // Đóng modal và reset selected appointment
+                 setShowFeedbackModal(false);
+                 setSelectedAppointment(null);
+               } else {
+                 toast.error(response.message || 'Có lỗi xảy ra khi gửi đánh giá');
+               }
+             } catch (error) {
+               console.error('Error submitting feedback:', error);
+               toast.error('Có lỗi xảy ra khi gửi đánh giá');
+             }
            }}
          />
        )}
