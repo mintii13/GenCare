@@ -10,7 +10,7 @@ import {
 const ErrorTestComponent: React.FC = () => {
   const testValidationError = async () => {
     try {
-      // Gửi request với dữ liệu không hợp lệ
+
       await apiClient.post('/api/appointments/book', {
         consultant_id: 'invalid-id',
         appointment_date: 'invalid-date',

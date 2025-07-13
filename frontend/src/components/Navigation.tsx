@@ -101,17 +101,15 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/consultation/book-appointment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Đặt lịch tư vấn
                   </Link>
-                  <Link to="/test-packages" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                    Dịch vụ xét nghiệm
+                  <Link to="/test-packages/sti" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                    Dịch vụ xét nghiệm 
                   </Link>
                   {isAuthenticated && user?.role === 'customer' && (
                     <>
                       <Link to="/sti-assessment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Đánh giá sàng lọc STI
                       </Link>
-                      <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử đánh giá STI
-                      </Link>
+                    
                     </>
                   )}
                   {isAuthenticated && user?.role === 'customer' && (
@@ -189,6 +187,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                         <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           Đánh giá của tôi
                         </Link>
+                        <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử đánh giá STI
+                      </Link>
                       </>
                     )}
                     <button
@@ -279,7 +280,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       Theo dõi kinh nguyệt
                     </Link>
                     <Link 
-                      to="/test-packages" 
+                      to="/test-packages/sti" 
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >

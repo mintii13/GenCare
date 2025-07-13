@@ -98,7 +98,7 @@ class StiResultService {
   static async getStiResultById(resultId: string): Promise<StiResultResponse> {
     try {
       const response = await apiClient.get(`${API.STI.STI_RESULT}/${resultId}`);
-      return response.data;
+      return response.data as StiResultResponse;
     } catch (error: any) {
       console.error('Error fetching STI result:', error);
       return {
@@ -114,7 +114,7 @@ class StiResultService {
   static async updateStiResult(resultId: string, data: UpdateStiResultRequest): Promise<StiResultResponse> {
     try {
       const response = await apiClient.patch(`${API.STI.STI_RESULT}/${resultId}`, data);
-      return response.data;
+      return response.data as StiResultResponse;
     } catch (error: any) {
       console.error('Error updating STI result:', error);
       return {
@@ -130,7 +130,7 @@ class StiResultService {
   static async syncSampleFromOrder(orderId: string): Promise<StiResultResponse> {
     try {
       const response = await apiClient.patch(`${API.STI.STI_RESULT}/sync-sample?orderId=${orderId}`);
-      return response.data;
+      return response.data as StiResultResponse;
     } catch (error: any) {
       console.error('Error syncing sample from order:', error);
       return {
@@ -146,7 +146,7 @@ class StiResultService {
   static async notifyResult(resultId: string): Promise<StiResultResponse> {
     try {
       const response = await apiClient.post(`${API.STI.STI_RESULT}/notify?result_id=${resultId}`);
-      return response.data;
+      return response.data as StiResultResponse;
     } catch (error: any) {
       console.error('Error notifying result:', error);
       return {
@@ -162,8 +162,8 @@ class StiResultService {
  */
 export const getMySTIResults = async () => {
     try {
-        const response = await apiClient.get(API.MY_STI_RESULTS);
-        return response.data;
+        const response = await apiClient.get(API.STI.MY_STI_RESULTS);
+        return response.data as StiResultListResponse;
     } catch (error) {
         console.error('Error fetching my STI results:', error);
         throw error;
@@ -175,8 +175,8 @@ export const getMySTIResults = async () => {
  */
 export const getMySTIResultByOrderId = async (orderId: string) => {
     try {
-        const response = await apiClient.get(API.MY_STI_RESULT(orderId));
-        return response.data;
+        const response = await apiClient.get(API.STI.MY_STI_RESULT(orderId));
+        return response.data as StiResultResponse;
     } catch (error) {
         console.error('Error fetching my STI result:', error);
         throw error;

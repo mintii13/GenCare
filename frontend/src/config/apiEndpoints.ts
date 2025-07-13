@@ -196,6 +196,9 @@ export const API = {
     UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     SYNC_SAMPLE: '/sti/sti-result/sync-sample',
     NOTIFY_RESULT: '/sti/sti-result/notify',
+    // Customer STI Results
+    MY_STI_RESULTS: '/sti/my-results',
+    MY_STI_RESULT: (orderId: string) => `/sti/my-result/${orderId}`,
     // Audit & Analytics
     GET_AUDIT_LOGS: '/sti/audit-logs', // With pagination
     GET_ALL_AUDIT_LOGS: '/sti/getAllAuditLogs', // Legacy
@@ -226,10 +229,6 @@ export const API = {
     DELETE: (id: string) => `/users/${id}`, // DELETE - Admin only (soft delete)
     STATISTICS: '/users/statistics/overview' // GET - Admin/Staff
   },
-
-    // STI Results for Customer
-    MY_STI_RESULTS: '/api/sti/my-results',
-    MY_STI_RESULT: (orderId: string) => `/api/sti/my-result/${orderId}`,
 
 } as const;
 

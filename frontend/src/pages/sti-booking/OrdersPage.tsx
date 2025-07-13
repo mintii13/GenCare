@@ -317,7 +317,7 @@ const OrdersPage: React.FC = () => {
           {isStaffView ? 'Quản lý lịch xét nghiệm STI' : 'Lịch xét nghiệm STI đã đặt'}
         </Title>
         {!isStaffView && (
-          <Button type="primary" onClick={() => navigate('/test-packages')}>
+          <Button type="primary" onClick={() => navigate('/sti-booking/book')}>
             Đặt lịch mới
           </Button>
         )}

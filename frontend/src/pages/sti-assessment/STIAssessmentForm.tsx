@@ -1,23 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { User, Calendar, Heart, AlertTriangle, Shield, CheckCircle, Package, ArrowLeft, ArrowRight } from 'lucide-react';
 import { authService } from '../../services/auth';
-import { STIAssessmentData, STIAssessmentService } from '../../services/stiAssessmentService';
+import { STIAssessmentData, STIAssessmentService, STIRecommendation, STIPackageInfo } from '../../services/stiAssessmentService';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import toast from 'react-hot-toast';
-
-interface Recommendation {
-  recommended_package: string;
-  risk_level: 'Thấp' | 'Trung bình' | 'Cao';
-  reasoning: string[];
-}
+import { Spin, Alert } from 'antd';
 
 const STIAssessmentForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [recommendation, setRecommendation] = useState<STIRecommendation | null>(null);
+
+  // Fetch packages info from API
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        setPackagesLoading(true);
+        const response = await STIAssessmentService.getPackageInfo();
+        if (response.success && response.data) {
+          // Không destructure, chỉ setPackages đúng kiểu
+          const packages = (response.data as any).packages || response.data;
+          setPackages(packages);
+        } else {
+          console.error('Failed to fetch packages:', response.message);
+          toast.error('Không thể tải thông tin gói xét nghiệm');
+        }
+      } catch (error) {
+        console.error('Error fetching packages:', error);
+        toast.error('Lỗi khi tải thông tin gói xét nghiệm');
+      } finally {
+        setPackagesLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
 
   const [formData, setFormData] = useState({
     // Thông tin cá nhân
@@ -234,10 +256,69 @@ const STIAssessmentForm = () => {
       const response = await apiClient.get(API.STI.GET_ALL_PACKAGES);
       const data = response.data as any;
 
+      console.log('API GET_ALL_PACKAGES result:', data);
+      console.log('All data keys:', Object.keys(data));
+      console.log('data properties:', data);
+      console.log('JSON.stringify(data):', JSON.stringify(data));
+
       if (data.success) {
-        let packages = data.stippackage || data.stippackages || [];
+        console.log('Raw data.stippackage:', data.stippackage);
+        console.log('Raw data.stippackages:', data.stippackages);
+        console.log('data.stippackage type:', typeof data.stippackage);
+        console.log('data.stippackage isArray:', Array.isArray(data.stippackage));
+        
+        // Thử destructuring để tránh vấn đề với getter/setter
+        const { stippackage, stippackages } = data;
+        console.log('Destructured stippackage:', stippackage);
+        console.log('Destructured stippackages:', stippackages);
+        
+        let packages = stippackage || stippackages || [];
+        
+        // Nếu vẫn rỗng, thử dùng bracket notation
+        if (!packages.length) {
+          packages = data['stippackage'] || data['stippackages'] || [];
+        }
+        
+        // Nếu vẫn rỗng, thử Object.values để lấy tất cả arrays có trong object
+        if (!packages.length) {
+          console.log('Trying Object.values approach');
+          const allValues = Object.values(data);
+          console.log('All object values:', allValues);
+          packages = allValues.find(val => Array.isArray(val) && val.length > 0) as any[] || [];
+        }
+        
+        // FALLBACK: Nếu vẫn không có, tạm thời hard-code để test flow
+        if (!packages.length) {
+          console.log('Using fallback hardcoded packages for testing');
+          packages = [
+            {
+              _id: '675e1a2b3c4d5e6f7a8b9101',
+              sti_package_name: 'Gói xét nghiệm STIs CƠ BẢN 1',
+              sti_package_code: 'STI-BASIC-01',
+              price: 700000
+            },
+            {
+              _id: '675e1a2b3c4d5e6f7a8b9102',
+              sti_package_name: 'Gói xét nghiệm STIs CƠ BẢN 2',
+              sti_package_code: 'STI-BASIC-02',
+              price: 900000
+            },
+            {
+              _id: '675e1a2b3c4d5e6f7a8b9103',
+              sti_package_name: 'Gói xét nghiệm STIs NÂNG CAO',
+              sti_package_code: 'STI-ADVANCE',
+              price: 1700000
+            }
+          ];
+        }
+        
+        console.log('Final assigned packages:', packages);
+        console.log('Final packages type:', typeof packages);
+        console.log('Final packages isArray:', Array.isArray(packages));
+        console.log('Final packages length:', packages.length);
 
         if (!Array.isArray(packages)) {
+          console.log('Packages is not array, type:', typeof packages);
           toast.error('Dữ liệu gói xét nghiệm không hợp lệ', {
             duration: 3000,
             position: 'top-center',
@@ -245,17 +326,35 @@ const STIAssessmentForm = () => {
           return;
         }
 
-        const targetPackage = packages.find((pkg: any) => {
-          return pkg.sti_package_code === recommendation.recommended_package;
-        });
+        const targetPackage = packages.find((pkg: any) =>
+          pkg.sti_package_code === recommendation.recommended_package
+        );
+
+        console.log('API GET_ALL_PACKAGES packages:', packages);
+        console.log('Looking for package with code:', recommendation.recommended_package);
+        console.log('Found package:', targetPackage);
 
         if (targetPackage) {
           const packageId = typeof targetPackage._id === 'object'
             ? targetPackage._id.toString()
             : targetPackage._id;
 
-          navigate(`/sti-booking/book?packageId=${packageId}`);
+          console.log('Package found! Details:', {
+            id: packageId,
+            code: targetPackage.sti_package_code,
+            name: targetPackage.sti_package_name,
+            price: targetPackage.price
+          });
+          
+          console.log('About to navigate to:', `/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
+          navigate(`/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
+          console.log('Navigation completed');
         } else {
+          console.log('Package not found! Available packages:', packages.map(pkg => ({
+            id: pkg._id,
+            code: pkg.sti_package_code,
+            name: pkg.sti_package_name
+          })));
           toast.error(`Không tìm thấy gói xét nghiệm với mã: ${recommendation.recommended_package}`, {
             duration: 4000,
             position: 'top-center',
@@ -276,6 +375,10 @@ const STIAssessmentForm = () => {
     } finally {
       setBookingLoading(false);
     }
+  };
+
+  const getPackageInfo = (packageCode: string) => {
+      return packages.find(pkg => pkg.sti_package_code === packageCode);
   };
 
   const renderPersonalInfo = () => (
@@ -698,90 +801,88 @@ const STIAssessmentForm = () => {
   const renderRecommendation = () => {
     if (!recommendation) return null;
 
-    const getPackageInfo = (packageCode: string) => {
-      const packages = {
-        'STI-BASIC-01': {
-          name: 'Gói xét nghiệm STIs CƠ BẢN 1',
-          price: '7.000.000 VNĐ',
-          tests: ['HIV combo Alere', 'Giang mai', 'Lậu', 'Chlamydia'],
-          description: 'Gói test nhanh cơ bản'
-        },
-        'STI-BASIC-02': {
-          name: 'Gói xét nghiệm STIs CƠ BẢN 2',
-          price: '9.000.000 VNĐ',
-          tests: ['HIV combo Alere', 'Giang mai', 'Viêm gan B', 'Viêm gan C', 'Lậu', 'Chlamydia'],
-          description: 'Gói test cơ bản mở rộng'
-        },
-        'STI-ADVANCE': {
-          name: 'Gói xét nghiệm STIs NÂNG CAO',
-          price: '17.000.000 VNĐ',
-          tests: ['HIV combo Alere', 'Viêm gan B', 'Viêm gan C', 'Herpes', 'RPR', 'Syphilis TP IgM/IgG', 'Lậu', 'Chlamydia'],
-          description: 'Gói toàn diện với hầu hết các STIs'
-        }
-      };
-      return packages[packageCode as keyof typeof packages];
-    };
-
     const packageInfo = getPackageInfo(recommendation.recommended_package);
+
+    if (packagesLoading) {
+      return (
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center justify-center">
+            <Spin size="large" />
+            <span className="ml-3">Đang tải thông tin gói xét nghiệm...</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (!packageInfo) {
+      return (
+        <div className="bg-white p-6 rounded-lg border">
+          <Alert
+            message="Không tìm thấy thông tin gói xét nghiệm"
+            description="Vui lòng thử lại sau hoặc liên hệ hỗ trợ"
+            type="warning"
+            showIcon
+          />
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-6">
-        <div className="text-center">
-          <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-          <h3 className="text-2xl font-bold text-gray-800">Kết quả đánh giá STI</h3>
-          <p className="text-gray-600 mt-2">Dựa trên hướng dẫn CDC 2021</p>
-        </div>
-
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-          <div className="flex items-center mb-4">
-            <Package className="w-6 h-6 text-blue-600 mr-2" />
-            <h4 className="font-bold text-lg text-blue-800">Gói xét nghiệm được đề xuất</h4>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg border">
-            <h5 className="font-bold text-xl text-blue-600 mb-2">{packageInfo.name}</h5>
-            <p className="text-gray-600 mb-3">{packageInfo.description}</p>
-            <p className="font-bold text-2xl text-green-600 mb-4">Giá: {packageInfo.price}</p>
-
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border-l-4 border-blue-500">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <Shield className="w-6 h-6 mr-2 text-blue-600" />
+            Kết quả đánh giá nguy cơ STI
+          </h3>
+          
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm font-medium mb-2 text-gray-700">Bao gồm các xét nghiệm:</p>
-              <div className="grid grid-cols-2 gap-2">
-                {packageInfo.tests.map((test: string, index: number) => (
-                  <div key={index} className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    <span className="text-sm">{test}</span>
-                  </div>
-                ))}
+              <h4 className="font-semibold text-lg mb-3">Mức độ nguy cơ:</h4>
+              <div className={`inline-flex items-center px-4 py-2 rounded-full text-white font-medium ${
+                recommendation.risk_level === 'Cao' ? 'bg-red-500' :
+                recommendation.risk_level === 'Trung bình' ? 'bg-yellow-500' : 'bg-green-500'
+              }`}>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                {recommendation.risk_level}
+              </div>
+              
+              <div className="mt-4">
+                <h5 className="font-medium mb-2">Lý do đánh giá:</h5>
+                <ul className="space-y-1">
+                  {recommendation.reasoning.map((reason, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                      <span className="text-sm text-gray-700">{reason}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className={`p-4 rounded-lg border ${recommendation.risk_level === 'Cao' ? 'bg-red-50 border-red-200' :
-          recommendation.risk_level === 'Trung bình' ? 'bg-yellow-50 border-yellow-200' :
-            'bg-green-50 border-green-200'
-          }`}>
-          <h5 className="font-semibold mb-2 flex items-center">
-            <AlertTriangle className={`w-5 h-5 mr-2 ${recommendation.risk_level === 'Cao' ? 'text-red-600' :
-              recommendation.risk_level === 'Trung bình' ? 'text-yellow-600' :
-                'text-green-600'
-              }`} />
-            Mức độ nguy cơ:
-            <span className={`ml-2 px-3 py-1 rounded-full text-sm font-bold ${recommendation.risk_level === 'Cao' ? 'bg-red-200 text-red-800' :
-              recommendation.risk_level === 'Trung bình' ? 'bg-yellow-200 text-yellow-800' :
-                'bg-green-200 text-green-800'
-              }`}>
-              {recommendation.risk_level}
-            </span>
-          </h5>
+            <div className="bg-white p-6 rounded-lg border border-green-200 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h5 className="font-bold text-xl text-blue-600">{packageInfo.sti_package_name}</h5>
+                <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                  <p className="text-xs text-gray-600 mb-1">Giá gói</p>
+                  <p className="font-bold text-2xl text-green-600" style={{ whiteSpace: 'nowrap' }}>
+                    {packageInfo.price?.toLocaleString('vi-VN')} VNĐ
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-600 mb-4 leading-relaxed">{packageInfo.sti_package_description}</p>
 
-          <div className="text-sm">
-            <p className="font-medium mb-2">Lý do đề xuất:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {recommendation.reasoning.map((reason, index) => (
-                <li key={index}>{reason}</li>
-              ))}
-            </ul>
+              <div>
+                <p className="text-sm font-medium mb-3 text-gray-700">Bao gồm các xét nghiệm:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {packageInfo.sti_package_tests?.map((test: string, index: number) => (
+                    <div key={index} className="flex items-start bg-gray-50 p-3 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 leading-relaxed">{test}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
