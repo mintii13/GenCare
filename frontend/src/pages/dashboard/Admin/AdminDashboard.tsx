@@ -12,7 +12,7 @@ import {
   FaPlus,
   FaEye,
   FaUserMd,
-  FaClipboardList,
+    FaClipboardList,
   FaBell,
   FaArrowUp,
   FaArrowDown,
@@ -21,11 +21,13 @@ import {
   FaDownload,
   FaSync
 } from 'react-icons/fa';
+import { analyticsService } from '@/services/analyticsService';
+import { toast } from 'react-hot-toast';
 
 interface DashboardStats {
   totalUsers: number;
   todayAppointments: number;
-  monthlyRevenue: string;
+  totalRevenue: number;
   newBlogs: number;
   pendingOrders: number;
   activeConsultants: number;
@@ -36,16 +38,42 @@ interface DashboardStats {
 const AdminDashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 1234,
-    todayAppointments: 15,
-    monthlyRevenue: '45.6M',
-    newBlogs: 8,
-    pendingOrders: 23,
-    activeConsultants: 12,
-    userGrowth: 8.5,
-    revenueGrowth: 12.3
+    totalUsers: 0,
+    todayAppointments: 0,
+    totalRevenue: 0,
+    newBlogs: 0,
+    pendingOrders: 0,
+    activeConsultants: 0,
+    userGrowth: 0,
+    revenueGrowth: 0
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchStats = async () => {
+    setIsLoading(true);
+    try {
+      const revenueRes = await analyticsService.getTotalRevenue();
+      // Mock other stats for now
+      setStats({
+        totalUsers: 1234,
+        todayAppointments: 15,
+        totalRevenue: revenueRes.data.total_revenue,
+        newBlogs: 8,
+        pendingOrders: 23,
+        activeConsultants: 12,
+        userGrowth: 8.5,
+        revenueGrowth: 12.3
+      });
+    } catch (error) {
+      toast.error('Không thể tải dữ liệu thống kê.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   // Redirect if not authenticated or not an admin
   if (!isAuthenticated || user?.role !== 'admin') {
@@ -53,11 +81,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   const handleRefreshStats = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    fetchStats();
   };
 
   const managementCards = [
@@ -147,7 +171,7 @@ const AdminDashboard: React.FC = () => {
     },
     {
       title: "Doanh thu tháng này",
-      value: `${stats.monthlyRevenue} VND`,
+      value: `${stats.totalRevenue.toLocaleString()} VND`,
       growth: stats.revenueGrowth,
       icon: FaChartLine,
       color: "purple"

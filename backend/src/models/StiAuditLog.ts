@@ -26,9 +26,11 @@ const stiAuditLogSchema = new Schema<IStiAuditLog>({
     after: { type: Schema.Types.Mixed },
     timestamp: { type: Date, default: Date.now },
     notes: { type: String },
+}, {
+    collection: 'stiauditlogs' // Explicitly set collection name
 });
 
-export const StiAuditLog = mongoose.model<IStiAuditLog>('AuditLog', stiAuditLogSchema);
+export const StiAuditLog = mongoose.model<IStiAuditLog>('StiAuditLog', stiAuditLogSchema);
 
 export const modelMap: Record<TargetType, mongoose.Model<any>> = {
   StiOrder: StiOrder,

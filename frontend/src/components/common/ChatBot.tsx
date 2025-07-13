@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import chatbotIcon from '../../assets/icons/chatboticon.png';
+import ChatBotIcon from '../../assets/icons/chatboticon.png'
 
 interface Message {
   id: string;
@@ -27,7 +27,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const webhookUrl = import.meta.env.VITE_CHATBOX_API;
+  const webhookUrl = import.meta.env.VITE_CHATBOT_API;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,6 +39,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
+
+    // Kiểm tra webhook URL trước khi gửi
+    if (!webhookUrl) {
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -52,8 +57,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
     setIsLoading(true);
 
     try {
-      console.log(' Gửi tin nhắn đến webhook:', webhookUrl);
-      
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -99,7 +102,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
       setMessages(prev => [...prev, botMessage]);
       
     } catch (error) {
-      console.error(' Lỗi gửi tin nhắn:', error);
+      
+      
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -159,7 +163,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <img
-                  src={chatbotIcon}
+                  src={ChatBotIcon}
                   alt="Chatbot Icon"
                   className="w-8 h-8 object-contain rounded-full bg-white"
                 />
@@ -203,7 +207,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
                       </svg>
                     ) : (
                       <img
-                        src={chatbotIcon}
+                        src={ChatBotIcon}
                         alt="Chatbot Icon"
                         className="w-7 h-7 object-contain rounded-full bg-white"
                       />
@@ -212,7 +216,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
 
                   {/* Message bubble */}
                   <div className={`px-4 py-3 rounded-2xl text-sm shadow-sm ${
-                    message.isUser
+                    message.isUser  
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-md'
                       : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'
                   }`}>

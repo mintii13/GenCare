@@ -6,7 +6,8 @@ import {
   FaUsers, 
   FaCog,
   FaSignOutAlt,
-  FaFlask
+  FaFlask,
+  FaBlog
 } from 'react-icons/fa';
 
 const StaffSidebar: React.FC = () => {
@@ -24,7 +25,13 @@ const StaffSidebar: React.FC = () => {
     {
       title: 'Quản lý Xét nghiệm',
       items: [
-        { name: 'Đơn hàng STI', path: '/staff/sti-orders', icon: FaFlask },
+        { name: 'Quản lý STI', path: '/staff/sti-management', icon: FaFlask },
+      ]
+    },
+    {
+      title: 'Quản lý Nội dung',
+      items: [
+        { name: 'Quản lý Blog', path: '/staff/blogs', icon: FaBlog },
       ]
     },
     {

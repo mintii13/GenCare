@@ -5,6 +5,9 @@ import { useWeeklySchedule } from '../../../hooks/useWeeklySchedule';
 import WeeklyCalendarView from '../../../components/schedule/WeeklyCalendarView';
 import { WorkingDay, DAY_NAMES, DAY_LABELS, DayName } from '../../../types/schedule';
 import { formatWeekRange } from '../../../utils/dateUtils';
+import { useAuth } from '../../../contexts/AuthContext';
+import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
+import { getWeekRange } from '../../../utils/dateUtils';
 
 interface Consultant {
   _id: string;
@@ -19,8 +22,10 @@ interface TableRow {
 }
 
 const ConsultantSchedule: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [selectedConsultantId, setSelectedConsultantId] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   // Use shared hook for schedule management
   const {
@@ -37,21 +42,37 @@ const ConsultantSchedule: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log('🔍 [DEBUG] ConsultantSchedule - User context:', {
+      user,
+      isAuthenticated,
+      userRole: user?.role,
+      userId: user?.id
+    });
+    
+    setDebugInfo({
+      user,
+      isAuthenticated,
+      userRole: user?.role,
+      userId: user?.id
+    });
+    
     loadConsultants();
-  }, []);
+  }, [user, isAuthenticated]);
 
   const loadConsultants = async () => {
     try {
+      console.log('🔍 [DEBUG] Loading consultants...');
       const response = await consultantService.getAllConsultants();
+
       if (response.data && response.data.consultants) {
         const mapped = response.data.consultants.map((c: any) => ({
           _id: c._id,
           full_name: c.full_name || c.name || ''
         }));
         setConsultants(mapped);
+ 
       }
     } catch (error) {
-      console.error('Error loading consultants:', error);
     }
   };
 
@@ -77,6 +98,57 @@ const ConsultantSchedule: React.FC = () => {
         </div>
 
         <div className="p-6">
+          {/* Debug Information - Only in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-3 bg-gray-100 rounded text-xs">
+              <strong>Debug Info:</strong>
+              <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+              <div className="mt-2">
+                <strong>Selected Consultant:</strong> {selectedConsultantId || 'None'}
+              </div>
+              <div>
+                <strong>Schedule Data:</strong> {scheduleData ? 'Loaded' : 'Not loaded'}
+              </div>
+              <div>
+                <strong>Loading:</strong> {loading ? 'Yes' : 'No'}
+              </div>
+              <div>
+                <strong>Error:</strong> {error || 'None'}
+              </div>
+              
+              {/* Debug Test Button */}
+              <div className="mt-2 pt-2 border-t">
+                <button
+                  onClick={async () => {
+                    try {
+                      // Test consultants API first
+                      const consultantsRes = await consultantService.getAllConsultants();
+                      
+                      if (consultantsRes.data?.consultants?.length > 0 && selectedConsultantId) {
+                        // Test weekly schedule API
+                        const { weekStart } = getWeekRange(currentWeek);
+                        
+                        const scheduleRes = await weeklyScheduleService.getConsultantSchedules(selectedConsultantId, weekStart, weekStart);
+                      }
+                    } catch (err) {
+                    }
+                  }}
+                  className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                  disabled={!selectedConsultantId}
+                >
+                  Test API
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Authentication Check */}
+          {!isAuthenticated && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-700">Bạn cần đăng nhập để xem lịch làm việc.</p>
+            </div>
+          )}
+
           {/* Consultant Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -84,8 +156,11 @@ const ConsultantSchedule: React.FC = () => {
             </label>
             <select
               value={selectedConsultantId}
-              onChange={(e) => setSelectedConsultantId(e.target.value)}
+              onChange={(e) => {  
+                setSelectedConsultantId(e.target.value);
+              }}
               className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!isAuthenticated}
             >
               <option value="">-- Chọn chuyên gia --</option>
               {consultants.map((consultant) => (
@@ -118,7 +193,7 @@ const ConsultantSchedule: React.FC = () => {
           )}
 
           {/* Schedule Display */}
-          {selectedConsultantId && !loading && (
+          {selectedConsultantId && !loading && isAuthenticated && (
             <>
               <div className="mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -126,16 +201,16 @@ const ConsultantSchedule: React.FC = () => {
                 </h3>
               </div>
 
-                             <WeeklyCalendarView
-                 currentWeek={currentWeek}
-                 scheduleData={scheduleData || undefined}
-                 mode="read-only"
-                 onPreviousWeek={goToPreviousWeek}
-                 onNextWeek={goToNextWeek}
-                 loading={loading}
-                 error={error}
-                 onRetry={handleRetry}
-               />
+              <WeeklyCalendarView
+                currentWeek={currentWeek}
+                scheduleData={scheduleData || undefined}
+                mode="read-only"
+                onPreviousWeek={goToPreviousWeek}
+                onNextWeek={goToNextWeek}
+                loading={loading}
+                error={error}
+                onRetry={handleRetry}
+              />
 
               {/* Schedule Table */}
               {scheduleData && (
@@ -186,7 +261,7 @@ const ConsultantSchedule: React.FC = () => {
           )}
 
           {/* No Consultant Selected */}
-          {!selectedConsultantId && (
+          {!selectedConsultantId && isAuthenticated && (
             <div className="text-center py-8 text-gray-500">
               <p>Vui lòng chọn chuyên gia để xem lịch làm việc</p>
             </div>

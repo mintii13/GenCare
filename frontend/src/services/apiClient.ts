@@ -8,6 +8,10 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+  errorType?: string;
+  details?: string;
+  errors?: any[];
+  timestamp?: string;
 }
 
 export interface RetryConfig {
@@ -27,7 +31,7 @@ class ApiClient {
   constructor(baseURL: string = env.API_BASE_URL || 'http://localhost:3000/api') {
     this.instance = axios.create({
       baseURL,
-      timeout: 30000, // 30 seconds
+      timeout: 15000, // 15 seconds - increased for heavy data operations
       headers: {
         'Content-Type': 'application/json',
       },
@@ -92,14 +96,22 @@ class ApiClient {
             return Promise.reject(error);
           }
           
-          // Token expired or invalid for other requests
+          // Don't auto-logout for login requests (let login form handle the error)
+          if (requestUrl.includes('/auth/login')) {
+            console.log("Login failed - form will handle the error");
+            return Promise.reject(error);
+          }
+          
+          // Token expired or invalid for other requests - clear immediately
           console.error("Token expired or invalid, logging out.");
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');
           
-          // Only redirect if not already on login page
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+          // Only redirect if not already on home page - use setTimeout for better UX
+          if (!window.location.pathname.includes('/') || window.location.pathname !== '/') {
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100); // Small delay to prevent blocking
           }
         }
 
@@ -116,7 +128,9 @@ class ApiClient {
     operation: () => Promise<AxiosResponse<T>>,
     retryConfig: Partial<RetryConfig> = {}
   ): Promise<AxiosResponse<T>> {
-    const config = { ...this.defaultRetryConfig, ...retryConfig };
+    // Defensive check to ensure retryConfig is an object
+    const safeRetryConfig = retryConfig && typeof retryConfig === 'object' ? retryConfig : {};
+    const config = { ...this.defaultRetryConfig, ...safeRetryConfig };
     let lastError: AxiosError;
 
     for (let attempt = 1; attempt <= config.attempts; attempt++) {
@@ -142,9 +156,9 @@ class ApiClient {
           : config.delay;
 
         log.warn('ApiClient', `Attempt ${attempt} failed, retrying in ${delay}ms`, {
-          error: lastError.message,
-          url: lastError.config?.url,
-          status: status
+          error: lastError.message || 'Unknown error',
+          url: lastError.config?.url || 'Unknown URL',
+          status: status || 'Unknown status'
         });
 
         await this.delay(delay);
@@ -267,6 +281,24 @@ class ApiClient {
     }
   }
 
+  async safePatch<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+    retryConfig?: Partial<RetryConfig>
+  ): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.patch<T>(url, data, config, retryConfig);
+      return {
+        success: true,
+        data: response.data,
+        message: 'Request successful'
+      };
+    } catch (error) {
+      return this.handleError<T>(error as AxiosError);
+    }
+  }
+
   async safeDelete<T>(
     url: string, 
     config?: AxiosRequestConfig,
@@ -287,25 +319,82 @@ class ApiClient {
   private handleError<T>(error: AxiosError): ApiResponse<T> {
     const status = error.response?.status || 0;
     const responseData = error.response?.data as any;
+    
+    // Extract detailed error information from backend
+    const errorType = responseData?.type || 'UNKNOWN_ERROR';
     const message = responseData?.message || error.message || 'Có lỗi xảy ra';
-
-    return {
+    const details = responseData?.details || null;
+    const errors = responseData?.errors || null;
+    
+    // Create comprehensive error response
+    const errorResponse: ApiResponse<T> = {
       success: false,
       error: message,
-      message: this.getErrorMessage(status, message)
+      message: this.getErrorMessage(status, message, errorType, details),
+      errorType,
+      details,
+      errors,
+      timestamp: responseData?.timestamp || new Date().toISOString()
     };
+
+    // Log error for debugging
+    console.error('API Error:', {
+      status,
+      type: errorType,
+      message,
+      details,
+      errors,
+      url: error.config?.url,
+      method: error.config?.method
+    });
+
+    return errorResponse;
   }
 
-  private getErrorMessage(status: number, originalMessage: string): string {
+  private getErrorMessage(status: number, originalMessage: string, errorType?: string, details?: string): string {
+    // Use detailed message from backend if available
+    if (details && details !== originalMessage) {
+      return details;
+    }
+
+    // Handle specific error types
+    switch (errorType) {
+      case 'VALIDATION_ERROR':
+        return details || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin đã nhập.';
+      case 'AUTHENTICATION_ERROR':
+        return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      case 'AUTHORIZATION_ERROR':
+        return 'Bạn không có quyền thực hiện hành động này.';
+      case 'NOT_FOUND_ERROR':
+        return 'Không tìm thấy tài nguyên yêu cầu.';
+      case 'CONFLICT_ERROR':
+        return details || 'Dữ liệu đã tồn tại hoặc có xung đột.';
+      case 'DUPLICATE_ERROR':
+        return 'Dữ liệu này đã tồn tại trong hệ thống.';
+      case 'INVALID_ID_ERROR':
+        return 'ID được cung cấp không đúng định dạng.';
+      case 'UNPROCESSABLE_ERROR':
+        return details || 'Dữ liệu không đúng định dạng yêu cầu.';
+      case 'RATE_LIMIT_ERROR':
+        return 'Quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.';
+      case 'INTERNAL_SERVER_ERROR':
+        return 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.';
+      default:
+        break;
+    }
+
+    // Fallback to status-based messages
     switch (status) {
       case 400:
-        return 'Dữ liệu không hợp lệ';
+        return originalMessage || 'Dữ liệu không hợp lệ';
       case 401:
         return 'Phiên đăng nhập đã hết hạn';
       case 403:
         return 'Bạn không có quyền thực hiện hành động này';
       case 404:
         return 'Không tìm thấy dữ liệu yêu cầu';
+      case 409:
+        return 'Dữ liệu đã tồn tại hoặc có xung đột';
       case 422:
         return 'Dữ liệu không đúng định dạng';
       case 429:

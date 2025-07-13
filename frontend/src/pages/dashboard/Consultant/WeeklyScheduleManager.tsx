@@ -7,6 +7,8 @@ import { appointmentService } from '../../../services/appointmentService';
 import { getGoogleAccessToken } from '../../../utils/authUtils';
 import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
 import { FaChevronLeft, FaChevronRight, FaLink } from 'react-icons/fa';
+import apiClient from '../../../services/apiClient';
+import { API } from '../../../config/apiEndpoints';
 
 
 interface WorkingDay {
@@ -194,25 +196,41 @@ const WeeklyScheduleManager: React.FC = () => {
     try {
       const weekStartDate = format(currentWeek, 'yyyy-MM-dd');
       
+      
       // Sử dụng weeklyScheduleService thay vì fetch trực tiếp
       const response = await weeklyScheduleService.getMySchedules(weekStartDate, weekStartDate);
       
-      if (response.success && response.data && response.data.schedules && response.data.schedules.length > 0) {
+     
+
+      if ((response as any).success && (response as any).data && (response as any).data.schedules && (response as any).data.schedules.length > 0) {
         // Filter schedules for the exact week we're looking for
         const targetWeekStart = format(currentWeek, 'yyyy-MM-dd');
-        const matchingSchedule = response.data.schedules.find((schedule: Schedule) => {
-          const scheduleWeekStart = format(new Date(schedule.week_start_date), 'yyyy-MM-dd');
+       
+        
+        const matchingSchedule = (response as any).data.schedules.find((schedule: Schedule) => {
+          // Normalize both dates to yyyy-MM-dd format for comparison
+          const scheduleDate = new Date(schedule.week_start_date);
+          const scheduleWeekStart = format(scheduleDate, 'yyyy-MM-dd');
           return scheduleWeekStart === targetWeekStart;
         });
 
         if (matchingSchedule) {
+        
           setExistingSchedule(matchingSchedule);
-          setScheduleData({
+          const newScheduleData = {
             working_days: matchingSchedule.working_days || {},
             default_slot_duration: matchingSchedule.default_slot_duration || 30,
             notes: matchingSchedule.notes || ''
-          });
+          };
+         
+          setScheduleData(newScheduleData);
+          
+          // Force a re-render to make sure UI updates
+          setTimeout(() => {
+       
+          }, 100);
         } else {
+
           setExistingSchedule(null);
           setScheduleData({
             working_days: {},
@@ -230,28 +248,109 @@ const WeeklyScheduleManager: React.FC = () => {
         });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: 'Có lỗi xảy ra khi tải lịch làm việc' });
+
     }
   };
 
-  const fetchAppointmentsForWeek = async () => {
+    const fetchAppointmentsForWeek = async () => {
     try {
       const weekStart = format(currentWeek, 'yyyy-MM-dd');
       const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
+
+      for (let i = 0; i < 7; i++) {
+        const date = addDays(currentWeek, i);
+
+      }
+
       
-      const data = await appointmentService.getConsultantAppointments();
+
       
-      if (data.success && data.data) {
-        // Filter appointments for current week
-        const weekAppointments = (data.data.appointments || []).filter((appointment: Appointment) => {
-          const appointmentDate = appointment.appointment_date;
-          return appointmentDate >= weekStart && appointmentDate <= weekEnd;
+      // Get current user's consultant ID (for consultant role, user.id is the consultant ID)
+      const consultantId = user?.id;
+      
+      
+      // Try multiple approaches to get appointments
+      
+      // Temporarily disable new endpoint due to 500 error
+      /*
+      try {
+        const myData = await appointmentService.getMyAppointments({
+          date_from: weekStart,
+          date_to: weekEnd
         });
         
-        setAppointments(weekAppointments);
-      } else {
-        setAppointments([]);
+        console.log('📅 [DEBUG] getMyAppointments response:', myData);
+        
+        if (myData && myData.success && myData.data && myData.data.appointments) {
+          console.log('📅 [DEBUG] ✅ getMyAppointments successful, found:', myData.data.appointments.length, 'appointments');
+          setAppointments(myData.data.appointments);
+          return;
+        }
+      } catch (myError) {
+        console.log('📅 [DEBUG] ❌ getMyAppointments failed:', myError);
       }
+      */
+      
+      
+      try {
+        const paginatedData = await appointmentService.getAllAppointmentsPaginated({
+          date_from: weekStart,
+          date_to: weekEnd,
+          consultant_id: consultantId
+        });
+        
+
+        
+        if (paginatedData && paginatedData.success && paginatedData.data && paginatedData.data.appointments) {
+          setAppointments(paginatedData.data.appointments);
+          return;
+        }
+      } catch (paginatedError) {
+        
+
+      }
+      
+      // Fallback 1: Try consultant appointments endpoint
+      try {
+        const consultantData = await appointmentService.getConsultantAppointments();
+if (consultantData && consultantData.success && consultantData.data && consultantData.data.appointments) {
+          // Filter by date range manually
+          const weekAppointments = consultantData.data.appointments.filter((appointment: Appointment) => {
+            const appointmentDate = appointment.appointment_date;
+            return appointmentDate >= weekStart && appointmentDate <= weekEnd;
+          });
+          
+setAppointments(weekAppointments);
+          return;
+        }
+      } catch (consultantError) {
+      }
+      
+      // Fallback 2: Try direct apiClient call with proper parameters
+      try {
+        const directResponse = await apiClient.get(API.Appointment.ALL, {
+          params: {
+            date_from: weekStart,
+            date_to: weekEnd,
+            consultant_id: consultantId
+          }
+        });
+        
+        const directData = directResponse.data;
+        
+        if (directData && (directData as any).success && (directData as any).data && (directData as any).data.appointments) {
+          setAppointments((directData as any).data.appointments);
+          return;
+        } else if (directData && (directData as any).appointments) {
+          // Fallback for different response structure
+          setAppointments((directData as any).appointments);
+          return;
+        }
+      } catch (directError) {
+      }
+      
+      setAppointments([]);
+      
     } catch (error) {
       setAppointments([]);
     }
@@ -331,11 +430,11 @@ const WeeklyScheduleManager: React.FC = () => {
 
 
       
-      if (response.success) {
+      if ((response as any).success) {
         setMessage({ type: 'success', text: existingSchedule ? 'Cập nhật lịch thành công!' : 'Tạo lịch thành công!' });
         fetchScheduleForWeek(); // Refresh data
       } else {
-        setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi lưu lịch' });
+        setMessage({ type: 'error', text: (response as any).message || 'Có lỗi xảy ra khi lưu lịch' });
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi lưu lịch' });
@@ -353,13 +452,13 @@ const WeeklyScheduleManager: React.FC = () => {
       
       const response = await weeklyScheduleService.copySchedule(existingSchedule._id, targetWeekStart);
       
-      if (response.success) {
+      if ((response as any).success) {
         setMessage({ type: 'success', text: 'Sao chép lịch thành công!' });
         setCurrentWeek(addWeeks(currentWeek, 1)); // Move to next week
       } else {
-        setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi sao chép lịch' });
+        setMessage({ type: 'error', text: (response as any).message || 'Có lỗi xảy ra khi sao chép lịch' });
       }
-    } catch (err) {
+    } catch (err) { 
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi sao chép lịch' });
     } finally {
       setSaving(false);
@@ -379,6 +478,7 @@ const WeeklyScheduleManager: React.FC = () => {
     action: 'confirm' | 'cancel' | 'start' | 'complete'
   ) => {
     try {
+      
       // Kiểm tra Google access token cho action confirm
       if (action === 'confirm') {
         const googleAccessToken = getGoogleAccessToken();
@@ -388,8 +488,8 @@ const WeeklyScheduleManager: React.FC = () => {
             text: 'Cần đăng nhập Google để tạo link Google Meet. Vui lòng đăng nhập lại.' 
           });
           // Redirect đến Google OAuth
-          window.location.href = 'http://localhost:3000/api/auth/google';
-          return;
+            window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}${API.Auth.GOOGLE_VERIFY}`;
+            return;
         }
       }
 
@@ -400,20 +500,21 @@ const WeeklyScheduleManager: React.FC = () => {
           response = await appointmentService.confirmAppointment(appointmentId, googleAccessToken!);
           break;
         case 'cancel':
-          response = await appointmentService.cancelAppointment(appointmentId);
+            response = await appointmentService.cancelAppointment(appointmentId);
           break;
         case 'start':
           const googleTokenForStart = getGoogleAccessToken();
           response = await appointmentService.startMeeting(appointmentId, googleTokenForStart || undefined);
           break;
-        case 'complete':
+        case 'complete': 
           response = await appointmentService.completeAppointment(appointmentId, ''); // No notes in quick modal
           break;
         default:
           return;
       }
 
-      if (response.success) {
+
+      if ((response as any).success) {
         const successMsg = {
           confirm: 'Đã chấp nhận cuộc hẹn và tạo link Google Meet thành công',
           cancel: 'Đã hủy cuộc hẹn',
@@ -426,10 +527,22 @@ const WeeklyScheduleManager: React.FC = () => {
         // Refresh appointments
         fetchAppointmentsForWeek();
         setHoveredAppointment(null);
-            } else {
-        setMessage({ type: 'error', text: response.message || 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
+      } else {
+        const errorMsg = (response as any).message || 'Có lỗi xảy ra khi cập nhật cuộc hẹn';
+        
+        // Show more specific error message based on action
+        let userFriendlyMsg = errorMsg;
+        if (action === 'confirm' && errorMsg.includes('Internal server error')) {
+          userFriendlyMsg = 'Không thể xác nhận cuộc hẹn. Vui lòng kiểm tra lịch làm việc hoặc liên hệ admin.';
+        } else if (action === 'start' && errorMsg.includes('Internal server error')) {
+          userFriendlyMsg = 'Không thể bắt đầu cuộc hẹn. Vui lòng thử lại sau.';
+        }
+        
+        setMessage({ type: 'error', text: userFriendlyMsg });
       }
-    } catch (error) {       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật cuộc hẹn' });
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message || 'Có lỗi xảy ra khi cập nhật cuộc hẹn';
+      setMessage({ type: 'error', text: errorMsg });
     }
   };
 
@@ -542,6 +655,9 @@ const WeeklyScheduleManager: React.FC = () => {
       return 'Không xác định';
     }
   };
+
+  // Debug current state
+
 
   if (loading) {
     return (
@@ -670,7 +786,7 @@ const WeeklyScheduleManager: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {Array.from({ length: 10 }, (_, i) => {
+                        {Array.from({ length: 12 }, (_, i) => {
                           const hour = 7 + i;
                           const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
                           return (
@@ -685,6 +801,11 @@ const WeeklyScheduleManager: React.FC = () => {
                                 const isWorking = dayData?.is_available || false;
                                 const dayDate = addDays(currentWeek, dayIndex);
                                 
+                                // Debug working days
+                                if (dayIndex === 0) { // Only log once per row
+                                  
+                                }
+                                
                                 // Get appointments for this specific day and hour
                                 const dayAppointments = appointments.filter(appointment => {
                                   if (appointment.status === 'cancelled') return false; // Bỏ qua lịch đã hủy
@@ -692,6 +813,8 @@ const WeeklyScheduleManager: React.FC = () => {
                                   const appointmentHour = parseInt(appointment.start_time.split(':')[0]);
                                   return isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
                                 });
+                                
+                             
                                 
                                 const isToday = isSameDay(dayDate, new Date());
                                 

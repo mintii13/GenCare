@@ -30,7 +30,7 @@ export interface ChatbotConfig {
 // Cấu hình mặc định cho chatbot GenCare
 export const defaultChatbotConfig: ChatbotConfig = {
   // Sử dụng webhook URL từ environment helper function
-  webhookUrl: import.meta.env.CHATBOX_API,
+  webhookUrl: import.meta.env.VITE_CHATBOX_API,
   
   webhookConfig: {
     method: 'POST',

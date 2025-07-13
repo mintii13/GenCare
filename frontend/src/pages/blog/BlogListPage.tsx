@@ -52,7 +52,6 @@ const BlogListPage: React.FC = () => {
 
   // Debug query changes
   useEffect(() => {
-    console.log('🏷️  Query changed:', query);
   }, [query]);
 
   useEffect(() => {
@@ -70,21 +69,15 @@ const BlogListPage: React.FC = () => {
         sort_by: ['publish_date', 'updated_date', 'title'].includes(query.sort_by || '') ? query.sort_by : 'publish_date'
       };
       
-      console.log('🔍 Fetching blogs with query:', validQuery);
-      console.log('📝 Raw query before validation:', query);
       const response = await blogService.getBlogs(validQuery);
-      console.log('📊 API Response:', response);
       
       if (response.success) {
-        console.log('✅ Blogs loaded successfully:', response.data.blogs.length, 'blogs');
         setBlogs(response.data.blogs);
         setPagination(response.data.pagination);
       } else {
-        console.error('❌ API returned success: false');
         setError(response.message || 'Có lỗi xảy ra khi tải danh sách blog');
       }
     } catch (error) {
-      console.error('💥 Error fetching blogs:', error);
       setError('Không thể tải danh sách blog. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
@@ -104,7 +97,6 @@ const BlogListPage: React.FC = () => {
     const validSortOrder = ['asc', 'desc'].includes(sort_order) ? sort_order : 'desc';
     const validSortBy = ['publish_date', 'updated_date', 'title'].includes(sort_by) ? sort_by : 'publish_date';
     
-    console.log('🔄 Sort change:', { sort_by: validSortBy, sort_order: validSortOrder });
     
     setQuery(prev => ({
       ...prev,

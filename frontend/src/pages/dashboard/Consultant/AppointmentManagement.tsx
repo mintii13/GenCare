@@ -9,6 +9,8 @@ import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
 import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
 import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
 import { getGoogleAccessToken, hasGoogleAccessToken } from '../../../utils/authUtils';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { 
   Appointment,
   AppointmentQuery,
@@ -35,9 +37,11 @@ import {
   FaChevronRight,
   FaFilter
 } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 const AppointmentManagement: React.FC = () => {
   const { user } = useAuth();
+  const { modalState, showConfirm, hideConfirm } = useConfirmModal();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -143,11 +147,9 @@ const AppointmentManagement: React.FC = () => {
         return;
       }
       
-      console.log('🔍 Fetching consultant appointments with query:', query);
       const response = await appointmentService.getConsultantAppointmentsPaginated(query);
       
       if (response.success) {
-        console.log('✅ Appointments loaded:', response.data.appointments.length);
         
         // Filter out appointments with null customer_id
         const validAppointments = response.data.appointments.filter((appointment: Appointment) => {
@@ -162,7 +164,6 @@ const AppointmentManagement: React.FC = () => {
         showNotification('error', response.message || 'Không thể tải danh sách lịch hẹn');
       }
     } catch (err: any) {
-      console.error('Error fetching appointments:', err);
       if (err.response?.status === 401) {
         showNotification('error', 'Token đã hết hạn. Vui lòng đăng nhập lại');
         window.location.href = '/auth/login';
@@ -234,16 +235,12 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const showNotification = (type: 'success' | 'error' | 'warning', message: string) => {
-    // Simple notification - có thể thay thế bằng toast library
     if (type === 'error') {
-      console.error(message);
-      // Có thể show toast notification ở đây
+      toast.error(message);
     } else if (type === 'success') {
-      console.log(message);
-      // Có thể show toast notification ở đây
+      toast.success(message);
     } else if (type === 'warning') {
-      console.warn(message);
-      // Có thể show toast notification ở đây
+      toast(message, { icon: '⚠️' });
     }
   };
 
@@ -255,7 +252,6 @@ const AppointmentManagement: React.FC = () => {
       try {
         googleAccessToken = await getGoogleAccessToken();
       } catch (error) {
-        console.error('Error getting Google Access Token:', error);
         showNotification('error', 'Cần đăng nhập Google để tạo Google Meet link. Vui lòng đăng nhập Google trước.');
         setActionLoading('');
       return;
@@ -276,7 +272,7 @@ const AppointmentManagement: React.FC = () => {
         if ((data as any).requiresGoogleAuth) {
           showNotification('error', 'Cần xác thực Google để tạo Google Meet link. Vui lòng đăng nhập Google.');
         } else {
-          showNotification('error', data.message);
+          showNotification('error', data.message || 'Có lỗi xảy ra khi xác nhận lịch hẹn');
         }
       }
     } catch (err: any) {
@@ -301,7 +297,7 @@ const AppointmentManagement: React.FC = () => {
         showNotification('success', 'Cuộc họp đã được bắt đầu');
         fetchAppointments();
       } else {
-        showNotification('error', data.message);
+        showNotification('error', data.message || 'Có lỗi xảy ra khi bắt đầu cuộc họp');
       }
     } catch (err: any) {
       console.error('Error starting meeting:', err);
@@ -324,7 +320,7 @@ const AppointmentManagement: React.FC = () => {
         setConsultantNotes('');
         fetchAppointments();
       } else {
-        showNotification('error', data.message);
+        showNotification('error', data.message || 'Có lỗi xảy ra khi hoàn thành lịch hẹn');
       }
     } catch (err: any) {
       console.error('Error completing appointment:', err);
@@ -335,24 +331,33 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
-
-      setActionLoading(appointmentId);
-    try {
-      const data = await appointmentService.cancelAppointment(appointmentId);
-      
-      if (data.success) {
-        showNotification('success', 'Đã hủy lịch hẹn');
-        fetchAppointments();
-      } else {
-        showNotification('error', data.message);
+    showConfirm(
+      {
+        title: "Xác nhận hủy lịch hẹn",
+        description: "Bạn có chắc chắn muốn hủy lịch hẹn này? Khách hàng sẽ được thông báo về việc hủy lịch.",
+        confirmText: "Hủy lịch hẹn",
+        cancelText: "Không",
+        confirmVariant: "destructive"
+      },
+      async () => {
+        setActionLoading(appointmentId);
+        try {
+          const data = await appointmentService.cancelAppointment(appointmentId);
+          
+          if (data.success) {
+            showNotification('success', 'Đã hủy lịch hẹn');
+            fetchAppointments();
+          } else {
+            showNotification('error', data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+          }
+        } catch (err: any) {
+          console.error('Error cancelling appointment:', err);
+          showNotification('error', err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+        } finally {
+          setActionLoading('');
+        }
       }
-    } catch (err: any) {
-      console.error('Error cancelling appointment:', err);
-      showNotification('error', err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-    } finally {
-      setActionLoading('');
-    }
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -1067,6 +1072,18 @@ const AppointmentManagement: React.FC = () => {
       </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={hideConfirm}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+        description={modalState.description}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        confirmVariant={modalState.confirmVariant}
+        isLoading={modalState.isLoading}
+      />
     </div>
   );
 };

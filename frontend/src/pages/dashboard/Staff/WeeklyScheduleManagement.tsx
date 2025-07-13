@@ -10,6 +10,8 @@ import DataTable from 'react-data-table-component';
 import { format } from 'date-fns';
 import ScheduleEditModal from './components/ScheduleEditModal';
 import CopyScheduleModal from './components/CopyScheduleModal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 
 // Interfaces
 interface Consultant {
@@ -29,6 +31,7 @@ interface Schedule {
 
 const WeeklyScheduleManagement: React.FC = () => {
     const { user } = useAuth();
+    const { modalState, showConfirm, hideConfirm } = useConfirmModal();
     const [consultants, setConsultants] = useState<Consultant[]>([]);
     const [selectedConsultantId, setSelectedConsultantId] = useState<string>('');
     const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -52,11 +55,9 @@ const WeeklyScheduleManagement: React.FC = () => {
                 const response = await consultantService.getAllConsultants(1, 1000); 
                     
                 if (response.data && response.data.consultants) {
-                    console.log('✅ [DEBUG] Consultants response:', response.data.consultants);
                     
                     // Map từ ConsultantType sang Consultant interface
                     const mappedConsultants: Consultant[] = response.data.consultants.map((consultant: any) => {
-                        console.log('🔄 [DEBUG] Mapping consultant:', consultant);
                         const mapped = {
                             _id: consultant.consultant_id, // ✅ Dùng consultant_id - đây là ID thực của consultant
                             name: consultant.full_name, // ✅ Dùng full_name từ user
@@ -64,11 +65,9 @@ const WeeklyScheduleManagement: React.FC = () => {
                             specialization: consultant.specialization,
                             user_id: consultant.user_id // Lưu user_id nếu cần
                         };
-                        console.log('✅ [DEBUG] Mapped to:', mapped);
                         return mapped;
                     });
                     
-                    console.log('📋 [DEBUG] Final consultants list:', mappedConsultants);
                     setConsultants(mappedConsultants);
                 } else {
                     toast.error("Không thể tải danh sách chuyên gia.");
@@ -135,22 +134,29 @@ const WeeklyScheduleManagement: React.FC = () => {
     };
 
     const handleDeleteSchedule = async (scheduleId: string) => {
-        if (!window.confirm("Bạn có chắc muốn xóa lịch này không?")) {
-            return;
-        }
-        
-        try {
-            const response: any = await weeklyScheduleService.deleteSchedule(scheduleId);
-            if (response.success) {
-                toast.success("Xóa lịch thành công!");
-                fetchSchedules(); // Reload danh sách
-            } else {
-                toast.error(response.message || "Không thể xóa lịch");
+        showConfirm(
+            {
+                title: "Xác nhận xóa lịch",
+                description: "Bạn có chắc muốn xóa lịch này không? Hành động này không thể hoàn tác.",
+                confirmText: "Xóa",
+                cancelText: "Hủy",
+                confirmVariant: "destructive"
+            },
+            async () => {
+                try {
+                    const response: any = await weeklyScheduleService.deleteSchedule(scheduleId);
+                    if (response.success) {
+                        toast.success("Xóa lịch thành công!");
+                        fetchSchedules(); // Reload danh sách
+                    } else {
+                        toast.error(response.message || "Không thể xóa lịch");
+                    }
+                } catch (error) {
+                    toast.error("Lỗi khi xóa lịch");
+                    console.error(error);
+                }
             }
-        } catch (error) {
-            toast.error("Lỗi khi xóa lịch");
-            console.error(error);
-        }
+        );
     };
 
     const handleOpenCopyModal = (scheduleId: string) => {
@@ -263,12 +269,7 @@ const WeeklyScheduleManagement: React.FC = () => {
                 />
             )}
             
-            {/* DEBUG: Show selected consultant ID */}
-            {selectedConsultantId && (
-                <div className="mt-4 p-2 bg-gray-100 rounded text-sm">
-                    <strong>🔍 DEBUG:</strong> Selected Consultant ID: {selectedConsultantId}
-                </div>
-            )}
+
 
             {isCopyModalOpen && (
                 <CopyScheduleModal
@@ -278,6 +279,18 @@ const WeeklyScheduleManagement: React.FC = () => {
                     sourceScheduleId={copyingScheduleId}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={modalState.isOpen}
+                onClose={hideConfirm}
+                onConfirm={modalState.onConfirm}
+                title={modalState.title}
+                description={modalState.description}
+                confirmText={modalState.confirmText}
+                cancelText={modalState.cancelText}
+                confirmVariant={modalState.confirmVariant}
+                isLoading={modalState.isLoading}
+            />
         </div>
     );
 };

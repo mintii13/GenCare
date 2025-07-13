@@ -101,17 +101,15 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/consultation/book-appointment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Đặt lịch tư vấn
                   </Link>
-                  <Link to="/test-packages" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                    Dịch vụ xét nghiệm
+                  <Link to="/test-packages/sti" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                    Dịch vụ xét nghiệm 
                   </Link>
                   {isAuthenticated && user?.role === 'customer' && (
                     <>
                       <Link to="/sti-assessment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Đánh giá sàng lọc STI
                       </Link>
-                      <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử đánh giá STI
-                      </Link>
+                    
                     </>
                   )}
                   {isAuthenticated && user?.role === 'customer' && (
@@ -119,9 +117,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch hẹn của tôi
                       </Link>
-                      <Link to="/consultants" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Danh sách chuyên gia
-                      </Link>
+
                     </>
                   )}
                 </div>
@@ -177,6 +173,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử xét nghiệm
                     </Link>
+                    <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Kết quả xét nghiệm STI
+                    </Link>
                     <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Lịch sử tư vấn
                     </Link>
@@ -188,6 +187,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                         <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           Đánh giá của tôi
                         </Link>
+                        <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử đánh giá STI
+                      </Link>
                       </>
                     )}
                     <button
@@ -278,7 +280,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       Theo dõi kinh nguyệt
                     </Link>
                     <Link 
-                      to="/test-packages" 
+                      to="/test-packages/sti" 
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -324,6 +326,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                   <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
                   <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử xét nghiệm
+                  </Link>
+                  <Link to="/dashboard/customer/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                    Kết quả xét nghiệm STI
                   </Link>
                   <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
                     Lịch sử tư vấn

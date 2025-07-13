@@ -19,6 +19,8 @@ const AdminLayout: React.FC = () => {
     { path: '/admin/blogs', label: 'Quản lý bài viết', icon: '📝' },
     { path: '/admin/revenue', label: 'Thống kê doanh thu', icon: '💰' },
     { path: '/admin/appointments', label: 'Quản lý lịch hẹn', icon: '📅' },
+    { path: '/admin/sti-management', label: 'Quản lý STI', icon: '🧪' },
+    { path: '/admin/audit-log', label: 'Nhật ký hệ thống', icon: '📜' },
     { path: '/admin/settings', label: 'Cài đặt hệ thống', icon: '⚙️' },
   ];
 

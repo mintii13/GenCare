@@ -90,14 +90,19 @@ export const userService = {
   },
 
   async logout() {
+    // Clear local storage immediately for better UX
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem('user');
+    
     try {
-      await apiClient.post(API.Auth.LOGOUT);
+      // Try to notify backend with short timeout - don't wait for response
+      apiClient.post(API.Auth.LOGOUT, {}, { timeout: 2000 }).catch(() => {
+        // Ignore API errors during logout
+        console.log("Backend logout notification failed - local logout completed");
+      });
     } catch (error) {
-  
-    } finally {
-      // Clear local storage regardless of API call result
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.removeItem('user');
+      // Ignore errors - user is already logged out locally
+      console.log("Logout notification skipped");
     }
   },
 

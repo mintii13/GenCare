@@ -25,6 +25,11 @@ export interface Appointment {
     meeting_id: string;
     meeting_password?: string;
   };
+  feedback?: {
+    rating: number;
+    comment?: string;
+    feedback_date: string;
+  };
 }
 
 export interface AppointmentHistory {
@@ -112,10 +117,34 @@ export interface AppointmentHistoryPaginatedResponse {
 export interface AppointmentResponse {
   success: boolean;
   message: string;
-  data: {
-    appointment: Appointment;
+  data?: {
+    appointment?: Appointment;
+    appointments?: Appointment[];
+    appointmentId?: string;
+    meetingDetails?: {
+      meet_url: string;
+      meeting_id: string;
+      meeting_password?: string;
+      calendar_event_id?: string;
+    };
+    pagination?: PaginationInfo;
+    total?: number;
+    summary?: any;
+    stats?: any;
   };
-  timestamp: string;
+  requiresGoogleAuth?: boolean;
+  googleAuthUrl?: string;
+  timestamp?: string;
+  errorType?: string;
+  details?: {
+    existingAppointment?: {
+      id: string;
+      appointment_date: string;
+      time_slot: string;
+      status: string;
+    };
+    [key: string]: any;
+  };
 }
 
 export interface AppointmentSlot {

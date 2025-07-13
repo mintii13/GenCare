@@ -36,9 +36,23 @@ export class AppointmentService {
             );
 
             if (existingPending.length > 0) {
+                // Lấy thông tin appointment đang chờ xác nhận
+                const pendingAppointment = existingPending[0];
+                const appointmentDate = new Date(pendingAppointment.appointment_date).toLocaleDateString('vi-VN');
+                const timeSlot = `${pendingAppointment.start_time} - ${pendingAppointment.end_time}`;
+                
                 return {
                     success: false,
-                    message: 'You already have a pending appointment. Please wait for confirmation or cancel the existing one before booking new appointment.'
+                    message: `Bạn đã có một lịch hẹn đang chờ xác nhận vào ngày ${appointmentDate} (${timeSlot}). Vui lòng chờ xác nhận từ bác sĩ hoặc hủy lịch hẹn hiện tại trước khi đặt lịch mới.`,
+                    errorType: 'PENDING_APPOINTMENT_EXISTS',
+                    details: {
+                        existingAppointment: {
+                            id: pendingAppointment._id,
+                            appointment_date: appointmentDate,
+                            time_slot: timeSlot,
+                            status: 'pending'
+                        }
+                    }
                 };
             }
 
@@ -465,11 +479,26 @@ export class AppointmentService {
 
             // Business rules validation
             if (updateData.appointment_date || updateData.start_time || updateData.end_time) {
+                // Safely extract consultant_id as string
+                let consultantId: string;
+                if (updateData.consultant_id) {
+                    consultantId = updateData.consultant_id.toString();
+                } else {
+                    // Handle both populated and non-populated consultant_id
+                    if (typeof appointment.consultant_id === 'string') {
+                        consultantId = appointment.consultant_id;
+                    } else if (appointment.consultant_id && typeof appointment.consultant_id === 'object') {
+                        consultantId = (appointment.consultant_id as any)._id?.toString() || appointment.consultant_id.toString();
+                    } else {
+                        consultantId = appointment.consultant_id?.toString() || '';
+                    }
+                }
+
                 const validationError = await this.validateAppointmentTime(
                     updateData.appointment_date || appointment.appointment_date,
                     updateData.start_time || appointment.start_time,
                     updateData.end_time || appointment.end_time,
-                    updateData.consultant_id?.toString() || appointment.consultant_id.toString(),
+                    consultantId,
                     appointmentId
                 );
 
@@ -753,6 +782,76 @@ export class AppointmentService {
     }
 
     /**
+     * Send feedback reminder for a specific appointment
+     */
+    public static async sendFeedbackReminderForAppointment(appointmentId: string): Promise<AppointmentResponse> {
+        try {
+            const appointment = await AppointmentRepository.findById(appointmentId);
+            if (!appointment) {
+                return {
+                    success: false,
+                    message: 'Appointment not found'
+                };
+            }
+
+            if (appointment.status !== 'completed') {
+                return {
+                    success: false,
+                    message: 'Only completed appointments can receive feedback reminders'
+                };
+            }
+
+            if (appointment.feedback) {
+                return {
+                    success: false,
+                    message: 'Appointment already has feedback'
+                };
+            }
+
+            const customer = await User.findById(appointment.customer_id);
+            const consultant = await Consultant.findById(appointment.consultant_id).populate('user_id', 'full_name');
+
+            if (!customer || !consultant) {
+                return {
+                    success: false,
+                    message: 'Customer or consultant not found'
+                };
+            }
+
+            const emailData = {
+                customerName: customer.full_name,
+                customerEmail: customer.email,
+                consultantName: (consultant.user_id as any).full_name,
+                appointmentDate: appointment.appointment_date.toLocaleDateString('vi-VN'),
+                startTime: appointment.start_time,
+                endTime: appointment.end_time,
+                appointmentId: appointmentId
+            };
+
+            // Send feedback reminder email
+            const emailResult = await EmailNotificationService.sendFeedbackReminder(emailData);
+
+            if (emailResult.success) {
+                return {
+                    success: true,
+                    message: 'Feedback reminder sent successfully'
+                };
+            } else {
+                return {
+                    success: false,
+                    message: emailResult.message
+                };
+            }
+        } catch (error) {
+            console.error('Send feedback reminder service error:', error);
+            return {
+                success: false,
+                message: 'Internal server error when sending feedback reminder'
+            };
+        }
+    }
+
+    /**
      * Start meeting (update status to in_progress)
      */
     public static async startMeeting(appointmentId: string, userId: string): Promise<AppointmentResponse> {
@@ -900,6 +999,37 @@ export class AppointmentService {
                 );
             } catch (historyError) {
                 console.error('History logging error:', historyError);
+            }
+
+            // Send feedback reminder email to customer
+            try {
+                const customer = await User.findById(appointment.customer_id);
+                if (customer) {
+                    const emailData = {
+                        customerName: customer.full_name,
+                        customerEmail: customer.email,
+                        consultantName: (consultant.user_id as any).full_name,
+                        appointmentDate: appointment.appointment_date.toLocaleDateString('vi-VN'),
+                        startTime: appointment.start_time,
+                        endTime: appointment.end_time,
+                        appointmentId: appointmentId
+                    };
+
+                    // Send feedback reminder (non-blocking)
+                    EmailNotificationService.sendFeedbackReminder(emailData)
+                        .then(result => {
+                            if (result.success) {
+                                console.log('✅ Feedback reminder email sent successfully to:', customer.email);
+                            } else {
+                                console.error('❌ Failed to send feedback reminder:', result.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('❌ Error sending feedback reminder email:', error);
+                        });
+                }
+            } catch (emailError) {
+                console.error('Error preparing feedback reminder email:', emailError);
             }
 
             return {

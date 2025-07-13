@@ -11,7 +11,8 @@ import toast from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
 import { log } from '../../utils/logger';
 import { CardSkeleton, LoadingSpinner } from '../../components/common/LoadingSkeleton';
-import { FaCalendarAlt, FaSpinner, FaArrowLeft } from 'react-icons/fa';
+import { FaCalendarAlt, FaSpinner, FaArrowLeft, FaExclamationTriangle, FaEye } from 'react-icons/fa';
+import { AppointmentResponse } from '../../types/appointment';
 
 interface Consultant {
   consultant_id: string;
@@ -220,7 +221,7 @@ const BookAppointment: React.FC = () => {
       };
 
       // User is guaranteed to be authenticated at this point
-      const response = await appointmentService.bookAppointment(appointmentData);
+      const response = await appointmentService.bookAppointment(appointmentData) as AppointmentResponse;
 
       if (response.success) {
         // Success feedback
@@ -241,233 +242,72 @@ const BookAppointment: React.FC = () => {
           navigate('/my-appointments');
         }, 2000);
       } else {
-        showError('Không thể đặt lịch', response.message || 'Có lỗi xảy ra khi đặt lịch hẹn');
-        setErrors({ consultant: response.message || 'Có lỗi xảy ra khi đặt lịch hẹn' });
+        // Kiểm tra nếu là lỗi pending appointment
+        if (response.errorType === 'PENDING_APPOINTMENT_EXISTS') {
+          // Hiển thị thông báo lỗi với thông tin chi tiết
+          const existingAppointment = response.details?.existingAppointment;
+          const detailMessage = existingAppointment 
+            ? `Lịch hẹn đang chờ: ${existingAppointment.appointment_date} (${existingAppointment.time_slot})`
+            : '';
+          
+          // Hiển thị toast error với action buttons
+          toast.error(
+            (t) => (
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center space-x-2">
+                  <FaExclamationTriangle className="text-red-500" />
+                  <div className="font-medium">Không thể đặt lịch mới</div>
+                </div>
+                <div className="text-sm text-gray-600">{response.message}</div>
+                {detailMessage && (
+                  <div className="text-sm text-blue-600 font-medium">{detailMessage}</div>
+                )}
+                <div className="flex space-x-2 mt-2">
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      navigate('/my-appointments');
+                    }}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center space-x-1"
+                  >
+                    <FaEye className="text-xs" />
+                    <span>Xem lịch hẹn</span>
+                  </button>
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            ),
+            { 
+              duration: 10000,
+              position: 'top-center',
+              style: {
+                minWidth: '400px',
+                padding: '16px'
+              }
+            }
+          );
+          
+          // Cũng set error để hiển thị trong form
+          setErrors({ 
+            consultant: 'Bạn đã có lịch hẹn đang chờ xác nhận. Vui lòng kiểm tra lịch hẹn của bạn.' 
+          });
+        } else {
+          // Lỗi khác
+          showError('Không thể đặt lịch', response.message || 'Có lỗi xảy ra khi đặt lịch hẹn');
+          setErrors({ consultant: response.message || 'Có lỗi xảy ra khi đặt lịch hẹn' });
+        }
       }
     } catch (error: any) {
       log.error('BookAppointment', 'Error booking appointment', error);
       
-      // Handle specific error cases
-      let errorTitle = 'Lỗi hệ thống';
-      let errorMessage = 'Có lỗi xảy ra khi đặt lịch hẹn. Vui lòng thử lại.';
-      
-      if (error.response?.status === 400) {
-        const responseMessage = error.response?.data?.message || error.message;
-        
-        if (responseMessage.includes('pending appointment')) {
-          errorTitle = 'Không thể đặt lịch';
-          errorMessage = 'Bạn đã có lịch hẹn đang chờ xác nhận. Vui lòng chờ chuyên gia xác nhận hoặc hủy lịch hẹn hiện tại trước khi đặt lịch mới.';
-        } else if (responseMessage.includes('already booked')) {
-          errorTitle = 'Khung giờ đã được đặt';
-          errorMessage = 'Khung giờ này đã có người đặt. Vui lòng chọn khung giờ khác.';
-        } else if (responseMessage.includes('invalid time')) {
-          errorTitle = 'Thời gian không hợp lệ';
-          errorMessage = 'Thời gian đã chọn không còn khả dụng. Vui lòng chọn thời gian khác.';
-        } else {
-          errorMessage = responseMessage;
-        }
-      } else if (error.response?.status === 401) {
-        errorTitle = 'Phiên đăng nhập hết hạn';
-        errorMessage = 'Vui lòng đăng nhập lại để tiếp tục đặt lịch.';
-      } else if (error.response?.status === 403) {
-        errorTitle = 'Không có quyền truy cập';
-        errorMessage = 'Bạn không có quyền thực hiện thao tác này.';
-      } else if (error.response?.status >= 500) {
-        errorTitle = 'Lỗi máy chủ';
-        errorMessage = 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau ít phút.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Use toast for better UX
-      if (errorMessage.includes('chờ xác nhận')) {
-        // Special toast for pending appointment error
-        toast.custom(
-          (t) => (
-            <div className={`${
-              t.visible ? 'animate-enter' : 'animate-leave'
-            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-              <div className="flex-1 w-0 p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {errorTitle}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {errorMessage}
-                    </p>
-                    <div className="mt-3 flex space-x-2">
-                      <button
-                        onClick={() => {
-                          toast.dismiss(t.id);
-                          window.location.href = '/dashboard/customer/appointments';
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200"
-                      >
-                        <FaCalendarAlt className="inline mr-2" />
-                        Xem lịch hẹn
-                      </button>
-                      <button
-                        onClick={() => toast.dismiss(t.id)}
-                        className="bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium py-2 px-3 rounded-md border border-gray-300 transition-colors duration-200"
-                      >
-                        Đóng
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex border-l border-gray-200">
-                <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ),
-          {
-            duration: 10000,
-            position: 'top-center',
-          }
-        );
-      } else if (errorMessage.includes('đăng nhập')) {
-        toast.custom(
-          (t) => (
-            <div className={`${
-              t.visible ? 'animate-enter' : 'animate-leave'
-            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-              <div className="flex-1 w-0 p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Phiên đăng nhập hết hạn</p>
-                    <p className="mt-1 text-sm text-gray-500">{errorMessage}</p>
-                    <div className="mt-3">
-                      <button
-                        onClick={() => {
-                          toast.dismiss(t.id);
-                          window.location.reload();
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200"
-                      >
-                        <FaSpinner className="inline mr-2" />
-              Tải lại trang
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex border-l border-gray-200">
-                <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ),
-          {
-            duration: 6000,
-            position: 'top-center',
-          }
-        );
-      } else if (errorMessage.includes('đã được đặt')) {
-        toast.custom(
-          (t) => (
-            <div className={`${
-              t.visible ? 'animate-enter' : 'animate-leave'
-            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-              <div className="flex-1 w-0 p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Khung giờ đã được đặt</p>
-                    <p className="mt-1 text-sm text-gray-500">{errorMessage}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex border-l border-gray-200">
-                <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ),
-          {
-            duration: 5000,
-            position: 'top-center',
-          }
-        );
-      } else {
-        toast.custom(
-          (t) => (
-            <div className={`${
-              t.visible ? 'animate-enter' : 'animate-leave'
-            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-              <div className="flex-1 w-0 p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-900">{errorTitle}</p>
-                    <p className="mt-1 text-sm text-gray-500">{errorMessage}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex border-l border-gray-200">
-                <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ),
-          {
-            duration: 5000,
-            position: 'top-center',
-          }
-        );
-      }
+      // Sử dụng error utils để xử lý lỗi chi tiết
+      const { handleApiError } = await import('@/utils/errorUtils');
+      handleApiError(error, 'Đặt lịch hẹn');
     } finally {
       setLoading(false);
     }
@@ -684,15 +524,7 @@ const BookAppointment: React.FC = () => {
   };
 
   // Debug info
-  console.log('BookAppointment Debug:', {
-    isAuthenticated,
-    step,
-    selectedConsultant,
-    selectedSlot,
-    consultants: consultants.length,
-    consultantsLoading,
-    errors
-  });
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

@@ -9,14 +9,42 @@ const router = Router();
 router.post('/processMenstrualCycle', validateMenstrualCycle, authenticateToken, async (req: Request, res: Response) => {
     try {
         const user_id = (req.user as any).userId;
-        const period_days = req.body.period_days.map((day: string) => new Date(day));
-        const notes = req.body.notes;
+        
+        // Validation đã được thực hiện ở middleware, nhưng thêm safety check
+        if (!req.body.period_days || !Array.isArray(req.body.period_days)) {
+            return res.status(400).json({
+                success: false,
+                message: 'period_days phải là một mảng'
+            });
+        }
+
+        // Convert string dates to Date objects với error handling
+        let period_days: Date[];
+        try {
+            period_days = req.body.period_days.map((day: string) => {
+                const date = new Date(day);
+                if (isNaN(date.getTime())) {
+                    throw new Error(`Invalid date format: ${day}`);
+                }
+                return date;
+            });
+        } catch (dateError) {
+            return res.status(400).json({
+                success: false,
+                message: `Định dạng ngày không hợp lệ: ${dateError.message}`
+            });
+        }
+
+        const notes = req.body.notes || '';
         const result = await MenstrualCycleService.processPeriodDays(user_id, period_days, notes);
-        if (!Array.isArray(result) && result.success === false)
+        
+        if (!Array.isArray(result) && result.success === false) {
             return res.status(400).json(result);
+        }
+        
         return res.status(201).json(result);
     } catch (error) {
-        console.error('Error in /processPeriodDays:', error);
+        console.error('Error in /processMenstrualCycle:', error);
         return res.status(500).json({ 
             success: false, 
             message: 'System error'

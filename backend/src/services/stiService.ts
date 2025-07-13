@@ -366,62 +366,37 @@ export class StiService {
 
     public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
-            /*
-            let sti_package_item = null;
-            let sti_test_items = [];
-            let total_amount = 0;
-            let noPackage: boolean = false;
-            let noTest: boolean = false;
-            */
             if (!order_date){
                 return{
                     success: false,
                     message: 'Order date is required'
                 }
             }
-            /*
-            // Xử lý package
-            if (sti_package_id) {
+
+            // Xử lý trường hợp không có package hoặc test items cụ thể
+            // Đây là trường hợp đặt lịch tư vấn chung, total_amount = 0
+            let total_amount = 0;
+            let sti_package_item = null;
+            let sti_test_items: string[] = [];
+
+            // Nếu có package_id, xử lý package
+            if (sti_package_id && sti_package_id !== 'null') {
                 const result = await this.handleStiPackage(sti_package_id);
-                if (!result.success)
-                    noPackage = true;
-                else {
+                if (result.success) {
                     sti_package_item = result.sti_package_item;
                     total_amount += result.amount;
                 }
-
-            }
-            else {
-                noPackage = true;
             }
 
-            // Xử lý test lẻ
+            // Nếu có test items, xử lý test lẻ
             if (sti_test_items_input && sti_test_items_input.length > 0) {
                 const result = await this.handleStiTest(sti_test_items_input);
-                if (!result.success)
-                    noTest = true;
-                else {
+                if (result.success) {
                     sti_test_items = result.sti_test_items.map((item) => item.sti_test_id);
                     total_amount += result.amount;
                 }
             }
-            else {
-                noTest = true;
-            }
 
-            if (noPackage && noTest) {
-                return {
-                    success: false,
-                    message: 'No valid STI tests or package provided'
-                };
-            }
-            if (!noPackage && !noTest) {
-                return {
-                    success: false,
-                    message: 'Cannot provide both STI package and individual tests'
-                };
-            }
-            */
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
                 return {
@@ -430,15 +405,17 @@ export class StiService {
                 };
             }
             const schedule = scheduleResult.schedule;
+            
             const sti_order = new StiOrder({
                 customer_id,
-                //sti_package_item,
-                //sti_test_items,
+                sti_package_item,
+                sti_test_items: sti_test_items.length > 0 ? sti_test_items : undefined,
                 sti_schedule_id: schedule._id,
                 order_date,
-                //total_amount,
+                total_amount,
                 notes
             });
+            
             const result = await StiOrderRepository.insertStiOrder(sti_order);
 
             if (!result) {
@@ -447,6 +424,7 @@ export class StiService {
                     message: 'Order already exists or failed to insert'
                 };
             }
+            
             schedule.number_current_orders += 1;
             if (schedule.number_current_orders >= 10) {
                 schedule.is_locked = true;
@@ -454,17 +432,6 @@ export class StiService {
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id)
 
-            // Chỉ lấy package info nếu có sti_package_id
-            /*
-            let packageName = 'Xét nghiệm lẻ';
-            if (sti_package_id) {
-                const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
-                if (stiPackage) {
-                    packageName = stiPackage.sti_package_name;
-                }
-            }
-            */
-            // await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
             await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email)
             return {
                 success: true,
@@ -948,53 +915,37 @@ export class StiService {
  */
     public static async getAuditLogsWithPagination(query: AuditLogQuery): Promise<AuditLogPaginationResponse> {
         try {
-            // Validate pagination parameters
-            const { page, limit, sort_by, sort_order } = PaginationUtils.validateAuditLogPagination(query);
+            const {
+                page = 1,
+                limit = 10,
+                sort_by = 'timestamp',
+                sort_order = 'desc',
+            } = query;
 
-            // Build filter query
             const filters = PaginationUtils.buildAuditLogFilter(query);
 
-            // Get data từ repository
-            const result = await StiAuditLogRepository.findWithPagination(
+            const { auditLogs: items, total } = await StiAuditLogRepository.findWithPagination(
                 filters,
                 page,
                 limit,
                 sort_by,
-                sort_order
+                sort_order === 'desc' ? -1 : 1
             );
 
-            // Calculate pagination info
-            const pagination = PaginationUtils.calculatePagination(
-                result.total,
-                page,
-                limit
-            );
-
-            // Build filters_applied object
-            const filters_applied: Record<string, any> = {};
-            if (query.target_type) filters_applied.target_type = query.target_type;
-            if (query.target_id) filters_applied.target_id = query.target_id;
-            if (query.user_id) filters_applied.user_id = query.user_id;
-            if (query.action) filters_applied.action = query.action;
-            if (query.date_from) filters_applied.date_from = query.date_from;
-            if (query.date_to) filters_applied.date_to = query.date_to;
-            if (query.sort_by) filters_applied.sort_by = query.sort_by;
-            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+            const paginationDetails = PaginationUtils.calculatePagination(total, page, limit);
 
             return {
                 success: true,
-                message: result.auditLogs.length > 0
-                    ? `Found ${result.auditLogs.length} audit logs`
-                    : 'No audit logs found with the given criteria',
+                message: "Audit logs retrieved successfully.",
                 data: {
-                    items: result.auditLogs,
-                    pagination,
-                    filters_applied
+                    items,
+                    pagination: paginationDetails,
+                    filters_applied: query
                 },
                 timestamp: new Date().toISOString()
             };
         } catch (error) {
-            console.error('Error getting audit logs with pagination:', error);
+            console.error('Error fetching audit logs with pagination:', error);
             return {
                 success: false,
                 message: 'Internal server error when getting audit logs',
@@ -1144,33 +1095,6 @@ export class StiService {
         }
     }
 
-    public static async getStiResultById(resultId: string){
-        try {
-            if (!resultId){
-                return{
-                    success: false,
-                    message: 'Result id is not found'
-                }
-            }
-            const result = await StiResultRepository.findById(resultId);
-            if (!result){
-                return{
-                    success: false,
-                    message: 'Fail to fetch sti result by id'
-                }
-            }
-            return{
-                success: true,
-                message: 'Fetched sti result by id successfully',
-                data: result
-            }
-        } catch (error) {
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
 
     public static async updateStiResult(resultId: string, updateData: UpdateStiResultRequest, userId: string) {
         try {
@@ -1328,7 +1252,7 @@ export class StiService {
                     message: 'Cannot find the sti result'
                 }
             }
-            const currentQualities = result.sample.sampleQualities || {};
+            const currentQualities = result.sample?.sampleQualities || {};
             const newSampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
 
             // Maintain the old type and quality in sampleQualities
@@ -1361,5 +1285,269 @@ export class StiService {
             };
         }
     }
+
+    public static async sendStiResultNotificationFromDB(stiResultId: string) {
+        try {
+            const result = await StiResultRepository.getFullResult(stiResultId);
+            if (!result || !result.sti_order_id) {
+                return { 
+                    success: false, 
+                    message: "Cannot find the result" 
+                };
+            }
+            if (!result.is_confirmed) {
+                return {
+                    success: false,
+                    message: 'Result is not confirmed.'
+                };
+            }
+            if (result.is_notified) {
+                return {
+                    success: false,
+                    message: 'Result is sent before.'
+                };
+            }
+            const order = result.sti_order_id as any;
+            const user = order.customer_id;
+            const consultantUser = order.consultant_id?.user_id;
+            const staffUser = order.staff_id?.user_id;
+
+            const customerName = user?.full_name ?? 'Khách hàng';
+            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
+            const gender = user?.gender ?? 'Không rõ';
+            const diagnosis = result.diagnosis ?? '';
+            const resultValue = result.result_value ?? '';
+            const notes = result.notes ?? '';
+            const isCritical = result.is_critical ?? false;
+            const consultantName = consultantUser?.full_name ?? 'Chưa có';
+            const staffName = staffUser?.full_name ?? 'Chưa có';
+            let testNames: string[] = [];
+            
+            if (staffName === 'Chưa có' && consultantName === 'Chưa có') {
+                return {
+                    success: false,
+                    message: 'Consultant and Staff is not found'
+                };
+            }
+
+            // Nếu có sti_test_items
+            if (order.sti_test_items && order.sti_test_items.length > 0) {
+                // Populate trước đó để có sti_test_items là mảng StiTest
+                testNames = order.sti_test_items.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            // Nếu không có mà có package item
+            else if (order.sti_package_item?.sti_test_ids && order.sti_package_item.sti_test_ids.length > 0) {
+                // Cần populate sti_package_item.sti_test_ids (vì là ObjectId)
+                testNames = order.sti_package_item.sti_test_ids.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            const sampleInfo = {
+                timeReceived: result.sample?.timeReceived,
+                timeTesting: result.sample?.timeTesting,
+                sampleQualities: result.sample?.sampleQualities ?? {}
+            };
+
+            const resultDate = result.time_result;
+            const emailSendTo = user?.email;
+
+            if (!emailSendTo) {
+                return { success: false, message: 'Người dùng không có email' };
+            }
+
+            const mailResult = await MailUtils.sendStiResultNotification(
+                customerName,
+                birthYear,
+                gender,
+                diagnosis,
+                resultValue,
+                notes,
+                isCritical,
+                consultantName,
+                staffName,
+                sampleInfo,
+                testNames,
+                resultDate,
+                emailSendTo
+            );
+            if (!mailResult){
+                return{
+                    success: false,
+                    message: 'Fail to send mail'
+                }
+            }
+            return mailResult;
+        } catch (error) {
+            console.error(error);
+            return{
+                success: false,
+                message: 'Internal server error'
+            }
+        }    
+    }
+
+    public static async getStiResultById(resultId: string){
+        try {
+            const result = await StiResultRepository.getFullResult(resultId);
+            if (!result || !result.sti_order_id) {
+                return { 
+                    success: false, 
+                    message: "Cannot find the result" 
+                };
+            }
+            const order = result.sti_order_id as any;
+            const user = order.customer_id;
+            const consultantUser = order.consultant_id?.user_id;
+            const staffUser = order.staff_id?.user_id;
+
+            const customerName = user?.full_name ?? 'Khách hàng';
+            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
+            const gender = user?.gender ?? 'Không rõ';
+            const diagnosis = result.diagnosis ?? '';
+            const resultValue = result.result_value ?? '';
+            const notes = result.notes ?? '';
+            const isCritical = result.is_critical ?? false;
+            const consultantName = consultantUser?.full_name ?? 'Chưa có';
+            const staffName = staffUser?.full_name ?? 'Chưa có';
+            let testNames: string[] = [];
+            // Nếu có sti_test_items
+            if (order.sti_test_items && order.sti_test_items.length > 0) {
+                // Populate trước đó để có sti_test_items là mảng StiTest
+                testNames = order.sti_test_items.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            // Nếu không có mà có package item
+            else if (order.sti_package_item?.sti_test_ids && order.sti_package_item.sti_test_ids.length > 0) {
+                // Cần populate sti_package_item.sti_test_ids (vì là ObjectId)
+                testNames = order.sti_package_item.sti_test_ids.map((t: IStiTest) => t.sti_test_name);
+            }
+
+            const resultDate = result.time_result;
+            return {
+                success: true,
+                message: 'Send result successfully',
+                customerName,
+                birthYear,
+                gender,
+                diagnosis,
+                resultValue,
+                notes,
+                isCritical,
+                consultantName,
+                staffName,
+                sample: {
+                    timeReceived: result.sample?.timeReceived,
+                    timeTesting: result.sample?.timeTesting,
+                    sampleQualities: result.sample?.sampleQualities ?? {}
+                },
+                testNames,
+                resultDate,
+            };
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Server error'
+            }
+        }
+    }
+
+    /**
+     * Lấy tất cả STI orders của một customer
+     */
+    public static async getStiOrdersByCustomer(customerId: string) {
+        try {
+            if (!customerId) {
+                return {
+                    success: false,
+                    message: 'Customer ID is required'
+                };
+            }
+
+            const orders = await StiOrderRepository.getOrdersByCustomer(customerId);
+            
+            return {
+                success: true,
+                message: 'STI orders retrieved successfully',
+                data: orders
+            };
+        } catch (error) {
+            console.error('Error getting STI orders by customer:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /**
+     * Lấy STI order theo ID
+     */
+    public static async getStiOrderById(orderId: string) {
+        try {
+            if (!orderId) {
+                return {
+                    success: false,
+                    message: 'Order ID is required'
+                };
+            }
+
+            const order = await StiOrderRepository.findOrderById(orderId);
+            
+            if (!order) {
+                return {
+                    success: false,
+                    message: 'Order not found'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'STI order retrieved successfully',
+                data: order
+            };
+        } catch (error) {
+            console.error('Error getting STI order by ID:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /**
+     * Lấy STI result theo order ID cho customer
+     */
+    public static async getCustomerStiResultByOrderId(orderId: string) {
+        try {
+            if (!orderId) {
+                return {
+                    success: false,
+                    message: 'Order ID is required'
+                };
+            }
+
+            const result = await StiResultRepository.findByOrderId(orderId);
+            
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'STI result not found'
+                };
+            }
+
+            return {
+                success: true,
+                message: 'STI result retrieved successfully',
+                data: result
+            };
+        } catch (error) {
+            console.error('Error getting STI result by order ID:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
+
     
 }

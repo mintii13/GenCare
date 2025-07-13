@@ -80,6 +80,8 @@ export class FeedbackService {
       appointment_id: string;
       consultant_name: string;
       appointment_date: string;
+      start_time: string;
+      end_time: string;
       feedback: {
         rating: number;
         comment?: string;
@@ -87,7 +89,7 @@ export class FeedbackService {
       };
     }>;
   }> {
-    const response = await apiClient.get(`${API.Appointment.MY_APPOINTMENTS.replace('my-appointments','my-feedback')}`);
+    const response = await apiClient.get(API.Appointment.MY_FEEDBACK);
     return response.data as any;
   }
 

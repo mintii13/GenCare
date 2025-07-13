@@ -6,6 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import dayjs from 'dayjs';
+import { toast } from 'react-hot-toast';
+import LoginModal from '../../components/auth/LoginModal';
 
 const { Title, Text } = Typography;
 
@@ -34,6 +36,7 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<STIOrder | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   
   // Detect if this is staff/admin view based on route
   const isStaffView = location.pathname.includes('/staff/') || location.pathname.includes('/admin/');
@@ -67,8 +70,8 @@ const OrdersPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) {
-      message.error('Vui lòng đăng nhập để xem lịch xét nghiệm');
-      navigate('/login');
+      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
+      setShowLoginModal(true);
       return;
     }
     
@@ -314,7 +317,7 @@ const OrdersPage: React.FC = () => {
           {isStaffView ? 'Quản lý lịch xét nghiệm STI' : 'Lịch xét nghiệm STI đã đặt'}
         </Title>
         {!isStaffView && (
-          <Button type="primary" onClick={() => navigate('/test-packages')}>
+          <Button type="primary" onClick={() => navigate('/sti-booking/book')}>
             Đặt lịch mới
           </Button>
         )}
@@ -529,6 +532,7 @@ const OrdersPage: React.FC = () => {
           </div>
         )}
       </Modal>
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };

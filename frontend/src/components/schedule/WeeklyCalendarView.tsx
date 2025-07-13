@@ -43,7 +43,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   error = null,
   onRetry
 }) => {
-  
+
   // State để quản lý ngày được chọn (chỉ cho slot-picker mode)
   const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -56,7 +56,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     }
     return 0;
   });
-  
+
   // Tạo time slots cho booking mode (7:00 - 18:00, mỗi 1 giờ)
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -70,19 +70,19 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
 
   const handleSlotClick = (date: string, startTime: string, endTime: string) => {
     if (!onSlotSelect) return;
-    
+
     // Validation cho booking
     const slotDateTime = new Date(`${date}T${startTime}:00`);
     const now = new Date();
     const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
+
     if (slotDateTime <= now) {
       import('react-hot-toast').then(({ default: toast }) => {
         toast.error('Không thể chọn thời gian đã qua');
       });
       return;
     }
-    
+
     if (diffHours < 2) {
       import('react-hot-toast').then(({ default: toast }) => {
         toast.error(`Lịch hẹn phải được đặt trước ít nhất 2 giờ. Hiện tại chỉ còn ${diffHours.toFixed(1)} giờ.`);
@@ -90,7 +90,6 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       return;
     }
     
-    console.log('Slot selected:', { date, startTime, endTime });
     onSlotSelect(date, startTime, endTime);
   };
 
@@ -101,7 +100,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     const dayDateString = format(dayDate, 'yyyy-MM-dd');
     const dayData = weeklyData?.days[dayName];
     const isDayToday = isToday(dayDate);
-    
+
     return {
       index: dayIndex,
       label: dayLabel,
@@ -126,47 +125,47 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     const isPast = slotDateTime <= now;
 
     // Kiểm tra slot có available không
-    const availableSlot = day.data.available_slots?.find((slot: any) => 
+    const availableSlot = day.data.available_slots?.find((slot: any) =>
       slot.start_time === timeSlot.startTime && slot.is_available
     );
 
     // Kiểm tra slot có bị đặt không
-    const isBooked = day.data.booked_appointments?.some((appt: any) => 
-      appt.status !== 'cancelled' && 
-      timeSlot.startTime >= appt.start_time && 
+    const isBooked = day.data.booked_appointments?.some((appt: any) =>
+      appt.status !== 'cancelled' &&
+      timeSlot.startTime >= appt.start_time &&
       timeSlot.startTime < appt.end_time
     );
 
-    const isSelected = selectedSlot && 
-      selectedSlot.date === day.dateString && 
+    const isSelected = selectedSlot &&
+      selectedSlot.date === day.dateString &&
       selectedSlot.startTime === timeSlot.startTime;
 
     if (isBooked) {
       return { type: 'booked', available: false };
     }
-    
+
     if (isPast) {
       return { type: 'past', available: false };
     }
-    
+
     if (!availableSlot) {
       return { type: 'unavailable', available: false };
     }
-    
+
     if (diffHours < 2) {
       return { type: 'restricted', available: false, diffHours };
     }
-    
+
     if (isSelected) {
       return { type: 'selected', available: true };
     }
-    
+
     return { type: 'available', available: true };
   };
 
   const getSlotClassName = (slotInfo: any) => {
     const baseClass = "w-full h-12 text-xs font-medium rounded transition-all duration-200 border cursor-pointer relative overflow-hidden";
-    
+
     switch (slotInfo.type) {
       case 'not-working':
         return baseClass + " bg-gray-100 border-gray-200 cursor-not-allowed opacity-50";
@@ -186,6 +185,108 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         return baseClass + " bg-gray-100 border-gray-200";
     }
   };
+
+  // Tính toán số slot thực sự có thể đặt được
+  const getBookableSlots = () => {
+    if (!weeklyData?.days) return 0;
+    
+    let bookableCount = 0;
+    const now = new Date();
+    
+    // Duyệt qua tất cả các ngày trong tuần
+    Object.values(weeklyData.days).forEach(dayData => {
+      if (!dayData || dayData.total_slots === 0) return;
+      
+      // Duyệt qua tất cả time slots (7h-18h)
+      for (let hour = 7; hour <= 17; hour++) {
+        const startTime = `${hour.toString().padStart(2, '0')}:00`;
+        const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+        
+        // Tìm ngày tương ứng với dayData
+        const dayName = Object.keys(weeklyData.days).find(key => weeklyData.days[key] === dayData);
+        if (!dayName) continue;
+        
+        const dayIndex = DAY_NAMES.indexOf(dayName as DayName);
+        if (dayIndex === -1) continue;
+        
+        const dayDate = addDays(currentWeek, dayIndex);
+        const dayDateString = format(dayDate, 'yyyy-MM-dd');
+        
+        // Kiểm tra slot có thể đặt được không
+        const slotDateTime = new Date(`${dayDateString}T${startTime}:00`);
+        const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+        const isPast = slotDateTime <= now;
+        
+        // Kiểm tra slot có available không
+        const availableSlot = dayData.available_slots?.find((slot: any) =>
+          slot.start_time === startTime && slot.is_available
+        );
+        
+        // Kiểm tra slot có bị đặt không
+        const isBooked = dayData.booked_appointments?.some((appt: any) =>
+          appt.status !== 'cancelled' &&
+          startTime >= appt.start_time &&
+          startTime < appt.end_time
+        );
+        
+        // Slot có thể đặt được nếu:
+        // 1. Có available slot
+        // 2. Không bị đặt
+        // 3. Không phải quá khứ
+        // 4. Đặt trước ít nhất 2 giờ
+        if (availableSlot && !isBooked && !isPast && diffHours >= 2) {
+          bookableCount++;
+        }
+      }
+    });
+    
+    return bookableCount;
+  };
+
+  // Tính toán số slot có thể đặt được cho từng ngày
+  const getBookableSlotsForDay = (dayData: any, dayIndex: number) => {
+    if (!dayData || dayData.total_slots === 0) return 0;
+    
+    let bookableCount = 0;
+    const now = new Date();
+    const dayDate = addDays(currentWeek, dayIndex);
+    const dayDateString = format(dayDate, 'yyyy-MM-dd');
+    
+    // Duyệt qua tất cả time slots (7h-18h)
+    for (let hour = 7; hour <= 17; hour++) {
+      const startTime = `${hour.toString().padStart(2, '0')}:00`;
+      
+      // Kiểm tra slot có thể đặt được không
+      const slotDateTime = new Date(`${dayDateString}T${startTime}:00`);
+      const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const isPast = slotDateTime <= now;
+      
+      // Kiểm tra slot có available không
+      const availableSlot = dayData.available_slots?.find((slot: any) =>
+        slot.start_time === startTime && slot.is_available
+      );
+      
+      // Kiểm tra slot có bị đặt không
+      const isBooked = dayData.booked_appointments?.some((appt: any) =>
+        appt.status !== 'cancelled' &&
+        startTime >= appt.start_time &&
+        startTime < appt.end_time
+      );
+      
+      // Slot có thể đặt được nếu:
+      // 1. Có available slot
+      // 2. Không bị đặt
+      // 3. Không phải quá khứ
+      // 4. Đặt trước ít nhất 2 giờ
+      if (availableSlot && !isBooked && !isPast && diffHours >= 2) {
+        bookableCount++;
+      }
+    }
+    
+    return bookableCount;
+  };
+
+  const bookableSlots = getBookableSlots();
 
   if (loading) {
     return (
@@ -233,11 +334,11 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
           <FaChevronLeft className="mr-2" />
           Tuần trước
         </button>
-        
+
         <h2 className="text-2xl font-bold">
           {getCurrentWeekLabel(currentWeek)}
         </h2>
-        
+
         <button
           onClick={onNextWeek}
           className="flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg transition-colors"
@@ -257,7 +358,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
             </div>
             <div className="flex items-center">
               <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
-              <span className="text-green-700 font-medium">Slot có sẵn: {weeklyData.summary.total_available_slots}</span>
+              <span className="text-green-700 font-medium">Có thể đặt: {bookableSlots}</span>
             </div>
             <div className="flex items-center">
               <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
@@ -276,13 +377,17 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
             </div>
             <div className="flex-1">
               <h4 className="text-sm font-semibold text-blue-800 mb-2">Quy tắc đặt lịch hẹn</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-blue-700">
-                <div className="flex items-center space-x-2">
-                  <FaClock className="text-blue-500 flex-shrink-0" />
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2 text-blue-700">
+                  <FaClock className="text-blue-500 flex-shrink-0 text-sm" />
+                  <span>Không thể đặt lịch trong <strong>quá khứ</strong></span>
+                </div>
+                <div className="flex items-center space-x-2 text-orange-700">
+                  <FaExclamationTriangle className="text-orange-500 flex-shrink-0 text-sm" />
                   <span>Đặt trước tối thiểu <strong>2 giờ</strong></span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                <div className="flex items-center space-x-2 text-green-700">
+                  <FaCheckCircle className="text-green-500 flex-shrink-0 text-sm" />
                   <span>Click vào ô xanh để <strong>đặt lịch</strong></span>
                 </div>
               </div>
@@ -303,13 +408,12 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                   Giờ
                 </div>
                 {weekDays.map((day) => (
-                  <div key={day.index} className={`h-16 flex flex-col items-center justify-center rounded border-2 ${
-                    day.isToday 
-                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                      : day.isWorkingDay
-                        ? 'bg-green-50 border-green-200 text-green-700'
-                        : 'bg-gray-50 border-gray-200 text-gray-500'
-                  }`}>
+                  <div key={day.index} className={`h-16 flex flex-col items-center justify-center rounded border-2 ${day.isToday
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : day.isWorkingDay
+                      ? 'bg-green-50 border-green-200 text-green-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-500'
+                    }`}>
                     <div className="font-semibold text-sm">{day.label}</div>
                     <div className="text-xs">{format(day.date, 'dd/MM', { locale: vi })}</div>
                     {day.isToday && (
@@ -329,11 +433,11 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                     <div className="h-12 flex items-center justify-center text-sm font-medium text-gray-600 bg-gray-50 rounded">
                       {timeSlot.displayTime}
                     </div>
-                    
+
                     {/* Slots for each day */}
                     {weekDays.map((day) => {
                       const slotInfo = getSlotInfo(day, timeSlot);
-                      
+
                       return (
                         <div
                           key={`${day.dateString}-${timeSlot.startTime}`}
@@ -341,12 +445,12 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                           onClick={() => slotInfo.available && handleSlotClick(day.dateString, timeSlot.startTime, timeSlot.endTime)}
                           title={
                             slotInfo.type === 'available' ? `Đặt lịch ${timeSlot.displayTime}` :
-                            slotInfo.type === 'booked' ? 'Đã được đặt' :
-                            slotInfo.type === 'past' ? 'Đã qua thời gian' :
-                            slotInfo.type === 'restricted' ? `Quá gấp (${slotInfo.diffHours?.toFixed(1)}h)` :
-                            slotInfo.type === 'selected' ? 'Đã chọn' :
-                            slotInfo.type === 'not-working' ? 'Không làm việc' :
-                            'Không khả dụng'
+                              slotInfo.type === 'booked' ? 'Đã được đặt' :
+                                slotInfo.type === 'past' ? 'Đã qua thời gian' :
+                                  slotInfo.type === 'restricted' ? `Quá gấp (${slotInfo.diffHours?.toFixed(1)}h)` :
+                                    slotInfo.type === 'selected' ? 'Đã chọn' :
+                                      slotInfo.type === 'not-working' ? 'Không làm việc' :
+                                        'Không khả dụng'
                           }
                         >
                           <span className="flex items-center justify-center h-full text-xs font-bold">
@@ -382,29 +486,29 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                 {weekDays.map((day) => {
                   const isPastDay = day.date < new Date() && !day.isToday;
                   const isNonWorkingDay = (!day.data || day.data.total_slots === 0);
-                  const hasAvailableSlots = day.slotsCount > 0;
-                  
+                  const bookableSlotsForDay = getBookableSlotsForDay(day.data, day.index);
+
                   let optionText = `${day.label} - ${format(day.date, 'dd/MM', { locale: vi })}`;
-                  
+
                   if (day.isToday) {
                     optionText += ' (Hôm nay)';
                   } else if (isPastDay) {
                     optionText += ' (Đã qua)';
                   }
-                  
+
                   if (isNonWorkingDay) {
                     optionText += ' - Không làm việc';
-                  } else if (hasAvailableSlots) {
-                    optionText += ` - ${day.slotsCount} slots`;
+                  } else if (bookableSlotsForDay > 0) {
+                    optionText += ` - ${bookableSlotsForDay} slot có thể đặt`;
                   } else {
-                    optionText += ' - Hết slot';
+                    optionText += ' - Không có slot khả dụng';
                   }
-                  
+
                   return (
-                    <option 
-                      key={day.index} 
+                    <option
+                      key={day.index}
                       value={day.index}
-                      disabled={isPastDay || isNonWorkingDay}
+                      disabled={isPastDay || isNonWorkingDay || bookableSlotsForDay === 0}
                     >
                       {optionText}
                     </option>

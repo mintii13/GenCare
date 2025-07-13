@@ -2,16 +2,21 @@ import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 
 export const menstrualCycleSchema = Joi.object({
-    notes: Joi.string().max(500).optional().messages({
-        'string.max': 'Ghi chú không được vượt quá 500 ký tự'
+    period_days: Joi.array()
+    .items(
+        Joi.string().required()
+    )
+    .min(1)
+    .required()
+    .messages({
+        'array.base': 'period_days phải là một mảng',
+        'array.empty': 'Cần có ít nhất một ngày kinh nguyệt',
+        'array.min': 'Cần có ít nhất một ngày kinh nguyệt',
+        'any.required': 'period_days là bắt buộc',
     }),
-    period_days: Joi.array().items(
-        Joi.string()
-            .pattern(/^\d{4}-\d{2}-\d{2}$/) // Định dạng YYYY-MM-DD
-            .message('Ngày phải có định dạng YYYY-MM-DD')
-    ).optional().messages({
-        'array.base': 'period_days phải là một mảng'
-    })
+    notes: Joi.string().optional().messages({
+        'string.max': 'Ghi chú không được vượt quá 500 ký tự',
+    }),
 });
 
 export const validateMenstrualCycle = (req: Request, res: Response, next: NextFunction) => {

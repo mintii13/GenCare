@@ -49,6 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { FaEye, FaEdit, FaTrash, FaPlus, FaUser, FaMale, FaFemale } from 'react-icons/fa';
 import { UserManagementService, UserData, CreateUserData, UpdateUserData } from '@/services/userManagementService';
+import { analyticsService } from '@/services/analyticsService';
 
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
@@ -113,7 +114,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
   // Debug logging when modal opens or role changes
   React.useEffect(() => {
     if (isOpen) {
-      console.log('📝 CreateUserModal opened - role prop:', role, 'formData.role:', formData.role);
       setFormData(prev => ({ ...prev, role: role }));
     }
   }, [isOpen, role]);
@@ -146,7 +146,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
     }
     
     if (role === 'staff') {
-      console.log('🔍 Staff validation - department:', formData.department);
       if (!formData.department?.trim()) errors.push('Phòng ban là bắt buộc');
       if (!formData.hire_date?.trim()) errors.push('Ngày bắt đầu làm việc là bắt buộc');
       else {
@@ -156,13 +155,11 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
         }
       }
     } else if (role === 'consultant') {
-      console.log('🔍 Consultant validation - specialization:', formData.specialization);
       if (!formData.specialization?.trim()) errors.push('Chuyên môn là bắt buộc');
       if (!formData.qualifications?.trim()) errors.push('Bằng cấp/Chứng chỉ là bắt buộc');
       if (!formData.experience_years || formData.experience_years <= 0) errors.push('Số năm kinh nghiệm phải lớn hơn 0');
     }
 
-    console.log('🔍 Validation errors:', errors);
     
     if (errors.length > 0) {
       toast.error(errors.join(', '));
@@ -203,22 +200,10 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
         cleanData.experience_years = formData.experience_years;
       }
 
-      console.log('🔍 Creating user with data:', cleanData);
-      console.log('🎯 Role debug:');
-      console.log('  - role prop:', role);
-      console.log('  - formData.role:', formData.role);
-      console.log('  - cleanData.role:', cleanData.role);
-      console.log('📅 Optional fields debug:');
-      console.log('  - phone:', formData.phone, '→', cleanData.phone || 'not included');
-      console.log('  - date_of_birth:', formData.date_of_birth, '→', cleanData.date_of_birth || 'not included');
-      console.log('  - gender:', formData.gender, '→', cleanData.gender || 'not included');
-      console.log('  - hire_date:', formData.hire_date, '→', cleanData.hire_date || 'not included');
-      console.log('  - permissions:', formData.permissions, '→', cleanData.permissions || 'not included');
-      console.log('🔑 Current user:', user);
+      
       
       const response = await UserManagementService.createUser(cleanData);
       
-      console.log('📝 Response:', response);
       
       if (response.success) {
         toast.success(`Tạo ${role === 'staff' ? 'nhân viên' : 'tư vấn viên'} thành công! Email đã được xác thực tự động.`);
@@ -242,12 +227,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
           experience_years: undefined
         });
       } else {
-        console.error('❌ API Error:', response);
         toast.error(response.message || 'Có lỗi xảy ra');
       } 
     } catch (error: any) {
-      console.error('💥 Exception:', error);
-      console.error('📊 Error details:', error.response?.data);
       
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.errors?.join(', ') || 
@@ -622,7 +604,36 @@ interface UserDetailModalProps {
 }
 
 const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user }) => {
-  if (!user) return null;
+  const [revenue, setRevenue] = useState<number | null>(null);
+  const [loadingRevenue, setLoadingRevenue] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && user && user.role === 'customer') {
+      const fetchRevenue = async () => {
+        setLoadingRevenue(true);
+        try {
+
+              const response = await analyticsService.getRevenueByCustomer(user.id);
+
+ 
+          if (response.success) {
+            setRevenue(response.data.total_revenue);
+          }
+        } catch (error) {
+          console.error("Failed to fetch customer revenue", error);
+        } finally {
+          setLoadingRevenue(false);
+        }
+      };
+      fetchRevenue();
+    } else {
+      setRevenue(null);
+    }
+  }, [isOpen, user]);
+
+  if (!isOpen || !user) {
+    return null;
+  }
 
   const formatDate = (dateString: string) => {
     try {
@@ -685,19 +696,22 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
               <p className="text-sm">{user.phone || 'Chưa cập nhật'}</p>
             </div>
             
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Ngày sinh</Label>
-              <p className="text-sm">{user.date_of_birth ? formatDate(user.date_of_birth) : 'Chưa cập nhật'}</p>
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-500">Ngày sinh</span>
+              <span className="font-medium">{user.date_of_birth ? formatDate(user.date_of_birth) : 'N/A'}</span>
             </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Giới tính</Label>
-              <p className="text-sm flex items-center">
-                {user.gender === 'male' && <FaMale className="mr-1 text-blue-500" />}
-                {user.gender === 'female' && <FaFemale className="mr-1 text-pink-500" />}
-                {getGenderDisplay(user.gender)}
-              </p>
-            </div>
+
+            {user.role === 'customer' && (
+              <div className="mt-4 pt-4 border-t">
+                <h4 className="font-semibold text-lg mb-2">Thông tin mua hàng</h4>
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500">Tổng chi tiêu:</span>
+                  <span className="font-medium ml-2">
+                    {loadingRevenue ? 'Đang tải...' : revenue !== null ? `${revenue.toLocaleString()} VND` : 'Không có dữ liệu'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Thông tin tài khoản */}
@@ -1059,7 +1073,6 @@ const UserManagement: React.FC = () => {
                   <CardTitle className="text-xl font-semibold">{title}</CardTitle>
                   {role !== 'customer' && (
                     <Button variant="default" onClick={() => {
-                      console.log('🚀 Opening CreateUserModal for role:', role, 'selectedRole:', selectedRole);
                       setCreateModalRole(role as 'staff' | 'consultant');
                       setShowCreateModal(true);
                     }}>
@@ -1162,11 +1175,9 @@ const UserManagement: React.FC = () => {
       <CreateUserModal
         isOpen={showCreateModal}
         onClose={() => {
-          console.log('🔍 Closing CreateUserModal - createModalRole:', createModalRole);
           setShowCreateModal(false);
         }}
         onSuccess={() => {
-          console.log('🎉 Success callback - createModalRole:', createModalRole);
           fetchUsers();
         }}
         role={createModalRole}

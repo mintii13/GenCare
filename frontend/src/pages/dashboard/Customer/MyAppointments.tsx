@@ -6,6 +6,9 @@ import { consultantService } from '../../../services/consultantService';
 import WeeklySlotPicker from '../../consultation/WeeklySlotPicker';
 import FeedbackModal from '../../../components/feedback/FeedbackModal';
 import FeedbackService from '../../../services/feedbackService';
+import toast from 'react-hot-toast';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import {
   Appointment,
   AppointmentQuery,
@@ -23,6 +26,7 @@ import {
 } from 'react-icons/fa';
 
 const MyAppointments: React.FC = () => {
+  const { modalState, showConfirm, hideConfirm } = useConfirmModal();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -35,7 +39,7 @@ const MyAppointments: React.FC = () => {
   });
   const [selectedNewSlot, setSelectedNewSlot] = useState<{date: string, startTime: string, endTime: string} | null>(null);
   const [consultantDetails, setConsultantDetails] = useState<{[key: string]: any}>({});
-  const [canFeedback, setCanFeedback] = useState(false);
+  // Feedback modal open condition handled per appointment (no global canFeedback)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Pagination states
@@ -53,7 +57,8 @@ const MyAppointments: React.FC = () => {
     page: 1,
     limit: 10,
     sort_by: 'appointment_date',
-    sort_order: 'desc'
+    sort_order: 'desc',
+    status: undefined // Xóa filter status để hiển thị tất cả
   });
 
   const statusLabels = {
@@ -97,15 +102,7 @@ const MyAppointments: React.FC = () => {
     }
   }, [consultantDetails]);
 
-  useEffect(() => {
-    if (selectedAppointment && selectedAppointment.status === 'completed') {
-      FeedbackService.canSubmitFeedback(selectedAppointment._id as any)
-        .then(res => setCanFeedback(res.can_submit))
-        .catch(() => setCanFeedback(false));
-    } else {
-      setCanFeedback(false);
-    }
-  }, [selectedAppointment]);
+  // Remove canFeedback fetch; will verify server-side when submitting.
 
   const fetchAppointments = async () => {
     try {
@@ -152,12 +149,17 @@ const MyAppointments: React.FC = () => {
   };
 
   const handleSortChange = (sort_by: string, sort_order: 'asc' | 'desc') => {
-    setQuery(prev => ({
-      ...prev,
-      page: 1,
-      sort_by: sort_by as any,
-      sort_order
-    }));
+    console.log('🔄 Sort change requested:', { sort_by, sort_order });
+    setQuery(prev => {
+      const newQuery = {
+        ...prev,
+        page: 1,
+        sort_by: sort_by as any,
+        sort_order
+      };
+
+      return newQuery;
+    });
   };
 
   const handleClearFilters = () => {
@@ -166,43 +168,53 @@ const MyAppointments: React.FC = () => {
       page: 1,
       limit: 10,
       sort_by: 'appointment_date',
-      sort_order: 'desc'
+      sort_order: 'asc',
+      status: undefined
     });
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
-
-    try {
-      console.log('Starting cancel appointment for ID:', appointmentId);
-      const data = await appointmentService.cancelAppointment(appointmentId);
-      
-      console.log('Cancel appointment response:', data);
-      
-      if (data.success) {
-        alert('Hủy lịch hẹn thành công');
-        fetchAppointments();
-      } else {
-        console.error('Cancel failed with message:', data.message);
-        alert(data.message);
+    showConfirm(
+      {
+        title: "Xác nhận hủy lịch hẹn",
+        description: "Bạn có chắc chắn muốn hủy lịch hẹn này? Hành động này không thể hoàn tác.",
+        confirmText: "Hủy lịch hẹn",
+        cancelText: "Không",
+        confirmVariant: "destructive"
+      },
+      async () => {
+        try {
+          console.log('Starting cancel appointment for ID:', appointmentId);
+          const data = await appointmentService.cancelAppointment(appointmentId);
+          
+          console.log('Cancel appointment response:', data);
+          
+          if (data.success) {
+            toast.success('Hủy lịch hẹn thành công!');
+            fetchAppointments();
+          } else {
+            console.error('Cancel failed with message:', data.message);
+            toast.error(data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+          }
+        } catch (err: any) {
+          console.error('Error cancelling appointment:', err);
+          
+          // Detailed error handling
+          if (err.response?.status === 400) {
+            const errorMsg = err.response?.data?.message || err.response?.data?.details || 'Yêu cầu không hợp lệ';
+            toast.error(`Lỗi: ${errorMsg}`);
+          } else if (err.response?.status === 401) {
+            toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+          } else if (err.response?.status === 403) {
+            toast.error('Bạn không có quyền hủy lịch hẹn này.');
+          } else if (err.response?.status === 404) {
+            toast.error('Không tìm thấy lịch hẹn này.');
+          } else {
+            toast.error(err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+          }
+        }
       }
-    } catch (err: any) {
-      console.error('Error cancelling appointment:', err);
-      
-      // Detailed error handling
-      if (err.response?.status === 400) {
-        const errorMsg = err.response?.data?.message || err.response?.data?.details || 'Yêu cầu không hợp lệ';
-        alert(`Lỗi: ${errorMsg}`);
-      } else if (err.response?.status === 401) {
-        alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-      } else if (err.response?.status === 403) {
-        alert('Bạn không có quyền hủy lịch hẹn này.');
-      } else if (err.response?.status === 404) {
-        alert('Không tìm thấy lịch hẹn này.');
-      } else {
-        alert(err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-      }
-    }
+    );
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -243,16 +255,16 @@ const MyAppointments: React.FC = () => {
       );
       
       if (data.success) {
-        alert('Đổi lịch hẹn thành công! Chuyên gia sẽ xác nhận lại trong thời gian sớm nhất.');
+        toast.success('Đổi lịch hẹn thành công! Chuyên gia sẽ xác nhận lại trong thời gian sớm nhất.');
         setEditingAppointment(null);
         setSelectedNewSlot(null);
         fetchAppointments();
       } else {
-        alert(data.message);
+        toast.error(data.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
       }
     } catch (err: any) {
       console.error('Error updating appointment:', err);
-      alert(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
+      toast.error(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
     }
   };
 
@@ -378,8 +390,32 @@ const MyAppointments: React.FC = () => {
             <select
               value={`${query.sort_by}_${query.sort_order}`}
               onChange={(e) => {
-                const [sort_by, sort_order] = e.target.value.split('_');
-                handleSortChange(sort_by, sort_order as 'asc' | 'desc');
+                const value = e.target.value;
+                let sort_by: string;
+                let sort_order: 'asc' | 'desc';
+                
+                // Parse correctly based on known values
+                if (value === 'appointment_date_desc') {
+                  sort_by = 'appointment_date';
+                  sort_order = 'desc';
+                } else if (value === 'appointment_date_asc') {
+                  sort_by = 'appointment_date';
+                  sort_order = 'asc';
+                } else if (value === 'created_date_desc') {
+                  sort_by = 'created_date';
+                  sort_order = 'desc';
+                } else if (value === 'created_date_asc') {
+                  sort_by = 'created_date';
+                  sort_order = 'asc';
+                } else {
+                  // Fallback to split method
+                  const lastUnderscoreIndex = value.lastIndexOf('_');
+                  sort_by = value.substring(0, lastUnderscoreIndex);
+                  sort_order = value.substring(lastUnderscoreIndex + 1) as 'asc' | 'desc';
+                }
+                
+                console.log('🔄 Sort dropdown change:', { sort_by, sort_order, fullValue: value });
+                handleSortChange(sort_by, sort_order);
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -493,12 +529,15 @@ const MyAppointments: React.FC = () => {
                       </>
                     )}
 
-                    {appointment.status === 'completed' && canFeedback && (
+                    {appointment.status === 'completed' && (
                       <button
-                        onClick={() => setShowFeedbackModal(true)}
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setShowFeedbackModal(true);
+                        }}
                         className="px-3 py-1 text-purple-600 hover:text-purple-800 text-sm font-medium"
                       >
-                        Đánh giá
+                        {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
                       </button>
                     )}
                   </div>
@@ -689,20 +728,71 @@ const MyAppointments: React.FC = () => {
        {showFeedbackModal && selectedAppointment && (
          <FeedbackModal
            isOpen={showFeedbackModal}
-           onClose={() => setShowFeedbackModal(false)}
+           onClose={() => {
+             setShowFeedbackModal(false);
+             setSelectedAppointment(null);
+           }}
            appointmentInfo={{
              consultant_name: getConsultantNameWithFetch(selectedAppointment),
              appointment_date: formatDate(selectedAppointment.appointment_date),
              start_time: formatTime(selectedAppointment.start_time),
              end_time: formatTime(selectedAppointment.end_time)
            }}
+           existingFeedback={selectedAppointment.feedback ? {
+             rating: selectedAppointment.feedback.rating,
+             comment: selectedAppointment.feedback.comment
+           } : undefined}
            onSubmit={async (formData) => {
-             await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
-             setShowFeedbackModal(false);
-             setCanFeedback(false);
+             try {
+               const response = await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
+               if (response.success) {
+                 // Hiển thị toast thành công
+                 toast.success(selectedAppointment.feedback 
+                   ? 'Đánh giá đã được cập nhật thành công!' 
+                   : 'Đánh giá đã được gửi thành công! Cảm ơn bạn đã chia sẻ.'
+                 );
+                 
+                 // Cập nhật state appointment để thay đổi nút
+                 setAppointments(prevAppointments => 
+                   prevAppointments.map(apt => 
+                     apt._id === selectedAppointment._id 
+                       ? { 
+                           ...apt, 
+                           feedback: { 
+                             rating: formData.rating as number, 
+                             comment: formData.comment,
+                             feedback_date: new Date().toISOString()
+                           } 
+                         } as Appointment
+                       : apt
+                   )
+                 );
+                 
+                 // Đóng modal và reset selected appointment
+                 setShowFeedbackModal(false);
+                 setSelectedAppointment(null);
+               } else {
+                 toast.error(response.message || 'Có lỗi xảy ra khi gửi đánh giá');
+               }
+             } catch (error) {
+               console.error('Error submitting feedback:', error);
+               toast.error('Có lỗi xảy ra khi gửi đánh giá');
+             }
            }}
          />
        )}
+
+       <ConfirmModal
+         isOpen={modalState.isOpen}
+         onClose={hideConfirm}
+         onConfirm={modalState.onConfirm}
+         title={modalState.title}
+         description={modalState.description}
+         confirmText={modalState.confirmText}
+         cancelText={modalState.cancelText}
+         confirmVariant={modalState.confirmVariant}
+         isLoading={modalState.isLoading}
+       />
     </div>
   );
 };

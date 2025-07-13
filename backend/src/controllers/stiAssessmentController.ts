@@ -234,4 +234,28 @@ router.get('/stats/overview',
     }
 );
 
+/**
+ * GET /api/sti-assessment/packages/info
+ * Lấy thông tin các gói xét nghiệm STI (public endpoint)
+ */
+router.get('/packages/info',
+    async (req: Request, res: Response) => {
+        try {
+            const result = await StiAssessmentService.getPackageInfo();
+
+            if (result.success) {
+                return res.status(200).json(result);
+            } else {
+                return res.status(400).json(result);
+            }
+        } catch (error) {
+            console.error('Error in get package info:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
 export default router;
