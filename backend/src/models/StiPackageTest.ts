@@ -7,7 +7,7 @@ export interface IStiPackageTest extends Document {
 }
 
 const stiPackageTestSchema = new Schema<IStiPackageTest>({
-    sti_package_id: { type: Schema.Types.ObjectId, ref: 'STIPackage', required: true },
+    sti_package_id: { type: Schema.Types.ObjectId, ref: 'StiPackage', required: true },
     sti_test_id: { type: Schema.Types.ObjectId, ref: 'StiTest', required: true },
     is_active: { type: Boolean, default: true }
 });

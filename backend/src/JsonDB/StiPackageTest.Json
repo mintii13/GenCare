@@ -90,10 +90,5 @@
     "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9103" },
     "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9008" },
     "is_active": true
-  },
-  {
-    "sti_package_id": { "$oid": "675e1a2b3c4d5e6f7a8b9103" },
-    "sti_test_id": { "$oid": "675e1a2b3c4d5e6f7a8b9009" },
-    "is_active": true
   }
 ]

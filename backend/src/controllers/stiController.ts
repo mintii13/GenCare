@@ -1,9 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiService } from '../services/stiService';
-import { validateStiTest, validateStiPackage, validateStiOrder, validateStatusUpdate } from '../middlewares/stiValidation';
+import { validateStiTest, validateStiPackage, validateStiOrder } from '../middlewares/stiValidation';
 import { IStiPackage, StiPackage } from '../models/StiPackage';
 import { JWTPayload } from '../utils/jwtUtils';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
@@ -495,26 +495,7 @@ router.get('/getStiOrder/:id', authenticateToken, async (req: Request, res: Resp
 });
 
 //update order by id
-router.patch('/updateStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin', 'consultant'), async (req: Request, res: Response, next: NextFunction) => {
-    // Fetch current order để validate status transition
-    try {
-        const orderId = req.params.id;
-        const currentOrder = await StiOrderRepository.findOrderById(orderId);
-        if (!currentOrder) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
-        req.currentOrder = currentOrder;
-        next();
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching order'
-        });
-    }
-}, validateStatusUpdate, stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
+router.patch('/updateStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin', 'consultant'), stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
     const orderId = req.params.id;
     const userId = (req.user as any).userId;
     const role = (req.user as any).role;
