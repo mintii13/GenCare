@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import toast from 'react-hot-toast';
-import { Spin, Alert } from 'antd';
+import { Spin, Alert, Modal } from 'antd';
 
 const STIAssessmentForm = () => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ const STIAssessmentForm = () => {
   const [packages, setPackages] = useState<any[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [recommendation, setRecommendation] = useState<STIRecommendation | null>(null);
+  const [showConsultantModal, setShowConsultantModal] = useState(false);
 
   // Fetch packages info from API
   useEffect(() => {
@@ -375,6 +376,30 @@ const STIAssessmentForm = () => {
     } finally {
       setBookingLoading(false);
     }
+  };
+
+  const handleConsultantBooking = () => {
+    setShowConsultantModal(true);
+  };
+
+  const handleConfirmConsultantBooking = (sendScreeningResults: boolean) => {
+    if (sendScreeningResults && recommendation) {
+      // Lưu kết quả sàng lọc vào localStorage để form đặt lịch có thể lấy
+      const screeningData = {
+        risk_level: recommendation.risk_level,
+        recommended_package: recommendation.recommended_package,
+        reasoning: recommendation.reasoning,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('sti_screening_results', JSON.stringify(screeningData));
+      toast.success('Kết quả sàng lọc sẽ được gửi cho chuyên gia');
+    } else {
+      // Xóa dữ liệu cũ nếu có
+      localStorage.removeItem('sti_screening_results');
+    }
+    
+    setShowConsultantModal(false);
+    navigate('/consultants');
   };
 
   const getPackageInfo = (packageCode: string) => {
@@ -905,6 +930,13 @@ const STIAssessmentForm = () => {
           </button>
 
           <button
+            onClick={handleConsultantBooking}
+            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-6 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors shadow-lg"
+          >
+            Đặt lịch tư vấn với chuyên gia ngay để hiểu kĩ hơn
+          </button>
+
+          <button
             onClick={handleBookingSTI}
             disabled={bookingLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -915,10 +947,65 @@ const STIAssessmentForm = () => {
                 Đang xử lý...
               </>
             ) : (
-              'Đặt lịch xét nghiệm'
+              'Đặt lịch xét nghiệm STI ngay'
             )}
           </button>
         </div>
+
+        {/* Modal xác nhận gửi kết quả sàng lọc */}
+        <Modal
+          title="Gửi kết quả sàng lọc cho chuyên gia"
+          open={showConsultantModal}
+          onCancel={() => setShowConsultantModal(false)}
+          footer={null}
+          width={500}
+        >
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Bạn có đồng ý gửi thêm kết quả sàng lọc STI này cho chuyên gia không?
+            </p>
+            
+            {recommendation && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2">Kết quả sàng lọc:</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Mức độ nguy cơ:</span>
+                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      recommendation.risk_level === 'Cao' ? 'bg-red-100 text-red-800' :
+                      recommendation.risk_level === 'Trung bình' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {recommendation.risk_level}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Gói đề xuất:</span>
+                    <span className="ml-2 text-blue-700">{recommendation.recommended_package}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <p className="text-sm text-gray-600">
+              Việc gửi kết quả sàng lọc sẽ giúp chuyên gia hiểu rõ hơn về tình trạng của bạn và đưa ra lời khuyên phù hợp hơn.
+            </p>
+            
+            <div className="flex space-x-3 pt-4">
+              <button
+                onClick={() => handleConfirmConsultantBooking(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Không gửi
+              </button>
+              <button
+                onClick={() => handleConfirmConsultantBooking(true)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Đồng ý gửi
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   };

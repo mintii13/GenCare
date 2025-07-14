@@ -9,8 +9,7 @@ import {
   FaClipboard,
   FaCog,
   FaUser,
-  FaFile,
-  FaFlask
+  FaFile
 } from 'react-icons/fa';
 
 interface ConsultantSidebarProps {
@@ -44,8 +43,8 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
     { name: 'Quản lý Blog', path: '/consultant/blogs', icon: FaEdit },
     // { name: 'Thư viện tài liệu', path: '/consultant/documents', icon: FaFile },
     
-    // STI Results management
-    { name: 'Kết quả STI', path: '/consultant/sti-results', icon: FaFlask },
+    // STI Results management - Ẩn vì consultant không cần chức năng này
+    // { name: 'Kết quả STI', path: '/consultant/sti-results', icon: FaFlask },
     
     // Analytics and reports
     { name: 'Thống kê tư vấn', path: '/consultant/consultation-stats', icon: FaChartBar },

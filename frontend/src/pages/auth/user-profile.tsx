@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
 import { AxiosResponse } from 'axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface UserProfile {
   id: string;
@@ -54,6 +55,11 @@ const UserProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changePwdLoading, setChangePwdLoading] = useState(false);
 
   // React Hook Form setup
   const {
@@ -140,13 +146,19 @@ const UserProfilePage: React.FC = () => {
       if ((response.data as any)?.success) {
         toast.success('Cập nhật thông tin thành công');
         const updatedProfile = convertToUserProfile((response.data as any).user);
-        if (updateUserInfo) {
-          updateUserInfo((response.data as any).user);
-        }
+        
+        // Chỉ cập nhật local state, không gọi updateUserInfo để tránh re-render AuthContext
         setProfile(updatedProfile);
         setIsEditing(false);
         setAvatar(null);
         setAvatarPreview(null);
+        
+        // Cập nhật user info sau một delay ngắn để tránh conflict
+        setTimeout(() => {
+          if (updateUserInfo) {
+            updateUserInfo((response.data as any).user);
+          }
+        }, 100);
       } else {
         toast.error((response.data as any)?.message || 'Có lỗi xảy ra');
       }
@@ -179,6 +191,39 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!oldPassword || !newPassword || !confirmNewPassword) {
+      toast.error('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error('Mật khẩu mới không khớp');
+      return;
+    }
+    setChangePwdLoading(true);
+    try {
+      const res = await apiClient.put(API.Auth.CHANGE_PASSWORD, {
+        old_password: oldPassword,
+        new_password: newPassword
+      });
+      const data = res.data as any;
+      if (data.success) {
+        toast.success('Đổi mật khẩu thành công!');
+        setShowChangePassword(false);
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+      } else {
+        toast.error(data.message || 'Đổi mật khẩu thất bại');
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Đổi mật khẩu thất bại');
+    } finally {
+      setChangePwdLoading(false);
+    }
+  };
+
   if (!profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -197,6 +242,7 @@ const UserProfilePage: React.FC = () => {
           <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1890ff' }}>Hồ sơ cá nhân</h1>
           <p className="text-gray-600">Quản lý thông tin cá nhân của bạn</p>
         </div>
+
 
         {/* Profile Card */}
         <Card className="shadow-sm border" style={{ backgroundColor: '#ffffff', borderColor: '#e6f7ff' }}>
@@ -235,7 +281,15 @@ const UserProfilePage: React.FC = () => {
               
               <div className="flex-1 text-center sm:text-left">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">{profile.full_name}</h2>
-                <p className="text-gray-600 mb-2">{profile.role}</p>
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                  <p className="text-gray-600">{profile.role}</p>
+                  <div className="flex items-center gap-1">
+                    <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: profile.status ? '#52c41a' : '#ff4d4f' }}></div>
+                    <span className={`text-xs font-medium`} style={{ color: profile.status ? '#52c41a' : '#ff4d4f' }}>
+                      {profile.status ? 'Hoạt động' : 'Bị khóa'}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 text-sm">
                   <MapPin className="w-4 h-4" />
                   <span>Hồ Chí Minh, Việt Nam</span>
@@ -243,23 +297,32 @@ const UserProfilePage: React.FC = () => {
               </div>
 
               {!isEditing && (
-                <Button 
-                  variant="outline"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
-                  style={{ borderColor: '#1890ff', color: '#1890ff' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e6f7ff';
-                    e.currentTarget.style.borderColor = '#40a9ff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = '#1890ff';
-                  }}
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Chỉnh sửa
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    style={{ borderColor: '#1890ff', color: '#1890ff' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#e6f7ff';
+                      e.currentTarget.style.borderColor = '#40a9ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.borderColor = '#1890ff';
+                    }}
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Chỉnh sửa
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setShowChangePassword(true)}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -313,15 +376,7 @@ const UserProfilePage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Trạng thái</label>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: profile.status ? '#52c41a' : '#ff4d4f' }}></div>
-                      <span className={`text-sm font-medium`} style={{ color: profile.status ? '#52c41a' : '#ff4d4f' }}>
-                        {profile.status ? 'Hoạt động' : 'Bị khóa'}
-                      </span>
-                    </div>
-                  </div>
+
                 </div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -468,6 +523,45 @@ const UserProfilePage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        {/* Modal đổi mật khẩu */}
+        <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Đổi mật khẩu</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Mật khẩu hiện tại"
+                value={oldPassword}
+                onChange={e => setOldPassword(e.target.value)}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Mật khẩu mới"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Xác nhận mật khẩu mới"
+                value={confirmNewPassword}
+                onChange={e => setConfirmNewPassword(e.target.value)}
+                required
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowChangePassword(false)}>
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={changePwdLoading}>
+                  {changePwdLoading ? 'Đang đổi...' : 'Đổi mật khẩu'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

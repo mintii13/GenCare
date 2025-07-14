@@ -108,13 +108,15 @@ const AppointmentManagement: React.FC = () => {
         page: 1,
         search: searchTerm.trim() || undefined
       }));
-    }, 500);
+    }, 1000); // Tăng debounce time từ 500ms lên 1000ms
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
-    fetchAppointments();
+    // Kiểm tra xem có phải search không
+    const isSearching = Boolean(query.search && query.search.length > 0);
+    fetchAppointments(isSearching);
   }, [query]);
 
   // Cập nhật UI mỗi phút để refresh thời gian completion
@@ -132,9 +134,12 @@ const AppointmentManagement: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedAppointment]);
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = async (isSearching = false) => {
     try {
-      setLoading(true);
+      // Chỉ show loading spinner khi không phải search
+      if (!isSearching) {
+        setLoading(true);
+      }
       
       // Check if user is authenticated and has consultant role
       if (!user) {
@@ -779,14 +784,11 @@ const AppointmentManagement: React.FC = () => {
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm theo tên khách hàng, ghi chú..."
+                placeholder="Tìm kiếm theo tên, email, SĐT khách hàng, ghi chú..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              {searchTerm !== query.search && (
-                <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-              )}
               </div>
               </div>
 

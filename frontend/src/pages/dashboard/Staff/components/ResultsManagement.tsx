@@ -283,22 +283,41 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
       order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.order_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      order.order_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.notes?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const statusMatch = statusFilter === 'all' || order.order_status === statusFilter;
     
     return searchMatch && statusMatch;
   });
 
+  // Filter results based on search
+  const filteredResults = Array.isArray(results) ? results.filter(result => {
+    if (!searchTerm) return true;
+    
+    const order = orders.find(o => o._id === result.order_id);
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      result.result_value?.toLowerCase().includes(searchLower) ||
+      result.diagnosis?.toLowerCase().includes(searchLower) ||
+      result.notes?.toLowerCase().includes(searchLower) ||
+      order?.customer_name?.toLowerCase().includes(searchLower) ||
+      order?.customer_email?.toLowerCase().includes(searchLower) ||
+      order?.customer_phone?.toLowerCase().includes(searchLower) ||
+      order?.order_code?.toLowerCase().includes(searchLower)
+    );
+  }) : [];
+
   // Calculate statistics
   const totalOrders = filteredOrders.length;
   const ordersWithResults = filteredOrders.filter(order => 
     Array.isArray(results) && results.some(result => result.order_id === order._id)
   ).length;
-  const criticalResults = Array.isArray(results) ? results.filter(result => result.is_critical).length : 0;
-  const pendingNotifications = Array.isArray(results) ? results.filter(result => 
+  const criticalResults = filteredResults.filter(result => result.is_critical).length;
+  const pendingNotifications = filteredResults.filter(result => 
     result.is_confirmed && !result.is_notified
-  ).length : 0;
+  ).length;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {

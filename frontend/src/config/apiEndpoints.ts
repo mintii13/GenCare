@@ -33,6 +33,9 @@ export const API = {
     VERIFY_EMAIL: '/auth/verify-email',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    FORGOT_PASSWORD_REQUEST: '/auth/forgot-password/request',
+    FORGOT_PASSWORD_VERIFY: '/auth/forgot-password/verify',
+    FORGOT_PASSWORD_RESET: '/auth/forgot-password/reset',
   },
 
   // ---------------------- APPOINTMENTS ----------------
@@ -157,6 +160,7 @@ export const API = {
   // Home page endpoints
   Home: {
     GET_DATA: '/home/data',
+    GET_CONSULTANTS: '/home/consultants', // Thêm endpoint mới
   },
 
   // Pill tracking endpoints

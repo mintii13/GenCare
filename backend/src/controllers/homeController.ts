@@ -32,7 +32,11 @@ export class HomeController {
       const stiTests = (stiTestsResponse as any).stitest || (stiTestsResponse as any).tests || [];
       const stiPackages = (stiPackagesResponse as any).stipackage || (stiPackagesResponse as any).packages || [];
       const blogs = blogsResponse.success ? blogsResponse.data.blogs : [];
-      const consultants = (consultantsResponse as any).consultants || [];
+      
+      // Debug consultant response
+      console.log('🔍 HomeController: consultantsResponse:', JSON.stringify(consultantsResponse, null, 2));
+      const consultants = (consultantsResponse as any).success ? (consultantsResponse as any).data.consultants : [];
+      console.log('🔍 HomeController: extracted consultants:', consultants.length);
 
       // Filter active items
       const activeStiTests = stiTests.filter((test: any) => test.is_active !== false);

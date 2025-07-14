@@ -105,6 +105,28 @@ const BookAppointment: React.FC = () => {
         // Nếu không có consultant param, redirect sang /consultants
         window.location.replace('/consultants');
       }
+
+      // Kiểm tra và lấy kết quả sàng lọc STI từ localStorage
+      const screeningResults = localStorage.getItem('sti_screening_results');
+      if (screeningResults) {
+        try {
+          const data = JSON.parse(screeningResults);
+          const screeningNote = `Kết quả sàng lọc STI:
+- Mức độ nguy cơ: ${data.risk_level}
+- Gói đề xuất: ${data.recommended_package}
+- Lý do: ${data.reasoning.join(', ')}
+- Thời gian sàng lọc: ${new Date(data.timestamp).toLocaleString('vi-VN')}`;
+          
+          setNotes(screeningNote);
+          toast.success('Đã tự động thêm kết quả sàng lọc STI vào ghi chú');
+          
+          // Xóa dữ liệu khỏi localStorage sau khi đã sử dụng
+          localStorage.removeItem('sti_screening_results');
+        } catch (error) {
+          console.error('Error parsing STI screening results:', error);
+          localStorage.removeItem('sti_screening_results');
+        }
+      }
     } else {
       setShowLoginModal(true);
     }

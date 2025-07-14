@@ -104,8 +104,9 @@ export class UserRepository {
         }
     }
 
-    public static async saveUser(user: Partial<IUser>) {
+    public static async saveUser(userData: Partial<IUser>) {
         try {
+            const user = new User(userData);
             return await user.save();
         } catch (error) {
             console.error('Error saving user:', error);

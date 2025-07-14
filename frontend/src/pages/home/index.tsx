@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Banner from "./components/Banner";
 import BlogCard from '../../components/blog/BlogCard';
-import { homeService } from '../../services';
+import { homeService, consultantService } from '../../services';
 import { Blog as BlogType } from '../../types/blog';
 
 // Memoized components để tránh re-render không cần thiết
@@ -54,29 +54,42 @@ const HomePage = () => {
     },
   ];
 
-  // Optimized data fetching with single API call
+  // Optimized data fetching with separate API calls
   const fetchData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('🏠 HomePage: Fetching data with composite API...');
-      const homepageData = await homeService.getHomepageData();
+      console.log('🏠 HomePage: Fetching data...');
+      
+      // Fetch data in parallel
+      const [homepageData, consultantsData] = await Promise.all([
+        homeService.getHomepageData(),
+        consultantService.getAllConsultants(1, 10)
+      ]);
       
       if (homepageData.success) {
-        const { sti_packages, sti_tests, blogs, consultants } = homepageData.data;
+        const { sti_packages, sti_tests, blogs } = homepageData.data;
         
         setPackagesData(sti_packages || []);
         setTestsData(sti_tests || []);
         setBlogsData(blogs || []);
-        setConsultantsData(consultants || []);
         
-        console.log('✅ HomePage: All data fetched successfully', {
+        console.log('✅ HomePage: Homepage data fetched successfully', {
           packages: sti_packages?.length || 0,
-          blogs: blogs?.length || 0,
-          consultants: consultants?.length || 0
+          blogs: blogs?.length || 0
         });
       }
+      
+      if (consultantsData.data) {
+        const consultants = consultantsData.data.consultants || [];
+        setConsultantsData(consultants);
+        
+        console.log('✅ HomePage: Consultants fetched successfully', {
+          consultants: consultants.length
+        });
+      }
+      
     } catch (error) {
       console.error('❌ HomePage: Error fetching data:', error);
       setError('Không thể tải dữ liệu trang chủ. Vui lòng thử lại sau.');

@@ -193,9 +193,10 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
             res.status(400).json(result);
         }
     } catch (error) {
+        console.error('OTP verification error:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi hệ thống'
+            message: 'Server error'
         });
     }
 });

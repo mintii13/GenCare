@@ -8,6 +8,7 @@ import { API } from '../../config/apiEndpoints';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
+import STIAssessmentService from '../../services/stiAssessmentService';
 
 const { Title, Text } = Typography;
 
@@ -37,6 +38,7 @@ const OrdersPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<STIOrder | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [packageMap, setPackageMap] = useState<{ [id: string]: string }>({});
   
   // Detect if this is staff/admin view based on route
   const isStaffView = location.pathname.includes('/staff/') || location.pathname.includes('/admin/');
@@ -50,13 +52,14 @@ const OrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [minAmount, setMinAmount] = useState<string>('');
+  const [maxAmount, setMaxAmount] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   
   // Staff-only filter state
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
-  const [minAmount, setMinAmount] = useState<string>('');
-  const [maxAmount, setMaxAmount] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('order_date');
   
   // Debounce search term
@@ -89,7 +92,17 @@ const OrdersPage: React.FC = () => {
     }
     
     fetchOrders();
-  }, [user, isStaffView, currentPage, pageSize, debouncedSearchTerm, statusFilter, paymentStatusFilter, dateFrom, dateTo, minAmount, maxAmount, sortBy]);
+    // Lấy danh sách gói xét nghiệm để mapping id -> tên
+    STIAssessmentService.getPackageInfo().then(res => {
+      if (res.success && Array.isArray(res.data)) {
+        const map: { [id: string]: string } = {};
+        res.data.forEach(pkg => {
+          map[pkg.code] = pkg.name;
+        });
+        setPackageMap(map);
+      }
+    });
+  }, [user, isStaffView, currentPage, pageSize, debouncedSearchTerm, statusFilter, typeFilter, minAmount, maxAmount, dateFrom, dateTo, paymentStatusFilter, sortBy]);
 
   const fetchOrders = async () => {
     try {
@@ -123,27 +136,31 @@ const OrdersPage: React.FC = () => {
       if (statusFilter !== 'all') {
         params.append('order_status', statusFilter);
       }
+
+      if (typeFilter !== 'all') {
+        params.append('order_type', typeFilter);
+      }
+
+      if (minAmount) {
+        params.append('min_amount', minAmount);
+      }
+
+      if (maxAmount) {
+        params.append('max_amount', maxAmount);
+      }
+
+      if (dateFrom) {
+        params.append('date_from', dateFrom);
+      }
+
+      if (dateTo) {
+        params.append('date_to', dateTo);
+      }
       
       // Staff-only filters
       if (isStaffView) {
         if (paymentStatusFilter !== 'all') {
           params.append('payment_status', paymentStatusFilter);
-        }
-        
-        if (dateFrom) {
-          params.append('date_from', dateFrom);
-        }
-        
-        if (dateTo) {
-          params.append('date_to', dateTo);
-        }
-        
-        if (minAmount) {
-          params.append('min_amount', minAmount);
-        }
-        
-        if (maxAmount) {
-          params.append('max_amount', maxAmount);
         }
         
         if (sortBy !== 'order_date') {
@@ -236,13 +253,17 @@ const OrdersPage: React.FC = () => {
 
   const columns = [
     {
-      title: 'Mã đơn',
-      dataIndex: '_id',
-      key: '_id',
-      render: (id: string) => (
-        <Text code>{id.slice(-8)}</Text>
+      title: 'Ngày giờ',
+      dataIndex: 'order_date',
+      key: 'order_date',
+      render: (date: string) => (
+        <div>
+          <CalendarOutlined style={{ marginRight: 8 }} />
+          {dayjs(date).format('DD/MM/YYYY HH:mm')}
+        </div>
       )
     },
+
     {
       title: 'Loại xét nghiệm',
       key: 'type',
@@ -253,17 +274,6 @@ const OrdersPage: React.FC = () => {
           ) : (
             <Tag color="green">Xét nghiệm lẻ</Tag>
           )}
-        </div>
-      )
-    },
-    {
-      title: 'Ngày xét nghiệm',
-      dataIndex: 'order_date',
-      key: 'order_date',
-      render: (date: string) => (
-        <div>
-          <CalendarOutlined style={{ marginRight: 8 }} />
-          {dayjs(date).format('DD/MM/YYYY')}
         </div>
       )
     },
@@ -288,10 +298,10 @@ const OrdersPage: React.FC = () => {
       )
     },
     {
-      title: 'Ngày đặt',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm')
+      title: 'Ghi chú',
+      dataIndex: 'notes',
+      key: 'notes',
+      render: (notes: string) => notes || 'Không có ghi chú'
     },
     {
       title: 'Thao tác',
@@ -355,6 +365,58 @@ const OrdersPage: React.FC = () => {
             </Select>
           </Col>
 
+          <Col xs={24} sm={12} md={8} lg={4}>
+            <Select
+              placeholder="Loại xét nghiệm"
+              style={{ width: '100%' }}
+              value={typeFilter}
+              onChange={setTypeFilter}
+              allowClear
+            >
+              <Select.Option value="all">Tất cả loại</Select.Option>
+              <Select.Option value="package">Gói xét nghiệm</Select.Option>
+              <Select.Option value="single">Xét nghiệm lẻ</Select.Option>
+            </Select>
+          </Col>
+
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <Input
+              placeholder="Tiền tối thiểu"
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              type="number"
+            />
+          </Col>
+
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <Input
+              placeholder="Tiền tối đa"
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              type="number"
+            />
+          </Col>
+
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <DatePicker
+              placeholder="Từ ngày"
+              style={{ width: '100%' }}
+              value={dateFrom ? dayjs(dateFrom) : null}
+              onChange={(date) => setDateFrom(date ? date.format('YYYY-MM-DD') : '')}
+              format="DD/MM/YYYY"
+            />
+          </Col>
+
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <DatePicker
+              placeholder="Đến ngày"
+              style={{ width: '100%' }}
+              value={dateTo ? dayjs(dateTo) : null}
+              onChange={(date) => setDateTo(date ? date.format('YYYY-MM-DD') : '')}
+              format="DD/MM/YYYY"
+            />
+          </Col>
+
           {/* Staff-only Filters */}
           {isStaffView && (
             <>
@@ -371,40 +433,6 @@ const OrdersPage: React.FC = () => {
                   <Select.Option value="Unpaid">Chưa thanh toán</Select.Option>
                   <Select.Option value="Refunded">Đã hoàn tiền</Select.Option>
                 </Select>
-              </Col>
-              <Col xs={12} sm={8} md={6} lg={3}>
-                <DatePicker
-                  placeholder="Từ ngày"
-                  style={{ width: '100%' }}
-                  value={dateFrom ? dayjs(dateFrom) : null}
-                  onChange={(date) => setDateFrom(date ? date.format('YYYY-MM-DD') : '')}
-                  format="DD/MM/YYYY"
-                />
-              </Col>
-              <Col xs={12} sm={8} md={6} lg={3}>
-                <DatePicker
-                  placeholder="Đến ngày"
-                  style={{ width: '100%' }}
-                  value={dateTo ? dayjs(dateTo) : null}
-                  onChange={(date) => setDateTo(date ? date.format('YYYY-MM-DD') : '')}
-                  format="DD/MM/YYYY"
-                />
-              </Col>
-              <Col xs={12} sm={8} md={6} lg={3}>
-                <Input
-                  placeholder="Tiền tối thiểu"
-                  value={minAmount}
-                  onChange={(e) => setMinAmount(e.target.value)}
-                  type="number"
-                />
-              </Col>
-              <Col xs={12} sm={8} md={6} lg={3}>
-                <Input
-                  placeholder="Tiền tối đa"
-                  value={maxAmount}
-                  onChange={(e) => setMaxAmount(e.target.value)}
-                  type="number"
-                />
               </Col>
               <Col xs={24} sm={8} md={6} lg={4}>
                 <Select
@@ -427,13 +455,14 @@ const OrdersPage: React.FC = () => {
               onClick={() => {
                 setSearchTerm('');
                 setStatusFilter('all');
+                setTypeFilter('all');
+                setMinAmount('');
+                setMaxAmount('');
+                setDateFrom('');
+                setDateTo('');
                 setCurrentPage(1);
                 if (isStaffView) {
                   setPaymentStatusFilter('all');
-                  setDateFrom('');
-                  setDateTo('');
-                  setMinAmount('');
-                  setMaxAmount('');
                   setSortBy('order_date');
                 }
               }}
