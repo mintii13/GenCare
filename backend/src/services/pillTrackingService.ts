@@ -89,14 +89,14 @@ export class PillTrackingService{
                     message: 'No active menstrual cycle found. Please create menstrual cycle first.'
                 };
             }
-            const cycleStartDate = DateTime.fromJSDate(menstrualCycle[0].cycle_start_date).startOf('day');
-            const diffDays = Math.floor(parsedStartDate.diff(cycleStartDate, 'days').days);
-            if (diffDays < 0 || diffDays >= 5){
-                return{
-                    success: false,
-                    message: 'You cannot drink pill after menstrual cycle date over 5 five days'
-                }
-            }
+            // const cycleStartDate = DateTime.fromJSDate(menstrualCycle[0].cycle_start_date).startOf('day');
+            // const diffDays = Math.floor(parsedStartDate.diff(cycleStartDate, 'days').days);
+            // if (diffDays < 0 || diffDays >= 5){
+            //     return{
+            //         success: false,
+            //         message: 'You cannot drink pill after menstrual cycle date over 5 five days'
+            //     }
+            // }
             // Kiểm tra đã có pill tracking cho menstrual cycle này chưa
             const existingPillTracking = await PillTrackingRepository.hasTrackingForCycle(menstrualCycle[0]._id.toString())
             if (existingPillTracking) {
@@ -600,6 +600,86 @@ export class PillTrackingService{
         }
     }
 
+    public static async getWeeklyPillTracking(user_id: string, start_date: string){
+        try {
+            if (!user_id || !start_date) {
+            return {
+                success: false,
+                message: 'Missing user_id or start_date' 
+            };
+        }
+        const start = new Date(start_date);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6); // 7 ngày
+        const result = await PillTrackingRepository.getWeeklyPillTracking(user_id, start, end);
+        console.log(result)
+        if (!result){
+            return{
+                success: false,
+                message: 'Cannot find any pill tracking'
+            }
+        }
+        return{
+            success: true,
+            message: 'Fetched pill tracking weekly successfully',
+            data: result
+        }
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Internal server error'
+            }
+        }
+    }
+
+    public static async markPillAsTaken(pill_track_id: string, taken_time: string) {
+        try {
+            const updated = await PillTrackingRepository.updateTakenStatus(pill_track_id, taken_time);
+
+            if (!updated) {
+                return { 
+                    success: false, 
+                    message: 'Pill not found' 
+                };
+            }
+            return { 
+                success: true, 
+                message: 'Marked as taken', 
+                data: updated 
+            };
+        } catch (error) {
+            return { 
+                success: false, 
+                message: 'Internal server error' 
+            };
+        }
+    }
+
+    public static async getPillStatistics(user_id: string) {
+        try {
+            const pills = await PillTrackingRepository.getPillTrackingByUserId(user_id);
+
+            const total_days = pills.length;
+            const taken_days = pills.filter(p => p.is_taken).length;
+            const missed_days = total_days - taken_days;
+
+            return {
+                success: true,
+                message: 'Statistics retrieved successfully',
+                data: { 
+                    total_days, 
+                    taken_days, 
+                    missed_days 
+                }
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Internal server error',
+                error
+            };
+        }
+    }
 }
 
 export class PillTrackingReminderService{
