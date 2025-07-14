@@ -336,4 +336,42 @@ export class PillTrackingRepository {
             throw error;
         }
     }
+
+    public static async getWeeklyPillTracking(user_id: string, start: Date, end: Date){
+        try {
+            const userId = new mongoose.Types.ObjectId(user_id);
+            return await PillTracking.find({
+                user_id: userId,
+                pill_start_date: { $gte: start, $lte: end },
+                is_active: true,
+            }).sort({ pill_start_date: 1 });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+
+    public static async updateTakenStatus(pill_tracking_id: string, taken_time: string){
+        try {
+            const pillTrackingId = new mongoose.Types.ObjectId(pill_tracking_id)
+            return await PillTracking.findByIdAndUpdate(
+                pillTrackingId,
+                { is_taken: true, taken_time: new Date(taken_time) },
+                { new: true }
+            );
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+
+    public static async getPillTrackingByUserId(user_id: string){
+        try {
+            const userId = new mongoose.Types.ObjectId(user_id);
+            return await PillTracking.find({ user_id: userId, is_active: true });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
 }

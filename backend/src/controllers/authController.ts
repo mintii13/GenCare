@@ -47,12 +47,14 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     try {
         const loginRequest: LoginRequest = req.body;
         const result = await AuthService.login(loginRequest);
+        console.log(result);
         if (result.success) {
             res.status(200).json(result);
         } else {
             res.status(401).json(result);
         }
     } catch (error) {
+        console.error('Login controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống'
@@ -109,10 +111,12 @@ router.get('/google/callback', async (req, res) => {
                 const redirectUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/oauth-success?token=${jwtAccessToken}&googleToken=${userWithToken.googleAccessToken}`;
                 res.redirect(redirectUrl);
             } catch (error) {
-                    res.redirect(failedRedirectedUrl);
+                console.error('Google callback error:', error);
+                res.redirect(failedRedirectedUrl);
             }
         })
     } catch (error){
+        console.error('Google callback error:', error);
     }
 });
 
@@ -149,6 +153,7 @@ router.post('/create-google-meet', authenticateToken, async (req: Request, res: 
         });
 
     } catch (error) {
+        console.error('Create Google Meet error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi tạo Google Meet: ' + error.message
@@ -157,7 +162,7 @@ router.post('/create-google-meet', authenticateToken, async (req: Request, res: 
 });
 
 // Các endpoints khác giữ nguyên...
-router.post('/register', validateRegister, async (req: Request, res: Response) => {
+router.post('/register/send-otp', validateRegister, async (req: Request, res: Response) => {
     try {
         const registerRequest: RegisterRequest = req.body;
         const result = await AuthService.register(registerRequest);
@@ -167,6 +172,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
             res.status(400).json(result);
         }
     } catch (error) {
+        console.error('Register controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống'
@@ -175,11 +181,13 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
 });
 
 // POST /verifyOTP - Xác thực OTP và insert vào DB nếu đúng
-router.post('/verifyOTP', async (req: Request, res: Response) => {
+router.post('/register/verify-otp', async (req: Request, res: Response) => {
     try {
+        console.log('VerifyOTP endpoint called with body:', req.body);
         const { email, otp } = req.body;
 
         if (!email || !otp) {
+            console.log('Missing email or otp in request');
             return res.status(400).json({
                 success: false,
                 message: 'Email and otp are required'
@@ -193,6 +201,7 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
             res.status(400).json(result);
         }
     } catch (error) {
+        console.error('Verify OTP controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống'
@@ -202,7 +211,7 @@ router.post('/verifyOTP', async (req: Request, res: Response) => {
 
 router.put('/change-password', authenticateToken, validateChangePassword, async (req: Request, res: Response) => {
     try {
-        const userId = req.jwtUser?.userId;
+        const userId = (req.user as any).userId;
         const {old_password, new_password} = req.body;
         if (!userId) {
             return res.status(400).json({
@@ -217,6 +226,7 @@ router.put('/change-password', authenticateToken, validateChangePassword, async 
         else res.status(400).json(result);
         
     } catch (error) {
+        console.error('Forgot password controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -241,6 +251,7 @@ router.post('/forgot-password/request', async (req: Request, res: Response) => {
             res.status(400).json(result);
         }
     } catch (error) {
+        console.error('Forgot password controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -250,9 +261,11 @@ router.post('/forgot-password/request', async (req: Request, res: Response) => {
 
 router.post('/forgot-password/verify', async (req: Request, res: Response) => {
     try {
+        console.log('VerifyOTP endpoint called with body:', req.body);
         const { email, otp } = req.body;
 
         if (!email || !otp) {
+            console.log('Missing email or otp in request');
             return res.status(400).json({
                 success: false,
                 message: 'Email and otp are required'
@@ -266,6 +279,7 @@ router.post('/forgot-password/verify', async (req: Request, res: Response) => {
             res.status(400).json(result);
         }
     } catch (error) {
+        console.error('Verify OTP controller error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống'
@@ -289,6 +303,7 @@ router.post('/forgot-password/reset', async (req: Request, res: Response) => {
         }
         else res.status(400).json(result)
     } catch (error) {
+        console.error('Reset password controller error:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Internal server error' 
