@@ -60,9 +60,8 @@ export class StiTestRepository{
     public static async findByIdAndUpdate(sti_test_id: string, userId: string): Promise<IStiTest | null> {
         try {
             const objectStiId = new mongoose.Types.ObjectId(sti_test_id);
-            const objectUserId = new mongoose.Types.ObjectId(userId);
             return await StiTest.findOneAndUpdate(
-                { _id: objectStiId, createdBy: objectUserId },
+                { _id: objectStiId },
                 { is_active: false },
                 { new: true }
             );

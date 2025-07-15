@@ -366,25 +366,26 @@ export class StiService {
 
     public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
+            let sti_package_item = null;
+            let sti_test_items = [];
+            let total_amount = 0;
+            let hasPackage: boolean = false;
+            let hasTest = false;
+
             if (!order_date){
                 return{
                     success: false,
                     message: 'Order date is required'
                 }
             }
-
-            // Xử lý trường hợp không có package hoặc test items cụ thể
-            // Đây là trường hợp đặt lịch tư vấn chung, total_amount = 0
-            let total_amount = 0;
-            let sti_package_item = null;
-            let sti_test_items: string[] = [];
-
-            // Nếu có package_id, xử lý package
-            if (sti_package_id && sti_package_id !== 'null') {
+            
+            // Xử lý package
+            if (sti_package_id) {
                 const result = await this.handleStiPackage(sti_package_id);
                 if (result.success) {
                     sti_package_item = result.sti_package_item;
                     total_amount += result.amount;
+                    hasPackage = true;
                 }
             }
 
@@ -392,11 +393,19 @@ export class StiService {
             if (sti_test_items_input && sti_test_items_input.length > 0) {
                 const result = await this.handleStiTest(sti_test_items_input);
                 if (result.success) {
-                    sti_test_items = result.sti_test_items.map((item) => item.sti_test_id);
+                    sti_test_items = result.sti_test_items.map(item => item.sti_test_id);
                     total_amount += result.amount;
+                    hasTest = true;
                 }
             }
 
+            if (!hasPackage && !hasTest) {
+                return {
+                    success: false,
+                    message: 'No valid STI tests or package provided'
+                };
+            }
+            
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
                 return {
@@ -430,9 +439,17 @@ export class StiService {
                 schedule.is_locked = true;
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
-            const customer = await UserRepository.findById(customer_id)
-
-            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email)
+            const customer = await UserRepository.findById(customer_id);
+            
+            let packageName = 'Gói combo';
+            if (sti_package_id) {
+                const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
+                if (stiPackage) {
+                    packageName = stiPackage.sti_package_name;
+                }
+            }
+            
+            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
             return {
                 success: true,
                 message: 'StiOrder is inserted successfully',
@@ -657,7 +674,7 @@ export class StiService {
                             message: 'Unauthorized status update'
                         };
                     }
-                } else if (role === 'staff' || role === 'admin') {
+                } else if (role === 'staff' || role === 'admin' || role === 'consultant') {
                     order.order_status = nextStatus;
                     if (order.order_status === 'Processing') {
                         order.payment_status = 'Paid';
@@ -693,7 +710,50 @@ export class StiService {
             }
 
             if (Array.isArray(updates.sti_test_items)) {
+                if (!['staff', 'consultant', 'admin'].includes(role)) {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update STI test items'
+                    };
+                }
                 order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
+            }
+            if (updates.sti_package_item) {
+                if (!['staff', 'consultant', 'admin'].includes(role)) {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update STI package item'
+                    };
+                }
+
+                const sti_package_id  = updates.sti_package_item.sti_package_id;
+                const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id.toString());
+                if (!stiPackageTests || stiPackageTests.length === 0) {
+                    return {
+                        success: false,
+                        message: 'No STI tests found for this package'
+                    };
+                }
+
+                // Gán lại vào order
+                order.sti_package_item = {
+                    sti_package_id: new mongoose.Types.ObjectId(sti_package_id),
+                    sti_test_ids: stiPackageTests.map(test => new mongoose.Types.ObjectId(test.sti_test_id))
+                };
+            }
+
+            if (updates.payment_status) {
+                if (['staff', 'admin'].includes(role)) {
+                    order.payment_status = updates.payment_status;
+                    if (order.payment_status === 'Paid'){
+                        order.order_status = 'Processing';
+                    }
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update payment_status'
+                    };
+                }
             }
 
             if (updates.order_date && updates.order_date.toString() !== order.order_date.toString()) {
@@ -733,12 +793,15 @@ export class StiService {
 
             const validFields = Object.keys(order.toObject());
             for (const [key, value] of Object.entries(updates)) {
-                if (key !== 'order_status' && 
-                    key !== 'sti_test_items' && 
+                if (
+                    key !== 'order_status' && 
+                    key !== 'sti_test_items' &&
+                    key !== 'sti_package_item' && 
                     key !== 'consultant_id' && 
                     key !== 'staff_id' && 
                     key !== 'order_date' &&
-                    key !== 'total_amount' &&
+                    key !== 'total_amount' && 
+                    key !== 'payment_status' &&
                     validFields.includes(key)
                 ){
                     (order as any)[key] = value;
@@ -1208,7 +1271,7 @@ export class StiService {
         const uniqueTestIds = [...new Set(testIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
 
         if (uniqueTestIds.length === 0) {
-        return [];
+            return [];
         }
 
         // Lấy test types từ database

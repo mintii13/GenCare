@@ -157,7 +157,7 @@ router.post('/create-google-meet', authenticateToken, async (req: Request, res: 
 });
 
 // Các endpoints khác giữ nguyên...
-router.post('/register', validateRegister, async (req: Request, res: Response) => {
+router.post('/register/send-otp', validateRegister, async (req: Request, res: Response) => {
     try {
         const registerRequest: RegisterRequest = req.body;
         const result = await AuthService.register(registerRequest);
@@ -175,7 +175,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
 });
 
 // POST /verifyOTP - Xác thực OTP và insert vào DB nếu đúng
-router.post('/verifyOTP', async (req: Request, res: Response) => {
+router.post('/register/verify-otp', async (req: Request, res: Response) => {
     try {
         const { email, otp } = req.body;
 

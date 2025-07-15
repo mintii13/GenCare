@@ -3,6 +3,7 @@ import { GetScheduleRequest, SetupPillTrackingRequest, UpdateScheduleRequest } f
 import { PillTrackingService } from '../services/pillTrackingService';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { DateTime } from 'luxon';
+import mongoose from 'mongoose';
 const router = Router();
 
 router.post('/setup', authenticateToken, async (req: Request, res: Response): Promise<void> => {
@@ -35,6 +36,92 @@ router.post('/setup', authenticateToken, async (req: Request, res: Response): Pr
     }
 });
 
+router.get('/weekly', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try {
+        const start_date = req.query.start_date as string;
+        const user_id = (req.user as any).userId;
+        const result = await PillTrackingService.getWeeklyPillTracking(user_id, start_date);
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(400).json(result);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+})
+
+router.get('/monthly', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try {
+        const start_date = req.query.start_date as string;
+        const user_id = (req.user as any).userId;
+        const result = await PillTrackingService.getMonthlyPillTracking(user_id, start_date);
+        if (result.success){
+            res.status(200).json(result);
+        }
+        else res.status(400).json(result);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+})
+
+router.patch('/mark-as-taken/:id', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const pill_tracking_id = req.params.id;
+        const taken_time = req.body.taken_time;
+
+        if (!taken_time) {
+            res.status(400).json({
+                success: false, 
+                message: 'is_taken is required' 
+            });
+            return;
+        }
+
+        const result = await PillTrackingService.markPillAsTaken(pill_tracking_id, taken_time);
+
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(404).json(result);
+        }
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
+    }
+});
+
+router.get('/statistics', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const user_id = req.jwtUser.userId;
+        if (!user_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing user_id'
+            });
+        }
+
+        const result = await PillTrackingService.getPillStatistics(user_id);
+
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+})
 
 router.get('/:userId', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {

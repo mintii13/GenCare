@@ -65,6 +65,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('🔄 AuthContext: Keeping cached user due to network error');
             // Giữ cached user nếu chỉ là network error
           }
+          // Xóa token không hợp lệ
+          await authService.logout(); 
+          setUser(null);
         }
       } else {
         console.log('❌ AuthContext: No token found');

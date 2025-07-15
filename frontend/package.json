@@ -10,8 +10,11 @@
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
     "@hookform/resolvers": "^5.1.1",
+<<<<<<< HEAD
     "@lexical/list": "^0.32.0",
     "@lexical/rich-text": "^0.32.0",
+=======
+>>>>>>> 768f2f03a0e51be63cbdbd47fec21d9d63c7462b
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dropdown-menu": "^2.1.15",

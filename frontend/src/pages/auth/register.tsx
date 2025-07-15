@@ -165,7 +165,7 @@ const Register: React.FC = () => {
           if ((loginResponse.data as any)?.success) {
             login((loginResponse.data as any).user, (loginResponse.data as any).accessToken);
             toast.success('Xác thực thành công! Chào mừng bạn đến với GenCare!');
-            navigate('/dashboard');
+            navigate('/');
           } else {
             // Nếu auto login thất bại, vẫn thông báo thành công và cho user login thủ công
             toast.success('Xác thực thành công! Vui lòng đăng nhập.');
@@ -281,11 +281,11 @@ const Register: React.FC = () => {
                     <p className="text-red-500 text-sm">{otpError}</p>
                     {otpError.includes('Server error') || otpError.includes('hệ thống') ? (
                       <p className="text-gray-500 text-xs mt-1">
-                        💡 Gợi ý: Hãy thử gửi lại OTP hoặc liên hệ hỗ trợ nếu vấn đề vẫn tiếp tục.
+                         Gợi ý: Hãy thử gửi lại OTP hoặc liên hệ hỗ trợ nếu vấn đề vẫn tiếp tục.
                       </p>
                     ) : (
                       <p className="text-gray-500 text-xs mt-1">
-                        💡 Gợi ý: Kiểm tra email (kể cả thư mục spam) và nhập đúng 6 chữ số.
+                         Gợi ý: Kiểm tra email (kể cả thư mục spam) và nhập đúng 6 chữ số.
                       </p>
                     )}
                   </div>

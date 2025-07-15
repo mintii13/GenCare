@@ -136,7 +136,7 @@ export const validateUpdateAppointment = (req: Request, res: Response, next: Nex
     if (req.body.appointment_date && typeof req.body.appointment_date === 'string') {
         try {
             req.body.appointment_date = new Date(req.body.appointment_date);
-            
+
             // Check if the parsed date is valid
             if (isNaN(req.body.appointment_date.getTime())) {
                 res.status(400).json({
@@ -357,11 +357,11 @@ const feedbackSchema = Joi.object({
             'any.required': 'Rating is required'
         }),
     comment: Joi.string()
-        .max(1000)
+        .max(500)
         .optional()
         .allow('')
         .messages({
-            'string.max': 'Comment cannot exceed 1000 characters'
+            'string.max': 'Comment cannot exceed 500 characters'
         })
 });
 

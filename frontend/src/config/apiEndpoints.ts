@@ -13,9 +13,9 @@ export const API = {
   // ----------------------- AUTH -----------------------
   Auth: {
     LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
+    REGISTER: '/register/send-otp',
     CHECK_EMAIL: '/auth/check-email',
-    VERIFY_OTP: '/auth/verifyOTP',
+    VERIFY_OTP: '/auth/register/verify-otp',
     RESEND_OTP: '/auth/resendOTP',
     LOGOUT: '/auth/logout',
     CHANGE_PASSWORD: '/auth/change-password',
@@ -26,7 +26,7 @@ export const API = {
     REFRESH: '/identity/refresh',
     USER_INFO: '/identity/user',
     LOGIN_PUBLIC: '/auth/login',
-    REGISTER_PUBLIC: '/auth/register',
+    REGISTER_PUBLIC: '/auth/register/send-otp',
     ME: '/auth/me',
     REFRESH_TOKEN: '/auth/refresh-token',
     SEND_VERIFICATION: '/auth/send-verification',

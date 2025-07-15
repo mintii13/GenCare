@@ -242,6 +242,12 @@ const UserProfilePage: React.FC = () => {
           <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1890ff' }}>Hồ sơ cá nhân</h1>
           <p className="text-gray-600">Quản lý thông tin cá nhân của bạn</p>
         </div>
+        {/* Nút đổi mật khẩu */}
+        <div className="mb-6">
+          <Button variant="outline" onClick={() => setShowChangePassword(true)}>
+            Đổi mật khẩu
+          </Button>
+        </div>
 
 
         {/* Profile Card */}

@@ -313,7 +313,7 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
   const totalOrders = filteredOrders.length;
   const ordersWithResults = filteredOrders.filter(order => 
     Array.isArray(results) && results.some(result => result.order_id === order._id)
-  ).length;
+    ).length;
   const criticalResults = filteredResults.filter(result => result.is_critical).length;
   const pendingNotifications = filteredResults.filter(result => 
     result.is_confirmed && !result.is_notified

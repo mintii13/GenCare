@@ -238,207 +238,212 @@ const BookSTIPage: React.FC = () => {
           {selectedPackage ? `Đặt lịch xét nghiệm: ${selectedPackage.sti_package_name}` : 'Đặt lịch tư vấn xét nghiệm STI'}
         </Title>
       
-      {selectedPackage && (
+        {selectedPackage && (
+          <Card 
+            style={{ 
+              marginBottom: '24px', 
+              backgroundColor: '#f6ffed', 
+              borderColor: '#b7eb8f',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} sm={16} md={18}>
+                <div>
+                  <Title 
+                    level={4} 
+                    style={{ 
+                      margin: '0 0 8px 0', 
+                      color: '#389e0d',
+                      fontWeight: 600,
+                      lineHeight: 1.2
+                    }}
+                  >
+                    {selectedPackage.sti_package_name}
+                  </Title>
+                  <Text 
+                    type="secondary" 
+                    style={{ 
+                      fontSize: '14px',
+                      lineHeight: 1.5,
+                      display: 'block',
+                      marginBottom: '4px'
+                    }}
+                  >
+                    {selectedPackage.description}
+                  </Text>
+                </div>
+              </Col>
+              <Col xs={24} sm={8} md={6}>
+                <div 
+                  style={{ 
+                    textAlign: 'right',
+                    padding: '12px 16px',
+                    backgroundColor: 'rgba(56, 158, 13, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(56, 158, 13, 0.2)'
+                  }}
+                >
+                  <Text 
+                    style={{ 
+                      fontSize: '12px', 
+                      color: '#666',
+                      display: 'block',
+                      marginBottom: '2px'
+                    }}
+                  >
+                    Giá gói
+                  </Text>
+                  <Text 
+                    strong 
+                    style={{ 
+                      fontSize: '20px', 
+                      color: '#389e0d',
+                      whiteSpace: 'nowrap',
+                      fontWeight: 700,
+                      display: 'block'
+                    }}
+                  >
+                    {selectedPackage.price?.toLocaleString('vi-VN')} VNĐ
+                  </Text>
+                </div>
+              </Col>
+            </Row>
+            
+            {recommendedPackage && (
+              <Alert
+                message="Gói xét nghiệm được đề xuất"
+                description="Gói xét nghiệm này được đề xuất dựa trên kết quả đánh giá STI của bạn"
+                type="info"
+                showIcon
+                style={{ 
+                  marginTop: '16px',
+                  borderRadius: '8px'
+                }}
+              />
+            )}
+          </Card>
+        )}
+        
+        <Alert
+          message="Quy trình đặt lịch tư vấn"
+          description={selectedPackage 
+            ? "Bạn sẽ được tư vấn và thực hiện xét nghiệm theo gói đã chọn. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
+            : "Bạn sẽ được tư vấn và hướng dẫn chọn gói xét nghiệm phù hợp. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
+          }
+          type="info"
+          showIcon
+          style={{ 
+            marginBottom: '24px',
+            borderRadius: '12px',
+            border: '1px solid #1890ff20',
+            backgroundColor: '#f0f9ff'
+          }}
+        />
+        
         <Card 
           style={{ 
-            marginBottom: '24px', 
-            backgroundColor: '#f6ffed', 
-            borderColor: '#b7eb8f',
+            marginBottom: '24px',
             borderRadius: '12px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
           }}
         >
-          <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} sm={16} md={18}>
-              <div>
-                <Title 
-                  level={4} 
-                  style={{ 
-                    margin: '0 0 8px 0', 
-                    color: '#389e0d',
-                    fontWeight: 600,
-                    lineHeight: 1.2
-                  }}
-                >
-                  {selectedPackage.sti_package_name}
-                </Title>
-                <Text 
-                  type="secondary" 
-                  style={{ 
-                    fontSize: '14px',
-                    lineHeight: 1.5,
-                    display: 'block',
-                    marginBottom: '4px'
-                  }}
-                >
-                  {selectedPackage.description}
-                </Text>
-              </div>
-            </Col>
-            <Col xs={24} sm={8} md={6}>
-              <div 
-                style={{ 
-                  textAlign: 'right',
-                  padding: '12px 16px',
-                  backgroundColor: 'rgba(56, 158, 13, 0.1)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(56, 158, 13, 0.2)'
-                }}
-              >
-                <Text 
-                  style={{ 
-                    fontSize: '12px', 
-                    color: '#666',
-                    display: 'block',
-                    marginBottom: '2px'
-                  }}
-                >
-                  Giá gói
-                </Text>
-                <Text 
-                  strong 
-                  style={{ 
-                    fontSize: '20px', 
-                    color: '#389e0d',
-                    whiteSpace: 'nowrap',
-                    fontWeight: 700,
-                    display: 'block'
-                  }}
-                >
-                  {selectedPackage.price?.toLocaleString('vi-VN')} VNĐ
-                </Text>
-              </div>
-            </Col>
-          </Row>
-          
-          {recommendedPackage && (
-            <Alert
-              message="Gói xét nghiệm được đề xuất"
-              description="Gói xét nghiệm này được đề xuất dựa trên kết quả đánh giá STI của bạn"
-              type="info"
-              showIcon
-              style={{ 
-                marginTop: '16px',
-                borderRadius: '8px'
-              }}
-            />
-          )}
+          <Steps 
+            current={currentStep} 
+            items={steps} 
+            style={{ 
+              padding: '8px 0'
+            }} 
+          />
         </Card>
-      )}
-      
-      <Alert
-        message="Quy trình đặt lịch tư vấn"
-        description={selectedPackage 
-          ? "Bạn sẽ được tư vấn và thực hiện xét nghiệm theo gói đã chọn. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
-          : "Bạn sẽ được tư vấn và hướng dẫn chọn gói xét nghiệm phù hợp. Trung tâm sẽ liên hệ xác nhận lịch hẹn với bạn."
-        }
-        type="info"
-        showIcon
-        style={{ 
-          marginBottom: '24px',
-          borderRadius: '12px',
-          border: '1px solid #1890ff20',
-          backgroundColor: '#f0f9ff'
-        }}
-      />
-      
-      <Card 
-        style={{ 
-          marginBottom: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}
-      >
-        <Steps 
-          current={currentStep} 
-          items={steps} 
+        
+        <Card 
+          title={selectedPackage ? "Đặt lịch xét nghiệm" : "Đặt lịch tư vấn"}
+          style={{
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          headStyle={{
+            borderBottom: '1px solid #f0f0f0',
+            fontSize: '18px',
+            fontWeight: 600
+          }}
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item label="Ngày tư vấn" required help="Không thể chọn ngày Chủ nhật và ngày đã qua">
+              <DatePicker
+                style={{ width: '100%' }}
+                format="DD/MM/YYYY"
+                placeholder="Chọn ngày tư vấn"
+                disabledDate={disabledDate}
+                value={orderDate}
+                onChange={handleDateChange}
+              />
+            </Form.Item>
+            <Form.Item label="Ghi chú (tùy chọn)">
+              <TextArea
+                rows={4}
+                placeholder={selectedPackage 
+                  ? "Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
+                  : "Nhập thông tin về tình trạng sức khỏe, mong muốn tư vấn..."
+                }
+                maxLength={500}
+                value={notes}
+                onChange={handleNotesChange}
+                showCount
+              />
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button onClick={() => navigate('/test-packages')}>Quay lại</Button>
+                <Button type="primary" loading={loading} onClick={handleSubmit} disabled={!orderDate}>
+                  {selectedPackage ? 'Đặt lịch xét nghiệm' : 'Đặt lịch tư vấn'}
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Card>
+        
+        <Card 
+          title="Lưu ý quan trọng" 
           style={{ 
-            padding: '8px 0'
-          }} 
+            marginTop: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          headStyle={{
+            borderBottom: '1px solid #f0f0f0',
+            fontSize: '16px',
+            fontWeight: 600
+          }}
+        >
+          <ul>
+            <li>Buổi tư vấn sẽ diễn ra khoảng 30-45 phút</li>
+            <li>Bác sĩ sẽ tư vấn gói xét nghiệm phù hợp với tình trạng của bạn</li>
+            <li>Vui lòng đến đúng giờ đã hẹn</li>
+            <li>Mang theo CMND/CCCD để xác minh danh tính</li>
+            <li>Chuẩn bị các thông tin về tình trạng sức khỏe hiện tại</li>
+            <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
+          </ul>
+        </Card>
+        
+        <STIAssessmentModal
+          visible={showAssessmentModal}
+          onClose={() => setShowAssessmentModal(false)}
+          onTakeAssessment={handleTakeAssessment}
+          onSkipAssessment={handleSkipAssessment}
+          loading={loading}
         />
-      </Card>
-      <Card 
-        title={selectedPackage ? "Đặt lịch xét nghiệm" : "Đặt lịch tư vấn"}
-        style={{
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}
-        headStyle={{
-          borderBottom: '1px solid #f0f0f0',
-          fontSize: '18px',
-          fontWeight: 600
-        }}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item label="Ngày tư vấn" required help="Không thể chọn ngày Chủ nhật và ngày đã qua">
-            <DatePicker
-              style={{ width: '100%' }}
-              format="DD/MM/YYYY"
-              placeholder="Chọn ngày tư vấn"
-              disabledDate={disabledDate}
-              value={orderDate}
-              onChange={handleDateChange}
-            />
-          </Form.Item>
-          <Form.Item label="Ghi chú (tùy chọn)">
-            <TextArea
-              rows={4}
-              placeholder={selectedPackage 
-                ? "Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
-                : "Nhập thông tin về tình trạng sức khỏe, mong muốn tư vấn..."
-              }
-              maxLength={500}
-              value={notes}
-              onChange={handleNotesChange}
-              showCount
-            />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button onClick={() => navigate('/test-packages')}>Quay lại</Button>
-              <Button type="primary" loading={loading} onClick={handleSubmit} disabled={!orderDate}>
-                {selectedPackage ? 'Đặt lịch xét nghiệm' : 'Đặt lịch tư vấn'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-      <Card 
-        title="Lưu ý quan trọng" 
-        style={{ 
-          marginTop: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}
-        headStyle={{
-          borderBottom: '1px solid #f0f0f0',
-          fontSize: '16px',
-          fontWeight: 600
-        }}
-      >
-        <ul>
-          <li>Buổi tư vấn sẽ diễn ra khoảng 30-45 phút</li>
-          <li>Bác sĩ sẽ tư vấn gói xét nghiệm phù hợp với tình trạng của bạn</li>
-          <li>Vui lòng đến đúng giờ đã hẹn</li>
-          <li>Mang theo CMND/CCCD để xác minh danh tính</li>
-          <li>Chuẩn bị các thông tin về tình trạng sức khỏe hiện tại</li>
-          <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
-        </ul>
-      </Card>
-      <STIAssessmentModal
-        visible={showAssessmentModal}
-        onClose={() => setShowAssessmentModal(false)}
-        onTakeAssessment={handleTakeAssessment}
-        onSkipAssessment={handleSkipAssessment}
-        loading={loading}
-      />
-      <LicenseModal
-        visible={showLicenseModal}
-        onAccept={handleLicenseAccept}
-        onCancel={handleLicenseCancel}
-        title="Điều khoản sử dụng dịch vụ tư vấn STI"
-      />
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+        
+        <LicenseModal
+          visible={showLicenseModal}
+          onAccept={handleLicenseAccept}
+          onCancel={handleLicenseCancel}
+          title="Điều khoản sử dụng dịch vụ tư vấn STI"
+        />
+        
+        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       </div>
     </div>
   );

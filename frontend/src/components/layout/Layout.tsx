@@ -22,10 +22,7 @@ export default function Layout({ children, onLoginClick }: LayoutProps) {
       <Footer />
       
       {/* GenCare AI Chatbot */}
-      <ChatBot 
-        mode="window"
-        className="gencare-chatbot"
-      />
+      <ChatBot className="gencare-chatbot" />
     </div>
   );
 }

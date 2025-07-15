@@ -225,7 +225,7 @@ export class AppointmentService {
             // Get customer info để gửi email
             const customer = await User.findById(appointment.customer_id);
 
-     
+
             if (!googleAccessToken) {
                 return {
                     success: false,
@@ -380,7 +380,48 @@ export class AppointmentService {
                     message: 'Cannot cancel completed appointment'
                 };
             }
+            // THÊM: AUTHORIZATION CHECK - Customer chỉ được cancel appointment của mình
+            if (requestUserRole === 'customer') {
+                let customerIdToCheck: string;
 
+                // Handle cả trường hợp customer_id được populate và không populate
+                if (typeof appointment.customer_id === 'string') {
+                    customerIdToCheck = appointment.customer_id;
+                } else if (appointment.customer_id && typeof appointment.customer_id === 'object') {
+                    customerIdToCheck = (appointment.customer_id as any)._id?.toString() || (appointment.customer_id as any).toString();
+                } else {
+                    customerIdToCheck = appointment.customer_id?.toString() || '';
+                }
+
+                if (customerIdToCheck !== requestUserId) {
+                    return {
+                        success: false,
+                        message: 'This appointment is not belong to to you'
+                    };
+                }
+            }
+            // THÊM: AUTHORIZATION CHECK - Consultant chỉ được cancel appointment được assign cho mình
+            if (requestUserRole === 'consultant') {
+                let consultantIdFromAppointment: string;
+
+                // Handle consultant_id
+                if (typeof appointment.consultant_id === 'string') {
+                    consultantIdFromAppointment = appointment.consultant_id;
+                } else if (appointment.consultant_id && typeof appointment.consultant_id === 'object') {
+                    consultantIdFromAppointment = (appointment.consultant_id as any)._id?.toString() || (appointment.consultant_id as any).toString();
+                } else {
+                    consultantIdFromAppointment = appointment.consultant_id?.toString() || '';
+                }
+
+                // Find consultant document để lấy user_id
+                const consultant = await Consultant.findById(consultantIdFromAppointment).lean();
+                if (!consultant || consultant.user_id.toString() !== requestUserId) {
+                    return {
+                        success: false,
+                        message: 'This appointment is not belong to to you'
+                    };
+                }
+            }
             // Store old data for history
             const oldData = { ...appointment };
 
