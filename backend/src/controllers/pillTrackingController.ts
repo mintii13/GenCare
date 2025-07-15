@@ -53,7 +53,6 @@ router.get('/weekly', authenticateToken, async (req: Request, res: Response): Pr
     }
 })
 
-<<<<<<< HEAD
 router.get('/monthly', authenticateToken, async (req: Request, res: Response): Promise<void> => {
     try {
         const start_date = req.query.start_date as string;
@@ -71,8 +70,6 @@ router.get('/monthly', authenticateToken, async (req: Request, res: Response): P
     }
 })
 
-=======
->>>>>>> 09e91f223368664a1f48e271147b3ac3dc088319
 router.patch('/mark-as-taken/:id', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {
         const pill_tracking_id = req.params.id;
