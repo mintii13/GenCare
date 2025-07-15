@@ -337,19 +337,26 @@ export class PillTrackingRepository {
         }
     }
 
-    public static async getWeeklyPillTracking(user_id: string, start: Date, end: Date){
+    public static async getPillTrackingByDateRange(user_id: string, start: Date, end: Date){
         try {
             const userId = new mongoose.Types.ObjectId(user_id);
-            return await PillTracking.find({
+            console.log(start, end);
+            const result = await PillTracking.find({
                 user_id: userId,
                 pill_start_date: { $gte: start, $lte: end },
                 is_active: true,
-            }).sort({ pill_start_date: 1 });
+            }).select('_id is_taken pill_start_date').sort({ pill_start_date: 1 });
+            return result.map(item => ({
+                _id: item._id,
+                is_taken: item.is_taken,
+                pill_start_date: new Date(item.pill_start_date).toISOString().slice(0, 10)
+            }))
         } catch (error) {
             console.error(error);
             throw error;
         }
     }
+
 
     public static async updateTakenStatus(pill_tracking_id: string, taken_time: string){
         try {

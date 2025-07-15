@@ -600,6 +600,38 @@ export class PillTrackingService{
         }
     }
 
+    public static async getMonthlyPillTracking(user_id: string, start_date: string){
+        try {
+            if (!user_id || !start_date) {
+            return {
+                success: false,
+                message: 'Missing user_id or start_date'
+            };
+        }
+        const start = new Date(start_date);
+        const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+
+        const result = await PillTrackingRepository.getPillTrackingByDateRange(user_id, start, end);
+
+        if (!result){
+            return{
+                success: false,
+                message: 'Cannot find any pill tracking'
+            }
+        }
+        return{
+            success: true,
+            message: 'Fetched pill tracking monthly successfully',
+            data: result
+        }
+        } catch (error) {
+            return{
+                success: false,
+                message: 'Internal server error'
+            }
+        }
+    }
+
     public static async getWeeklyPillTracking(user_id: string, start_date: string){
         try {
             if (!user_id || !start_date) {
@@ -611,7 +643,7 @@ export class PillTrackingService{
         const start = new Date(start_date);
         const end = new Date(start);
         end.setDate(start.getDate() + 6); // 7 ngày
-        const result = await PillTrackingRepository.getWeeklyPillTracking(user_id, start, end);
+        const result = await PillTrackingRepository.getPillTrackingByDateRange(user_id, start, end);
         console.log(result)
         if (!result){
             return{

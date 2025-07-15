@@ -1,10 +1,16 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
+import dayjs from 'dayjs';
 
 export const menstrualCycleSchema = Joi.object({
     period_days: Joi.array()
     .items(
-        Joi.string().required()
+        Joi.string().required().custom((value, helpers) => {
+            if (dayjs(value).isAfter(dayjs())) {
+                return helpers.error('date.future');
+            }
+            return value;
+        })
     )
     .min(1)
     .required()
@@ -13,6 +19,7 @@ export const menstrualCycleSchema = Joi.object({
         'array.empty': 'Cần có ít nhất một ngày kinh nguyệt',
         'array.min': 'Cần có ít nhất một ngày kinh nguyệt',
         'any.required': 'period_days là bắt buộc',
+        'date.future': 'Không được chọn ngày trong tương lai'
     }),
     notes: Joi.string().optional().messages({
         'string.max': 'Ghi chú không được vượt quá 500 ký tự',
