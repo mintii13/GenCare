@@ -31,7 +31,7 @@ export class HomeController {
       // Extract data arrays from responses
       const stiTests = (stiTestsResponse as any).stitest || (stiTestsResponse as any).tests || [];
       const stiPackages = (stiPackagesResponse as any).stipackage || (stiPackagesResponse as any).packages || [];
-      const blogs = blogsResponse.success ? blogsResponse.data.blogs : [];
+      const blogs = blogsResponse.success ? blogsResponse.data?.blogs || [] : [];
       
       // Debug consultant response
       console.log('🔍 HomeController: consultantsResponse:', JSON.stringify(consultantsResponse, null, 2));
