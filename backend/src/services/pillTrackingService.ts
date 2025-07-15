@@ -642,9 +642,8 @@ export class PillTrackingService{
         }
         const start = new Date(start_date);
         const end = new Date(start);
-        end.setDate(start.getDate() + 6); // 7 ngày
+        end.setDate(start.getDate() + 6);
         const result = await PillTrackingRepository.getPillTrackingByDateRange(user_id, start, end);
-        console.log(result)
         if (!result){
             return{
                 success: false,

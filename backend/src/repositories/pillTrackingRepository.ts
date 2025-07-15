@@ -357,7 +357,6 @@ export class PillTrackingRepository {
         }
     }
 
-
     public static async updateTakenStatus(pill_tracking_id: string, taken_time: string){
         try {
             const pillTrackingId = new mongoose.Types.ObjectId(pill_tracking_id)
