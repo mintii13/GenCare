@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, DatePicker, Button, Form, Alert } from 'antd';
+import { Modal, Button, Alert } from 'antd';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { toast } from 'react-toastify';
@@ -43,7 +43,7 @@ const CopyScheduleModal: React.FC<CopyScheduleModalProps> = ({ isOpen, onClose, 
     
     try {
       const formattedDate = format(targetDate, 'yyyy-MM-dd');
-      const response = await weeklyScheduleService.copySchedule(sourceScheduleId, formattedDate);
+      const response = (await weeklyScheduleService.copySchedule(sourceScheduleId, formattedDate)) as { success: boolean; message?: string };
 
       if (response.success) {
         toast.success("Sao chép lịch thành công!");
@@ -99,5 +99,4 @@ const CopyScheduleModal: React.FC<CopyScheduleModalProps> = ({ isOpen, onClose, 
     </Modal>
   );
 };
-
 export default CopyScheduleModal;

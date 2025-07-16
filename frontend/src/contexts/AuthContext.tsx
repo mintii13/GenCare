@@ -3,7 +3,6 @@ import { authService } from '../services/auth';
 import { User } from '../services/userService';
 import apiClient from '../services/apiClient';
 import { API } from '../config/apiEndpoints';
-import { clearAllTokens } from '../utils/authUtils';
 
 interface GetUserProfileResponse {
   success: boolean;
@@ -39,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const parsedUser = JSON.parse(cachedUser);
             setUser(parsedUser);
             console.log('✅ AuthContext: Using cached user', parsedUser.role);
-          } catch (e) {
+          } catch (_e) {
             console.error('❌ AuthContext: Failed to parse cached user');
           }
         }

@@ -52,7 +52,8 @@ const AdminAuditLog: React.FC = () => {
     setSearchTerm,
   } = usePaginatedResource<AuditLog>({
     apiService,
-    initialFilters: { page: 1, limit: 10 },
+    initialFilters: { page: 1, limit: 10, sort_by: 'timestamp', sort_order: 'desc' },
+    searchParamName: 'user_id',
   });
 
   const actionColors: { [key: string]: string } = {
@@ -108,6 +109,31 @@ const AdminAuditLog: React.FC = () => {
                 <SelectItem value="StiPackage">Gói STI</SelectItem>
                 <SelectItem value="User">Người dùng</SelectItem>
                 <SelectItem value="Appointment">Lịch hẹn</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => handleFilterChange('sort_by', value)}
+              defaultValue="timestamp"
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sắp xếp theo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="timestamp">Thời gian</SelectItem>
+                <SelectItem value="action">Hành động</SelectItem>
+                <SelectItem value="target_type">Đối tượng</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => handleFilterChange('sort_order', value)}
+              defaultValue="desc"
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Thứ tự" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Mới nhất</SelectItem>
+                <SelectItem value="asc">Cũ nhất</SelectItem>
               </SelectContent>
             </Select>
           </div>

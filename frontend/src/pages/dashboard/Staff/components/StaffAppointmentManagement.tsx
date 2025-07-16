@@ -1,27 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { appointmentService } from '../../../../services/appointmentService';
-import appointmentHistoryService from '../../../../services/appointmentHistoryService';
 import { consultantService } from '../../../../services/consultantService';
 import toast from 'react-hot-toast';
 import { FaEye, FaCheck, FaTimes, FaEdit, FaBell, FaCheckCircle } from 'react-icons/fa';
-import { Appointment } from '../../../../types/appointment';
+import { Appointment, AppointmentQuery, AppointmentsPaginatedResponse } from '../../../../types/appointment';
 import ResourceList from '../../../../components/common/ResourceList';
 import usePaginatedResource from '../../../../hooks/usePaginatedResource';
 import { Select, Col, Button, DatePicker, Modal, Tag, Space, Popconfirm, Tooltip } from 'antd';
 
-const { Option } = Select;
+import { Consultant } from '@/types/user';
 
-interface Consultant {
-  _id: string;
-  user_id: {
-    _id: string;
-    full_name: string;
-  };
-  specialization: string;
-}
+const { Option } = Select;
 
 // Enhanced status colors with more appealing design
 const getStatusColor = (status: string) => {
@@ -53,6 +45,47 @@ const StaffAppointmentManagement: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string>('');
   const [consultants, setConsultants] = useState<Consultant[]>([]);
 
+  const apiService = useCallback(async (params: URLSearchParams) => {
+    const query: AppointmentQuery = {};
+    for (const [key, value] of params.entries()) {
+      query[key as keyof AppointmentQuery] = value as any;
+    }
+    
+    const response = await appointmentService.getAllAppointmentsPaginated(query);
+
+    // Transform the response to match the structure expected by usePaginatedResource
+    if (response.success && response.data?.data) {
+      const originalData = response.data as unknown as AppointmentsPaginatedResponse;
+      return {
+        ...response,
+        data: {
+          success: true,
+          data: {
+            items: originalData.data.appointments,
+            pagination: originalData.data.pagination,
+          }
+        },
+      };
+    }
+    
+    // Return a compatible error structure
+    return {
+        ...response,
+        data: {
+          success: false,
+          data: {
+            items: [],
+            pagination: {
+                current_page: 1,
+                total_pages: 1,
+                total_items: 0,
+                items_per_page: 10,
+            },
+          }
+        },
+    };
+  }, []);
+
   const {
     data,
     loading,
@@ -63,8 +96,8 @@ const StaffAppointmentManagement: React.FC = () => {
     handlePageChange,
     handleFilterChange,
     refresh,
-  } = usePaginatedResource<any>({
-    apiService: appointmentHistoryService.getAppointmentHistoryList,
+  } = usePaginatedResource<Appointment>({
+    apiService,
     initialFilters: {
     page: 1,
     limit: 10,
@@ -186,31 +219,31 @@ const StaffAppointmentManagement: React.FC = () => {
     { 
       title: 'Khách hàng', 
       key: 'customer', 
-      render: (_: any, r: any) => (
+      render: (_: any, r: Appointment) => (
           <div className="font-medium text-gray-900">
-          {r.appointment_id?.customer_id?.full_name || 'N/A'}
+          {r.customer_id?.full_name || 'N/A'}
         </div>
       )
     },
     { 
       title: 'Chuyên gia', 
       key: 'consultant', 
-      render: (_: any, r: any) => (
+      render: (_: any, r: Appointment) => (
           <div className="font-medium text-gray-900">
-          {r.appointment_id?.consultant_id?.user_id?.full_name || 'N/A'}
+          {r.consultant_id?.user_id?.full_name || 'N/A'}
         </div>
       )
     },
     { 
       title: 'Ngày & Giờ', 
       key: 'datetime', 
-      render: (_: any, r: any) => (
+      render: (_: any, r: Appointment) => (
         <div className="text-sm">
           <div className="font-medium">
-            {formatDateDisplay(r.appointment_id?.appointment_date)}
+            {formatDateDisplay(r.appointment_date)}
           </div>
           <div className="text-gray-500">
-            {formatTimeDisplay(r.appointment_id?.start_time, r.appointment_id?.end_time)}
+            {formatTimeDisplay(r.start_time, r.end_time)}
           </div>
         </div>
       )
@@ -218,22 +251,21 @@ const StaffAppointmentManagement: React.FC = () => {
     { 
       title: 'Trạng thái', 
       key: 'status', 
-      render: (_: any, r: any) => (
+      render: (_: any, r: Appointment) => (
         <Tag 
-          color={getStatusColor(r.appointment_id?.status)} 
+          color={getStatusColor(r.status)} 
           className="font-medium"
         >
-          {getStatusLabel(r.appointment_id?.status)}
+          {getStatusLabel(r.status)}
         </Tag>
       )
     },
     {
       title: 'Hành động',
       key: 'actions',
-      render: (_: any, record: any) => {
-        const appointment = record.appointment_id;
-        const appointmentId = appointment?._id;
-        const status = appointment?.status;
+      render: (_: any, record: Appointment) => {
+        const appointmentId = record._id;
+        const status = record.status;
         const isLoading = actionLoading === appointmentId;
 
         return (
@@ -243,103 +275,77 @@ const StaffAppointmentManagement: React.FC = () => {
               <Button 
                 size="small" 
                 icon={<FaEye />} 
-                onClick={() => setSelectedAppointment(appointment)}
+                onClick={() => setSelectedAppointment(record)}
               />
             </Tooltip>
 
-            {/* Status-specific actions */}
+            {/* Confirm */}
             {status === 'pending' && (
-              <>
+              <Popconfirm
+                title="Xác nhận lịch hẹn này?"
+                onConfirm={() => handleConfirmAppointment(appointmentId)}
+                okText="Xác nhận"
+                cancelText="Hủy"
+                disabled={isLoading}
+              >
                 <Tooltip title="Xác nhận">
-                  <Popconfirm
-                    title="Xác nhận lịch hẹn này?"
-                    onConfirm={() => handleConfirmAppointment(appointmentId)}
-                    okText="Xác nhận"
-                    cancelText="Hủy"
-                  >
-                    <Button 
-                      size="small" 
-                      type="primary" 
-                      icon={<FaCheck />} 
-                      loading={isLoading}
-                    />
-                  </Popconfirm>
-                </Tooltip>
-                
-                <Tooltip title="Hủy lịch hẹn">
-                  <Popconfirm
-                    title="Hủy lịch hẹn này?"
-                    onConfirm={() => handleCancelAppointment(appointmentId)}
-                    okText="Hủy lịch"
-                    cancelText="Không"
-                  >
-                    <Button 
-                      size="small" 
-                      danger 
-                      icon={<FaTimes />} 
-                      loading={isLoading}
-                    />
-                  </Popconfirm>
-                </Tooltip>
-            </>
-          )}
-          
-            {(status === 'confirmed' || status === 'in_progress') && (
-              <>
-                <Tooltip title="Hoàn thành">
-                  <Popconfirm
-                    title="Đánh dấu lịch hẹn này đã hoàn thành?"
-                    onConfirm={() => handleCompleteAppointment(appointmentId)}
-                    okText="Hoàn thành"
-                    cancelText="Hủy"
-                  >
-                    <Button 
-                      size="small" 
-                      type="primary"
-                      icon={<FaCheckCircle />} 
-                      loading={isLoading}
-                      style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-                    />
-                  </Popconfirm>
-                </Tooltip>
-                
-                <Tooltip title="Gửi nhắc nhở">
                   <Button 
                     size="small" 
-                    icon={<FaBell />} 
+                    icon={<FaCheck />} 
                     loading={isLoading}
-                    onClick={() => handleSendReminder(appointmentId)}
-                    style={{ borderColor: '#faad14', color: '#faad14' }}
                   />
                 </Tooltip>
-                
-                <Tooltip title="Hủy lịch hẹn">
-                  <Popconfirm
-                    title="Hủy lịch hẹn này?"
-                    onConfirm={() => handleCancelAppointment(appointmentId)}
-                    okText="Hủy lịch"
-                    cancelText="Không"
-                  >
-                    <Button 
-                      size="small" 
-                      danger 
-                      icon={<FaTimes />} 
-                      loading={isLoading}
-                    />
-                  </Popconfirm>
-                </Tooltip>
-              </>
+              </Popconfirm>
             )}
 
-            {/* Send reminder for all non-cancelled appointments */}
-            {status !== 'cancelled' && status !== 'completed' && status !== 'pending' && (
+            {/* Cancel */}
+            {(status === 'pending' || status === 'confirmed') && (
+              <Popconfirm
+                title="Hủy lịch hẹn này?"
+                onConfirm={() => handleCancelAppointment(appointmentId)}
+                okText="Đồng ý"
+                cancelText="Không"
+                disabled={isLoading}
+              >
+                <Tooltip title="Hủy bỏ">
+                  <Button 
+                    size="small" 
+                    danger 
+                    icon={<FaTimes />} 
+                    loading={isLoading}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            )}
+
+            {/* Complete */}
+            {status === 'in_progress' && (
+              <Popconfirm
+                title="Hoàn thành lịch hẹn này?"
+                onConfirm={() => handleCompleteAppointment(appointmentId)}
+                okText="Đồng ý"
+                cancelText="Không"
+                disabled={isLoading}
+              >
+                <Tooltip title="Hoàn thành">
+                  <Button 
+                    size="small" 
+                    icon={<FaCheckCircle />} 
+                    loading={isLoading}
+                    style={{ color: 'green', borderColor: 'green' }}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            )}
+            
+            {/* Send Reminder */}
+            {status === 'confirmed' && (
               <Tooltip title="Gửi nhắc nhở">
                 <Button 
                   size="small" 
                   icon={<FaBell />} 
-                  loading={isLoading}
                   onClick={() => handleSendReminder(appointmentId)}
-                  style={{ borderColor: '#faad14', color: '#faad14' }}
+                  loading={isLoading}
                 />
               </Tooltip>
             )}
@@ -375,10 +381,10 @@ const StaffAppointmentManagement: React.FC = () => {
         >
           <Option value="all">Tất cả chuyên gia</Option>
           {consultants
-            .filter(c => c && c._id && c.user_id)
+            .filter(c => c && c._id && c.full_name)
             .map(c => (
               <Option key={c._id} value={c._id}>
-                {c.user_id.full_name}
+                {c.full_name}
               </Option>
             ))
           }
@@ -434,7 +440,7 @@ const StaffAppointmentManagement: React.FC = () => {
                  <p className="mt-1 text-sm text-gray-900">
                    {typeof selectedAppointment.consultant_id === 'object' && selectedAppointment.consultant_id?.user_id?.full_name
                      ? selectedAppointment.consultant_id.user_id.full_name
-                     : (typeof selectedAppointment.consultant_id === 'string' ? selectedAppointment.consultant_id : 'N/A')}
+                     : 'N/A'}
                  </p>
                       </div>
                       <div>

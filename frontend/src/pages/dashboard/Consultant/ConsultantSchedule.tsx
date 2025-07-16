@@ -3,7 +3,7 @@ import { format, addDays } from 'date-fns';
 import { consultantService } from '../../../services/consultantService';
 import { useWeeklySchedule } from '../../../hooks/useWeeklySchedule';
 import WeeklyCalendarView from '../../../components/schedule/WeeklyCalendarView';
-import { WorkingDay, DAY_NAMES, DAY_LABELS, DayName } from '../../../types/schedule';
+import { DAY_NAMES, DAY_LABELS, DayName } from '../../../types/schedule';
 import { formatWeekRange } from '../../../utils/dateUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
@@ -72,7 +72,7 @@ const ConsultantSchedule: React.FC = () => {
         setConsultants(mapped);
  
       }
-    } catch (error) {
+    } catch (_error) {
     }
   };
 
@@ -128,9 +128,9 @@ const ConsultantSchedule: React.FC = () => {
                         // Test weekly schedule API
                         const { weekStart } = getWeekRange(currentWeek);
                         
-                        const scheduleRes = await weeklyScheduleService.getConsultantSchedules(selectedConsultantId, weekStart, weekStart);
+                        await weeklyScheduleService.getConsultantSchedules(selectedConsultantId, weekStart, weekStart);
                       }
-                    } catch (err) {
+                    } catch (_err) {
                     }
                   }}
                   className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"

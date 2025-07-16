@@ -37,10 +37,15 @@ import StatusUpdateModal from '../../../../components/sti/StatusUpdateModal';
 import { 
   OrderStatus, 
   PaymentStatus, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getOrderStatusLabel, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getPaymentStatusLabel, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getOrderStatusColor, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getPaymentStatusColor,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getAvailableActions
 } from '../../../../utils/stiStatusUtils';
 import dayjs from 'dayjs';
@@ -146,6 +151,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   
   // Pagination and filters
   const [currentPage, setCurrentPage] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<OrderFilters>({
@@ -169,18 +175,14 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     fetchAvailablePackages();
   }, [filters, refreshTrigger]);
 
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters(prev => ({
-        ...prev,
-        page: 1,
-        search: searchTerm.trim() || undefined
-      }));
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Handle search button click
+  const handleSearch = () => {
+    setFilters(prev => ({
+      ...prev,
+      page: 1,
+      search: searchTerm.trim() || undefined
+    }));
+  };
 
   const fetchOrders = async () => {
     try {
@@ -244,7 +246,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       if (response.success && response.data) {
         setResults(response.data);
       }
-    } catch (error) {
+    } catch (_error) {
       message.error('Lỗi khi tải kết quả');
     }
   };
@@ -788,13 +790,25 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
               Tìm kiếm
             </label>
-            <Input
-              placeholder="Mã đơn, tên khách hàng, email..."
-              prefix={<SearchOutlined />}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              allowClear
-            />
+            <Input.Group compact>
+              <Input
+                placeholder="Mã đơn, tên khách hàng, email..."
+                prefix={<SearchOutlined />}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onPressEnter={handleSearch}
+                allowClear
+                style={{ width: 'calc(100% - 80px)' }}
+              />
+              <Button 
+                type="primary" 
+                icon={<SearchOutlined />}
+                onClick={handleSearch}
+                style={{ width: '80px' }}
+              >
+                Tìm
+              </Button>
+            </Input.Group>
           </Col>
           
           <Col xs={24} sm={12} md={8} lg={6}>

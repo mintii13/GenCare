@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Blog, Comment } from '../../types/blog';
 import { blogService } from '../../services/blogService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,8 +33,8 @@ const BlogDetailPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [relatedBlogs, setRelatedBlogs] = useState<Blog[]>([]);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const fetchBlogDetail = useCallback(async () => {
     if (!blogId) return;
@@ -114,16 +114,6 @@ const BlogDetailPage: React.FC = () => {
     });
   };
 
-  const formatFullDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const handleBack = () => {
     navigate('/blogs');
   };
@@ -151,7 +141,7 @@ const BlogDetailPage: React.FC = () => {
       } else {
         toast.error((updated as any).message || 'Cập nhật thất bại');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Có lỗi khi cập nhật blog');
     }
   };

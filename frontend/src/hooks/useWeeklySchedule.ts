@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { addWeeks, subWeeks } from 'date-fns';
 import { WeeklyScheduleData, Schedule, WeeklySlotData } from '../types/schedule';
 import { weeklyScheduleService } from '../services/weeklyScheduleService';
-import { appointmentService } from '../services/appointmentService';
 import { getWeekStart, getWeekRange } from '../utils/dateUtils';
 import { log } from '../utils/logger';
 
@@ -140,7 +139,7 @@ export const useWeeklySchedule = ({
         } as any);
         setError(null);
       }
-    } catch (err) {
+    } catch (_err) {
       const { weekStart, weekEnd } = getWeekRange(currentWeek);
       setWeeklySlotData({
         week_start_date: weekStart,
@@ -165,7 +164,7 @@ export const useWeeklySchedule = ({
       } else {
         await fetchScheduleForWeek();
       }
-    } catch (err) { 
+    } catch (_err) { 
       setError('Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
@@ -224,7 +223,7 @@ export const useWeeklySchedule = ({
         setError((response as any).message || 'Không thể sao chép lịch');
         return false;
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Có lỗi xảy ra khi sao chép lịch');
       return false;
     }

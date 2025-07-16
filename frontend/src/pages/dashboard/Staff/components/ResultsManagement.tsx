@@ -619,13 +619,25 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
             <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
               Tìm kiếm
             </label>
-            <Input
-              placeholder="Mã đơn, tên khách hàng, email..."
-              prefix={<SearchOutlined />}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              allowClear
-            />
+            <Input.Group compact>
+              <Input
+                placeholder="Mã đơn, tên khách hàng, email..."
+                prefix={<SearchOutlined />}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                                 allowClear
+                 style={{ width: 'calc(100% - 80px)' }}
+               />
+               <Button 
+                 type="primary" 
+                 icon={<SearchOutlined />}
+                 disabled
+                 style={{ width: '80px' }}
+                 title="Tìm kiếm tự động"
+               >
+                 Tìm
+               </Button>
+            </Input.Group>
           </Col>
           <Col xs={24} sm={12} md={8}>
             <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>

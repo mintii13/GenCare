@@ -34,25 +34,11 @@ app.use(helmet());
 
 // CORS cấu hình cho phép frontend truy cập với credentials
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
+  origin: ['http://localhost:5173', 'http://localhost:3000', process.env.FRONTEND_URL].filter(Boolean) as string[],
+  credentials: true,
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type,Authorization"
 }));
-
-// Thêm middleware thủ công để set header CORS cho mọi response
-app.use((req, res, next) => {
-  const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
 
 // Body parsing middleware
 app.use(express.json({ limit: '200mb' }));

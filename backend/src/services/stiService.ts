@@ -1117,18 +1117,25 @@ export class StiService {
                     message: 'Fail to fetch sti result by order'
                 }
             }
-            if (role === 'Customer' && result.sti_order_id.customer_id.toString() !== userId) {
+            
+            // Authorization check
+            if (role === 'customer' && result.sti_order_id.customer_id.toString() !== userId) {
                 return {
                     success: false,
-                    message: 'Access denied'
+                    message: 'Không có quyền truy cập'
                 };
             }
+            
+            // Staff, consultant, and admin can access all results
+            // Customer can only access their own results (checked above)
+            
             return{
                 success: true,
                 message: 'Fetched sti result by order successfully',
                 data: result
             }
         } catch (error) {
+            console.error('Error in getStiResultByOrderId:', error);
             return{
                 success: false,
                 message: 'Server error'

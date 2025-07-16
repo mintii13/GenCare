@@ -8,8 +8,6 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '../../contexts/AuthContext';
-import { RegisterFormData, validationSchemas } from '../../hooks/useFormValidation';
-import { FormField, FormSelect } from '../../components/ui/FormField';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { toast } from 'react-hot-toast';
@@ -22,11 +20,11 @@ const Register: React.FC = () => {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOTP] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
-  const [registerSuccess, setRegisterSuccess] = useState(false);
   const [otpError, setOTPError] = useState('');
   const [resendCountdown, setResendCountdown] = useState(60);
   const [resendLoading, setResendLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -39,9 +37,6 @@ const Register: React.FC = () => {
   const {
     control,
     handleSubmit,
-    getValues,
-    setValue,
-    trigger,
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(z.object({
@@ -171,7 +166,7 @@ const Register: React.FC = () => {
             toast.success('Xác thực thành công! Vui lòng đăng nhập.');
             navigate('/');
           }
-        } catch (loginError) {
+        } catch (_loginError) {
           // Nếu auto login bị lỗi, vẫn thông báo thành công và cho user login thủ công
           toast.success('Xác thực thành công! Vui lòng đăng nhập.');
           navigate('/');
@@ -211,24 +206,6 @@ const Register: React.FC = () => {
 
   const handleGoogleSignIn = () => {
     window.location.href = `${API.Auth.GOOGLE_VERIFY}`;
-  };
-
-  const handleCheckEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email) {
-      setEmailError('Vui lòng nhập email');
-      return;
-    }
-
-    const emailExists = await checkEmailExists(email);
-    if (emailExists) {
-      setEmailError('Email này đã được sử dụng');
-      toast.error('Email này đã được sử dụng');
-    } else {
-      setEmailError('');
-      toast.success('Email có thể sử dụng');
-    }
   };
 
   const handleResendOTP = async () => {

@@ -1,4 +1,4 @@
-import { useForm, UseFormReturn, FieldValues, DefaultValues, SubmitHandler, SubmitErrorHandler } from 'react-hook-form';
+import { useForm, FieldValues, SubmitHandler, SubmitErrorHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
@@ -13,7 +13,6 @@ import {
 export interface UseFormValidationProps<T extends FieldValues> extends FormConfig<T> {
   onSubmit: SubmitHandler<T>;
   onError?: SubmitErrorHandler<T>;
-  enableDevtools?: boolean;
   resetOnSubmitSuccess?: boolean;
 }
 
@@ -24,7 +23,6 @@ export function useFormValidation<T extends FieldValues>({
   mode = 'onChange',
   onSubmit,
   onError,
-  enableDevtools = false,
   resetOnSubmitSuccess = false
 }: UseFormValidationProps<T>): UseFormValidationReturn<T> {
   const form = useForm<T>({
