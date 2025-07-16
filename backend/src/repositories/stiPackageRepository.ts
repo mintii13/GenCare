@@ -69,4 +69,14 @@ export class StiPackageRepository{
             console.error(error);
         }
     }
+
+    public static async getPackageNameById(packageId: string): Promise<string | null> {
+        try {
+            const pkg = await StiPackage.findById(packageId).select('sti_package_name').lean();
+            return pkg?.sti_package_name || null;
+        } catch (error) {
+            console.error('Error in getPackageNameById:', error);
+            throw error;
+        }
+    }
 }

@@ -364,13 +364,13 @@ export class StiService {
         };
     }
 
-    public static async createStiOrder(customer_id: string, sti_package_id: string, sti_test_items_input: string[], order_date: Date, notes: string): Promise<StiOrderResponse> {
+    public static async createStiOrder(customer_id: string, order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
-            let sti_package_item = null;
-            let sti_test_items = [];
-            let total_amount = 0;
-            let hasPackage: boolean = false;
-            let hasTest = false;
+            // let sti_package_item = null;
+            // let sti_test_items = [];
+            // let total_amount = 0;
+            // let hasPackage: boolean = false;
+            // let hasTest = false;
 
             if (!order_date){
                 return{
@@ -379,32 +379,32 @@ export class StiService {
                 }
             }
             
-            // Xử lý package
-            if (sti_package_id) {
-                const result = await this.handleStiPackage(sti_package_id);
-                if (result.success) {
-                    sti_package_item = result.sti_package_item;
-                    total_amount += result.amount;
-                    hasPackage = true;
-                }
-            }
+            // // Xử lý package
+            // if (sti_package_id) {
+            //     const result = await this.handleStiPackage(sti_package_id);
+            //     if (result.success) {
+            //         sti_package_item = result.sti_package_item;
+            //         total_amount += result.amount;
+            //         hasPackage = true;
+            //     }
+            // }
 
-            // Xử lý test lẻ
-            if (sti_test_items_input && sti_test_items_input.length > 0) {
-                const result = await this.handleStiTest(sti_test_items_input);
-                if (result.success) {
-                    sti_test_items = result.sti_test_items.map(item => item.sti_test_id);
-                    total_amount += result.amount;
-                    hasTest = true;
-                }
-            }
+            // // Xử lý test lẻ
+            // if (sti_test_items_input && sti_test_items_input.length > 0) {
+            //     const result = await this.handleStiTest(sti_test_items_input);
+            //     if (result.success) {
+            //         sti_test_items = result.sti_test_items.map(item => item.sti_test_id);
+            //         total_amount += result.amount;
+            //         hasTest = true;
+            //     }
+            // }
 
-            if (!hasPackage && !hasTest) {
-                return {
-                    success: false,
-                    message: 'No valid STI tests or package provided'
-                };
-            }
+            // if (!hasPackage && !hasTest) {
+            //     return {
+            //         success: false,
+            //         message: 'No valid STI tests or package provided'
+            //     };
+            // }
             
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
@@ -416,11 +416,11 @@ export class StiService {
             const schedule = scheduleResult.schedule;
             const sti_order = new StiOrder({
                 customer_id,
-                sti_package_item,
-                sti_test_items: sti_test_items.length > 0 ? sti_test_items : undefined,
+                // sti_package_item,
+                // sti_test_items: sti_test_items.length > 0 ? sti_test_items : undefined,
                 sti_schedule_id: schedule._id,
                 order_date,
-                total_amount,
+                // total_amount,
                 notes
             });
             const result = await StiOrderRepository.insertStiOrder(sti_order);
@@ -438,15 +438,16 @@ export class StiService {
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id);
             
-            let packageName = 'Gói combo';
-            if (sti_package_id) {
-                const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
-                if (stiPackage) {
-                    packageName = stiPackage.sti_package_name;
-                }
-            }
+            // let packageName = 'Gói combo';
+            // if (sti_package_id) {
+            //     const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
+            //     if (stiPackage) {
+            //         packageName = stiPackage.sti_package_name;
+            //     }
+            // }
             
-            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
+            // await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
+            await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email);
             return {
                 success: true,
                 message: 'StiOrder is inserted successfully',
@@ -640,6 +641,33 @@ export class StiService {
                     message: 'Order not found'
                 };
             }
+            if (order.order_status === 'Completed' || order.order_status === 'Canceled') {
+                return {
+                    success: false,
+                    message: 'Cannot update order that is already completed or canceled'
+                };
+            }
+
+            if (role === 'staff' || role === 'admin' || role === 'consultant') {
+                if (updates.order_status === 'Completed') {
+                    if (
+                        !order.payment_status || order.payment_status !== 'Paid' ||
+                        !order.order_date ||
+                        !order.consultant_id ||
+                        !order.staff_id ||
+                        !order.sti_package_item ||
+                        !order.sti_package_item.sti_package_id ||
+                        !order.sti_package_item.sti_test_ids ||
+                        order.sti_package_item.sti_test_ids.length === 0 ||
+                        order.total_amount <= 0
+                    ) {
+                        return {
+                            success: false,
+                            message: 'Cannot complete order: missing required fields (payment_status must be Paid, order_date, consultant, staff, STI package and test items)'
+                        };
+                    }
+                }
+            }
             // Xử lý logic update order_status
             if (updates.order_status && updates.order_status !== order.order_status) {
                 const currentStatus = order.order_status;
@@ -715,6 +743,7 @@ export class StiService {
                 }
                 order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
             }
+            let sti_package_name = '';
             if (updates.sti_package_item) {
                 if (!['staff', 'consultant', 'admin'].includes(role)) {
                     return {
@@ -725,6 +754,7 @@ export class StiService {
 
                 const sti_package_id  = updates.sti_package_item.sti_package_id;
                 const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id.toString());
+                sti_package_name = await StiPackageRepository.getPackageNameById(sti_package_id.toString());
                 if (!stiPackageTests || stiPackageTests.length === 0) {
                     return {
                         success: false,
@@ -742,7 +772,7 @@ export class StiService {
             if (updates.payment_status) {
                 if (['staff', 'admin'].includes(role)) {
                     order.payment_status = updates.payment_status;
-                    if (order.payment_status === 'Paid'){
+                    if (updates.payment_status === 'Paid' && ['Booked', 'Accepted'].includes(order.order_status)) {
                         order.order_status = 'Processing';
                     }
                 } else {
@@ -797,7 +827,6 @@ export class StiService {
                     key !== 'consultant_id' && 
                     key !== 'staff_id' && 
                     key !== 'order_date' &&
-                    key !== 'total_amount' && 
                     key !== 'payment_status' &&
                     validFields.includes(key)
                 ){
@@ -810,7 +839,8 @@ export class StiService {
                 success: true,
                 message: 'Order updated successfully',
                 data: result,
-                updatedBy: userId
+                updatedBy: userId,
+                sti_package_name: sti_package_name || undefined
             };
 
         } catch (error) {
@@ -1051,6 +1081,13 @@ export class StiService {
                 return {
                     success: false,
                     message: 'STI result for this order already exists and is active'
+                };
+            }
+
+            if (order.order_status === 'Booked' || order.order_status === 'Accepted' || order.order_status === 'Canceled'){
+                return {
+                    success: false,
+                    message: 'STI result can be created where order_status after processing (money is paid)'
                 };
             }
             const allTests: any[] = [];

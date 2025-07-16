@@ -175,8 +175,8 @@ const BookSTIPage: React.FC = () => {
 
       // Tạo STI order thay vì appointment
       const orderData = {
-        sti_package_id: selectedPackage?._id || null,
-        sti_test_items: selectedTest ? [selectedTest._id] : [],
+        // sti_package_id: selectedPackage?._id || null,
+        // sti_test_items: selectedTest ? [selectedTest._id] : [],
         order_date: orderDate.format('YYYY-MM-DD'),
         notes: isConsultationMode 
           ? `Tư vấn xét nghiệm STI. ${notes.trim()}` 

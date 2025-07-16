@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { IStiTest, StiTest } from '../models/StiTest';
 import { StiService } from '../services/stiService';
-import { validateStiTest, validateStiPackage, validateStiOrder } from '../middlewares/stiValidation';
+import { validateStiTest, validateStiPackage, validateStiOrderUpdate, validateStiOrderCreate } from '../middlewares/stiValidation';
 import { IStiPackage, StiPackage } from '../models/StiPackage';
 import { JWTPayload } from '../utils/jwtUtils';
 import { StiTestScheduleRepository } from '../repositories/stiTestScheduleRepository';
@@ -417,12 +417,12 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
 });
 
 //create orders                                         (post)
-router.post('/createStiOrder', validateStiOrder, authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
+router.post('/createStiOrder', validateStiOrderCreate, authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
     try {
         const customer_id = (req.user as any).userId;
-        const { sti_package_id, sti_test_items, order_date, notes } = req.body;
+        const {order_date, notes } = req.body;
         console.log("BODY===>", req.body)
-        const result = await StiService.createStiOrder(customer_id, sti_package_id, sti_test_items, order_date, notes);
+        const result = await StiService.createStiOrder(customer_id, order_date, notes);
         if (result.success) {
             return res.status(201).json(result);
         }
@@ -495,7 +495,7 @@ router.get('/getStiOrder/:id', authenticateToken, async (req: Request, res: Resp
 });
 
 //update order by id
-router.patch('/updateStiOrder/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin', 'consultant'), stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
+router.patch('/updateStiOrder/:id', validateStiOrderUpdate, authenticateToken, authorizeRoles('customer', 'staff', 'admin', 'consultant'), stiAuditLogger('StiOrder', 'Update Order'), async (req: Request, res: Response) => {
     const orderId = req.params.id;
     const userId = (req.user as any).userId;
     const role = (req.user as any).role;
@@ -924,8 +924,8 @@ router.patch('/order/:orderId/status',
     authorizeRoles('staff', 'consultant', 'admin'),
     async (req: Request, res: Response) => {
         try {
-            const { orderId } = req.params;
-            const { order_status, consultant_id, staff_id, notes } = req.body;
+            const orderId  = req.params.orderId;
+            const {order_status, payment_status} = req.body;
             const user = req.jwtUser as JWTPayload;
 
             if (!order_status) {
@@ -935,11 +935,7 @@ router.patch('/order/:orderId/status',
                 });
             }
 
-            const updateData: any = { order_status };
-            
-            if (consultant_id) updateData.consultant_id = consultant_id;
-            if (staff_id) updateData.staff_id = staff_id;
-            if (notes) updateData.notes = notes;
+            const updateData: any = { order_status, payment_status };
 
             const result = await StiService.updateOrder(orderId, updateData, user.userId, user.role);
 
