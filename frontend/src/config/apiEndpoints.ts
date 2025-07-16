@@ -194,6 +194,7 @@ export const API = {
     GET_ORDERS_BY_CUSTOMER: (customerId: string) => `/sti/getAllStiOrders/${customerId}`,
     GET_ORDER: (id: string) => `/sti/getStiOrder/${id}`, // Fixed: backend uses getStiOrder not getOrderById
     UPDATE_ORDER: (id: string) => `/sti/updateStiOrder/${id}`, // Backend uses PATCH method
+    UPDATE_ORDER_STATUS: (id: string) => `/sti/order/${id}/status`, // Backend uses PATCH method
     // STI Results - NEW ENDPOINTS
     STI_RESULT: '/sti/sti-result',
     GET_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,

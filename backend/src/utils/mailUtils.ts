@@ -74,7 +74,14 @@ export class MailUtils{
         return otpGenerator;
     }
 
-    public static async sendStiOrderConfirmation(customerName: string, orderDate: string, total_amount: number, emailSendTo: string, packageName: string, testNames: string[]) {
+    public static async sendStiOrderConfirmation(
+        customerName: string, 
+        orderDate: string, 
+        // total_amount: number, 
+        emailSendTo: string, 
+        // packageName: string, 
+        // testNames: string[]
+    ) {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
@@ -85,36 +92,34 @@ export class MailUtils{
                 rejectUnauthorized: false
             }
         })
-        const hasPackage = !!packageName;
-        const hasTests = testNames.length > 0;
-        let selectedOptionsHTML = '';
-        if (hasPackage && hasTests) {
-            selectedOptionsHTML = `
-                <p><strong>Gói combo bạn đã chọn:</strong> ${packageName}</p>
-                <p><strong>Các xét nghiệm lẻ bạn đã chọn:</strong></p>
-                <ul>${testNames.map(t => `<li>${t}</li>`).join('')}</ul>
-            `;
-        } else if (hasPackage) {
-            selectedOptionsHTML = `<p><strong>Bạn đã chọn gói combo:</strong> ${packageName}</p>`;
-        } else if (hasTests) {
-            selectedOptionsHTML = `
-                <p><strong>Các xét nghiệm bạn đã chọn:</strong></p>
-                <ul>${testNames.map(t => `<li>${t}</li>`).join('')}</ul>
-            `;
-        } else {
-            selectedOptionsHTML = `<p><em>Không có gói hoặc xét nghiệm nào được chọn.</em></p>`;
-        }
+        // const hasPackage = !!packageName;
+        // const hasTests = testNames.length > 0;
+        // let selectedOptionsHTML = '';
+        // if (hasPackage && hasTests) {
+        //     selectedOptionsHTML = `
+        //         <p><strong>Gói combo bạn đã chọn:</strong> ${packageName}</p>
+        //         <p><strong>Các xét nghiệm lẻ bạn đã chọn:</strong></p>
+        //         <ul>${testNames.map(t => `<li>${t}</li>`).join('')}</ul>
+        //     `;
+        // } else if (hasPackage) {
+        //     selectedOptionsHTML = `<p><strong>Bạn đã chọn gói combo:</strong> ${packageName}</p>`;
+        // } else if (hasTests) {
+        //     selectedOptionsHTML = `
+        //         <p><strong>Các xét nghiệm bạn đã chọn:</strong></p>
+        //         <ul>${testNames.map(t => `<li>${t}</li>`).join('')}</ul>
+        //     `;
+        // } else {
+        //     selectedOptionsHTML = `<p><em>Không có gói hoặc xét nghiệm nào được chọn.</em></p>`;
+        // }
         const mailContent = {
             from: `"Đăng ký xét nghiệm thành công" <${process.env.EMAIL_FOR_VERIFY ?? null}>`,
             to: emailSendTo,
-            subject: "Mã xác thực OTP của bạn là: ",
+            subject: "Thông tin đăng ký xét nghiệm thành công: ",
             html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
                     <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
                     <h2>Xin chào ${customerName},</h2>
                     <p>Bạn đã đăng ký xét nghiệm STI thành công. Dưới đây là thông tin chi tiết:</p>
-                    ${selectedOptionsHTML}
                     <p><strong>Ngày đặt lịch:</strong> ${orderDate}</p>
-                    <p><strong>Tổng chi phí:</strong> ${total_amount.toLocaleString('vi-VN')} VND</p>
                     <p>Bạn có thể truy cập hệ thống tại: ${process.env.APP_URL ?? 'http://localhost:5173'}</p>
                     <p>Trân trọng,</p>
                     <h4>${process.env.APP_NAME ?? 'GenCare'}</h4>

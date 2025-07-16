@@ -55,7 +55,8 @@ export class StiResultRepository {
             return await StiOrder.findById(orderId)
                 .populate('sti_test_items')
                 .populate('sti_package_item.sti_package_id')
-                .populate('sti_package_item.sti_test_ids');
+                .populate('sti_package_item.sti_test_ids')
+                .populate('order_status');
         } catch (error) {
             throw new Error(`Error retrieving STI order with tests: ${error}`);
         }

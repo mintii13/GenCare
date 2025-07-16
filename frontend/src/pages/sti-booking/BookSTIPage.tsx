@@ -118,8 +118,8 @@ const BookSTIPage: React.FC = () => {
      
       // Nếu có selectedPackage từ STI Assessment, tạo order với package đó
       const orderData = {
-        sti_package_id: selectedPackage ? selectedPackage._id : null,
-        sti_test_items: [],
+        // sti_package_id: selectedPackage?._id || null,
+        // sti_test_items: selectedTest ? [selectedTest._id] : [],
         order_date: orderDate.format('YYYY-MM-DD'),
         notes: notes.trim() || undefined
       };

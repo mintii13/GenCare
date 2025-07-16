@@ -123,9 +123,9 @@ router.get('/statistics', authenticateToken, async (req: Request, res: Response)
     }
 })
 
-router.get('/:userId', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
+router.get('/', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = req.params.userId;
+        const userId = (req.user as any).userId;
         const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
         const pillSchedule: GetScheduleRequest = {userId, startDate, endDate};
         const result = await PillTrackingService.getUserPillSchedule(pillSchedule);
@@ -144,9 +144,9 @@ router.get('/:userId', authenticateToken, authorizeRoles('customer'), async (req
     }
 });
 
-router.patch('/:userId', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
+router.patch('/', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
         try {
-            const user_id = req.params.userId;
+            const user_id = (req.user as any).userId;
             const {is_taken, reminder_enabled, reminder_time, is_active, pill_type, max_reminder_times, reminder_interval} = req.body;
             if (is_taken === undefined && is_active === undefined && reminder_enabled === undefined && !reminder_time && 
                 !pill_type && max_reminder_times === undefined && reminder_interval === undefined) {

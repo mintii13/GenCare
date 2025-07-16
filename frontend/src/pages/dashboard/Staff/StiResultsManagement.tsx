@@ -270,7 +270,7 @@ const StiResultsManagement: React.FC = () => {
         const updateData = {
           order_date: values.order_date ? values.order_date.toDate() : undefined,
           notes: values.notes,
-          sti_package_id: values.sti_package_id || null,
+          sti_package_item: values.sti_package_item?.sti_package_id ? { sti_package_id: values.sti_package_id}: undefined,
           sti_test_items: values.sti_test_items || [],
           total_amount: calculatedTotal,
           order_status: values.order_status,
