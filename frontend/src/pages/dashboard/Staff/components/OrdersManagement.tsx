@@ -499,7 +499,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     if (!selectedOrder) return;
 
     try {
-      const response = await apiClient.patch(`/sti/updateStiOrder/${selectedOrder._id}`, {
+      const response = await apiClient.patch(API.STI.UPDATE_ORDER_STATUS(selectedOrder._id), {
         order_status: orderStatus,
         payment_status: paymentStatus
       });
