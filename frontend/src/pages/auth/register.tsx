@@ -205,8 +205,7 @@ const Register: React.FC = () => {
   };
 
   const handleGoogleSignIn = () => {
-    // Sửa lỗi trang trắng: Thêm VITE_API_URL để đảm bảo gọi đúng endpoint
-    window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}${API.Auth.GOOGLE_VERIFY}`;
+    window.location.href = `${API.Auth.GOOGLE_VERIFY}`;
   };
 
   const handleResendOTP = async () => {
