@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
 import STIAssessmentService from '../../services/stiAssessmentService';
+import { ResourceTable } from '../../components/common/ResourceTable';
 
 const { Title, Text } = Typography;
 
@@ -49,10 +50,7 @@ const OrdersPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   
   // Common filter state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [minAmount, setMinAmount] = useState<string>('');
   const [maxAmount, setMaxAmount] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -64,12 +62,8 @@ const OrdersPage: React.FC = () => {
   
   // Debounce search term
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    // This useEffect is no longer needed as searchTerm is removed
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -102,7 +96,7 @@ const OrdersPage: React.FC = () => {
         setPackageMap(map);
       }
     });
-  }, [user, isStaffView, currentPage, pageSize, debouncedSearchTerm, statusFilter, typeFilter, minAmount, maxAmount, dateFrom, dateTo, paymentStatusFilter, sortBy]);
+  }, [user, isStaffView, currentPage, pageSize, statusFilter, minAmount, maxAmount, dateFrom, dateTo, paymentStatusFilter, sortBy]);
 
   const fetchOrders = async () => {
     try {
@@ -129,16 +123,8 @@ const OrdersPage: React.FC = () => {
       });
       
       // Common filters
-      if (debouncedSearchTerm.trim()) {
-        params.append('search', debouncedSearchTerm.trim());
-      }
-      
       if (statusFilter !== 'all') {
         params.append('order_status', statusFilter);
-      }
-
-      if (typeFilter !== 'all') {
-        params.append('order_type', typeFilter);
       }
 
       if (minAmount) {
@@ -321,9 +307,10 @@ const OrdersPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <Title level={2}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <Title level={2} className="text-3xl font-bold">
           {isStaffView ? 'Quản lý lịch xét nghiệm STI' : 'Lịch xét nghiệm STI đã đặt'}
         </Title>
         {!isStaffView && (
@@ -333,173 +320,53 @@ const OrdersPage: React.FC = () => {
         )}
       </div>
 
-      {/* Search and Filter */}
-      <Card style={{ marginBottom: '16px' }}>
-        <Row gutter={[16, 16]} align="middle">
-          {/* Common Filters */}
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Input
-              placeholder="Tìm kiếm theo mã đơn, ghi chú..."
-              prefix={<SearchOutlined />}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={4}>
-            <Select
-              placeholder="Trạng thái đơn"
-              style={{ width: '100%' }}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              allowClear
-            >
-              <Select.Option value="all">Tất cả trạng thái</Select.Option>
-              <Select.Option value="Booked">Đã đặt lịch</Select.Option>
-              <Select.Option value="Accepted">Đã chấp nhận</Select.Option>
-              <Select.Option value="Processing">Đang xử lý</Select.Option>
-              <Select.Option value="SpecimenCollected">Đã lấy mẫu</Select.Option>
-              <Select.Option value="Testing">Đang xét nghiệm</Select.Option>
-              <Select.Option value="Completed">Hoàn thành</Select.Option>
-              <Select.Option value="Canceled">Đã hủy</Select.Option>
-            </Select>
-          </Col>
+      {/* Filter (ngay dưới header, trước bảng) */}
+      <div className="flex flex-row items-center gap-4 justify-center mb-6">
+        <Select
+          placeholder="Tất cả trạng thái"
+          style={{ minWidth: 200 }}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          allowClear
+        >
+          <Select.Option value="all">Tất cả trạng thái</Select.Option>
+          <Select.Option value="Booked">Đã đặt lịch</Select.Option>
+          <Select.Option value="Accepted">Đã chấp nhận</Select.Option>
+          <Select.Option value="Processing">Đang xử lý</Select.Option>
+          <Select.Option value="SpecimenCollected">Đã lấy mẫu</Select.Option>
+          <Select.Option value="Testing">Đang xét nghiệm</Select.Option>
+          <Select.Option value="Completed">Hoàn thành</Select.Option>
+          <Select.Option value="Canceled">Đã hủy</Select.Option>
+        </Select>
+        <Button
+          onClick={() => {
+            setStatusFilter('all');
+            setCurrentPage(1);
+          }}
+        >
+          Đặt lại
+        </Button>
+      </div>
 
-          <Col xs={24} sm={12} md={8} lg={4}>
-            <Select
-              placeholder="Loại xét nghiệm"
-              style={{ width: '100%' }}
-              value={typeFilter}
-              onChange={setTypeFilter}
-              allowClear
-            >
-              <Select.Option value="all">Tất cả loại</Select.Option>
-              <Select.Option value="package">Gói xét nghiệm</Select.Option>
-              <Select.Option value="single">Xét nghiệm lẻ</Select.Option>
-            </Select>
-          </Col>
-
-          <Col xs={12} sm={8} md={6} lg={3}>
-            <Input
-              placeholder="Tiền tối thiểu"
-              value={minAmount}
-              onChange={(e) => setMinAmount(e.target.value)}
-              type="number"
-            />
-          </Col>
-
-          <Col xs={12} sm={8} md={6} lg={3}>
-            <Input
-              placeholder="Tiền tối đa"
-              value={maxAmount}
-              onChange={(e) => setMaxAmount(e.target.value)}
-              type="number"
-            />
-          </Col>
-
-          <Col xs={12} sm={8} md={6} lg={3}>
-            <DatePicker
-              placeholder="Từ ngày"
-              style={{ width: '100%' }}
-              value={dateFrom ? dayjs(dateFrom) : null}
-              onChange={(date) => setDateFrom(date ? date.format('YYYY-MM-DD') : '')}
-              format="DD/MM/YYYY"
-            />
-          </Col>
-
-          <Col xs={12} sm={8} md={6} lg={3}>
-            <DatePicker
-              placeholder="Đến ngày"
-              style={{ width: '100%' }}
-              value={dateTo ? dayjs(dateTo) : null}
-              onChange={(date) => setDateTo(date ? date.format('YYYY-MM-DD') : '')}
-              format="DD/MM/YYYY"
-            />
-          </Col>
-
-          {/* Staff-only Filters */}
-          {isStaffView && (
-            <>
-              <Col xs={24} sm={12} md={6} lg={4}>
-                <Select
-                  placeholder="Trạng thái thanh toán"
-                  style={{ width: '100%' }}
-                  value={paymentStatusFilter}
-                  onChange={setPaymentStatusFilter}
-                  allowClear
-                >
-                  <Select.Option value="all">Tất cả thanh toán</Select.Option>
-                  <Select.Option value="Paid">Đã thanh toán</Select.Option>
-                  <Select.Option value="Unpaid">Chưa thanh toán</Select.Option>
-                  <Select.Option value="Refunded">Đã hoàn tiền</Select.Option>
-                </Select>
-              </Col>
-              <Col xs={24} sm={8} md={6} lg={4}>
-                <Select
-                  placeholder="Sắp xếp theo"
-                  style={{ width: '100%' }}
-                  value={sortBy}
-                  onChange={setSortBy}
-                >
-                  <Select.Option value="order_date">Ngày xét nghiệm</Select.Option>
-                  <Select.Option value="createdAt">Ngày đặt</Select.Option>
-                  <Select.Option value="total_amount">Số tiền</Select.Option>
-                  <Select.Option value="status">Trạng thái</Select.Option>
-                </Select>
-              </Col>
-            </>
-          )}
-
-          <Col xs={24} sm={12} md={4} lg={isStaffView ? 2 : 4}>
-            <Button 
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setTypeFilter('all');
-                setMinAmount('');
-                setMaxAmount('');
-                setDateFrom('');
-                setDateTo('');
-                setCurrentPage(1);
-                if (isStaffView) {
-                  setPaymentStatusFilter('all');
-                  setSortBy('order_date');
-                }
-              }}
-            >
-              Đặt lại
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-
-      <Table
+      <ResourceTable
+        data={orders}
         columns={columns}
-        dataSource={orders}
         loading={loading}
-        rowKey="_id"
         pagination={{
           current: currentPage,
           pageSize: pageSize,
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} lịch xét nghiệm`,
-          onChange: (page, size) => {
+          showTotal: (total: number, range: [number, number]) => `${range[0]}-${range[1]} của ${total} đơn hàng`,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          onChange: (page: number, pageSize: number) => {
             setCurrentPage(page);
-            if (size !== pageSize) {
-              setPageSize(size);
-              setCurrentPage(1); // Reset to first page when page size changes
-            }
+            setPageSize(pageSize);
           },
-          onShowSizeChange: (current, size) => {
-            setPageSize(size);
-            setCurrentPage(1);
-          }
         }}
-        locale={{
-          emptyText: 'Bạn chưa đặt lịch xét nghiệm nào'
-        }}
+    
+        onRowClick={showOrderDetail}
       />
 
       {/* Modal chi tiết đơn hàng */}

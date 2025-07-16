@@ -24,6 +24,8 @@ import {
   FaFilter,
   FaSortAmountDown
 } from 'react-icons/fa';
+import { ResourceTable } from '../../../components/common/ResourceTable';
+import { useNavigate } from 'react-router-dom';
 
 const MyAppointments: React.FC = () => {
   const { modalState, showConfirm, hideConfirm } = useConfirmModal();
@@ -76,6 +78,8 @@ const MyAppointments: React.FC = () => {
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800'
   };
+
+  const navigate = useNavigate();
 
   // Debounce search term
   useEffect(() => {
@@ -134,7 +138,7 @@ const MyAppointments: React.FC = () => {
       setLoading(false);
     }
   };
-
+  
   const handlePageChange = (page: number) => {
     setQuery(prev => ({ ...prev, page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -149,7 +153,7 @@ const MyAppointments: React.FC = () => {
   };
 
   const handleSortChange = (sort_by: string, sort_order: 'asc' | 'desc') => {
-    console.log('🔄 Sort change requested:', { sort_by, sort_order });
+
     setQuery(prev => {
       const newQuery = {
         ...prev,
@@ -267,15 +271,12 @@ const MyAppointments: React.FC = () => {
       toast.error(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
     }
   };
-
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: vi });
   };
-
   const formatTime = (timeString: string) => {
     return timeString;
   };
-
   const getConsultantSpecialization = (appointment: Appointment) => {
     const consultantId = appointment.consultant_id?._id;
     if (consultantDetails[consultantId]) {
@@ -283,7 +284,6 @@ const MyAppointments: React.FC = () => {
     }
     return appointment.consultant_id?.specialization || 'Tư vấn chung';
   };
-
   const fetchConsultantDetails = async (consultantId: string) => {
     try {
       if (consultantDetails[consultantId]) return;
@@ -333,6 +333,80 @@ const MyAppointments: React.FC = () => {
     return pages;
   };
 
+  // 1. Định nghĩa columns cho bảng lịch hẹn (Appointment)
+  const columns = [
+    {
+      title: 'Chuyên gia',
+      dataIndex: 'consultant',
+      key: 'consultant',
+      render: (_: any, record: Appointment) => (
+        <div className="flex items-center gap-2">
+          <img
+            src={consultantDetails[record.consultant_id?._id]?.avatar || '/default-avatar.png'}
+            alt={getConsultantNameWithFetch(record)}
+            className="w-8 h-8 rounded-full object-cover border border-gray-200"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/default-avatar.png';
+            }}
+          />
+          <span>{getConsultantNameWithFetch(record)}</span>
+        </div>
+      ),
+    },
+    {
+      title: 'Chuyên khoa',
+      dataIndex: 'specialization',
+      key: 'specialization',
+      render: (_: any, record: Appointment) => getConsultantSpecialization(record),
+    },
+    {
+      title: 'Ngày',
+      dataIndex: 'appointment_date',
+      key: 'appointment_date',
+      render: (date: string) => formatDate(date),
+    },
+    {
+      title: 'Thời gian',
+      dataIndex: 'start_time',
+      key: 'start_time',
+      render: (_: any, record: Appointment) => `${formatTime(record.start_time)} - ${formatTime(record.end_time)}`,
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status as keyof typeof statusColors]}`}>{statusLabels[status as keyof typeof statusLabels]}</span>
+      ),
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'customer_notes',
+      key: 'customer_notes',
+      render: (notes: string) => notes || '-',
+    },
+    {
+      title: 'Hành động',
+      key: 'actions',
+      render: (_: any, record: Appointment) => (
+        <div className="flex flex-col gap-1">
+          <button onClick={() => setSelectedAppointment(record)} className="text-blue-600 hover:underline">Chi tiết</button>
+          {record.status === 'pending' && (
+            <>
+              <button onClick={() => handleEditAppointment(record)} className="text-green-600 hover:underline">Đổi lịch</button>
+              <button onClick={() => handleCancelAppointment(record._id)} className="text-red-600 hover:underline">Hủy hẹn</button>
+            </>
+          )}
+          {record.status === 'completed' && (
+            <button onClick={() => { setSelectedAppointment(record); setShowFeedbackModal(true); }} className="text-purple-600 hover:underline">
+              {record.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -346,97 +420,91 @@ const MyAppointments: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch hẹn của tôi</h1>
-        <p className="text-gray-600">Quản lý và theo dõi các cuộc hẹn tư vấn của bạn</p>
-      </div>
+
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-          {/* Search */}
-          <div className="lg:col-span-5">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên chuyên gia, ghi chú..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Status Filter */}
-          <div className="lg:col-span-3">
-            <select
-              value={query.status || 'all'}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="in_progress">Đang tư vấn</option>
-              <option value="completed">Đã hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
-
-          {/* Sort */}
-          <div className="lg:col-span-3">
-            <select
-              value={`${query.sort_by}_${query.sort_order}`}
-              onChange={(e) => {
-                const value = e.target.value;
-                let sort_by: string;
-                let sort_order: 'asc' | 'desc';
-                
-                // Parse correctly based on known values
-                if (value === 'appointment_date_desc') {
-                  sort_by = 'appointment_date';
-                  sort_order = 'desc';
-                } else if (value === 'appointment_date_asc') {
-                  sort_by = 'appointment_date';
-                  sort_order = 'asc';
-                } else if (value === 'created_date_desc') {
-                  sort_by = 'created_date';
-                  sort_order = 'desc';
-                } else if (value === 'created_date_asc') {
-                  sort_by = 'created_date';
-                  sort_order = 'asc';
-                } else {
-                  // Fallback to split method
-                  const lastUnderscoreIndex = value.lastIndexOf('_');
-                  sort_by = value.substring(0, lastUnderscoreIndex);
-                  sort_order = value.substring(lastUnderscoreIndex + 1) as 'asc' | 'desc';
-                }
-                
-                console.log('🔄 Sort dropdown change:', { sort_by, sort_order, fullValue: value });
-                handleSortChange(sort_by, sort_order);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="appointment_date_desc">Ngày hẹn mới nhất</option>
-              <option value="appointment_date_asc">Ngày hẹn cũ nhất</option>
-              <option value="created_date_desc">Tạo mới nhất</option>
-              <option value="created_date_asc">Tạo cũ nhất</option>
-            </select>
-          </div>
-
-          {/* Clear Filters */}
-          <div className="lg:col-span-1">
-            <button
-              onClick={handleClearFilters}
-              className="w-full px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Xóa bộ lọc"
-            >
-              <FaFilter className="w-4 h-4 mx-auto" />
-            </button>
-          </div>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Lịch hẹn của tôi</h1>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow transition-colors"
+            onClick={() => navigate('/consultation/book')}
+          >
+            Đặt lịch mới
+          </button>
         </div>
+        <ResourceTable
+          data={appointments}
+          columns={columns}
+          loading={loading}
+          pagination={{
+            current: pagination.current_page,
+            pageSize: pagination.items_per_page,
+            total: pagination.total_items,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total: number, range: [number, number]) => `${range[0]}-${range[1]} của ${total} lịch hẹn`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (page: number, pageSize: number) => {
+              setQuery(prev => ({ ...prev, page, limit: pageSize }));
+            },
+          }}
+          filters={
+            <div className="flex flex-row items-center gap-4 justify-center">
+              <select
+                value={query.status || 'all'}
+                onChange={(e) => handleStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Chờ xác nhận</option>
+                <option value="confirmed">Đã xác nhận</option>
+                <option value="in_progress">Đang tư vấn</option>
+                <option value="completed">Đã hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+              <select
+                value={`${query.sort_by}_${query.sort_order}`}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  let sort_by: string;
+                  let sort_order: 'asc' | 'desc';
+                  if (value === 'appointment_date_desc') {
+                    sort_by = 'appointment_date';
+                    sort_order = 'desc';
+                  } else if (value === 'appointment_date_asc') {
+                    sort_by = 'appointment_date';
+                    sort_order = 'asc';
+                  } else if (value === 'created_date_desc') {
+                    sort_by = 'created_date';
+                    sort_order = 'desc';
+                  } else if (value === 'created_date_asc') {
+                    sort_by = 'created_date';
+                    sort_order = 'asc';
+                  } else {
+                    const lastUnderscoreIndex = value.lastIndexOf('_');
+                    sort_by = value.substring(0, lastUnderscoreIndex);
+                    sort_order = value.substring(lastUnderscoreIndex + 1) as 'asc' | 'desc';
+                  }
+                  handleSortChange(sort_by, sort_order);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="appointment_date_desc">Ngày hẹn mới nhất</option>
+                <option value="appointment_date_asc">Ngày hẹn cũ nhất</option>
+                <option value="created_date_desc">Tạo mới nhất</option>
+                <option value="created_date_asc">Tạo cũ nhất</option>
+              </select>
+              <button
+                onClick={handleClearFilters}
+                className="w-full px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Xóa bộ lọc"
+              >
+                <FaFilter className="w-4 h-4 mx-auto" />
+              </button>
+            </div>
+          }
+        />
       </div>
 
       {/* Error message */}
@@ -452,148 +520,8 @@ const MyAppointments: React.FC = () => {
       {/* Appointments List */}
       {appointments.length > 0 ? (
         <>
-          <div className="space-y-6 mb-8">
-            {appointments.map((appointment) => (
-              <div key={appointment._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-3">
-                      {/* Avatar */}
-                      <div className="flex-shrink-0">
-                        <img
-                          src={consultantDetails[appointment.consultant_id?._id]?.avatar || '/default-avatar.png'}
-                          alt={getConsultantNameWithFetch(appointment)}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/default-avatar.png';
-                          }}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {getConsultantNameWithFetch(appointment)}
-                        </h3>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[appointment.status]}`}>
-                          {statusLabels[appointment.status]}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <FaCalendarAlt className="w-4 h-4 mr-2" />
-                        <span>
-                          {formatDate(appointment.appointment_date)} • {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium">Chuyên khoa:</span> {getConsultantSpecialization(appointment)}
-                      </div>
-                    </div>
-
-                    {appointment.customer_notes && (
-                      <div className="mt-3 text-sm text-gray-600">
-                        <span className="font-medium">Ghi chú:</span> {appointment.customer_notes}
-                      </div>
-                    )}
-
-                    {appointment.consultant_notes && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <span className="font-medium">Ghi chú từ chuyên gia:</span> {appointment.consultant_notes}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-2 ml-4">
-                    <button
-                      onClick={() => setSelectedAppointment(appointment)}
-                      className="px-3 py-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      Chi tiết
-                    </button>
-                    
-                    {appointment.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleEditAppointment(appointment)}
-                          className="px-3 py-1 text-green-600 hover:text-green-800 text-sm font-medium"
-                        >
-                          Đổi lịch
-                        </button>
-                        <button
-                          onClick={() => handleCancelAppointment(appointment._id)}
-                          className="px-3 py-1 text-red-600 hover:text-red-800 text-sm font-medium"
-                        >
-                          Hủy hẹn
-                        </button>
-                      </>
-                    )}
-
-                    {appointment.status === 'completed' && (
-                      <button
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setShowFeedbackModal(true);
-                        }}
-                        className="px-3 py-1 text-purple-600 hover:text-purple-800 text-sm font-medium"
-                      >
-                        {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* Pagination */}
-          {pagination.total_pages > 1 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium">{(pagination.current_page - 1) * pagination.items_per_page + 1}</span> - <span className="font-medium">{Math.min(pagination.current_page * pagination.items_per_page, pagination.total_items)}</span> trong tổng số <span className="font-medium">{pagination.total_items}</span> lịch hẹn
-                </p>
-                
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => handlePageChange(pagination.current_page - 1)}
-                    disabled={!pagination.has_prev}
-                    className="flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    <FaChevronLeft className="w-4 h-4 mr-1" />
-                    Trước
-                  </button>
-
-                  {generatePageNumbers().map((page, index, array) => (
-                    <React.Fragment key={page}>
-                      {index > 0 && array[index - 1] < page - 1 && (
-                        <span className="px-2 text-gray-400">...</span>
-                      )}
-                      <button
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 rounded-md font-medium transition-colors ${
-                          page === pagination.current_page
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-100 border border-gray-300'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    </React.Fragment>
-                  ))}
-
-                  <button
-                    onClick={() => handlePageChange(pagination.current_page + 1)}
-                    disabled={!pagination.has_next}
-                    className="flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    Sau
-                    <FaChevronRight className="w-4 h-4 ml-1" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          
         </>
       ) : !loading && (
         <div className="text-center py-12">

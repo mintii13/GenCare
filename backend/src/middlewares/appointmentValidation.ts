@@ -31,10 +31,11 @@ const bookAppointmentSchema = Joi.object({
             'any.required': 'End time is required'
         }),
     customer_notes: Joi.string()
-        .max(500)
+        .max(2000)
         .optional()
+        .allow('')
         .messages({
-            'string.max': 'Customer notes cannot exceed 500 characters'
+            'string.max': 'Customer notes cannot exceed 2000 characters'
         })
 });
 
@@ -218,11 +219,11 @@ const appointmentSchema = Joi.object({
             'any.required': 'End time is required'
         }),
     customer_notes: Joi.string()
-        .max(500)
+        .max(2000)
         .optional()
         .allow('')
         .messages({
-            'string.max': 'Customer notes cannot exceed 500 characters'
+            'string.max': 'Customer notes cannot exceed 2000 characters'
         })
 });
 
@@ -283,18 +284,18 @@ const updateAppointmentSchema = Joi.object({
             'string.pattern.base': 'End time must be in HH:mm format'
         }),
     customer_notes: Joi.string()
-        .max(500)
+        .max(2000)
         .optional()
         .allow('')
         .messages({
-            'string.max': 'Customer notes cannot exceed 500 characters'
+            'string.max': 'Customer notes cannot exceed 2000 characters'
         }),
     consultant_notes: Joi.string()
-        .max(500)
+        .max(2000)
         .optional()
         .allow('')
         .messages({
-            'string.max': 'Consultant notes cannot exceed 500 characters'
+            'string.max': 'Consultant notes cannot exceed 2000 characters'
         }),
     googleAccessToken: Joi.string().optional(),
     explicitAction: Joi.string().valid('confirmed', 'rescheduled', 'cancelled', 'completed').optional()

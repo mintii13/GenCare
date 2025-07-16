@@ -384,17 +384,19 @@ const STIAssessmentForm = () => {
 
   const handleConfirmConsultantBooking = (sendScreeningResults: boolean) => {
     if (sendScreeningResults && recommendation) {
-      // Lưu kết quả sàng lọc vào localStorage để form đặt lịch có thể lấy
+      // Lưu cả câu trả lời và kết quả tổng hợp vào localStorage
       const screeningData = {
-        risk_level: recommendation.risk_level,
-        recommended_package: recommendation.recommended_package,
-        reasoning: recommendation.reasoning,
+        answers: formData,
+        result: {
+          risk_level: recommendation.risk_level,
+          recommended_package: recommendation.recommended_package,
+          reasoning: recommendation.reasoning,
+        },
         timestamp: new Date().toISOString()
       };
       localStorage.setItem('sti_screening_results', JSON.stringify(screeningData));
-      toast.success('Kết quả sàng lọc sẽ được gửi cho chuyên gia');
+      toast.success('Kết quả và câu trả lời đã được gửi cho chuyên gia');
     } else {
-      // Xóa dữ liệu cũ nếu có
       localStorage.removeItem('sti_screening_results');
     }
     

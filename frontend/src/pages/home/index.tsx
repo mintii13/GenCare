@@ -234,7 +234,7 @@ const HomePage = () => {
             <div className="text-center mb-8">
               <h2 className="text-4xl font-bold text-blue-700 mb-4">Dịch vụ xét nghiệm</h2>
               <p className="text-lg text-blue-700/80 max-w-2xl mx-auto mb-8">
-                Chọn gói tổng hợp hoặc xét nghiệm đơn lẻ phù hợp nhu cầu của bạn
+                Các gói xét nghiệm và các dịch vụ xét nghiệm được cung cấp bởi chúng tôi
               </p>
               {/* Tabs */}
               <div className="inline-flex bg-blue-100 rounded-lg overflow-hidden shadow-sm">
@@ -301,7 +301,7 @@ const HomePage = () => {
                   to="/sti-assessment"
                   className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
                 >
-                  Đánh giá sàng lọc STI
+                  Đánh giá sàng lọc STi
                 </Link>
                 <Link
                   to="/sti-booking/book"
@@ -311,7 +311,7 @@ const HomePage = () => {
                 </Link>
               </div>
             </div>
-          </div>
+          </div>  
         </section>
       )}
 

@@ -111,15 +111,16 @@ const BookAppointment: React.FC = () => {
       if (screeningResults) {
         try {
           const data = JSON.parse(screeningResults);
-          const screeningNote = `Kết quả sàng lọc STI:
-- Mức độ nguy cơ: ${data.risk_level}
-- Gói đề xuất: ${data.recommended_package}
-- Lý do: ${data.reasoning.join(', ')}
-- Thời gian sàng lọc: ${new Date(data.timestamp).toLocaleString('vi-VN')}`;
-          
+          // Hiển thị chi tiết answers (câu trả lời)
+          let answersText = '';
+          if (data.answers && typeof data.answers === 'object') {
+            answersText = Object.entries(data.answers)
+              .map(([key, value]) => `- ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+              .join('\n');
+          }
+          const screeningNote = `Kết quả sàng lọc STI:\n- Mức độ nguy cơ: ${data.result?.risk_level}\n- Gói đề xuất: ${data.result?.recommended_package}\n- Lý do: ${(data.result?.reasoning || []).join(', ')}\n- Thời gian sàng lọc: ${data.timestamp ? new Date(data.timestamp).toLocaleString('vi-VN') : ''}\n${answersText ? '\nChi tiết câu trả lời:\n' + answersText : ''}`;
           setNotes(screeningNote);
           toast.success('Đã tự động thêm kết quả sàng lọc STI vào ghi chú');
-          
           // Xóa dữ liệu khỏi localStorage sau khi đã sử dụng
           localStorage.removeItem('sti_screening_results');
         } catch (error) {
@@ -151,8 +152,8 @@ const BookAppointment: React.FC = () => {
           break;
         case 2:
           // Validation for confirmation step
-          if (notes.length > 500) {
-            newErrors.notes = 'Ghi chú không được vượt quá 500 ký tự';
+          if (notes.length > 2000) {
+            newErrors.notes = 'Ghi chú không được vượt quá 2000 ký tự';
           }
           break;
       }
@@ -173,8 +174,8 @@ const BookAppointment: React.FC = () => {
         
         case 3:
           // Validation for confirmation step
-          if (notes.length > 500) {
-            newErrors.notes = 'Ghi chú không được vượt quá 500 ký tự';
+          if (notes.length > 2000) {
+            newErrors.notes = 'Ghi chú không được vượt quá 2000 ký tự';
           }
           break;
       }
@@ -596,7 +597,7 @@ const BookAppointment: React.FC = () => {
           </div>
 
           {/* Error Display for loading consultants only */}
-          {errors.consultant && errors.consultant.includes('tải') && (
+          {typeof errors.consultant === 'string' && errors.consultant.includes('tải') && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -712,7 +713,7 @@ const BookAppointment: React.FC = () => {
                     errors.notes ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder="Mô tả về vấn đề bạn muốn tư vấn, triệu chứng, hoặc thông tin khác..."
-                  maxLength={500}
+                  maxLength={2000}
                 />
                 <div className="flex justify-between items-center mt-1">
                   <div>
@@ -720,7 +721,7 @@ const BookAppointment: React.FC = () => {
                       <p className="text-sm text-red-600">{errors.notes}</p>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">{notes.length}/500</p>
+                  <p className="text-xs text-gray-500">{notes.length}/2000</p>
                 </div>
               </div>
               {/* Actions */}

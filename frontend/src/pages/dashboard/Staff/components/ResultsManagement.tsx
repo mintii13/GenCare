@@ -89,7 +89,6 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
   useEffect(() => {
@@ -277,36 +276,18 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
     }
   };
 
-  // Filter orders based on search and status
+  // Filter orders based on status
   const filteredOrders = orders.filter(order => {
-    const searchMatch = !searchTerm || 
-      order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.order_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const statusMatch = statusFilter === 'all' || order.order_status === statusFilter;
     
-    return searchMatch && statusMatch;
+    return statusMatch;
   });
 
-  // Filter results based on search
+  // Filter results based on status
   const filteredResults = Array.isArray(results) ? results.filter(result => {
-    if (!searchTerm) return true;
+    const statusMatch = statusFilter === 'all' || result.is_confirmed === (statusFilter === 'Confirmed');
     
-    const order = orders.find(o => o._id === result.order_id);
-    const searchLower = searchTerm.toLowerCase();
-    
-    return (
-      result.result_value?.toLowerCase().includes(searchLower) ||
-      result.diagnosis?.toLowerCase().includes(searchLower) ||
-      result.notes?.toLowerCase().includes(searchLower) ||
-      order?.customer_name?.toLowerCase().includes(searchLower) ||
-      order?.customer_email?.toLowerCase().includes(searchLower) ||
-      order?.customer_phone?.toLowerCase().includes(searchLower) ||
-      order?.order_code?.toLowerCase().includes(searchLower)
-    );
+    return statusMatch;
   }) : [];
 
   // Calculate statistics
@@ -617,30 +598,6 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
         <Row gutter={16}>
           <Col xs={24} sm={12} md={8}>
             <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-              Tìm kiếm
-            </label>
-            <Input.Group compact>
-              <Input
-                placeholder="Mã đơn, tên khách hàng, email..."
-                prefix={<SearchOutlined />}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                                 allowClear
-                 style={{ width: 'calc(100% - 80px)' }}
-               />
-               <Button 
-                 type="primary" 
-                 icon={<SearchOutlined />}
-                 disabled
-                 style={{ width: '80px' }}
-                 title="Tìm kiếm tự động"
-               >
-                 Tìm
-               </Button>
-            </Input.Group>
-          </Col>
-          <Col xs={24} sm={12} md={8}>
-            <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
               Trạng thái
             </label>
             <Select
@@ -649,15 +606,14 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
               onChange={setStatusFilter}
             >
               <Option value="all">Tất cả</Option>
-              <Option value="Completed">Đã hoàn thành</Option>
-              <Option value="Testing">Đang xét nghiệm</Option>
+              <Option value="Confirmed">Đã xác nhận</Option>
+              <Option value="Unconfirmed">Chưa xác nhận</Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={8} style={{ display: 'flex', alignItems: 'end' }}>
             <Button 
               icon={<ClearOutlined />}
               onClick={() => {
-                setSearchTerm('');
                 setStatusFilter('all');
               }}
             >

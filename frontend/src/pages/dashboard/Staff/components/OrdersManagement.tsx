@@ -162,7 +162,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   });
   
   // Filter form states
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
@@ -176,13 +175,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   }, [filters, refreshTrigger]);
 
   // Handle search button click
-  const handleSearch = () => {
-    setFilters(prev => ({
-      ...prev,
-      page: 1,
-      search: searchTerm.trim() || undefined
-    }));
-  };
+
 
   const fetchOrders = async () => {
     try {
@@ -261,7 +254,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   };
 
   const handleClearFilters = () => {
-    setSearchTerm('');
     setStatusFilter('all');
     setPaymentStatusFilter('all');
     setDateRange(null);
@@ -786,30 +778,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       {/* Advanced Filters */}
       <Card style={{ marginBottom: '16px' }}>
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-              Tìm kiếm
-            </label>
-            <Input.Group compact>
-              <Input
-                placeholder="Mã đơn, tên khách hàng, email..."
-                prefix={<SearchOutlined />}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onPressEnter={handleSearch}
-                allowClear
-                style={{ width: 'calc(100% - 80px)' }}
-              />
-              <Button 
-                type="primary" 
-                icon={<SearchOutlined />}
-                onClick={handleSearch}
-                style={{ width: '80px' }}
-              >
-                Tìm
-              </Button>
-            </Input.Group>
-          </Col>
           
           <Col xs={24} sm={12} md={8} lg={6}>
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
@@ -890,7 +858,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
             />
           </Col>
 
-          <Col xs={24} sm={12} md={8} lg={6} style={{ display: 'flex', alignItems: 'end' }}>
+          <Col xs={24} sm={12} md={8} lg={6} style={{ display: 'grid', alignItems: 'end' }}>
             <Button 
               icon={<ClearOutlined />}
               onClick={handleClearFilters}
