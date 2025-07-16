@@ -160,6 +160,7 @@ export const API = {
   // Home page endpoints
   Home: {
     GET_DATA: '/home/data',
+    GET_CONSULTANTS: '/home/consultants', // Thêm endpoint mới
   },
 
   // Pill tracking endpoints

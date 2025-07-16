@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import DataTable, { TableColumn } from 'react-data-table-component';
 import { useAuth } from '../../../contexts/AuthContext';
-import axios from 'axios';
 import { appointmentService } from '../../../services/appointmentService';
-import AutoConfirmStatus from '../../../components/common/AutoConfirmStatus';
-import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
 import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
-import { getGoogleAccessToken, hasGoogleAccessToken } from '../../../utils/authUtils';
+import { getGoogleAccessToken } from '../../../utils/authUtils';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { 
@@ -20,18 +16,14 @@ import {
 import { 
   FaCalendarAlt, 
   FaCheckCircle, 
-  FaTimesCircle, 
   FaHourglassHalf, 
   FaPlay, 
   FaEye, 
-  FaComments, 
-  FaTrophy,
   FaExclamationTriangle,
   FaClock,
   FaSpinner,
   FaCheck,
   FaTimes,
-  FaLink,
   FaSearch,
   FaChevronLeft,
   FaChevronRight,
@@ -91,15 +83,6 @@ const AppointmentManagement: React.FC = () => {
     cancelled: 'bg-red-100 text-red-800 border-red-200'
   };
 
-  const filterOptions = [
-    { value: 'all', label: 'Tất cả', count: stats.total },
-    { value: 'pending', label: 'Chờ xác nhận', count: stats.pending },
-    { value: 'confirmed', label: 'Đã xác nhận', count: stats.confirmed },
-    { value: 'in_progress', label: 'Đang tư vấn', count: stats.in_progress },
-    { value: 'completed', label: 'Đã hoàn thành', count: stats.completed },
-    { value: 'cancelled', label: 'Đã hủy', count: stats.cancelled }
-  ];
-
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -108,13 +91,15 @@ const AppointmentManagement: React.FC = () => {
         page: 1,
         search: searchTerm.trim() || undefined
       }));
-    }, 500);
+    }, 1000); // Tăng debounce time từ 500ms lên 1000ms
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
-    fetchAppointments();
+    // Kiểm tra xem có phải search không
+    const isSearching = Boolean(query.search && query.search.length > 0);
+    fetchAppointments(isSearching);
   }, [query]);
 
   // Cập nhật UI mỗi phút để refresh thời gian completion
@@ -132,9 +117,12 @@ const AppointmentManagement: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedAppointment]);
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = async (isSearching = false) => {
     try {
-      setLoading(true);
+      // Chỉ show loading spinner khi không phải search
+      if (!isSearching) {
+        setLoading(true);
+      }
       
       // Check if user is authenticated and has consultant role
       if (!user) {
@@ -288,7 +276,7 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const handleStartMeeting = async (appointmentId: string) => {
-      setActionLoading(appointmentId);
+      setActionLoading(`start-${appointmentId}`);
     try {
       const googleAccessToken = await getGoogleAccessToken();
       const data = await appointmentService.startMeeting(appointmentId, googleAccessToken || undefined);
@@ -310,7 +298,7 @@ const AppointmentManagement: React.FC = () => {
   const handleCompleteAppointment = async () => {
     if (!selectedAppointment) return;
 
-      setActionLoading(selectedAppointment._id);
+      setActionLoading(`complete-${selectedAppointment._id}`);
     try {
       const data = await appointmentService.completeAppointment(selectedAppointment._id, consultantNotes);
       
@@ -331,33 +319,22 @@ const AppointmentManagement: React.FC = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    showConfirm(
-      {
-        title: "Xác nhận hủy lịch hẹn",
-        description: "Bạn có chắc chắn muốn hủy lịch hẹn này? Khách hàng sẽ được thông báo về việc hủy lịch.",
-        confirmText: "Hủy lịch hẹn",
-        cancelText: "Không",
-        confirmVariant: "destructive"
-      },
-      async () => {
-        setActionLoading(appointmentId);
-        try {
-          const data = await appointmentService.cancelAppointment(appointmentId);
-          
-          if (data.success) {
-            showNotification('success', 'Đã hủy lịch hẹn');
-            fetchAppointments();
-          } else {
-            showNotification('error', data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-          }
-        } catch (err: any) {
-          console.error('Error cancelling appointment:', err);
-          showNotification('error', err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-        } finally {
-          setActionLoading('');
-        }
+    setActionLoading(`cancel-${appointmentId}`);
+    try {
+      const data = await appointmentService.cancelAppointmentByConsultant(appointmentId);
+      
+      if (data.success) {
+        showNotification('success', 'Đã hủy lịch hẹn');
+        fetchAppointments();
+      } else {
+        showNotification('error', data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
       }
-    );
+    } catch (err: any) {
+      console.error('Error cancelling appointment:', err);
+      showNotification('error', err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+    } finally {
+      setActionLoading('');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -452,247 +429,6 @@ const AppointmentManagement: React.FC = () => {
     return 'normal';
   };
 
-  const columns: TableColumn<Appointment>[] = [
-    {
-      name: 'Khách hàng',
-      cell: (row) => (
-        <div className="py-2 min-w-0">
-          <div className="font-semibold text-gray-900 truncate">
-            {row.customer_id?.full_name || 'Không có thông tin'}
-          </div>
-          <div className="text-sm text-gray-500 truncate">
-            {row.customer_id?.email || 'Không có email'}
-          </div>
-          {row.customer_id?.phone && (
-            <div className="text-sm text-gray-500 truncate">{row.customer_id.phone}</div>
-          )}
-        </div>
-      ),
-      sortable: true,
-      width: '250px',
-      wrap: true,
-    },
-    {
-      name: 'Ngày & Giờ',
-      cell: (row) => {
-        const priority = getAppointmentPriority(row);
-        const priorityColors = {
-          urgent: 'text-red-600 font-semibold',
-          soon: 'text-orange-600 font-medium',
-          pending: 'text-yellow-600',
-          normal: 'text-gray-900'
-        };
-        
-        return (
-          <div className={`py-2 min-w-0 ${priorityColors[priority]}`}>
-            <div className="font-medium whitespace-nowrap">{formatDate(row.appointment_date)}</div>
-            <div className="text-sm whitespace-nowrap">{row.start_time} - {row.end_time}</div>
-            {priority === 'urgent' && (
-              <div className="text-xs text-red-500 font-semibold whitespace-nowrap">
-                <FaExclamationTriangle className="inline mr-1" />
-                Sắp diễn ra
-              </div>
-            )}
-            {priority === 'soon' && (
-              <div className="text-xs text-orange-500 whitespace-nowrap">
-                <FaClock className="inline mr-1" />
-                Trong 24h
-              </div>
-            )}
-          </div>
-        );
-      },
-      sortable: true,
-      width: '180px',
-    },
-    {
-      name: 'Trạng thái',
-      cell: (row) => (
-        <div className="py-2">
-          <span 
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusColors[row.status]} cursor-help`}
-            title={getStatusMessage(row)}
-          >
-            {statusLabels[row.status]}
-          </span>
-          {row.status === 'in_progress' && !canCompleteAppointment(row) && (
-            <div className="text-xs text-orange-600 mt-1 font-medium">
-              <FaHourglassHalf className="inline mr-1" />
-              Chờ hoàn thành
-            </div>
-          )}
-          {row.status === 'in_progress' && canCompleteAppointment(row) && (
-            <div className="text-xs text-green-600 mt-1 font-medium">
-              <FaCheckCircle className="inline mr-1" />
-              Sẵn sàng
-            </div>
-          )}
-        </div>
-      ),
-      sortable: true,
-      width: '160px',
-    },
-    {
-      name: 'Ghi chú khách hàng',
-      cell: (row) => (
-        <div className="py-2 min-w-0">
-          {row.customer_notes ? (
-            <div className="text-sm text-gray-600 truncate" title={row.customer_notes}>
-              {row.customer_notes}
-            </div>
-          ) : (
-            <span className="text-gray-400 text-sm italic whitespace-nowrap">Không có ghi chú</span>
-          )}
-        </div>
-      ),
-      width: '200px',
-      wrap: true,
-    },
-    {
-      name: 'Ngày tạo',
-      selector: row => row.created_date,
-      format: row => formatDateTime(row.created_date),
-      sortable: true,
-      width: '160px',
-    },
-    {
-      name: 'Hành động',
-      cell: (row) => (
-        <div className="flex flex-wrap gap-1 py-2 min-w-0">
-          <button
-            onClick={() => {
-              setSelectedAppointment(row);
-              setConsultantNotes(row.consultant_notes || '');
-            }}
-            className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors whitespace-nowrap"
-            title="Xem chi tiết"
-          >
-            <FaEye className="inline mr-1" />
-            Chi tiết
-          </button>
-          
-          {row.status === 'pending' && (
-            <button
-              onClick={() => handleConfirmAppointment(row._id)}
-              disabled={actionLoading === row._id}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors flex items-center"
-              title="Xác nhận lịch hẹn"
-            >
-              {actionLoading === row._id ? (
-                <FaSpinner className="animate-spin inline mr-1" />
-              ) : (
-                <FaCheck className="inline mr-1" />
-              )}
-              Xác nhận
-            </button>
-          )}
-          
-          {row.status === 'confirmed' && (
-            <button
-              onClick={() => handleStartMeeting(row._id)}
-              disabled={actionLoading === row._id}
-              className="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors whitespace-nowrap flex items-center"
-              title="Bắt đầu buổi tư vấn"
-            >
-              {actionLoading === row._id ? (
-                <FaSpinner className="animate-spin inline mr-1" />
-              ) : (
-                <FaPlay className="inline mr-1" />
-              )}
-              Bắt đầu
-            </button>
-          )}
-          
-          {row.status === 'in_progress' && (
-            <button
-              onClick={() => {
-                setSelectedAppointment(row);
-                setConsultantNotes(row.consultant_notes || '');
-              }}
-              className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors whitespace-nowrap"
-              title="Hoàn thành buổi tư vấn"
-            >
-              <FaCheckCircle className="inline mr-1" />
-              Hoàn thành
-            </button>
-          )}
-          
-          {canTransitionTo(row.status, 'cancelled', 'consultant') && (
-            <button
-              onClick={() => handleCancelAppointment(row._id)}
-              disabled={actionLoading === row._id}
-              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center"
-              title={`Hủy lịch hẹn (Chỉ được phép hủy lúc pending)`}
-            >
-              {actionLoading === row._id ? (
-                <FaSpinner className="animate-spin inline mr-1" />
-              ) : (
-                <FaTimes className="inline mr-1" />
-              )}
-              Hủy
-            </button>
-          )}
-        </div>
-      ),
-      ignoreRowClick: true,
-      width: '280px',
-      wrap: true,
-    },
-  ];
-
-  const customStyles = {
-    table: {
-      style: {
-        minWidth: '1200px', // Đảm bảo table có width tối thiểu
-      },
-    },
-    header: {
-      style: {
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
-        minHeight: '56px',
-        paddingLeft: '16px',
-        paddingRight: '16px',
-      },
-    },
-    headRow: {
-      style: {
-        backgroundColor: '#f1f5f9',
-        borderBottom: '1px solid #e2e8f0',
-        minHeight: '52px',
-        fontSize: '14px',
-        fontWeight: '600',
-      },
-    },
-    headCells: {
-      style: {
-        paddingLeft: '12px',
-        paddingRight: '12px',
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#374151',
-      },
-    },
-    rows: {
-      style: {
-        fontSize: '14px',
-        minHeight: '80px',
-        borderBottom: '1px solid #f3f4f6',
-        '&:hover': {
-          backgroundColor: '#f8fafc',
-        },
-      },
-    },
-    cells: {
-      style: {
-        paddingLeft: '12px',
-        paddingRight: '12px',
-        paddingTop: '8px',
-        paddingBottom: '8px',
-      },
-    },
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -779,14 +515,11 @@ const AppointmentManagement: React.FC = () => {
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm theo tên khách hàng, ghi chú..."
+                placeholder="Tìm kiếm theo tên, email, SĐT khách hàng, ghi chú..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              {searchTerm !== query.search && (
-                <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-              )}
               </div>
               </div>
 

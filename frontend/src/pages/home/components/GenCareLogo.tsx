@@ -1,9 +1,9 @@
 import React from 'react';
-import { TestTube } from 'lucide-react';
+import logo from '../../../assets/logo/logo.png';
 
 const GenCareLogo: React.FC<{className?: string}> = ({ className }) => (
-  <div className={`w-10 h-10 bg-cyan-300 rounded-full flex items-center justify-center ${className || ''}`}>
-    <TestTube className="w-6 h-6 text-blue-700" />
+  <div className={`w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden ${className || ''}`}>
+    <img src={logo} alt="GenCare Logo" className="w-14 h-14 object-contain" />
   </div>
 );
 

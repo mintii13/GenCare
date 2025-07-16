@@ -25,6 +25,7 @@ const MySTIResults: React.FC = () => {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [selectedResult, setSelectedResult] = useState<STIResultDetail | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchMyResults();

@@ -56,7 +56,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
   }, []);
 
   return (
-    <nav className="bg-white shadow-lg fixed top-0 left-0 right-0 w-full z-50">
+    <nav className="bg-white fixed top-0 left-0 right-0 w-full z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2 text-2xl font-bold text-primary-700">
@@ -112,14 +112,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     
                     </>
                   )}
-                  {isAuthenticated && user?.role === 'customer' && (
-                    <>
-                      <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch hẹn của tôi
-                      </Link>
 
-                    </>
-                  )}
                 </div>
               )}
             </div>
@@ -188,7 +181,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                           Đánh giá của tôi
                         </Link>
                         <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử đánh giá STI
+                        Lịch sử Sàng Lọc STi
                       </Link>
                       </>
                     )}

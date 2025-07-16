@@ -1,6 +1,15 @@
 import Joi, { valid } from 'joi';
 import { Request, Response, NextFunction } from 'express';
-import { OrderStatus } from '../models/StiOrder';
+import { OrderStatus, IStiOrder } from '../models/StiOrder';
+
+// Extend Request interface để thêm currentOrder
+declare global {
+    namespace Express {
+        interface Request {
+            currentOrder?: IStiOrder;
+        }
+    }
+}
 
 const objectId = Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)

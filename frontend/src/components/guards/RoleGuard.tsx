@@ -20,6 +20,7 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
   const { user, isAuthenticated, isLoading } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [toastShown, setToastShown] = useState(false);
+  const [showErrorPage, setShowErrorPage] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated && !toastShown && !isLoading) {
@@ -29,6 +30,27 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
       setToastShown(true);
     }
   }, [isAuthenticated, toastShown, isLoading]);
+
+  useEffect(() => {
+    console.log('🛡️ RoleGuard: Checking access', { 
+      userRole: user?.role, 
+      allowedRoles, 
+      isAuthenticated, 
+      isLoading 
+    });
+    
+    if (!isLoading && isAuthenticated && user?.role && !allowedRoles.includes(user.role)) {
+      const timer = setTimeout(() => {
+        console.log('❌ RoleGuard: Showing error page after delay');
+        setShowErrorPage(true);
+      }, 1000); // Tăng delay lên 1000ms
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('✅ RoleGuard: Access granted or still loading');
+      setShowErrorPage(false);
+    }
+  }, [user?.role, allowedRoles, isAuthenticated, isLoading]);
 
   // Reset toastShown khi modal đóng hoặc đăng nhập thành công
   const handleCloseModal = () => {
@@ -58,8 +80,9 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
     );
   }
 
-  if (!user?.role || !allowedRoles.includes(user.role)) {
-    if (showError) {
+  // Chỉ hiển thị error khi đã load xong và chắc chắn user không có quyền
+  if (!isLoading && isAuthenticated && user?.role && !allowedRoles.includes(user.role)) {
+    if (showError && showErrorPage) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
@@ -83,9 +106,20 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
         </div>
       );
     }
+    
+    // Hiển thị loading trong khi chờ
+    if (showError && !showErrorPage) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+    
     return null;
   }
 
+  // Cho phép truy cập nếu đang loading, chưa authenticated, hoặc có quyền
   return <>{children}</>;
 };
 

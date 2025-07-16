@@ -20,7 +20,7 @@ const STIManagement: React.FC = () => {
 
   // Check authorization
   useEffect(() => {
-    if (!user || !['admin', 'staff', 'manager'].includes(user.role)) {
+    if (!user || !['admin', 'staff'].includes(user.role)) {
       message.error('Bạn không có quyền truy cập trang này');
       navigate('/');
       return;

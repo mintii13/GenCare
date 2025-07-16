@@ -204,13 +204,17 @@ export class PaginationUtils {
             filter['feedback.rating'] = parseInt(query.feedback_rating);
         }
 
-        // Notes search (trong customer_notes hoặc consultant_notes)
+        // Search trong customer_notes, consultant_notes, customer name/email/phone
         if (query.search) {
             const searchRegex = { $regex: query.search.trim(), $options: 'i' };
             filter.$or = [
                 { customer_notes: searchRegex },
-                { consultant_notes: searchRegex }
+                { consultant_notes: searchRegex },
+                { 'customer_id.full_name': searchRegex },
+                { 'customer_id.email': searchRegex },
+                { 'customer_id.phone': searchRegex }
             ];
+            console.log('Search filter applied:', query.search, filter.$or);
         }
 
         return filter;

@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Phone, Calendar, Users, Mail, Shield, Edit3, Save, X, Camera, Heart, MapPin } from 'lucide-react';
+import { Edit3, Save, X, Camera, MapPin } from 'lucide-react';
 import { ProfileFormData, validationSchemas } from '../../hooks/useFormValidation';
-import { FormField, FormSelect } from '../../components/ui/FormField';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { useAuth } from '../../contexts/AuthContext';
-import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
 import { AxiosResponse } from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -146,13 +144,19 @@ const UserProfilePage: React.FC = () => {
       if ((response.data as any)?.success) {
         toast.success('Cập nhật thông tin thành công');
         const updatedProfile = convertToUserProfile((response.data as any).user);
-        if (updateUserInfo) {
-          updateUserInfo((response.data as any).user);
-        }
+        
+        // Chỉ cập nhật local state, không gọi updateUserInfo để tránh re-render AuthContext
         setProfile(updatedProfile);
         setIsEditing(false);
         setAvatar(null);
         setAvatarPreview(null);
+        
+        // Cập nhật user info sau một delay ngắn để tránh conflict
+        setTimeout(() => {
+          if (updateUserInfo) {
+            updateUserInfo((response.data as any).user);
+          }
+        }, 100);
       } else {
         toast.error((response.data as any)?.message || 'Có lỗi xảy ra');
       }
@@ -243,6 +247,7 @@ const UserProfilePage: React.FC = () => {
           </Button>
         </div>
 
+
         {/* Profile Card */}
         <Card className="shadow-sm border" style={{ backgroundColor: '#ffffff', borderColor: '#e6f7ff' }}>
           <CardContent className="p-8">
@@ -280,7 +285,15 @@ const UserProfilePage: React.FC = () => {
               
               <div className="flex-1 text-center sm:text-left">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">{profile.full_name}</h2>
-                <p className="text-gray-600 mb-2">{profile.role}</p>
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                  <p className="text-gray-600">{profile.role}</p>
+                  <div className="flex items-center gap-1">
+                    <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: profile.status ? '#52c41a' : '#ff4d4f' }}></div>
+                    <span className={`text-xs font-medium`} style={{ color: profile.status ? '#52c41a' : '#ff4d4f' }}>
+                      {profile.status ? 'Hoạt động' : 'Bị khóa'}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 text-sm">
                   <MapPin className="w-4 h-4" />
                   <span>Hồ Chí Minh, Việt Nam</span>
@@ -288,23 +301,32 @@ const UserProfilePage: React.FC = () => {
               </div>
 
               {!isEditing && (
-                <Button 
-                  variant="outline"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
-                  style={{ borderColor: '#1890ff', color: '#1890ff' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e6f7ff';
-                    e.currentTarget.style.borderColor = '#40a9ff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = '#1890ff';
-                  }}
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Chỉnh sửa
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    style={{ borderColor: '#1890ff', color: '#1890ff' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#e6f7ff';
+                      e.currentTarget.style.borderColor = '#40a9ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.borderColor = '#1890ff';
+                    }}
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Chỉnh sửa
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setShowChangePassword(true)}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -358,15 +380,7 @@ const UserProfilePage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Trạng thái</label>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: profile.status ? '#52c41a' : '#ff4d4f' }}></div>
-                      <span className={`text-sm font-medium`} style={{ color: profile.status ? '#52c41a' : '#ff4d4f' }}>
-                        {profile.status ? 'Hoạt động' : 'Bị khóa'}
-                      </span>
-                    </div>
-                  </div>
+
                 </div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

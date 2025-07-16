@@ -3,7 +3,6 @@ import { authService } from '../services/auth';
 import { User } from '../services/userService';
 import apiClient from '../services/apiClient';
 import { API } from '../config/apiEndpoints';
-import { clearAllTokens } from '../utils/authUtils';
 
 interface GetUserProfileResponse {
   success: boolean;
@@ -28,21 +27,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const validateToken = async () => {
       const token = authService.getToken();
+      const cachedUser = localStorage.getItem('user');
+      
+      console.log('🔍 AuthContext: validateToken called', { hasToken: !!token, hasCachedUser: !!cachedUser });
+      
       if (token) {
+        // Sử dụng cached user trước khi validate
+        if (cachedUser) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            setUser(parsedUser);
+            console.log('✅ AuthContext: Using cached user', parsedUser.role);
+          } catch (_e) {
+            console.error('❌ AuthContext: Failed to parse cached user');
+          }
+        }
+        
         try {
           // Sử dụng endpoint đúng từ apiEndpoints
           const response = await apiClient.get<GetUserProfileResponse>(API.Profile.GET);
           if (response.data.success && response.data.user) {
             setUser(response.data.user);
             localStorage.setItem('user', JSON.stringify(response.data.user));
+            console.log('✅ AuthContext: Token validated, user loaded', response.data.user.role);
           } else {
             throw new Error('Invalid API response format');
           }
         } catch (error) {
+          console.error('❌ AuthContext: Token validation failed', error);
+          // Chỉ logout nếu token thực sự invalid (401/403), không phải network error
+          if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
+            console.log('🚪 AuthContext: Logging out due to invalid token');
+            await authService.logout(); 
+            setUser(null);
+          } else {
+            console.log('🔄 AuthContext: Keeping cached user due to network error');
+            // Giữ cached user nếu chỉ là network error
+          }
           // Xóa token không hợp lệ
           await authService.logout(); 
           setUser(null);
         }
+      } else {
+        console.log('❌ AuthContext: No token found');
+        setUser(null);
       }
       setIsLoading(false);
     };

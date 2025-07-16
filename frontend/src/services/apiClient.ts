@@ -31,17 +31,13 @@ class ApiClient {
   constructor(baseURL: string = env.API_BASE_URL || 'http://localhost:3000/api') {
     this.instance = axios.create({
       baseURL,
-      timeout: 15000, // 15 seconds - increased for heavy data operations
+      timeout: 30000, // 30 seconds - increased for heavy data operations
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors(): void {
-    // Request interceptor
+    // Add a request interceptor to include the token in headers
     this.instance.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem(AUTH_TOKEN_KEY);

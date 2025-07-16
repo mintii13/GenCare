@@ -27,7 +27,6 @@ export default defineConfig({
           ],
           
           // Editor - Heavy components  
-          'vendor-editor': ['quill', 'react-quill', 'lexical', '@lexical/react', '@lexical/rich-text'],
           
           // Calendar & Date utilities
           'vendor-calendar': ['react-calendar', 'react-day-picker', 'date-fns'],

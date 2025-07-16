@@ -49,12 +49,12 @@ export const appointmentService = {
   },
 
   // Lấy tất cả appointments với pagination cho staff/admin
-  getAllAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
+  getAllAppointmentsPaginated: async (query?: AppointmentQuery): Promise<ApiResponse<AppointmentsPaginatedResponse>> => {
     try {
-      const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.ALL, {
+      const response = await apiClient.safeGet<AppointmentsPaginatedResponse>(API.Appointment.ALL, {
         params: cleanQuery(query)
       });
-      return response.data;
+      return response;
     } catch (error) {
       throw error;
     }

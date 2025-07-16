@@ -2,8 +2,10 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Banner from "./components/Banner";
 import BlogCard from '../../components/blog/BlogCard';
-import { homeService } from '../../services';
+import { homeService, consultantService } from '../../services';
 import { Blog as BlogType } from '../../types/blog';
+import { StiPackage, StiTest } from '@/types/sti';
+import { Consultant } from '@/types/user';
 
 // Memoized components để tránh re-render không cần thiết
 const MemoizedBanner = React.memo(Banner);
@@ -12,14 +14,13 @@ const MemoizedBlogCard = React.memo(BlogCard);
 const HomePage = () => {
   const navigate = useNavigate();
 
-  const [packagesData, setPackagesData] = useState<any[]>([]);
-  const [testsData, setTestsData] = useState<any[]>([]);
+  const [packagesData, setPackagesData] = useState<StiPackage[]>([]);
+  const [testsData, setTestsData] = useState<StiTest[]>([]);
   const [blogsData, setBlogsData] = useState<BlogType[]>([]);
-  const [consultantsData, setConsultantsData] = useState<any[]>([]);
+  const [consultantsData, setConsultantsData] = useState<Consultant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [testTab, setTestTab] = useState<'packages' | 'single'>('packages');
-  const [showPeriodLogger, setShowPeriodLogger] = useState(false);
   // Service cards config
   const serviceCards = [
     {
@@ -54,29 +55,42 @@ const HomePage = () => {
     },
   ];
 
-  // Optimized data fetching with single API call
+  // Optimized data fetching with separate API calls
   const fetchData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('🏠 HomePage: Fetching data with composite API...');
-      const homepageData = await homeService.getHomepageData();
+      console.log('🏠 HomePage: Fetching data...');
+      
+      // Fetch data in parallel
+      const [homepageData, consultantsData] = await Promise.all([
+        homeService.getHomepageData(),
+        consultantService.getAllConsultants(1, 10)
+      ]);
       
       if (homepageData.success) {
-        const { sti_packages, sti_tests, blogs, consultants } = homepageData.data;
+        const { sti_packages, sti_tests, blogs } = homepageData.data;
         
         setPackagesData(sti_packages || []);
         setTestsData(sti_tests || []);
         setBlogsData(blogs || []);
-        setConsultantsData(consultants || []);
         
-        console.log('✅ HomePage: All data fetched successfully', {
+        console.log('✅ HomePage: Homepage data fetched successfully', {
           packages: sti_packages?.length || 0,
-          blogs: blogs?.length || 0,
-          consultants: consultants?.length || 0
+          blogs: blogs?.length || 0
         });
       }
+      
+      if (consultantsData.data) {
+        const consultants = consultantsData.data.consultants || [];
+        setConsultantsData(consultants as unknown as Consultant[]);
+        
+        console.log('✅ HomePage: Consultants fetched successfully', {
+          consultants: consultants.length
+        });
+      }
+      
     } catch (error) {
       console.error('❌ HomePage: Error fetching data:', error);
       setError('Không thể tải dữ liệu trang chủ. Vui lòng thử lại sau.');
@@ -90,25 +104,17 @@ const HomePage = () => {
   }, []);
 
   // Memoized data processing
-  const displayPackages = useMemo(() => 
-    packagesData.slice(0, 6), [packagesData]
-  );
-  
-  const displayBlogs = useMemo(() => 
-    blogsData.slice(0, 6), [blogsData]
-  );
-  
   const topConsultants = useMemo(() => 
     consultantsData.slice(0, 3), [consultantsData]
   );
 
   const activePackages = useMemo(() => 
-    packagesData.filter((p: any) => p.is_active !== false),
+    packagesData.filter((p) => p.is_active !== false),
     [packagesData]
   );
 
   const activeTests = useMemo(() => 
-    testsData.filter((t: any) => t.is_active !== false),
+    testsData.filter((t) => t.is_active !== false),
     [testsData]
   );
 
@@ -153,8 +159,8 @@ const HomePage = () => {
             GenCare cung cấp các dịch vụ chăm sóc sức khỏe sinh sản toàn diện, từ tư vấn đến xét nghiệm.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {serviceCards.map((card, idx) => (
-              <div key={idx} className="bg-white rounded-xl shadow border border-blue-100 p-8 flex flex-col items-center text-center transition hover:shadow-lg">
+            {serviceCards.map((card) => (
+              <div key={card.link} className="bg-white rounded-xl shadow border border-blue-100 p-8 flex flex-col items-center text-center transition hover:shadow-lg">
                 {card.icon}
                 <h3 className="text-xl font-bold text-blue-700 mb-2">{card.title}</h3>
                 <p className="text-blue-700/80 mb-6">{card.desc}</p>
@@ -189,7 +195,7 @@ const HomePage = () => {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {topConsultants.map((consultant, idx) => (
+              {topConsultants.map((consultant) => (
                 <div key={consultant.consultant_id} className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
                   <div className="w-20 h-20 rounded-full bg-blue-100 mx-auto mb-4 flex items-center justify-center">
                     {consultant.avatar ? (
@@ -228,7 +234,7 @@ const HomePage = () => {
             <div className="text-center mb-8">
               <h2 className="text-4xl font-bold text-blue-700 mb-4">Dịch vụ xét nghiệm</h2>
               <p className="text-lg text-blue-700/80 max-w-2xl mx-auto mb-8">
-                Chọn gói tổng hợp hoặc xét nghiệm đơn lẻ phù hợp nhu cầu của bạn
+                Các gói xét nghiệm và các dịch vụ xét nghiệm được cung cấp bởi chúng tôi
               </p>
               {/* Tabs */}
               <div className="inline-flex bg-blue-100 rounded-lg overflow-hidden shadow-sm">
@@ -268,10 +274,10 @@ const HomePage = () => {
                       : {}
                   }
                 >
-                  {(testTab === 'packages' ? activePackages : activeTests).map(service => (
+                  {(testTab === 'packages' ? activePackages : activeTests).map((service: StiPackage | StiTest) => (
                     <div key={service._id} className="w-80 h-50 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition flex flex-col">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={service.sti_package_name || service.sti_test_name}>
-                        {service.sti_package_name || service.sti_test_name}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={'sti_package_name' in service ? service.sti_package_name : service.sti_test_name}>
+                        {'sti_package_name' in service ? service.sti_package_name : service.sti_test_name}
                       </h3>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-3">{service.description}</p>
                       <div className="flex-grow" />
@@ -280,7 +286,7 @@ const HomePage = () => {
                           {service.price?.toLocaleString('vi-VN')}đ
                         </span>
                         <span className="text-sm text-gray-500">
-                          {testTab==='packages' ? 'Gói' : service.sti_test_type || 'Test'}
+                          {testTab==='packages' ? 'Gói' : ('sti_test_type' in service && service.sti_test_type) || 'Test'}
                         </span>
                       </div>
                   
@@ -295,7 +301,7 @@ const HomePage = () => {
                   to="/sti-assessment"
                   className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
                 >
-                  Đánh giá sàng lọc STI
+                  Đánh giá sàng lọc STi
                 </Link>
                 <Link
                   to="/sti-booking/book"
@@ -305,7 +311,7 @@ const HomePage = () => {
                 </Link>
               </div>
             </div>
-          </div>
+          </div>  
         </section>
       )}
 
