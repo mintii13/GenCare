@@ -123,9 +123,9 @@ router.get('/statistics', authenticateToken, async (req: Request, res: Response)
     }
 })
 
-router.get('/:userId', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
+router.get('/', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = req.params.userId;
+        const userId = (req.user as any).userId;
         const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
         const pillSchedule: GetScheduleRequest = {userId, startDate, endDate};
         const result = await PillTrackingService.getUserPillSchedule(pillSchedule);
