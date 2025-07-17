@@ -208,6 +208,29 @@ export class UserService {
         }
     }
 
+    public static async getAllUsersByRole(role: string) {
+        try {
+            const users = await UserRepository.getAllUsersByRole(role);
+            if (!users || users.length === 0) {
+                return {
+                    success: false,
+                    message: `Không tìm thấy người dùng với vai trò ${role}`,
+                };
+            }
+            return {
+                success: true,
+                message: `Lấy danh sách người dùng với vai trò ${role} thành công`,
+                data: users
+            };
+        } catch (error) {
+            console.error('Service getAllStaffs error:', error);
+            return {
+            success: false,
+            message: 'Không thể lấy danh sách nhân viên'
+            };
+        }
+    }
+
     /**
      * Create new user
      */

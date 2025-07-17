@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ConsultantService } from '../services/consultantService';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { AppointmentService } from '../services/appointmentService';
-import { Consultant } from '../models/Consultant';
+import { Consultant, SpecializationType } from '../models/Consultant';
 const router = Router();
 
 // GET /api/consultants/public - Lấy danh sách công khai các chuyên gia (không cần đăng nhập)
@@ -366,4 +366,20 @@ router.get(
     }
 );
 
+router.get('/dropdown/:specialization', async (req, res) => {
+    try {
+        const specialization = req.params.specialization as SpecializationType;
+        const result = await ConsultantService.getConsultantsBySpecialization(specialization);
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error'
+        });
+    }
+});
 export default router;

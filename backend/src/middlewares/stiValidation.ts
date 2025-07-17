@@ -1,5 +1,9 @@
 import Joi, { valid } from 'joi';
 import { Request, Response, NextFunction } from 'express';
+<<<<<<< HEAD
+import { OrderStatus } from '../models/StiOrder';
+import dayjs from 'dayjs';
+=======
 import { OrderStatus, IStiOrder } from '../models/StiOrder';
 
 // Extend Request interface để thêm currentOrder
@@ -11,6 +15,7 @@ declare global {
     }
 }
 
+>>>>>>> 0e08d9e33a1ee5590f22c5a8315584a36c68660d
 const objectId = Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
     .message('ID không hợp lệ. Phải là ObjectId hợp lệ (24 ký tự hex).');
@@ -111,7 +116,20 @@ export const validateStiTest = (req: Request, res: Response, next: NextFunction)
 }
 
 export const stiOrderCreateSchema = Joi.object({
+<<<<<<< HEAD
+  order_date: Joi.date().required().custom((value, helpers) => {
+    const today = dayjs().startOf('day');
+    const inputDate = dayjs(value).startOf('day');
+
+    if (!inputDate.isAfter(today)) {
+      return helpers.error('date.futureOnly');
+    }
+
+    return value;
+  }).messages({
+=======
   order_date: Joi.date().required().messages({
+>>>>>>> 0e08d9e33a1ee5590f22c5a8315584a36c68660d
     'date.base': 'Ngày đặt không hợp lệ',
     'any.required': 'Ngày đặt là bắt buộc'
   }),
@@ -120,6 +138,96 @@ export const stiOrderCreateSchema = Joi.object({
     'string.max': 'Ghi chú không được vượt quá 500 ký tự'
   })
 })
+<<<<<<< HEAD
+
+
+export const validateStiOrderCreate = (req: Request, res: Response, next: NextFunction) => {
+    const { error } = stiOrderCreateSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dữ liệu không hợp lệ',
+        errors: error.details.map(err => err.message)
+      });
+    }
+    next();
+}
+
+const validTransitionsForUpdate: Record<OrderStatus, OrderStatus[]> = {
+    Booked: ['Accepted', 'Canceled'],
+    Accepted: ['Processing', 'Canceled'],
+    Processing: ['SpecimenCollected'],
+    SpecimenCollected: ['Testing'],
+    Testing: ['Completed'],
+    Completed: [],
+    Canceled: [],
+};
+
+export const stiOrderUpdateSchema = Joi.object({
+  customer_id: objectId.optional().messages({
+    'string.pattern.base': 'Customer ID không hợp lệ'
+  }),
+
+  consultant_id: objectId.allow(null).optional().messages({
+    'string.pattern.base': 'Consultant ID không hợp lệ'
+  }),
+
+  staff_id: objectId.allow(null).optional().messages({
+    'string.pattern.base': 'Staff ID không hợp lệ'
+  }),
+
+  sti_package_item: Joi.object({
+    sti_package_id: objectId.required().messages({
+      'string.pattern.base': 'STI Package ID không hợp lệ',
+      'any.required': 'STI Package ID là bắt buộc'
+    }),
+    sti_test_ids: Joi.array().items(objectId).required().messages({
+      'array.base': 'STI Test IDs phải là một mảng',
+      'string.pattern.base': 'STI Test ID không hợp lệ',
+      'any.required': 'STI Test IDs là bắt buộc'
+    })
+  }).optional(),
+
+  sti_test_items: Joi.array().items(objectId).optional().messages({
+    'array.base': 'STI Test Items phải là một mảng',
+    'string.pattern.base': 'STI Test ID không hợp lệ'
+  }),
+
+  order_date: Joi.date().optional().custom((value, helpers) => {
+    const today = dayjs().startOf('day');
+    const inputDate = dayjs(value).startOf('day');
+
+    if (!inputDate.isAfter(today)) {
+      return helpers.error('date.futureOnly');
+    }
+
+    return value;
+  }).messages({
+    'date.base': 'Ngày đặt không hợp lệ',
+    'any.required': 'Ngày đặt là bắt buộc',
+    'date.futureOnly': 'Ngày đặt phải sau hôm nay'
+  }),
+
+  order_status: Joi.string().optional().messages({
+    'any.only': 'Trạng thái đơn hàng không hợp lệ'
+  }),
+
+  payment_status: Joi.string().optional().messages({
+    'any.only': 'Trạng thái thanh toán không hợp lệ'
+  }),
+
+  total_amount: Joi.number().min(0).optional().messages({
+    'number.base': 'Tổng tiền phải là số',
+    'number.min': 'Tổng tiền không được âm',
+    'any.required': 'Tổng tiền là bắt buộc'
+  }),
+
+  notes: Joi.string().max(500).allow('').optional().messages({
+    'string.max': 'Ghi chú không được vượt quá 500 ký tự'
+  })
+});
+
+=======
 
 
 export const validateStiOrderCreate = (req: Request, res: Response, next: NextFunction) => {
@@ -177,6 +285,7 @@ export const stiOrderUpdateSchema = Joi.object({
   })
 })
 
+>>>>>>> 0e08d9e33a1ee5590f22c5a8315584a36c68660d
 export const validateStiOrderUpdate = (req: Request, res: Response, next: NextFunction) => {
     const { error } = stiOrderUpdateSchema.validate(req.body, { abortEarly: false });
     if (error) {

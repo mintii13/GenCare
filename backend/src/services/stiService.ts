@@ -21,6 +21,8 @@ import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationR
 import { StiResultRepository } from '../repositories/stiResultRepository';
 import { IStiResult, Sample } from '../models/StiResult';
 import { ConsultantRepository } from '../repositories/consultantRepository';
+import { SpecializationType } from '../models/Consultant';
+import { StaffRepository } from '../repositories/staffRepository';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
@@ -644,7 +646,7 @@ export class StiService {
                     message: 'Order not found'
                 };
             }
-            if (order.order_status === 'Completed' || order.order_status === 'Canceled') {
+            if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.payment_status !== 'Paid' && updates.order_status !== null) {
                 return {
                     success: false,
                     message: 'Cannot update order that is already completed or canceled'
@@ -717,6 +719,20 @@ export class StiService {
 
             if (updates.consultant_id) {
                 if (['consultant', 'staff', 'admin'].includes(role)) {
+                    const isValidConsultant = await ConsultantRepository.findConsultantsByIdAndSpecialization(updates.consultant_id.toString(), SpecializationType.SexualHealth);
+                    if (!isValidConsultant) {
+                        return {
+                            success: false,
+                            message: 'Consultant must be a valid consultant with specialization in Sexual Health'
+                        };
+                    }   
+                    const consultantExists = await ConsultantRepository.findById(updates.consultant_id.toString());
+                    if (!consultantExists) {
+                        return {
+                            success: false,
+                            message: 'Consultant not found'
+                        };
+                    }
                     order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
                 } else {
                     return {
@@ -728,6 +744,13 @@ export class StiService {
 
             if (updates.staff_id) {
                 if (['staff', 'admin'].includes(role)) {
+                    const staffExists = await StaffRepository.findById(updates.staff_id.toString());
+                    if (!staffExists) {
+                        return {
+                            success: false,
+                            message: 'Staff not found'
+                        };
+                    }
                     order.staff_id = new mongoose.Types.ObjectId(updates.staff_id);
                 } else {
                     return {
@@ -1203,7 +1226,7 @@ export class StiService {
     }
 
 
-    public static async updateStiResult(resultId: string, updateData: UpdateStiResultRequest, userId: string) {
+    public static async updateStiResult(resultId: string, updateData: UpdateStiResultRequest, userId: string, role: string) {
         try {
             // Validate input
             if (!resultId || !updateData) {
@@ -1214,20 +1237,64 @@ export class StiService {
             }
 
             // Check if result exists
-            const result = await StiResultRepository.findById(resultId);
+            const result = await StiResultRepository.findByActiveId(resultId);
             if (!result) {
                 return {
                     success: false,
-                    message: 'Cannot find the sti result'
+                    message: 'Cannot find the sti result or sti result is deactivated or confirmed'
                 };
             }
+            const order = result.sti_order_id;
+            if (updateData.consultant_id) {
+                if (['consultant', 'staff', 'admin'].includes(role)) {
+                    const isValidConsultant = await ConsultantRepository.findConsultantsByIdAndSpecialization(updateData.consultant_id.toString(), SpecializationType.SexualHealth);
+                    if (!isValidConsultant) {
+                        return {
+                            success: false,
+                            message: 'Consultant must be a valid consultant with specialization in Sexual Health'
+                        };
+                    }   
+                    const consultantExists = await ConsultantRepository.findById(updateData.consultant_id.toString());
+                    if (!consultantExists) {
+                        return {
+                            success: false,
+                            message: 'Consultant not found'
+                        };
+                    }
+                    order.consultant_id = new mongoose.Types.ObjectId(updateData.consultant_id);
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update consultant_id'
+                    };
+                }
+            }
 
-            // Check if result is active
-            if (!result.is_active) {
-                return {
-                    success: false,
-                    message: 'Sti result is deactivated'
-                };
+            if (updateData.staff_id) {
+                if (['staff', 'admin'].includes(role)) {
+                    const staffExists = await StaffRepository.findById(updateData.staff_id.toString());
+                    if (!staffExists) {
+                        return {
+                            success: false,
+                            message: 'Staff not found'
+                        };
+                    }
+                    order.staff_id = new mongoose.Types.ObjectId(updateData.staff_id);
+                } else {
+                    return {
+                        success: false,
+                        message: 'Unauthorized to update staff_id'
+                    };
+                }
+            }
+            if (updateData.consultant_id || updateData.staff_id) {
+                const resultOrder = await StiResultRepository.saveStiOrder(result);
+                if (!resultOrder) {
+                    return {
+                        success: false,
+                        message: 'Cannot update consultant or staff in sti order'
+                    };
+                }
             }
 
             if (updateData.hasOwnProperty('is_confirmed')) {
@@ -1245,22 +1312,21 @@ export class StiService {
                 updateData.time_result = new Date();
             }
 
-            if (updateData.sample?.sampleQualities) {
-                const existingQualities = result.sample?.sampleQualities || {};
-                const newQualities = updateData.sample.sampleQualities;
+            const allowedSampleQualities = ['máu', 'nước tiểu', 'dịch âm đạo', 'dịch niệu đạo', 'dịch cổ tử cung'];
 
-                const updatedQualities: Record<string, boolean | null> = {};
+            if (updateData.sample?.sampleQualities) {
+                const newQualities = updateData.sample.sampleQualities;
+                const updatedQualities: Record<string, any> = {};
                 const invalidKeys: string[] = [];
 
                 for (const key in newQualities) {
-                    if (key in existingQualities) {
+                    if (allowedSampleQualities.includes(key)) {
                         updatedQualities[key] = newQualities[key];
                     } else {
                         invalidKeys.push(key);
                     }
                 }
 
-                // Trả lỗi nếu có key không hợp lệ (không nằm trong existingQualities)
                 if (invalidKeys.length > 0) {
                     return {
                         success: false,
@@ -1268,9 +1334,13 @@ export class StiService {
                     };
                 }
 
-                updateData.sample.sampleQualities = {
-                    ...existingQualities,
+                // Merge với sample hiện tại (nếu có)
+                result.sample = {
+                    ...(result.sample || {}),
+                    sampleQualities: {
+                    ...(result.sample?.sampleQualities || {}),
                     ...updatedQualities
+                    }
                 };
             }
             // Update the result
@@ -1299,27 +1369,31 @@ export class StiService {
     }
 
     private static async getTestTypesFromOrder(order: IStiOrder): Promise<string[]> {
-        const testIds: mongoose.Types.ObjectId[] = [];
+        const testIds: (mongoose.Types.ObjectId | string | null | undefined)[] = [];
 
         // Lấy test IDs từ package
-        if (order.sti_package_item?.sti_test_ids) {
-        testIds.push(...order.sti_package_item.sti_test_ids);
+        if (Array.isArray(order.sti_package_item?.sti_test_ids)) {
+            testIds.push(...order.sti_package_item.sti_test_ids);
         }
 
         // Lấy test IDs từ individual tests
-        if (order.sti_test_items) {
-        testIds.push(...order.sti_test_items);
+        if (Array.isArray(order.sti_test_items)) {
+            testIds.push(...order.sti_test_items);
         }
 
-        // Loại bỏ duplicates
-        const uniqueTestIds = [...new Set(testIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
+        // Loại bỏ giá trị null, undefined và ID không hợp lệ
+        const uniqueValidIds = [...new Set(
+            testIds
+            .map(id => id?.toString())
+            .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+        )].map(id => new mongoose.Types.ObjectId(id!));
 
-        if (uniqueTestIds.length === 0) {
+        if (uniqueValidIds.length === 0) {
             return [];
         }
 
-        // Lấy test types từ database
-        return await StiTestRepository.getTestTypesByIds(uniqueTestIds);
+        // Lấy test types từ repository
+        return await StiTestRepository.getTestTypesByIds(uniqueValidIds);
     }
 
     public static async syncSampleFromOrder(orderId: string) {
@@ -1343,6 +1417,7 @@ export class StiService {
 
             // Lấy tất cả test types từ order
             const orderTestTypes = await this.getTestTypesFromOrder(order);
+            console.log('Order Test Types:', orderTestTypes);
             if (orderTestTypes.length === 0) {
                 return {
                 success: false,

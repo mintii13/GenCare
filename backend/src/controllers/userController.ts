@@ -41,6 +41,60 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'staff'), async (req:
     }
 });
 
+router.get('/staffs', authenticateToken, authorizeRoles('admin'), async (req: Request, res: Response) => {
+    try {
+        const result = await UserService.getAllUsersByRole('staff');
+
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(404).json(result);
+        }
+    } catch (error) {
+        console.error('Get all staffs error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống khi lấy thông tin người dùng'
+        });
+    }
+});
+
+router.get('/consultants', authenticateToken, authorizeRoles('admin', 'staff'), async (req: Request, res: Response) => {
+    try {
+        const result = await UserService.getAllUsersByRole('consultant');
+
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(404).json(result);
+        }
+    } catch (error) {
+        console.error('Get all consultants error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống khi lấy thông tin người dùng'
+        });
+    }
+});
+
+router.get('/customers', authenticateToken, authorizeRoles('admin', 'staff'), async (req: Request, res: Response) => {
+    try {
+        const result = await UserService.getAllUsersByRole('customer');
+
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(404).json(result);
+        }
+    } catch (error) {
+        console.error('Get all consultants error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi hệ thống khi lấy thông tin người dùng'
+        });
+    }
+});
+
 /**
  * GET /api/users/:id - Get user by ID (Admin/Staff only)
  */
@@ -181,5 +235,4 @@ router.get('/statistics/overview', authenticateToken, authorizeRoles('admin', 's
         });
     }
 });
-
 export default router;

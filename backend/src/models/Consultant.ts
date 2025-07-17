@@ -1,8 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export enum SpecializationType {
+    General = 'General',
+    SexualHealth = 'SexualHealth',
+    Psychological = 'Psychological',
+}
+
 export interface IConsultant extends Document {
     user_id: mongoose.Types.ObjectId;
-    specialization: string;
+    specialization: SpecializationType;
     qualifications: string;
     experience_years: number;
     consultation_rating?: number;
@@ -11,7 +17,7 @@ export interface IConsultant extends Document {
 
 const consultantSchema = new Schema<IConsultant>({
     user_id: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
-    specialization: { type: String, required: true },
+    specialization: { type: String, required: true , enum: Object.values(SpecializationType) },
     qualifications: { type: String, required: true },
     experience_years: { type: Number, required: true },
     consultation_rating: { type: Number, min: 0, max: 5 },

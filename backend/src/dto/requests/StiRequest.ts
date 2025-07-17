@@ -39,4 +39,6 @@ export interface UpdateStiResultRequest {
     is_notified?: boolean;
     notes?: string;
     is_active?: boolean;
+    consultant_id?: string;
+    staff_id?: string;
 }
