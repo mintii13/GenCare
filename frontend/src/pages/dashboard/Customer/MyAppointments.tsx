@@ -18,14 +18,15 @@ import {
   FaCalendarAlt, 
   FaSpinner, 
   FaTimes, 
-  FaSearch,
-  FaChevronLeft, 
-  FaChevronRight,
-  FaFilter,
-  FaSortAmountDown
+  FaFilter
 } from 'react-icons/fa';
 import { ResourceTable } from '../../../components/common/ResourceTable';
 import { useNavigate } from 'react-router-dom';
+
+interface FeedbackFormData {
+  rating: number;
+  comment: string;
+}
 
 const MyAppointments: React.FC = () => {
   const { modalState, showConfirm, hideConfirm } = useConfirmModal();
@@ -34,13 +35,9 @@ const MyAppointments: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const [editForm, setEditForm] = useState({
-    appointment_date: '',
-    start_time: '',
-    end_time: ''
-  });
+
   const [selectedNewSlot, setSelectedNewSlot] = useState<{date: string, startTime: string, endTime: string} | null>(null);
-  const [consultantDetails, setConsultantDetails] = useState<{[key: string]: any}>({});
+  const [consultantDetails, setConsultantDetails] = useState<{[key: string]: {full_name: string, specialization: string, avatar?: string}}>({});
   // Feedback modal open condition handled per appointment (no global canFeedback)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
@@ -131,18 +128,15 @@ const MyAppointments: React.FC = () => {
       } else {
         setError(response.message);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching appointments:', err);
-      setError(err.message || 'Có lỗi xảy ra khi tải dữ liệu');
+      setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
     }
   };
   
-  const handlePageChange = (page: number) => {
-    setQuery(prev => ({ ...prev, page }));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+
 
   const handleStatusFilter = (status: string) => {
     setQuery(prev => ({
@@ -152,13 +146,13 @@ const MyAppointments: React.FC = () => {
     }));
   };
 
-  const handleSortChange = (sort_by: string, sort_order: 'asc' | 'desc') => {
+  const handleSortChange = (sort_by: 'appointment_date' | 'created_date', sort_order: 'asc' | 'desc') => {
 
     setQuery(prev => {
       const newQuery = {
         ...prev,
         page: 1,
-        sort_by: sort_by as any,
+        sort_by,
         sort_order
       };
 
@@ -200,8 +194,9 @@ const MyAppointments: React.FC = () => {
             console.error('Cancel failed with message:', data.message);
             toast.error(data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
           }
-        } catch (err: any) {
-          console.error('Error cancelling appointment:', err);
+        } catch (error: unknown) {
+          console.error('Error cancelling appointment:', error);
+          const err = error as { response?: { status: number; data?: { message?: string; details?: string } }; message?: string };
           
           // Detailed error handling
           if (err.response?.status === 400) {
@@ -223,21 +218,11 @@ const MyAppointments: React.FC = () => {
 
   const handleEditAppointment = (appointment: Appointment) => {
     setEditingAppointment(appointment);
-    setEditForm({
-      appointment_date: appointment.appointment_date,
-      start_time: appointment.start_time,
-      end_time: appointment.end_time
-    });
     setSelectedNewSlot(null);
   };
 
   const handleSlotSelect = (date: string, startTime: string, endTime: string) => {
     setSelectedNewSlot({ date, startTime, endTime });
-    setEditForm({
-      appointment_date: date,
-      start_time: startTime,
-      end_time: endTime
-    });
   };
 
   const handleUpdateAppointment = async () => {
@@ -266,8 +251,9 @@ const MyAppointments: React.FC = () => {
       } else {
         toast.error(data.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
       }
-    } catch (err: any) {
-      console.error('Error updating appointment:', err);
+    } catch (error: unknown) {
+      console.error('Error updating appointment:', error);
+      const err = error as { message?: string };
       toast.error(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
     }
   };
@@ -288,7 +274,7 @@ const MyAppointments: React.FC = () => {
     try {
       if (consultantDetails[consultantId]) return;
       
-      const response = await consultantService.getConsultantById(consultantId) as any;
+      const response = await consultantService.getConsultantById(consultantId) as unknown as { data: { consultant: { full_name: string; specialization: string; avatar?: string } } };
       if (response && response.data && response.data.consultant) {
         setConsultantDetails(prev => ({
           ...prev,
@@ -310,28 +296,49 @@ const MyAppointments: React.FC = () => {
     return appointment.consultant_id?.user_id?.full_name || 'Chuyên gia';
   };
 
-  // Generate page numbers for pagination
-  const generatePageNumbers = (): number[] => {
-    const pages: number[] = [];
-    const { current_page, total_pages } = pagination;
+  // Handle feedback submission
+  const handleFeedbackSubmit = async (formData: FeedbackFormData) => {
+    if (!selectedAppointment) return;
     
-    if (total_pages <= 1) return pages;
-    
-    // Always show first page
-    pages.push(1);
-    
-    // Add pages around current page
-    for (let i = Math.max(2, current_page - 1); i <= Math.min(total_pages - 1, current_page + 1); i++) {
-      if (!pages.includes(i)) pages.push(i);
+    try {
+      const response = await FeedbackService.submitFeedback(selectedAppointment._id, formData);
+      if (response.success) {
+        // Hiển thị toast thành công
+        toast.success(selectedAppointment.feedback 
+          ? 'Đánh giá đã được cập nhật thành công!' 
+          : 'Đánh giá đã được gửi thành công! Cảm ơn bạn đã chia sẻ.'
+        );
+        
+        // Cập nhật state appointment để thay đổi nút
+        setAppointments(prevAppointments => 
+          prevAppointments.map(apt => 
+            apt._id === selectedAppointment._id 
+              ? { 
+                  ...apt, 
+                  feedback: { 
+                    rating: formData.rating as number, 
+                    comment: formData.comment,
+                    feedback_date: new Date().toISOString()
+                  } 
+                } as Appointment
+              : apt
+          )
+        );
+        
+        // Đóng modal và reset selected appointment
+        setShowFeedbackModal(false);
+        setSelectedAppointment(null);
+      } else {
+        toast.error(response.message || 'Có lỗi xảy ra khi gửi đánh giá');
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast.error('Có lỗi xảy ra khi gửi đánh giá');
     }
-    
-    // Always show last page
-    if (total_pages > 1 && !pages.includes(total_pages)) {
-      pages.push(total_pages);
-    }
-    
-    return pages;
   };
+
+  // Generate page numbers for pagination
+
 
   // 1. Định nghĩa columns cho bảng lịch hẹn (Appointment)
   const columns = [
@@ -339,7 +346,7 @@ const MyAppointments: React.FC = () => {
       title: 'Chuyên gia',
       dataIndex: 'consultant',
       key: 'consultant',
-      render: (_: any, record: Appointment) => (
+      render: (value: unknown, record: Appointment) => (
         <div className="flex items-center gap-2">
           <img
             src={consultantDetails[record.consultant_id?._id]?.avatar || '/default-avatar.png'}
@@ -357,7 +364,7 @@ const MyAppointments: React.FC = () => {
       title: 'Chuyên khoa',
       dataIndex: 'specialization',
       key: 'specialization',
-      render: (_: any, record: Appointment) => getConsultantSpecialization(record),
+      render: (value: unknown, record: Appointment) => getConsultantSpecialization(record),
     },
     {
       title: 'Ngày',
@@ -369,7 +376,7 @@ const MyAppointments: React.FC = () => {
       title: 'Thời gian',
       dataIndex: 'start_time',
       key: 'start_time',
-      render: (_: any, record: Appointment) => `${formatTime(record.start_time)} - ${formatTime(record.end_time)}`,
+      render: (value: unknown, record: Appointment) => `${formatTime(record.start_time)} - ${formatTime(record.end_time)}`,
     },
     {
       title: 'Trạng thái',
@@ -383,12 +390,24 @@ const MyAppointments: React.FC = () => {
       title: 'Ghi chú',
       dataIndex: 'customer_notes',
       key: 'customer_notes',
-      render: (notes: string) => notes || '-',
+      width: 200,
+      ellipsis: true,
+      render: (notes: string) => (
+        <div className="relative group">
+          <span className="block truncate">{notes || '-'}</span>
+          {notes && notes.length > 0 && (
+            <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-xs whitespace-normal shadow-lg">
+              {notes}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Hành động',
       key: 'actions',
-      render: (_: any, record: Appointment) => (
+      width: 120,
+      render: (value: unknown, record: Appointment) => (
         <div className="flex flex-col gap-1">
           <button onClick={() => setSelectedAppointment(record)} className="text-blue-600 hover:underline">Chi tiết</button>
           {record.status === 'pending' && (
@@ -397,9 +416,9 @@ const MyAppointments: React.FC = () => {
               <button onClick={() => handleCancelAppointment(record._id)} className="text-red-600 hover:underline">Hủy hẹn</button>
             </>
           )}
-          {record.status === 'completed' && (
+          {record.status === 'completed' && !record.feedback && (
             <button onClick={() => { setSelectedAppointment(record); setShowFeedbackModal(true); }} className="text-purple-600 hover:underline">
-              {record.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
+              Đánh giá
             </button>
           )}
         </div>
@@ -486,7 +505,7 @@ const MyAppointments: React.FC = () => {
                     sort_by = value.substring(0, lastUnderscoreIndex);
                     sort_order = value.substring(lastUnderscoreIndex + 1) as 'asc' | 'desc';
                   }
-                  handleSortChange(sort_by, sort_order);
+                  handleSortChange(sort_by as 'appointment_date' | 'created_date', sort_order);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -670,43 +689,7 @@ const MyAppointments: React.FC = () => {
              rating: selectedAppointment.feedback.rating,
              comment: selectedAppointment.feedback.comment
            } : undefined}
-           onSubmit={async (formData) => {
-             try {
-               const response = await FeedbackService.submitFeedback(selectedAppointment._id as any, formData);
-               if (response.success) {
-                 // Hiển thị toast thành công
-                 toast.success(selectedAppointment.feedback 
-                   ? 'Đánh giá đã được cập nhật thành công!' 
-                   : 'Đánh giá đã được gửi thành công! Cảm ơn bạn đã chia sẻ.'
-                 );
-                 
-                 // Cập nhật state appointment để thay đổi nút
-                 setAppointments(prevAppointments => 
-                   prevAppointments.map(apt => 
-                     apt._id === selectedAppointment._id 
-                       ? { 
-                           ...apt, 
-                           feedback: { 
-                             rating: formData.rating as number, 
-                             comment: formData.comment,
-                             feedback_date: new Date().toISOString()
-                           } 
-                         } as Appointment
-                       : apt
-                   )
-                 );
-                 
-                 // Đóng modal và reset selected appointment
-                 setShowFeedbackModal(false);
-                 setSelectedAppointment(null);
-               } else {
-                 toast.error(response.message || 'Có lỗi xảy ra khi gửi đánh giá');
-               }
-             } catch (error) {
-               console.error('Error submitting feedback:', error);
-               toast.error('Có lỗi xảy ra khi gửi đánh giá');
-             }
-           }}
+           onSubmit={handleFeedbackSubmit}
          />
        )}
 

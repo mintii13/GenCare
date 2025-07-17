@@ -16,3 +16,6 @@ selenium-tests/
 selenium-tests/
 selenium-tests/
 
+# Ignore test source files
+backend/src/test/
+

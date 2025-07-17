@@ -91,9 +91,13 @@ const ConsultantList: React.FC = () => {
         console.error('Failed to fetch consultants:', apiResponse.message);
         setError(apiResponse.message || 'Không thể tải danh sách chuyên gia');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching consultants:', err);
-      setError('Có lỗi xảy ra khi tải danh sách chuyên gia: ' + (err.message || ''));
+      if (err instanceof Error) {
+        setError('Có lỗi xảy ra khi tải danh sách chuyên gia: ' + err.message);
+      } else {
+        setError('Có lỗi xảy ra khi tải danh sách chuyên gia: ' + String(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -186,7 +190,7 @@ const ConsultantList: React.FC = () => {
     },
     {
       name: 'Trạng thái',
-      cell: row => (
+      cell: () => (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
           Sẵn sàng tư vấn
         </span>
@@ -196,7 +200,7 @@ const ConsultantList: React.FC = () => {
     },
     {
       name: 'Hành động',
-      cell: row => (
+      cell: (row: Consultant) => (
         <div className="flex gap-2">
           <button
             onClick={() => setSelectedConsultant(row)}

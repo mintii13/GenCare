@@ -368,46 +368,36 @@ export class StiService {
 
     public static async createStiOrder(customer_id: string, order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
-            // let sti_package_item = null;
-            // let sti_test_items = [];
-            // let total_amount = 0;
-            // let hasPackage: boolean = false;
-            // let hasTest = false;
+            // =================== VALIDATION START ===================
 
-            if (!order_date){
-                return{
+            // Defect D1 (Improved): Kiểm tra ngày hợp lệ
+            if (!order_date || !(order_date instanceof Date) || isNaN(order_date.getTime())) {
+                return {
                     success: false,
-                    message: 'Order date is required'
-                }
+                    message: 'Order date is required and must be a valid date'
+                };
             }
-            
-            // // Xử lý package
-            // if (sti_package_id) {
-            //     const result = await this.handleStiPackage(sti_package_id);
-            //     if (result.success) {
-            //         sti_package_item = result.sti_package_item;
-            //         total_amount += result.amount;
-            //         hasPackage = true;
-            //     }
-            // }
 
-            // // Xử lý test lẻ
-            // if (sti_test_items_input && sti_test_items_input.length > 0) {
-            //     const result = await this.handleStiTest(sti_test_items_input);
-            //     if (result.success) {
-            //         sti_test_items = result.sti_test_items.map(item => item.sti_test_id);
-            //         total_amount += result.amount;
-            //         hasTest = true;
-            //     }
-            // }
+            // Defect D2: Kiểm tra ngày không được ở trong quá khứ
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Reset giờ về đầu ngày để so sánh
+            if (new Date(order_date) < today) {
+                return {
+                    success: false,
+                    message: 'Order date cannot be in the past'
+                };
+            }
 
-            // if (!hasPackage && !hasTest) {
-            //     return {
-            //         success: false,
-            //         message: 'No valid STI tests or package provided'
-            //     };
-            // }
-            
+            // Defect D3, D6: Kiểm tra độ dài của notes
+            if (notes && notes.length > 500) {
+                return {
+                    success: false,
+                    message: 'Notes cannot exceed 500 characters'
+                };
+            }
+
+            // =================== VALIDATION END ===================
+
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
             if (!scheduleResult.success) {
                 return {
@@ -416,14 +406,19 @@ export class StiService {
                 };
             }
             const schedule = scheduleResult.schedule;
-            
+
+            // Defect D7, D8 (Double check): Kiểm tra lại trước khi tạo
+            if (schedule.is_locked || schedule.number_current_orders >= 10) {
+                return {
+                    success: false,
+                    message: 'The schedule for this date is full.'
+                };
+            }
+
             const sti_order = new StiOrder({
                 customer_id,
-                // sti_package_item,
-                // sti_test_items: sti_test_items.length > 0 ? sti_test_items : undefined,
                 sti_schedule_id: schedule._id,
                 order_date,
-                // total_amount,
                 notes
             });
             
@@ -443,15 +438,6 @@ export class StiService {
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id);
             
-            // let packageName = 'Gói combo';
-            // if (sti_package_id) {
-            //     const stiPackage = await StiPackageRepository.findPackageById(sti_package_id);
-            //     if (stiPackage) {
-            //         packageName = stiPackage.sti_package_name;
-            //     }
-            // }
-            
-            // await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), total_amount, customer.email, packageName, sti_test_items)
             await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email);
             return {
                 success: true,
