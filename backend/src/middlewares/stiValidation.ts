@@ -1,7 +1,7 @@
 import Joi, { valid } from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import { OrderStatus } from '../models/StiOrder';
-
+import dayjs from 'dayjs';
 const objectId = Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
     .message('ID không hợp lệ. Phải là ObjectId hợp lệ (24 ký tự hex).');
@@ -102,7 +102,16 @@ export const validateStiTest = (req: Request, res: Response, next: NextFunction)
 }
 
 export const stiOrderCreateSchema = Joi.object({
-  order_date: Joi.date().required().messages({
+  order_date: Joi.date().required().custom((value, helpers) => {
+    const today = dayjs().startOf('day');
+    const inputDate = dayjs(value).startOf('day');
+
+    if (!inputDate.isAfter(today)) {
+      return helpers.error('date.futureOnly');
+    }
+
+    return value;
+  }).messages({
     'date.base': 'Ngày đặt không hợp lệ',
     'any.required': 'Ngày đặt là bắt buộc'
   }),
@@ -136,37 +145,68 @@ const validTransitionsForUpdate: Record<OrderStatus, OrderStatus[]> = {
 };
 
 export const stiOrderUpdateSchema = Joi.object({
-  sti_package_id: objectId.allow(null).optional().messages({
-    'string.pattern.base': 'STI Package ID không hợp lệ',
+  customer_id: objectId.optional().messages({
+    'string.pattern.base': 'Customer ID không hợp lệ'
   }),
+
+  consultant_id: objectId.allow(null).optional().messages({
+    'string.pattern.base': 'Consultant ID không hợp lệ'
+  }),
+
+  staff_id: objectId.allow(null).optional().messages({
+    'string.pattern.base': 'Staff ID không hợp lệ'
+  }),
+
+  sti_package_item: Joi.object({
+    sti_package_id: objectId.required().messages({
+      'string.pattern.base': 'STI Package ID không hợp lệ',
+      'any.required': 'STI Package ID là bắt buộc'
+    }),
+    sti_test_ids: Joi.array().items(objectId).required().messages({
+      'array.base': 'STI Test IDs phải là một mảng',
+      'string.pattern.base': 'STI Test ID không hợp lệ',
+      'any.required': 'STI Test IDs là bắt buộc'
+    })
+  }).optional(),
 
   sti_test_items: Joi.array().items(objectId).optional().messages({
-    'array.base': 'sti_test_items phải là một mảng',
+    'array.base': 'STI Test Items phải là một mảng',
+    'string.pattern.base': 'STI Test ID không hợp lệ'
   }),
 
-  order_date: Joi.date().required().messages({
+  order_date: Joi.date().optional().custom((value, helpers) => {
+    const today = dayjs().startOf('day');
+    const inputDate = dayjs(value).startOf('day');
+
+    if (!inputDate.isAfter(today)) {
+      return helpers.error('date.futureOnly');
+    }
+
+    return value;
+  }).messages({
     'date.base': 'Ngày đặt không hợp lệ',
-    'any.required': 'Ngày đặt là bắt buộc'
+    'any.required': 'Ngày đặt là bắt buộc',
+    'date.futureOnly': 'Ngày đặt phải sau hôm nay'
   }),
 
-  notes: Joi.string().max(500).allow('').optional().messages({
-    'string.max': 'Ghi chú không được vượt quá 500 ký tự'
+  order_status: Joi.string().optional().messages({
+    'any.only': 'Trạng thái đơn hàng không hợp lệ'
   }),
 
-  total_amount: Joi.number().min(0).required().messages({
+  payment_status: Joi.string().optional().messages({
+    'any.only': 'Trạng thái thanh toán không hợp lệ'
+  }),
+
+  total_amount: Joi.number().min(0).optional().messages({
     'number.base': 'Tổng tiền phải là số',
     'number.min': 'Tổng tiền không được âm',
     'any.required': 'Tổng tiền là bắt buộc'
   }),
 
-  order_status: Joi.string().valid(...Object.keys(validTransitionsForUpdate)).optional().messages({
-    'any.only': 'Trạng thái đơn hàng không hợp lệ'
-  }),
-
-  payment_status: Joi.string().valid('Pending', 'Paid', 'Failed').optional().messages({
-    'any.only': 'Trạng thái thanh toán không hợp lệ'
+  notes: Joi.string().max(500).allow('').optional().messages({
+    'string.max': 'Ghi chú không được vượt quá 500 ký tự'
   })
-})
+});
 
 export const validateStiOrderUpdate = (req: Request, res: Response, next: NextFunction) => {
     const { error } = stiOrderUpdateSchema.validate(req.body, { abortEarly: false });

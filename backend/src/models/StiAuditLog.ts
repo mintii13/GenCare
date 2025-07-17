@@ -3,8 +3,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { StiOrder } from '../models/StiOrder';
 import { StiPackage } from '../models/StiPackage';
 import { StiTest } from '../models/StiTest';
+import { StiResult } from './StiResult';
 
-export type TargetType = 'StiOrder' | 'StiPackage' | 'StiTest';
+export type TargetType = 'StiOrder' | 'StiPackage' | 'StiTest' | 'StiResult';
 
 export interface IStiAuditLog extends Document {
     target_type: TargetType;                            
@@ -18,7 +19,7 @@ export interface IStiAuditLog extends Document {
 }
 
 const stiAuditLogSchema = new Schema<IStiAuditLog>({
-    target_type: {type: String, enum: ['StiOrder', 'StiPackage', 'StiTest'], required: true},
+    target_type: {type: String, enum: ['StiOrder', 'StiPackage', 'StiTest', 'StiResult'], required: true},
     target_id: {type: Schema.Types.ObjectId, required: true},
     user_id: { type: Schema.Types.ObjectId, required: true},
     action: { type: String, required: true },
@@ -33,7 +34,8 @@ const stiAuditLogSchema = new Schema<IStiAuditLog>({
 export const StiAuditLog = mongoose.model<IStiAuditLog>('StiAuditLog', stiAuditLogSchema);
 
 export const modelMap: Record<TargetType, mongoose.Model<any>> = {
-  StiOrder: StiOrder,
-  StiPackage: StiPackage,
-  StiTest: StiTest
+    StiOrder: StiOrder,
+    StiPackage: StiPackage,
+    StiTest: StiTest,
+    StiResult: StiResult
 };

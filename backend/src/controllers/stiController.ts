@@ -76,7 +76,7 @@ router.get('/audit-logs',
  */
 router.get('/orders',
     authenticateToken,
-    authorizeRoles('staff', 'admin', 'manager'),
+    authorizeRoles('staff', 'admin'),
     validateStiOrderPagination,
     async (req: Request, res: Response) => {
         try {
@@ -603,7 +603,7 @@ router.get('/getTotalRevenue', async (req: Request, res: Response) => {
 * api tạo mới một sti-result theo sti_order_id sẽ lấy khi nhấn vào 1 order nào đó trên frontend(truyền qua query)
 * (làm theo kiểu bấm tạo result cái nào thì lấy từ đó)
 */
-router.post('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+router.post('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant'), stiAuditLogger('StiResult', 'Create Sti Result'), async (req: Request, res: Response): Promise<void> => {
     try {
         const order_id  = req.query.orderId.toString();
 
@@ -641,7 +641,7 @@ router.post('/sti-result', authenticateToken, authorizeRoles('staff', 'consultan
 });
 
 //api lấy sti-result, nếu có query orderId thì sẽ lấy theo orderId, không thì lấy hết
-router.get('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant', 'customer'), async (req: Request, res: Response): Promise<void> => {
+router.get('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant', 'customer', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
         const order_id  = req.query.orderId?.toString();
         const {userId, role} = req.user as JWTPayload; 
@@ -660,7 +660,7 @@ router.get('/sti-result', authenticateToken, authorizeRoles('staff', 'consultant
     }
 });
 
-router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'consultant', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
         const stiResultId = req.query.result_id.toString();
 
@@ -692,7 +692,7 @@ router.get('/sti-result/notify', authenticateToken, authorizeRoles('staff', 'con
 });
 
 //api lấy từ sti_result_id
-router.get('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant', 'customer'), async (req: Request, res: Response): Promise<void> => {
+router.get('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant', 'customer', 'admin'), async (req: Request, res: Response): Promise<void> => {
     try {
         const result_id  = req.params.id;
         console.log(result_id)
@@ -704,6 +704,35 @@ router.get('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consul
         else res.status(200).json(result);
     } catch (error) {
         console.error('Error fetching STI Result:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+// API đồng bộ sample từ order, truyền order id từ query vào khi nhấn vào result của order tương ứng (1:1)
+router.patch('/sti-result/sync-sample', authenticateToken, authorizeRoles('staff', 'consultant', 'admin'), stiAuditLogger('StiResult', 'Update Sti Result'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const order_id = req.query.orderId.toString();
+        
+        if (!order_id || !mongoose.Types.ObjectId.isValid(order_id)) {
+            res.status(400).json({
+                success: false,
+                message: 'order id is required or invalid'
+            });
+            return;
+        }
+
+        const result = await StiService.syncSampleFromOrder(order_id);
+        
+        if (!result.success) {
+            res.status(400).json(result);
+        } else {
+            res.status(200).json(result);
+        }
+    } catch (error) {
+        console.error('Error syncing sample from order:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -735,15 +764,17 @@ router.get('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consul
         is_active: boolean;         => deactivation result
  */
 
-router.patch('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
+router.patch('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'consultant', 'admin'), stiAuditLogger('StiResult', 'Update Sti Result'), async (req: Request, res: Response): Promise<void> => {
         try {
             const result_id = req.params.id;
             const user_id = (req.user as any).userId;
+            const role = (req.user as any).role;
             const updateData: UpdateStiResultRequest = req.body;
             // Validate at least one field is provided for update
             const allowedFields = [
                 'sample', 'time_result', 'result_value', 'diagnosis', 
-                'is_confirmed', 'is_critical', 'is_notified', 'notes', 'is_active'
+                'is_confirmed', 'is_critical', 'is_notified', 'notes', 'is_active',
+                'consultant_id', 'staff_id'
             ];
             
             const hasValidField = allowedFields.some(field => 
@@ -759,7 +790,7 @@ router.patch('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'cons
             }
 
             // Call service to update
-            const result = await StiService.updateStiResult(result_id, updateData, user_id);
+            const result = await StiService.updateStiResult(result_id, updateData, user_id, role);
 
             if (result.success) {
                 res.status(200).json(result);
@@ -776,35 +807,6 @@ router.patch('/sti-result/:id', authenticateToken, authorizeRoles('staff', 'cons
                 message: 'Internal server error'
             });
         }
-});
-
-// API đồng bộ sample từ order, truyền order id từ query vào khi nhấn vào result của order tương ứng (1:1)
-router.patch('/sti-result/sync-sample', authenticateToken, authorizeRoles('staff', 'consultant'), async (req: Request, res: Response): Promise<void> => {
-    try {
-        const order_id = req.query.orderId.toString();
-        
-        if (!order_id) {
-            res.status(400).json({
-                success: false,
-                message: 'order id is required'
-            });
-            return;
-        }
-
-        const result = await StiService.syncSampleFromOrder(order_id);
-        
-        if (!result.success) {
-            res.status(400).json(result);
-        } else {
-            res.status(200).json(result);
-        }
-    } catch (error) {
-        console.error('Error syncing sample from order:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
 });
 
 /**
@@ -921,7 +923,7 @@ router.get('/my-result/:orderId',
  */
 router.patch('/order/:orderId/status',
     authenticateToken,
-    authorizeRoles('staff', 'consultant', 'admin'),
+    authorizeRoles('staff', 'consultant', 'admin'), stiAuditLogger('StiOrder', 'Update Sti Order Status'),
     async (req: Request, res: Response) => {
         try {
             const orderId  = req.params.orderId;

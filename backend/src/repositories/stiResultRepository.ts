@@ -17,7 +17,23 @@ export class StiResultRepository {
 
     public static async findById(id: string){
         try {
-            return await StiResult.findById(id).populate<{ sti_order_id: IStiOrder }>('sti_order_id').lean();
+            return await StiResult.findById(id).populate<{ sti_order_id: IStiOrder }>('sti_order_id');
+        } catch (error) {
+            throw new Error(`Error finding STI result by ID: ${error}`);
+        }
+    }
+    public static async findByActiveId(id: string) {
+        try {
+            return await StiResult.findOne({ _id: id, is_active: true, is_confirmed: false })
+                .populate<{ sti_order_id: IStiOrder }>('sti_order_id');
+        } catch (error) {
+            throw new Error(`Error finding active STI result by ID: ${error}`);
+        }
+    }
+
+    public static async saveStiOrder(result: any): Promise<IStiOrder> {
+        try {
+            return await result.sti_order_id.save();
         } catch (error) {
             throw new Error(`Error finding STI result by ID: ${error}`);
         }
