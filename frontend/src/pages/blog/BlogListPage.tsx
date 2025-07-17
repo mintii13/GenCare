@@ -34,7 +34,16 @@ const BlogListPage: React.FC = () => {
 
   const isConsultant = user?.role === 'consultant';
 
-  // Debounce search term
+  const handleSearch = () => {
+    setQuery(prev => ({
+      ...prev,
+      page: 1,
+      search: searchTerm.trim() || undefined,
+    }));
+  };
+
+  // Debounce search term - REMOVED
+  /*
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(prev => ({
@@ -49,6 +58,7 @@ const BlogListPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+  */
 
   // Debug query changes
   useEffect(() => {
@@ -62,14 +72,8 @@ const BlogListPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Ensure query has valid sort_order before sending to API
-      const validQuery = {
-        ...query,
-        sort_order: ['asc', 'desc'].includes(query.sort_order || '') ? query.sort_order : 'desc',
-        sort_by: ['publish_date', 'updated_date', 'title'].includes(query.sort_by || '') ? query.sort_by : 'publish_date'
-      };
-      
-      const response = await blogService.getBlogs(validQuery);
+      console.log('--- [FRONTEND] Sending query to backend:', JSON.stringify(query, null, 2));
+      const response = await blogService.getBlogs(query);
       
       if (response.success) {
         setBlogs(response.data.blogs);
@@ -198,26 +202,32 @@ const BlogListPage: React.FC = () => {
           <div className="border-t border-gray-200 pt-6">
             <div className="flex flex-col lg:flex-row gap-4">
               {/* Search Bar */}
-              <div className="flex-1">
-                <div className="relative">
+              <div className="flex-1 flex gap-2">
+                <div className="relative flex-grow">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm bài viết..."
                     value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
+                      }
+                    }}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
                   />
-                  {searchTerm !== (query.search || '') && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <Loader className="w-4 h-4 animate-spin text-blue-600" />
-                    </div>
-                  )}
                 </div>
+                <button
+                  onClick={handleSearch}
+                  className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
+                >
+                  Tìm kiếm
+                </button>
               </div>
 
               {/* Sort and Filter */}
-              <div className="flex gap-3">
+              <div className="flex items-center gap-4">
                 <div className="relative">
                   <select
                     value={`${query.sort_by || 'publish_date'}_${query.sort_order || 'desc'}`}

@@ -513,60 +513,55 @@ export class BlogService {
 
     public static async getBlogsWithPagination(query: BlogQuery) {
         try {
-            // Validate và normalize pagination parameters
+            console.log('--- [BlogService] Received query:', JSON.stringify(query, null, 2));
+
+            // Validate và normalize pagination, đặt giá trị mặc định nếu cần
             const { page, limit, sort_by, sort_order } = PaginationUtils.validatePagination(query);
+            
+            const final_sort_by = sort_by || 'publish_date';
+            const final_sort_order = sort_order || -1;
+
+            console.log(`--- [BlogService] Sorting by: ${final_sort_by}, Order: ${final_sort_order === 1 ? 'asc' : 'desc'}`);
 
             // Build filter query
-            const filters = PaginationUtils.buildBlogFilter(query);
+            const filter = PaginationUtils.buildBlogFilter(query);
 
-            // Sanitize search nếu có
-            if (query.search) {
-                query.search = PaginationUtils.sanitizeSearch(query.search);
-            }
-
-            // Get data từ repository
+            // Fetch data và total count từ repository
             const result = await BlogRepository.findWithPagination(
-                filters,
+                filter,
                 page,
                 limit,
-                sort_by,
-                sort_order
+                final_sort_by,
+                final_sort_order
             );
 
             // Calculate pagination info
-            const pagination = PaginationUtils.calculatePagination(
-                result.total,
-                page,
-                limit
-            );
-
-            // Build filters_applied object để track các filter đã dùng
-            const filters_applied: any = {};
-            if (query.search) filters_applied.search = query.search;
-            if (query.author_id) filters_applied.author_id = query.author_id;
-            if (query.status !== undefined) filters_applied.status = query.status;
-            if (query.date_from) filters_applied.date_from = query.date_from;
-            if (query.date_to) filters_applied.date_to = query.date_to;
-            if (query.sort_by) filters_applied.sort_by = query.sort_by;
-            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+            const pagination = PaginationUtils.calculatePagination(result.total, page, limit);
 
             return {
                 success: true,
-                message: result.blogs.length > 0
-                    ? 'Blogs retrieved successfully'
-                    : 'No blogs found matching the criteria',
+                message: 'Blogs retrieved successfully.',
                 data: {
                     blogs: result.blogs,
-                    pagination,
-                    filters_applied
+                    pagination: pagination,
+                    filters_applied: {
+                        search: query.search,
+                        author_id: query.author_id,
+                        status: query.status,
+                        date_from: query.date_from,
+                        date_to: query.date_to,
+                        sort_by: final_sort_by,
+                        sort_order: final_sort_order === 1 ? 'asc' : 'desc'
+                    }
                 },
                 timestamp: new Date().toISOString()
             };
         } catch (error) {
-            console.error('Blog service pagination error:', error);
+            console.error('getBlogsWithPagination service error:', error);
             return {
                 success: false,
-                message: 'Internal server error when getting blogs'
+                message: 'An error occurred while retrieving blogs.',
+                error: error.message
             };
         }
     }

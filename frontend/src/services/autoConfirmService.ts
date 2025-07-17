@@ -37,7 +37,7 @@ export class AutoConfirmService {
   private static async checkAndAutoConfirm(): Promise<void> {
     try {
       // Lấy danh sách appointments pending
-      const response = await appointmentService.getMyAppointments('pending');
+      const response = await appointmentService.getMyAppointments({ status: 'pending' });
       
       if (!response.success || !response.data?.appointments) {
         return;

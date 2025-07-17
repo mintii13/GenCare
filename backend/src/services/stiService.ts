@@ -416,6 +416,7 @@ export class StiService {
                 };
             }
             const schedule = scheduleResult.schedule;
+            
             const sti_order = new StiOrder({
                 customer_id,
                 // sti_package_item,
@@ -425,6 +426,7 @@ export class StiService {
                 // total_amount,
                 notes
             });
+            
             const result = await StiOrderRepository.insertStiOrder(sti_order);
 
             if (!result) {
@@ -433,6 +435,7 @@ export class StiService {
                     message: 'Order already exists or failed to insert'
                 };
             }
+            
             schedule.number_current_orders += 1;
             if (schedule.number_current_orders >= 10) {
                 schedule.is_locked = true;
@@ -1174,18 +1177,25 @@ export class StiService {
                     message: 'Fail to fetch sti result by order'
                 }
             }
-            if (role === 'Customer' && result.sti_order_id.customer_id.toString() !== userId) {
+            
+            // Authorization check
+            if (role === 'customer' && result.sti_order_id.customer_id.toString() !== userId) {
                 return {
                     success: false,
-                    message: 'Access denied'
+                    message: 'Không có quyền truy cập'
                 };
             }
+            
+            // Staff, consultant, and admin can access all results
+            // Customer can only access their own results (checked above)
+            
             return{
                 success: true,
                 message: 'Fetched sti result by order successfully',
                 data: result
             }
         } catch (error) {
+            console.error('Error in getStiResultByOrderId:', error);
             return{
                 success: false,
                 message: 'Server error'
@@ -1424,7 +1434,7 @@ export class StiService {
                     message: 'Cannot find the sti result'
                 }
             }
-            const currentQualities = result.sample.sampleQualities || {};
+            const currentQualities = result.sample?.sampleQualities || {};
             const newSampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
 
             // Maintain the old type and quality in sampleQualities

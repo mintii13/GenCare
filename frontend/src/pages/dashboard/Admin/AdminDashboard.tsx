@@ -12,12 +12,9 @@ import {
   FaPlus,
   FaEye,
   FaUserMd,
-    FaClipboardList,
   FaBell,
   FaArrowUp,
   FaArrowDown,
-  FaSearch,
-  FaFilter,
   FaDownload,
   FaSync
 } from 'react-icons/fa';
@@ -64,7 +61,7 @@ const AdminDashboard: React.FC = () => {
         userGrowth: 8.5,
         revenueGrowth: 12.3
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Không thể tải dữ liệu thống kê.');
     } finally {
       setIsLoading(false);

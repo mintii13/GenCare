@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { message } from 'antd';
+import { ApiResponse } from '@/services/apiClient';
 
 // Define the structure for pagination information
 export interface PaginationInfo {
@@ -11,30 +12,38 @@ export interface PaginationInfo {
   has_prev?: boolean;
 }
 
-// Define the structure for the API response
-interface PaginatedResponse<T> {
+// The structure of the 'data' property within a successful paginated response from the backend
+interface PaginatedData<T> {
+  items: T[];
+  pagination: PaginationInfo;
+}
+
+// The overall structure of a paginated response from the backend
+interface BackendPaginatedResponse<T> {
   success: boolean;
-  data: {
-    items: T[];
-    pagination: PaginationInfo;
-  };
+  data: PaginatedData<T>;
   message?: string;
 }
 
-// Define the service function that fetches data
-type ApiService<T> = (params: URLSearchParams) => Promise<PaginatedResponse<T>>;
+
+// Define the service function that fetches data, now using the standard ApiResponse
+type ApiService<T> = (
+  params: URLSearchParams
+) => Promise<ApiResponse<BackendPaginatedResponse<T>>>;
 
 // Define the parameters for the hook
 interface UsePaginatedResourceParams<T> {
   apiService: ApiService<T>;
   initialFilters?: Record<string, any>;
   debounceTime?: number;
+  searchParamName?: string; // Tên của search parameter
 }
 
 const usePaginatedResource = <T>({
   apiService,
   initialFilters = {},
   debounceTime = 500,
+  searchParamName = 'search', // Mặc định là 'search'
 }: UsePaginatedResourceParams<T>) => {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,17 +80,19 @@ const usePaginatedResource = <T>({
       }
       // Add debounced search term if it exists
       if (debouncedSearchTerm) {
-        params.append('search', debouncedSearchTerm);
+        params.append(searchParamName, debouncedSearchTerm);
       }
 
       const response = await apiService(params);
-      if (response.success && response.data) {
-        setData(response.data.items || []);
-        if (response.data.pagination) {
-          setPagination(response.data.pagination);
+      
+      // Handle the wrapped response structure from `safeGet`
+      if (response.success && response.data && response.data.data) {
+        setData(response.data.data.items || []);
+        if (response.data.data.pagination) {
+          setPagination(response.data.data.pagination);
         } else {
           // Fallback if pagination is missing in a successful response
-          setPagination({ current_page: 1, total_pages: 1, total_items: response.data.items?.length || 0, items_per_page: 10 });
+          setPagination({ current_page: 1, total_pages: 1, total_items: response.data.data.items?.length || 0, items_per_page: 10 });
         }
       } else {
         throw new Error(response.message || 'Failed to fetch data');
@@ -94,7 +105,7 @@ const usePaginatedResource = <T>({
     } finally {
       setLoading(false);
     }
-  }, [apiService, filters, debouncedSearchTerm]);
+  }, [apiService, filters, debouncedSearchTerm, searchParamName]);
 
   // Re-fetch data whenever filters or the debounced search term change
   useEffect(() => {

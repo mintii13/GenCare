@@ -102,8 +102,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
       setMessages(prev => [...prev, botMessage]);
       
     } catch (error) {
-      
-      
+      console.error(error);
+
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

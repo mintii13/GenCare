@@ -40,7 +40,7 @@ export class AppointmentService {
                 const pendingAppointment = existingPending[0];
                 const appointmentDate = new Date(pendingAppointment.appointment_date).toLocaleDateString('vi-VN');
                 const timeSlot = `${pendingAppointment.start_time} - ${pendingAppointment.end_time}`;
-
+                
                 return {
                     success: false,
                     message: `Bạn đã có một lịch hẹn đang chờ xác nhận vào ngày ${appointmentDate} (${timeSlot}). Vui lòng chờ xác nhận từ bác sĩ hoặc hủy lịch hẹn hiện tại trước khi đặt lịch mới.`,

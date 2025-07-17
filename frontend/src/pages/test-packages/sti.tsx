@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Tag, Typography, Button, Steps, Modal, Space, Spin, Empty } from 'antd';
+import { Card, Row, Col, Tag, Typography, Button, Tabs, Modal, Space, Spin, Empty } from 'antd';
+import type { TabsProps } from 'antd';
 import { AppstoreOutlined, ExperimentOutlined, ArrowRightOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
@@ -7,13 +8,17 @@ import { message } from 'antd';
 import { StiTest, StiPackage } from '../../types/sti';
 
 const { Title, Text } = Typography;
-const { Step } = Steps;
+
+interface ApiResponse<T> {
+  success: boolean;
+  stipackage?: T[];
+  stitest?: T[];
+}
 
 const STITestPage = () => {
   const [tests, setTests] = useState<StiTest[]>([]);
   const [packages, setPackages] = useState<StiPackage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const navigate = useNavigate();
 
@@ -22,7 +27,7 @@ const STITestPage = () => {
       setLoading(true);
       try {
         // Fetch packages
-        const packagesResponse = await apiClient.get<any>('/sti/getAllStiPackage');
+        const packagesResponse = await apiClient.get<ApiResponse<StiPackage>>('/sti/getAllStiPackage');
         if (packagesResponse.data.success && Array.isArray(packagesResponse.data.stipackage)) {
           setPackages(packagesResponse.data.stipackage);
         } else {
@@ -30,7 +35,7 @@ const STITestPage = () => {
         }
 
         // Fetch tests
-        const testsResponse = await apiClient.get<any>('/sti/getAllStiTest');
+        const testsResponse = await apiClient.get<ApiResponse<StiTest>>('/sti/getAllStiTest');
         if (testsResponse.data.success && Array.isArray(testsResponse.data.stitest)) {
           setTests(testsResponse.data.stitest);
         } else {
@@ -47,22 +52,6 @@ const STITestPage = () => {
     };
     fetchData();
   }, []);
-
-  const handleNext = () => {
-    if (currentStep === 0) {
-      // Từ step xem gói -> step xem test đơn lẻ
-      setCurrentStep(1);
-    } else if (currentStep === 1) {
-      // Từ step xem test -> hiện modal hỏi assessment
-      setShowAssessmentModal(true);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
 
   const handleAssessmentChoice = (doAssessment: boolean) => {
     setShowAssessmentModal(false);
@@ -168,10 +157,16 @@ const STITestPage = () => {
     </Col>
   );
 
-  const steps = [
+  const tabItems: TabsProps['items'] = [
     {
-      title: 'Xem gói xét nghiệm',
-      content: (
+      key: 'packages',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 500, padding: '8px 0' }}>
+          <AppstoreOutlined style={{ fontSize: '18px' }} />
+          Gói xét nghiệm
+        </span>
+      ),
+      children: (
         <div>
           <div style={{ marginBottom: '24px', textAlign: 'center' }}>
             <Title level={3}>Các gói xét nghiệm STI</Title>
@@ -194,8 +189,14 @@ const STITestPage = () => {
       )
     },
     {
-      title: 'Xem xét nghiệm đơn lẻ',
-      content: (
+      key: 'single_tests',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 500, padding: '8px 0' }}>
+          <ExperimentOutlined style={{ fontSize: '18px' }} />
+          Xét nghiệm đơn lẻ
+        </span>
+      ),
+      children: (
         <div>
           <div style={{ marginBottom: '24px', textAlign: 'center' }}>
             <Title level={3}>Các xét nghiệm đơn lẻ</Title>
@@ -225,37 +226,26 @@ const STITestPage = () => {
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={1}>Dịch vụ Xét nghiệm STI</Title>
         <Text style={{ fontSize: '16px', color: '#666' }}>
-          Tham khảo thông tin các gói xét nghiệm và xét nghiệm đơn lẻ
+          Tham khảo thông tin các gói xét nghiệm và xét nghiệm đơn lẻ để lựa chọn dịch vụ phù hợp.
         </Text>
       </div>
 
-      {/* Steps */}
+      {/* Tabs */}
       <div style={{ marginBottom: '32px' }}>
-        <Steps current={currentStep} style={{ maxWidth: '600px', margin: '0 auto' }}>
-          {steps.map((step, index) => (
-            <Step key={index} title={step.title} />
-          ))}
-        </Steps>
-      </div>
-
-      {/* Content */}
-      <div style={{ marginBottom: '32px' }}>
-        {steps[currentStep].content}
+        <Tabs defaultActiveKey="packages" items={tabItems} centered />
       </div>
 
       {/* Navigation */}
       <div style={{ textAlign: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '24px' }}>
-        <Space size="middle">
-          {currentStep > 0 && (
-            <Button onClick={handlePrevious}>
-              Quay lại
-            </Button>
-          )}
-          
-          <Button type="primary" onClick={handleNext}>
-            {currentStep === 1 ? 'Đặt lịch xét nghiệm' : 'Tiếp theo'} <ArrowRightOutlined />
-          </Button>
-        </Space>
+        <Button 
+          type="primary" 
+          size="large" 
+          onClick={() => setShowAssessmentModal(true)}
+          style={{ height: '48px', padding: '0 32px', fontSize: '16px' }}
+        >
+          Đặt lịch xét nghiệm ngay
+          <ArrowRightOutlined />
+        </Button>
       </div>
 
       {/* Assessment Modal */}

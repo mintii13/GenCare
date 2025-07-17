@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Calendar, Search, Filter, AlertCircle, Clock, Edit, Trash2 } from 'lucide-react';
 import { FeedbackService } from '../../services/feedbackService';
 import { toast } from 'react-hot-toast';
+import { ResourceTable } from '../../components/common/ResourceTable';
 
 interface CustomerFeedback {
   appointment_id: string;
@@ -176,6 +177,73 @@ const CustomerFeedbackPage: React.FC = () => {
 
   const ratingDistribution = getRatingDistribution();
 
+  // Định nghĩa columns cho bảng feedback
+  const columns = [
+    {
+      title: 'Chuyên gia',
+      dataIndex: 'consultant_name',
+      key: 'consultant_name',
+    },
+    {
+      title: 'Ngày hẹn',
+      dataIndex: 'appointment_date',
+      key: 'appointment_date',
+      render: (date: string) => new Date(date).toLocaleDateString(),
+    },
+    {
+      title: 'Thời gian',
+      key: 'time',
+      render: (_: any, record: CustomerFeedback) => `${record.start_time} - ${record.end_time}`,
+    },
+    {
+      title: 'Ngày đánh giá',
+      key: 'feedback_date',
+      render: (_: any, record: CustomerFeedback) => new Date(record.feedback.feedback_date).toLocaleDateString(),
+    },
+    {
+      title: 'Số sao',
+      key: 'rating',
+      render: (_: any, record: CustomerFeedback) => `${record.feedback.rating} ⭐`,
+    },
+    {
+      title: 'Nhận xét',
+      key: 'comment',
+      render: (_: any, record: CustomerFeedback) => record.feedback.comment || '-',
+    },
+    {
+      title: 'Hành động',
+      key: 'actions',
+      render: (_: any, record: CustomerFeedback) => (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEditingFeedback({
+              appointmentId: record.appointment_id,
+              current: {
+                rating: record.feedback.rating,
+                comment: record.feedback.comment || ''
+              },
+              info: {
+                consultant_name: record.consultant_name,
+                appointment_date: record.appointment_date,
+                start_time: record.start_time,
+                end_time: record.end_time
+              }
+            })}
+            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Sửa
+          </button>
+          <button
+            onClick={() => handleDeleteFeedback(record.appointment_id)}
+            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Xóa
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -189,90 +257,7 @@ const CustomerFeedbackPage: React.FC = () => {
       </div>
 
       {/* Stats Summary */}
-      {filteredFeedbacks.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center">
-              <MessageSquare className="w-8 h-8 text-blue-600 mr-3" />
-              <div>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {filteredFeedbacks.length}
-                </p>
-                <p className="text-gray-600">Tổng đánh giá</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center">
-              <Star className="w-8 h-8 text-yellow-500 mr-3" />
-              <div>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {getAverageRating()}
-                </p>
-                <p className="text-gray-600">Điểm trung bình</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="space-y-2">
-              {Object.entries(ratingDistribution).reverse().map(([rating, count]) => (
-                <div key={rating} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center">
-                    <span className="w-3">{rating}</span>
-                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400 ml-1" />
-                  </div>
-                  <span className="text-gray-600">{count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm theo tên bác sĩ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Rating Filter */}
-          <select
-            value={ratingFilter || ''}
-            onChange={(e) => setRatingFilter(e.target.value ? Number(e.target.value) : null)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Tất cả đánh giá</option>
-            <option value="5">5 sao</option>
-            <option value="4">4 sao</option>
-            <option value="3">3 sao</option>
-            <option value="2">2 sao</option>
-            <option value="1">1 sao</option>
-          </select>
-
-          {/* Date Filter */}
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Tất cả thời gian</option>
-            <option value="week">7 ngày qua</option>
-            <option value="month">30 ngày qua</option>
-            <option value="year">1 năm qua</option>
-          </select>
-        </div>
-      </div>
+   
 
       {/* Error State */}
       {error && (
@@ -285,75 +270,44 @@ const CustomerFeedbackPage: React.FC = () => {
       )}
 
       {/* Feedback List */}
-      {filteredFeedbacks.length === 0 ? (
-        <div className="text-center py-12">
-          <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {feedbacks.length === 0 ? 'Chưa có đánh giá nào' : 'Không tìm thấy đánh giá'}
-          </h3>
-          <p className="text-gray-600">
-            {feedbacks.length === 0 
-              ? 'Hãy đặt lịch tư vấn và đánh giá sau khi hoàn thành'
-              : 'Thử thay đổi bộ lọc để xem kết quả khác'
-            }
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {filteredFeedbacks.map((item) => (
-            <div key={item.appointment_id} className="bg-white rounded-lg p-6 border border-gray-200">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">
-                    {item.consultant_name}
-                  </h3>
-                  <p className="text-gray-600">
-                    {new Date(item.appointment_date).toLocaleDateString()}
-                    {item.start_time && item.end_time && ` (${item.start_time} - ${item.end_time})`}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-600 text-sm">
-                    {new Date(item.feedback.feedback_date).toLocaleDateString()}
-                  </span>
-                  <div className="flex items-center text-yellow-500">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${item.feedback.rating > i ? 'fill-yellow-500' : ''}`} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <p className="text-gray-800 mb-4">{item.feedback.comment || 'Không có nhận xét'}</p>
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setEditingFeedback({
-                    appointmentId: item.appointment_id,
-                    current: {
-                      rating: item.feedback.rating as any,
-                      comment: item.feedback.comment || ''
-                    },
-                    info: {
-                      consultant_name: item.consultant_name,
-                      appointment_date: item.appointment_date,
-                      start_time: item.start_time,
-                      end_time: item.end_time
-                    }
-                  })}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Edit className="w-4 h-4 mr-1" /> Chỉnh sửa
-                </button>
-                <button
-                  onClick={() => handleDeleteFeedback(item.appointment_id)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" /> Xóa
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ResourceTable
+        data={filteredFeedbacks}
+        columns={columns}
+        loading={loading}
+        filters={
+          <div className="flex flex-row items-center gap-4 justify-center mb-6">
+            <input
+              type="text"
+              placeholder="Tìm theo tên bác sĩ..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+              value={ratingFilter || ''}
+              onChange={(e) => setRatingFilter(e.target.value ? Number(e.target.value) : null)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Tất cả đánh giá</option>
+              <option value="5">5 sao</option>
+              <option value="4">4 sao</option>
+              <option value="3">3 sao</option>
+              <option value="2">2 sao</option>
+              <option value="1">1 sao</option>
+            </select>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as any)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Tất cả thời gian</option>
+              <option value="week">7 ngày qua</option>
+              <option value="month">30 ngày qua</option>
+              <option value="year">1 năm qua</option>
+            </select>
+          </div>
+        }
+      />
 
       {/* Edit Modal */}
       {editingFeedback && (
@@ -412,7 +366,9 @@ const CustomerFeedbackPage: React.FC = () => {
                      ></textarea>
                   </div>
                 </div>
-              </div>
+              </div>  
+              {/* Actions */}
+              
               <div className="flex items-center p-6 space-x-2 rounded-b dark:border-gray-600">
                 <button
                   onClick={() => setEditingFeedback(null)}

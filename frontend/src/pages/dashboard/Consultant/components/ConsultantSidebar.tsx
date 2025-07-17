@@ -5,11 +5,6 @@ import {
   FaCalendarAlt, 
   FaEdit, 
   FaChartBar, 
-  FaClock, 
-  FaClipboard,
-  FaCog,
-  FaUser,
-  FaFile,
   FaFlask
 } from 'react-icons/fa';
 
@@ -20,12 +15,6 @@ interface ConsultantSidebarProps {
 const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
   const location = useLocation();
   const { user } = useAuth();
-  const [expandedSections, setExpandedSections] = useState<{ [key: number]: boolean }>({
-    0: true, // Mặc định mở section đầu tiên
-    1: true,
-    2: false,
-    3: false,
-  });
 
   const menuItems = [
     // Main features
@@ -51,13 +40,6 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
     { name: 'Thống kê tư vấn', path: '/consultant/consultation-stats', icon: FaChartBar },
     // { name: 'Báo cáo hiệu suất', path: '/consultant/performance', icon: FaChartBar }
   ];
-
-  const toggleSection = (index: number) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
 
   return (
     <aside
