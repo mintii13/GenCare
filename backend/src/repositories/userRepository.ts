@@ -251,4 +251,48 @@ export class UserRepository {
             throw error;
         }
     }
+
+    public static async getAllUsersByRole(role: string): Promise<any[]> {
+        try {
+            const pipeline: any[] = [
+            { $match: { role } },
+            { $project: { password: 0 } }
+            ];
+
+            if (role === 'customer') {
+            pipeline.push({
+                $lookup: {
+                from: 'customers',
+                localField: '_id',
+                foreignField: 'user_id',
+                as: 'customer_info'
+                }
+            });
+            } else if (role === 'staff') {
+            pipeline.push({
+                $lookup: {
+                from: 'staffs',
+                localField: '_id',
+                foreignField: 'user_id',
+                as: 'staff_info'
+                }
+            });
+            } else if (role === 'consultant') {
+            pipeline.push({
+                $lookup: {
+                from: 'consultants',
+                localField: '_id',
+                foreignField: 'user_id',
+                as: 'consultant_info'
+                }
+            });
+            }
+
+            return await User.aggregate(pipeline);
+        } catch (error) {
+            console.error('Error getting users by role:', error);
+            throw error;
+        }
+    }
+   
 }

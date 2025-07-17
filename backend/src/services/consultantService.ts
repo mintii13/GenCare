@@ -1,4 +1,4 @@
-import { Consultant } from '../models/Consultant';
+import { Consultant, SpecializationType } from '../models/Consultant';
 
 interface IServiceResponse {
     success: boolean;
@@ -10,6 +10,7 @@ interface IServiceResponse {
 // services/consultantService.ts (Additional methods)
 
 import { AppointmentRepository } from '../repositories/appointmentRepository';
+import { ConsultantRepository } from '../repositories/consultantRepository';
 
 export class ConsultantService {
     /**
@@ -308,6 +309,38 @@ export class ConsultantService {
             };
         } catch (error: any) {
             console.error('Error getting consultants with ratings:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+
+    public static async getConsultantsBySpecialization(specialization: SpecializationType) {
+        try {
+            // Validate specialization
+            if (!Object.values(SpecializationType).includes(specialization)) {
+                return {
+                    success: false,
+                    message: 'Invalid specialization'
+                };
+            }
+
+            // Get consultants by specialization
+            const consultants = await ConsultantRepository.getBySpecialization(specialization);
+            if (!consultants || consultants.length === 0) {
+                return {
+                    success: false,
+                    message: 'No consultants found for this specialization'
+                };
+            }
+            return {
+                success: true,
+                message: 'Consultants retrieved successfully',
+                data: consultants
+            };
+        } catch (error: any) {
+            console.error(`[DEBUG] ConsultantService: Error occurred while getting consultants by specialization ${specialization}:`, error);
             return {
                 success: false,
                 message: error.message
