@@ -72,6 +72,14 @@ export class AppointmentService {
                 };
             }
 
+            // BUSINESS RULE: Validate notes length (TC-F1)
+            if (appointmentData.customer_notes && appointmentData.customer_notes.length > 2000) {
+                return {
+                    success: false,
+                    message: 'Ghi chú của khách hàng không được vượt quá 2000 ký tự.'
+                };
+            }
+
             // BUSINESS RULE 3: Check for time conflicts
             const hasConflict = await AppointmentRepository.checkTimeConflict(
                 appointmentData.consultant_id,

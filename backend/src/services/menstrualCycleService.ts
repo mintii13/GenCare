@@ -6,11 +6,37 @@ import { CycleStatsResponse, PeriodStatsResponse, RegularityStatus, TrendStatus 
 
 export class MenstrualCycleService {
     public static async processPeriodDays(user_id: string, period_days: Date[], notes: string){
-        if (!period_days || period_days.length === 0) return [];
+        // Defect D2: Empty period_days
+        if (!period_days || period_days.length === 0) {
+            return {
+                success: false,
+                message: 'Period days are required.'
+            };
+        }
         if (!user_id){
             return{
                 success: false,
                 message: 'User ID is required'
+            }
+        }
+
+        // Defect D3: Notes length
+        if (notes && notes.length > 500) {
+            return {
+                success: false,
+                message: 'Notes cannot exceed 500 characters'
+            };
+        }
+
+        // Defect D1: Future date check
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Set to end of today
+        for (const day of period_days) {
+            if (new Date(day) > today) {
+                return {
+                    success: false,
+                    message: 'Cannot log period days in the future.'
+                };
             }
         }
 
@@ -244,13 +270,33 @@ export class MenstrualCycleService {
 
     public static async updateNotificationSettings(user_id: string, settings: any) { 
         try { 
-            if (!settings){
+            if (!settings || Object.keys(settings).length === 0){
                 return{
                     success: false,
                     message: 'Nothing to update'
                 }
             }
-            const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, settings);
+
+            // Defect D6: Whitelist allowed fields to prevent malicious updates
+            const allowedFields = ['notification_enabled', 'notification_types'];
+            const validSettings: any = {};
+
+            for (const key of allowedFields) {
+                if (settings.hasOwnProperty(key)) {
+                    // Thêm validation chi tiết hơn nếu cần
+                    // Ví dụ: kiểm tra notification_types là một mảng các giá trị hợp lệ
+                    validSettings[key] = settings[key];
+                }
+            }
+
+            if (Object.keys(validSettings).length === 0) {
+                return {
+                    success: false,
+                    message: 'No valid fields to update.'
+                };
+            }
+
+            const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, validSettings);
             if (!result) { 
                 return { 
                     success: false, 
