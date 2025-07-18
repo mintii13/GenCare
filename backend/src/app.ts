@@ -26,6 +26,8 @@ import appointmentHistoryController from './controllers/appointmentHistoryContro
 import stiAssessmentRoutes from './controllers/stiAssessmentController';
 import userController from './controllers/userController';
 import homeController from './controllers/homeController';
+import vnPaymentController from './controllers/vnPaymentController';
+import { validateVNPayConfig } from './configs/vnpay';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,6 +80,19 @@ app.use('/api/menstrual-cycle', menstrualCycleController);
 app.use('/api/pill-tracking', pillTrackingController);
 app.use('/api/sti-assessment', stiAssessmentRoutes);
 app.use('/api/home', homeController);
+app.use('/api/vnpayment', vnPaymentController);
+// Middleware để handle VNPay errors globally
+app.use((error: any, req: any, res: any, next: any) => {
+  if (req.path.includes('/vnpayment/')) {
+    console.error('VNPay Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống thanh toán',
+      error_code: 'VNPAY_SYSTEM_ERROR'
+    });
+  }
+  next(error);
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -97,7 +112,7 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-      console.log(' Starting GenCare Backend Server...');
+    console.log(' Starting GenCare Backend Server...');
 
     // 1. Connect to RedisClient
     console.log(' Connecting to Redis...');
@@ -139,6 +154,13 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+try {
+  validateVNPayConfig();
+} catch (error) {
+  console.error('❌ VNPay configuration error:', error.message);
+  process.exit(1);
+}
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

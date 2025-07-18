@@ -189,7 +189,73 @@ export class StiOrderRepository {
 
     public static async getOrderWithTests(orderId: string): Promise<IStiOrder | null> {
         return await StiOrder.findById(orderId)
-        .populate('sti_package_item.sti_test_ids')
-        .populate('sti_test_items');
+            .populate('sti_package_item.sti_test_ids')
+            .populate('sti_test_items');
+    }
+    /**
+     * Cập nhật trạng thái thanh toán của đơn hàng
+     */
+    public static async updatePaymentStatus(orderId: string, paymentStatus: 'Pending' | 'Paid' | 'Failed'): Promise<any> {
+        try {
+            const updatedOrder = await StiOrder.findByIdAndUpdate(
+                orderId,
+                {
+                    payment_status: paymentStatus,
+                    updated_at: new Date()
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+
+            if (!updatedOrder) {
+                throw new Error('Order not found');
+            }
+
+            console.log(`Order ${orderId} payment status updated to: ${paymentStatus}`);
+            return updatedOrder;
+        } catch (error) {
+            console.error('Error updating payment status:', error);
+            throw new Error('Failed to update payment status');
+        }
+    }
+
+    /**
+     * Tìm orders theo payment status
+     */
+    public static async findByPaymentStatus(
+        paymentStatus: 'Pending' | 'Paid' | 'Failed',
+        page: number = 1,
+        limit: number = 10
+    ): Promise<{
+        orders: any[];
+        total: number;
+        totalPages: number;
+    }> {
+        try {
+            const skip = (page - 1) * limit;
+
+            const [orders, total] = await Promise.all([
+                StiOrder.find({ payment_status: paymentStatus })
+                    .populate('customer_id', 'full_name email phone')
+                    .populate('sti_package_id', 'package_name price')
+                    .populate('sti_test_items', 'test_name price')
+                    .sort({ created_at: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .exec(),
+                StiOrder.countDocuments({ payment_status: paymentStatus })
+            ]);
+
+            return {
+                orders,
+                total,
+                totalPages: Math.ceil(total / limit)
+            };
+        } catch (error) {
+            console.error('Error finding orders by payment status:', error);
+            throw new Error('Failed to fetch orders by payment status');
+        }
     }
 }
