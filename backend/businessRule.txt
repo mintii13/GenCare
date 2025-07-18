@@ -84,6 +84,7 @@ Pregnancy Chance Estimation: Phân 3 cấp độ
 - 'low': normal date
 
 Personal STI test Screening: 
+- Các mẫu cần lấy khi test: https://www.vinmec.com/vie/bai-viet/9-xet-nghiem-benh-lay-qua-duong-tinh-duc-stds-vi
 - Các gói test: https://www.glinkvn.com/cac-goi-xet-nghiem-nhiem-trung-qua-duong-tinh-duc-stis-tai-glink/?gidzl=EpNbVr9c2rOr8kL-Nda3L3OZwtf6VW1LAoVfA4Dy1b4g8BfyGdzS02aXvobFBGvGT2BZTc9UQjyVLsaDKG
 - Triệu chứng: https://www.cdc.gov/std/treatment-guidelines/screening-recommendations.htm
 

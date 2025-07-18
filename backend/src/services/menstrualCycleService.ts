@@ -138,13 +138,33 @@ export class MenstrualCycleService {
 
     public static async updateNotificationSettings(user_id: string, settings: any) { 
         try { 
-            if (!settings){
+            if (!settings || Object.keys(settings).length === 0){
                 return{
                     success: false,
                     message: 'Nothing to update'
                 }
             }
-            const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, settings);
+
+            // Defect D6: Whitelist allowed fields to prevent malicious updates
+            const allowedFields = ['notification_enabled', 'notification_types'];
+            const validSettings: any = {};
+
+            for (const key of allowedFields) {
+                if (settings.hasOwnProperty(key)) {
+                    // Thêm validation chi tiết hơn nếu cần
+                    // Ví dụ: kiểm tra notification_types là một mảng các giá trị hợp lệ
+                    validSettings[key] = settings[key];
+                }
+            }
+
+            if (Object.keys(validSettings).length === 0) {
+                return {
+                    success: false,
+                    message: 'No valid fields to update.'
+                };
+            }
+
+            const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, validSettings);
             if (!result) { 
                 return { 
                     success: false, 
