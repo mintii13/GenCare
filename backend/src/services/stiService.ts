@@ -646,7 +646,7 @@ export class StiService {
                     message: 'Order not found'
                 };
             }
-            if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.payment_status !== 'Paid' && updates.order_status !== null) {
+            if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.is_paid === false && updates.order_status !== null) {
                 return {
                     success: false,
                     message: 'Cannot update order that is already completed or canceled'
@@ -656,7 +656,7 @@ export class StiService {
             if (role === 'staff' || role === 'admin' || role === 'consultant') {
                 if (updates.order_status === 'Completed') {
                     if (
-                        !order.payment_status || order.payment_status !== 'Paid' ||
+                        order.is_paid === false ||
                         !order.order_date ||
                         !order.consultant_id ||
                         !order.staff_id ||
@@ -668,7 +668,7 @@ export class StiService {
                     ) {
                         return {
                             success: false,
-                            message: 'Cannot complete order: missing required fields (payment_status must be Paid, order_date, consultant, staff, STI package and test items)'
+                            message: 'Cannot complete order: missing required fields or conditions not met'
                         };
                     }
                 }
@@ -705,10 +705,8 @@ export class StiService {
                         };
                     }
                 } else if (role === 'staff' || role === 'admin' || role === 'consultant') {
-                    order.order_status = nextStatus;
-                    if (order.order_status === 'Processing') {
-                        order.payment_status = 'Paid';
-                    }
+                    if (nextStatus !== 'Processing')
+                        order.order_status = nextStatus;
                 } else {
                     return {
                         success: false,
@@ -795,16 +793,16 @@ export class StiService {
                 };
             }
 
-            if (updates.payment_status) {
+            if (updates.is_paid === true) {
                 if (['staff', 'admin'].includes(role)) {
-                    order.payment_status = updates.payment_status;
-                    if (updates.payment_status === 'Paid' && ['Booked', 'Accepted'].includes(order.order_status)) {
+                    order.is_paid = updates.is_paid;
+                    if (['Booked', 'Accepted'].includes(order.order_status)) {
                         order.order_status = 'Processing';
                     }
                 } else {
                     return {
                         success: false,
-                        message: 'Unauthorized to update payment_status'
+                        message: 'Unauthorized to update is_paid status'
                     };
                 }
             }
@@ -853,7 +851,7 @@ export class StiService {
                     key !== 'consultant_id' && 
                     key !== 'staff_id' && 
                     key !== 'order_date' &&
-                    key !== 'payment_status' &&
+                    key !== 'is_paid' &&
                     validFields.includes(key)
                 ){
                     (order as any)[key] = value;
@@ -981,7 +979,7 @@ export class StiService {
             const filters_applied: Record<string, any> = {};
             if (query.customer_id) filters_applied.customer_id = query.customer_id;
             if (query.order_status) filters_applied.order_status = query.order_status;
-            if (query.payment_status) filters_applied.payment_status = query.payment_status;
+            if (query.is_paid) filters_applied.is_paid = query.is_paid;
             if (query.date_from) filters_applied.date_from = query.date_from;
             if (query.date_to) filters_applied.date_to = query.date_to;
             if (query.min_amount) filters_applied.min_amount = query.min_amount;
@@ -1312,7 +1310,7 @@ export class StiService {
                 updateData.time_result = new Date();
             }
 
-            const allowedSampleQualities = ['máu', 'nước tiểu', 'dịch âm đạo', 'dịch niệu đạo', 'dịch cổ tử cung'];
+            const allowedSampleQualities = ['blood', 'urine', 'swab'];
 
             if (updateData.sample?.sampleQualities) {
                 const newQualities = updateData.sample.sampleQualities;

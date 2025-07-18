@@ -15,7 +15,7 @@ export interface IStiOrder extends Document {
     order_date: Date;
     order_status: OrderStatus;
     total_amount: number;
-    payment_status: 'Pending' | 'Paid' | 'Failed';
+    is_paid: boolean;
     notes?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -51,7 +51,7 @@ const stiOrderSchema: Schema = new Schema<IStiOrder>({
     order_date: { type: Date, required: true },
     order_status: {type: String, enum: ['Booked', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'], default: 'Booked', required: true},
     total_amount: { type: Number, min: 0, default: 0},
-    payment_status: {type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending', required: true},
+    is_paid: {type: Boolean, default: false},
     notes: { type: String, required: false },
   },
   {

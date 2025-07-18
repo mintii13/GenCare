@@ -1,13 +1,8 @@
 // STI Status Utilities - Ràng buộc logic trạng thái đơn hàng và thanh toán
 
 export type OrderStatus = 'Booked' | 'Accepted' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
-export type PaymentStatus = 'Pending' | 'Paid' | 'Failed';
 
-/**
- * Ràng buộc trạng thái đơn hàng và thanh toán theo cặp
- */
 export const STATUS_CONSTRAINTS = {
-  // Trạng thái đơn hàng có thể chuyển đổi
   validOrderTransitions: {
     'Booked': ['Accepted', 'Canceled'],
     'Accepted': ['Processing', 'Canceled'],
@@ -18,73 +13,57 @@ export const STATUS_CONSTRAINTS = {
     'Canceled': []
   } as Record<OrderStatus, OrderStatus[]>,
 
-  // Trạng thái thanh toán có thể chuyển đổi
-  validPaymentTransitions: {
-    'Pending': ['Paid', 'Failed'],
-    'Paid': [], // Không thể chuyển từ Paid sang trạng thái khác
-    'Failed': ['Pending', 'Paid']
-  } as Record<PaymentStatus, PaymentStatus[]>,
-
-  // Ràng buộc cặp: Trạng thái thanh toán bắt buộc theo trạng thái đơn hàng
   requiredPaymentByOrder: {
-    'Booked': ['Pending'],
-    'Accepted': ['Pending', 'Paid'],
-    'Processing': ['Paid'], // Phải thanh toán mới được xử lý
-    'SpecimenCollected': ['Paid'],
-    'Testing': ['Paid'],
-    'Completed': ['Paid'],
-    'Canceled': ['Pending', 'Paid', 'Failed']
-  } as Record<OrderStatus, PaymentStatus[]>,
+    Booked: [false],
+    Accepted: [false],
+    Processing: [true],
+    SpecimenCollected: [true],
+    Testing: [true],
+    Completed: [true],
+    Canceled: [false],
+  } as Record<OrderStatus, boolean[]>,
 
-  // Ràng buộc ngược: Trạng thái đơn hàng cho phép theo trạng thái thanh toán
   allowedOrderByPayment: {
-    'Pending': ['Booked', 'Accepted', 'Canceled'],
-    'Paid': ['Accepted', 'Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'],
-    'Failed': ['Canceled']
-  } as Record<PaymentStatus, OrderStatus[]>,
+    false: ['Booked', 'Accepted', 'Canceled'],
+    true: ['Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled']
+  } as Record<'true' | 'false', OrderStatus[]>,
 
-  // Các cặp trạng thái hợp lệ
   validStatusPairs: [
-    ['Booked', 'Pending'],
-    ['Accepted', 'Pending'],
-    ['Accepted', 'Paid'],
-    ['Processing', 'Paid'],
-    ['SpecimenCollected', 'Paid'],
-    ['Testing', 'Paid'],
-    ['Completed', 'Paid'],
-    ['Canceled', 'Pending'],
-    ['Canceled', 'Paid'],
-    ['Canceled', 'Failed']
-  ] as [OrderStatus, PaymentStatus][],
+    ['Booked', false],
+    ['Accepted', false],
+    ['Accepted', true],
+    ['Processing', true],
+    ['SpecimenCollected', true],
+    ['Testing', true],
+    ['Completed', true],
+    ['Canceled', false]
+  ] as [OrderStatus, boolean][],
 
-  // Rules đặc biệt
   specialRules: {
     cannotCancelPaidOrder: true,
     mustPayBeforeProcessing: true,
     completedOrderLocked: true,
     failedPaymentMustCancel: false
-  }
+  },
+
+  validPaymentTransitions: {
+    false: [true],
+    true: []
+  } as Record<'true' | 'false', boolean[]>
 };
 
-/**
- * Kiểm tra cặp trạng thái có hợp lệ không
- */
-export const isValidStatusPair = (orderStatus: OrderStatus, paymentStatus: PaymentStatus): boolean => {
+export const isValidStatusPair = (orderStatus: OrderStatus, paymentStatus: boolean): boolean => {
   return STATUS_CONSTRAINTS.validStatusPairs.some(
     ([order, payment]) => order === orderStatus && payment === paymentStatus
   );
 };
 
-/**
- * Kiểm tra có thể chuyển đổi trạng thái đơn hàng không
- */
 export const canTransitionOrderStatus = (
   currentOrderStatus: OrderStatus,
   newOrderStatus: OrderStatus,
-  currentPaymentStatus: PaymentStatus,
-  newPaymentStatus?: PaymentStatus
+  currentPaymentStatus: boolean,
+  newPaymentStatus?: boolean
 ): { valid: boolean; message?: string } => {
-  // Kiểm tra chuyển đổi trạng thái đơn hàng
   const allowedTransitions = STATUS_CONSTRAINTS.validOrderTransitions[currentOrderStatus];
   if (!allowedTransitions.includes(newOrderStatus)) {
     return {
@@ -93,19 +72,18 @@ export const canTransitionOrderStatus = (
     };
   }
 
-  // Kiểm tra ràng buộc với trạng thái thanh toán
-  const finalPaymentStatus = newPaymentStatus || currentPaymentStatus;
+  const finalPaymentStatus = newPaymentStatus ?? currentPaymentStatus;
   const requiredPaymentStatuses = STATUS_CONSTRAINTS.requiredPaymentByOrder[newOrderStatus];
-  
+
   if (!requiredPaymentStatuses.includes(finalPaymentStatus)) {
+    const readable = (v: boolean) => v ? 'Đã thanh toán' : 'Chưa thanh toán';
     return {
       valid: false,
-      message: `Trạng thái "${newOrderStatus}" yêu cầu thanh toán: ${requiredPaymentStatuses.join(' hoặc ')}. Hiện tại: ${finalPaymentStatus}`
+      message: `Trạng thái "${newOrderStatus}" yêu cầu thanh toán: ${requiredPaymentStatuses.map(readable).join(' hoặc ')}. Hiện tại: ${readable(finalPaymentStatus)}`
     };
   }
 
-  // Rule đặc biệt: Không thể hủy đơn hàng đã thanh toán
-  if (newOrderStatus === 'Canceled' && currentPaymentStatus === 'Paid' && STATUS_CONSTRAINTS.specialRules.cannotCancelPaidOrder) {
+  if (newOrderStatus === 'Canceled' && currentPaymentStatus === true && STATUS_CONSTRAINTS.specialRules.cannotCancelPaidOrder) {
     return {
       valid: false,
       message: 'Không thể hủy đơn hàng đã thanh toán thành công'
@@ -115,33 +93,15 @@ export const canTransitionOrderStatus = (
   return { valid: true };
 };
 
-/**
- * Kiểm tra có thể chuyển đổi trạng thái thanh toán không
- */
 export const canTransitionPaymentStatus = (
-  currentPaymentStatus: PaymentStatus,
-  newPaymentStatus: PaymentStatus,
+  currentPaymentStatus: boolean,
+  newPaymentStatus: boolean,
   orderStatus: OrderStatus
 ): { valid: boolean; message?: string } => {
-  // Kiểm tra chuyển đổi trạng thái thanh toán
-  const allowedTransitions = STATUS_CONSTRAINTS.validPaymentTransitions[currentPaymentStatus];
-  if (!allowedTransitions.includes(newPaymentStatus)) {
-    return {
-      valid: false,
-      message: `Không thể chuyển thanh toán từ "${currentPaymentStatus}" sang "${newPaymentStatus}". Chỉ có thể: ${allowedTransitions.join(', ')}`
-    };
-  }
+  // Không thay đổi gì
+  if (currentPaymentStatus === newPaymentStatus) return { valid: true };
 
-  // Kiểm tra ràng buộc với trạng thái đơn hàng
-  const allowedOrderStatuses = STATUS_CONSTRAINTS.allowedOrderByPayment[newPaymentStatus];
-  if (!allowedOrderStatuses.includes(orderStatus)) {
-    return {
-      valid: false,
-      message: `Trạng thái thanh toán "${newPaymentStatus}" không cho phép với đơn hàng "${orderStatus}"`
-    };
-  }
-
-  // Rule đặc biệt: Đơn hàng Completed không thể thay đổi payment
+  // Đơn hàng đã hoàn thành thì không thay đổi được trạng thái thanh toán
   if (orderStatus === 'Completed' && STATUS_CONSTRAINTS.specialRules.completedOrderLocked) {
     return {
       valid: false,
@@ -149,18 +109,38 @@ export const canTransitionPaymentStatus = (
     };
   }
 
+  // Kiểm tra chuyển đổi hợp lệ không
+  const allowedTransitions = STATUS_CONSTRAINTS.validPaymentTransitions[
+    currentPaymentStatus.toString() as 'true' | 'false'
+  ];
+  if (!allowedTransitions.includes(newPaymentStatus)) {
+    return {
+      valid: false,
+      message: `Không thể chuyển thanh toán từ "${currentPaymentStatus}" sang "${newPaymentStatus}". Chỉ có thể: ${allowedTransitions.join(', ')}`
+    };
+  }
+
+  // Kiểm tra trạng thái đơn hàng có hợp lệ với trạng thái thanh toán mới không
+  const allowedOrderStatuses = STATUS_CONSTRAINTS.allowedOrderByPayment[
+    newPaymentStatus.toString() as 'true' | 'false'
+  ];
+  if (!allowedOrderStatuses.includes(orderStatus)) {
+    return {
+      valid: false,
+      message: `Trạng thái thanh toán "${newPaymentStatus}" không áp dụng được cho đơn hàng "${orderStatus}".`
+    };
+  }
+
   return { valid: true };
 };
 
-/**
- * Lấy các trạng thái đơn hàng có thể chuyển đổi tiếp theo
- */
+
 export const getAvailableOrderStatuses = (
   currentOrderStatus: OrderStatus,
-  currentPaymentStatus: PaymentStatus
+  currentPaymentStatus: boolean
 ): OrderStatus[] => {
   const possibleTransitions = STATUS_CONSTRAINTS.validOrderTransitions[currentOrderStatus];
-  
+
   return possibleTransitions.filter(newOrderStatus => {
     const validation = canTransitionOrderStatus(
       currentOrderStatus,
@@ -171,28 +151,23 @@ export const getAvailableOrderStatuses = (
   });
 };
 
-/**
- * Lấy TẤT CẢ các trạng thái đơn hàng hợp lệ (không chỉ trạng thái tiếp theo)
- */
 export const getAllValidOrderStatuses = (
-  currentPaymentStatus: PaymentStatus
+  currentPaymentStatus: boolean
 ): OrderStatus[] => {
   const allOrderStatuses: OrderStatus[] = ['Booked', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'];
-  
+
   return allOrderStatuses.filter(orderStatus => {
     return isValidStatusPair(orderStatus, currentPaymentStatus);
   });
 };
 
-/**
- * Lấy các trạng thái thanh toán có thể chuyển đổi tiếp theo
- */
 export const getAvailablePaymentStatuses = (
-  currentPaymentStatus: PaymentStatus,
+  currentPaymentStatus: boolean,
   orderStatus: OrderStatus
-): PaymentStatus[] => {
-  const possibleTransitions = STATUS_CONSTRAINTS.validPaymentTransitions[currentPaymentStatus];
-  
+): boolean[] => {
+  const key = currentPaymentStatus.toString() as 'true' | 'false';
+  const possibleTransitions = STATUS_CONSTRAINTS.validPaymentTransitions[key];
+
   return possibleTransitions.filter(newPaymentStatus => {
     const validation = canTransitionPaymentStatus(
       currentPaymentStatus,
@@ -203,39 +178,31 @@ export const getAvailablePaymentStatuses = (
   });
 };
 
-/**
- * Lấy TẤT CẢ các trạng thái thanh toán hợp lệ (không chỉ trạng thái tiếp theo)
- */
 export const getAllValidPaymentStatuses = (
   orderStatus: OrderStatus
-): PaymentStatus[] => {
-  const allPaymentStatuses: PaymentStatus[] = ['Pending', 'Paid', 'Failed'];
-  
+): boolean[] => {
+  const allPaymentStatuses: boolean[] = [true, false];
+
   return allPaymentStatuses.filter(paymentStatus => {
     return isValidStatusPair(orderStatus, paymentStatus);
   });
 };
 
-/**
- * Lấy các cặp trạng thái hợp lệ cho dropdown
- */
 export const getValidStatusPairs = (): Array<{
   orderStatus: OrderStatus;
-  paymentStatus: PaymentStatus;
+  paymentStatus: boolean;
   label: string;
   disabled?: boolean;
 }> => {
+  const readable = (v: boolean) => v ? 'Đã thanh toán' : 'Chưa thanh toán';
   return STATUS_CONSTRAINTS.validStatusPairs.map(([orderStatus, paymentStatus]) => ({
     orderStatus,
     paymentStatus,
-    label: `${getOrderStatusLabel(orderStatus)} - ${getPaymentStatusLabel(paymentStatus)}`,
+    label: `${getOrderStatusLabel(orderStatus)} - ${readable(paymentStatus)}`,
     disabled: false
   }));
 };
 
-/**
- * Lấy label hiển thị cho trạng thái đơn hàng
- */
 export const getOrderStatusLabel = (status: OrderStatus): string => {
   const labels: Record<OrderStatus, string> = {
     'Booked': 'Đã đặt',
@@ -249,21 +216,6 @@ export const getOrderStatusLabel = (status: OrderStatus): string => {
   return labels[status] || status;
 };
 
-/**
- * Lấy label hiển thị cho trạng thái thanh toán
- */
-export const getPaymentStatusLabel = (status: PaymentStatus): string => {
-  const labels: Record<PaymentStatus, string> = {
-    'Pending': 'Chờ thanh toán',
-    'Paid': 'Đã thanh toán',
-    'Failed': 'Thanh toán thất bại'
-  };
-  return labels[status] || status;
-};
-
-/**
- * Lấy màu sắc cho trạng thái đơn hàng
- */
 export const getOrderStatusColor = (status: OrderStatus): string => {
   const colors: Record<OrderStatus, string> = {
     'Booked': 'blue',
@@ -277,24 +229,13 @@ export const getOrderStatusColor = (status: OrderStatus): string => {
   return colors[status] || 'default';
 };
 
-/**
- * Lấy màu sắc cho trạng thái thanh toán
- */
-export const getPaymentStatusColor = (status: PaymentStatus): string => {
-  const colors: Record<PaymentStatus, string> = {
-    'Pending': 'orange',
-    'Paid': 'green',
-    'Failed': 'red'
-  };
-  return colors[status] || 'default';
+export const getPaymentStatusColor = (status: boolean): string => {
+  return status ? 'green' : 'orange';
 };
 
-/**
- * Kiểm tra xem có thể thực hiện hành động nào trên đơn hàng không
- */
 export const getAvailableActions = (
   orderStatus: OrderStatus,
-  paymentStatus: PaymentStatus,
+  paymentStatus: boolean,
   userRole: string
 ): {
   canEdit: boolean;
@@ -304,7 +245,7 @@ export const getAvailableActions = (
   canComplete: boolean;
   canUpdatePayment: boolean;
   availableOrderTransitions: OrderStatus[];
-  availablePaymentTransitions: PaymentStatus[];
+  availablePaymentTransitions: boolean[];
 } => {
   const availableOrderTransitions = getAvailableOrderStatuses(orderStatus, paymentStatus);
   const availablePaymentTransitions = getAvailablePaymentStatuses(paymentStatus, orderStatus);
@@ -321,18 +262,14 @@ export const getAvailableActions = (
   };
 };
 
-/**
- * Validate trước khi submit form cập nhật trạng thái
- */
 export const validateStatusUpdate = (
   currentOrderStatus: OrderStatus,
-  currentPaymentStatus: PaymentStatus,
+  currentPaymentStatus: boolean,
   newOrderStatus?: OrderStatus,
-  newPaymentStatus?: PaymentStatus
+  newPaymentStatus?: boolean
 ): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
-  // Kiểm tra trạng thái đơn hàng
   if (newOrderStatus && newOrderStatus !== currentOrderStatus) {
     const orderValidation = canTransitionOrderStatus(
       currentOrderStatus,
@@ -345,8 +282,7 @@ export const validateStatusUpdate = (
     }
   }
 
-  // Kiểm tra trạng thái thanh toán
-  if (newPaymentStatus && newPaymentStatus !== currentPaymentStatus) {
+  if (newPaymentStatus !== undefined && newPaymentStatus !== currentPaymentStatus) {
     const paymentValidation = canTransitionPaymentStatus(
       currentPaymentStatus,
       newPaymentStatus,
@@ -357,16 +293,19 @@ export const validateStatusUpdate = (
     }
   }
 
-  // Kiểm tra cặp trạng thái cuối cùng
   const finalOrderStatus = newOrderStatus || currentOrderStatus;
-  const finalPaymentStatus = newPaymentStatus || currentPaymentStatus;
-  
+  const finalPaymentStatus = newPaymentStatus ?? currentPaymentStatus;
+
   if (!isValidStatusPair(finalOrderStatus, finalPaymentStatus)) {
-    errors.push(`Cặp trạng thái "${finalOrderStatus}" - "${finalPaymentStatus}" không hợp lệ`);
+    const readable = (v: boolean) => v ? 'Đã thanh toán' : 'Chưa thanh toán';
+    errors.push(`Cặp trạng thái "${finalOrderStatus}" - "${readable(finalPaymentStatus)}" không hợp lệ`);
   }
 
   return {
     valid: errors.length === 0,
     errors
   };
-}; 
+};
+
+export const getPaymentStatusLabel = (status: boolean): string =>
+  status ? 'Đã thanh toán' : 'Chưa thanh toán';

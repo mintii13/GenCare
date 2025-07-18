@@ -50,7 +50,7 @@ interface StiOrder {
   customer_email?: string;
   total_amount: number;
   order_status: string;
-  payment_status: string;
+  is_paid: boolean;
   order_date: string;
   notes?: string;
   created_at: string;
@@ -181,7 +181,7 @@ const StiResultsManagement: React.FC = () => {
       sti_test_items: order.sti_test_items || [],
       total_amount: order.total_amount,
       order_status: order.order_status,
-      payment_status: order.payment_status
+      is_paid: order.is_paid
     });
     
     setOrderModalVisible(true);
@@ -274,7 +274,7 @@ const StiResultsManagement: React.FC = () => {
           sti_test_items: values.sti_test_items || [],
           total_amount: calculatedTotal,
           order_status: values.order_status,
-          payment_status: values.payment_status
+          is_paid: values.is_paid === true || values.is_paid === 'true',
         };
         
         const response = await apiClient.patch(API.STI.UPDATE_ORDER(editingOrder._id), updateData);
@@ -381,9 +381,8 @@ const StiResultsManagement: React.FC = () => {
 
   const getPaymentStatusColor = (status: string) => {
     const colors = {
-      'Pending': 'orange',
-      'Paid': 'green',
-      'Failed': 'red'
+      true: 'green',
+      false: 'orange'
     };
     return colors[status as keyof typeof colors] || 'default';
   };
@@ -442,11 +441,11 @@ const StiResultsManagement: React.FC = () => {
     },
     {
       title: 'Thanh toán',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      dataIndex: 'is_paid',
+      key: 'is_paid',
       width: 100,
-      render: (status: string) => (
-        <Tag color={getPaymentStatusColor(status)}>{status}</Tag>
+      render: (status: boolean) => (
+        <Tag color={status ? 'green' : 'orange'}>{status ? 'Đã thanh toán' : 'Chờ thanh toán'}</Tag>
       )
     },
     {
@@ -705,13 +704,12 @@ const StiResultsManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 label="Trạng thái thanh toán"
-                name="payment_status"
+                name="is_paid"
                 rules={[{ required: true, message: 'Vui lòng chọn trạng thái thanh toán' }]}
               >
                 <Select>
-                  <Option value="Pending">Chờ thanh toán</Option>
-                  <Option value="Paid">Đã thanh toán</Option>
-                  <Option value="Failed">Thanh toán thất bại</Option>
+                  <Option value="false">Chờ thanh toán</Option>
+                  <Option value="true">Đã thanh toán</Option>
                 </Select>
               </Form.Item>
             </Col>
