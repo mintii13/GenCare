@@ -9,7 +9,7 @@
     "price": 200000,
     "is_active": true,
     "category": "viral",
-    "sti_test_type": "máu"
+    "sti_test_type": "blood"
   },
   {
     "_id": {
@@ -21,7 +21,7 @@
     "price": 250000,
     "is_active": true,
     "category": "bacterial",
-    "sti_test_type": "nước tiểu"
+    "sti_test_type": "urine"
   },
   {
     "_id": {
@@ -33,7 +33,7 @@
     "price": 120000,
     "is_active": true,
     "category": "viral",
-    "sti_test_type": "máu"
+    "sti_test_type": "blood"
   },
   {
     "_id": {
@@ -45,7 +45,7 @@
     "price": 130000,
     "is_active": true,
     "category": "viral",
-    "sti_test_type": "máu"
+    "sti_test_type": "blood"
   },
   {
     "_id": {
@@ -57,7 +57,7 @@
     "price": 150000,
     "is_active": true,
     "category": "bacterial",
-    "sti_test_type": "máu"
+    "sti_test_type": "blood"
   },
   {
     "_id": {
@@ -69,7 +69,7 @@
     "price": 250000,
     "is_active": true,
     "category": "bacterial",
-    "sti_test_type": "nước tiểu"
+    "sti_test_type": "urine"
   },
   {
     "_id": {
@@ -81,7 +81,7 @@
     "price": 300000,
     "is_active": true,
     "category": "viral",
-    "sti_test_type": "dịch ngoáy"
+    "sti_test_type": "swab"
   },
   {
     "_id": {
@@ -93,7 +93,7 @@
     "price": 80000,
     "is_active": true,
     "category": "bacterial",
-    "sti_test_type": "máu"
+    "sti_test_type": "blood"
   },
   {
     "_id": {
@@ -105,7 +105,7 @@
     "price": 400000,
     "is_active": true,
     "category": "bacterial",
-    "sti_test_type": "máu"
+    "sti_test_type": "blood"
   },
   {
     "_id": {
@@ -117,7 +117,7 @@
     "price": 400000,
     "is_active": true,
     "category": "viral",
-    "sti_test_type": "dịch tiết"
+    "sti_test_type": "swab"
   },
   {
     "_id": {
@@ -125,10 +125,10 @@
     },
     "sti_test_name": "Xét nghiệm Trichomonas",
     "sti_test_code": "STI-PAR-SWB-TRI",
-    "description": "Xác định ký sinh trùng Trichomonas vaginalis bằng mẫu phết âm đạo hoặc nước tiểu. Xét nghiệm chuyên biệt cho bệnh lây truyền qua đường tình dục.",
+    "description": "Xác định ký sinh trùng Trichomonas vaginalis bằng mẫu phết âm đạo. Xét nghiệm chuyên biệt cho bệnh lây truyền qua đường tình dục.",
     "price": 200000,
     "is_active": true,
     "category": "parasitic",
-    "sti_test_type": "dịch tiết"
+    "sti_test_type": "swab"
   }
 ]
