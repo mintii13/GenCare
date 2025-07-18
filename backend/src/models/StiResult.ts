@@ -19,6 +19,7 @@ const sampleSchema = new Schema({
 
 export interface IStiResult extends Document {
   sti_order_id: mongoose.Types.ObjectId;
+  sti_test_id: mongoose.Types.ObjectId; // ➤ Thêm: gắn kết quả với từng test cụ thể
   sample?: Sample;
   time_result?: Date;
   result_value?: string;
@@ -32,6 +33,7 @@ export interface IStiResult extends Document {
 
 const stiResultSchema = new Schema<IStiResult>({
   sti_order_id: { type: Schema.Types.ObjectId, ref: 'StiOrder', required: true },
+  sti_test_id: { type: Schema.Types.ObjectId, ref: 'StiTest', required: true }, // ➤ Thêm dòng này
   sample: { type: sampleSchema },
   time_result: { type: Date },
   result_value: { type: String },
@@ -42,5 +44,4 @@ const stiResultSchema = new Schema<IStiResult>({
   notes: { type: String },
   is_active: { type: Boolean, default: true }
 });
-
 export const StiResult = mongoose.model<IStiResult>('StiResult', stiResultSchema);

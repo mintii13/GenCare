@@ -47,7 +47,7 @@ export class StiOrderRepository {
                 $match: {
                     customer_id: new mongoose.Types.ObjectId(customerId),
                     order_status: 'Completed',
-                    payment_status: 'Paid'
+                    is_paid: true
                 }
             },
             {
@@ -66,7 +66,7 @@ export class StiOrderRepository {
             {
                 $match: {
                     order_status: 'Completed',
-                    payment_status: 'Paid'
+                    is_paid: true
                 }
             },
             {

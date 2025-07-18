@@ -146,7 +146,7 @@ const OrdersPage: React.FC = () => {
       // Staff-only filters
       if (isStaffView) {
         if (paymentStatusFilter !== 'all') {
-          params.append('payment_status', paymentStatusFilter);
+          params.append('is_paid', paymentStatusFilter === 'true' ? 'true' : paymentStatusFilter === 'false' ? 'false' : '');
         }
         
         if (sortBy !== 'order_date') {

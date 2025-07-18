@@ -320,13 +320,13 @@ export const validateStiOrderPagination = (req: Request, res: Response, next: Ne
             }
         }
 
-        // Validate payment_status parameter
-        if (query.payment_status !== undefined) {
-            const validPaymentStatuses = ['Pending', 'Paid', 'Failed'];
-            if (!validPaymentStatuses.includes(query.payment_status.toString())) {
+        // Validate is_paid parameter
+        if (query.is_paid !== undefined) {
+            const isPaidStr = query.is_paid.toString().toLowerCase();
+            if (isPaidStr !== 'true' && isPaidStr !== 'false') {
                 return res.status(400).json({
                     success: false,
-                    message: `Invalid payment_status parameter. Must be one of: ${validPaymentStatuses.join(', ')}`
+                    message: 'Invalid is_paid parameter. Must be true or false.'
                 });
             }
         }

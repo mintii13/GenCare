@@ -5,14 +5,7 @@ import {MenstrualCycleRepository} from '../repositories/menstrualCycleRepository
 import { CycleStatsResponse, PeriodStatsResponse, RegularityStatus, TrendStatus } from '../dto/responses/menstrualCycleResponse';
 
 export class MenstrualCycleService {
-    public static async processPeriodDays(user_id: string, period_days: Date[], notes: string){
-        // Defect D2: Empty period_days
-        if (!period_days || period_days.length === 0) {
-            return {
-                success: false,
-                message: 'Period days are required.'
-            };
-        }
+    public static async processPeriodDays(user_id: string, grouped_period_days: Date[][], notes: string){
         if (!user_id){
             return{
                 success: false,
@@ -20,195 +13,70 @@ export class MenstrualCycleService {
             }
         }
 
-        // Defect D3: Notes length
-        if (notes && notes.length > 500) {
-            return {
-                success: false,
-                message: 'Notes cannot exceed 500 characters'
+        if (!grouped_period_days || grouped_period_days.length === 0 || !user_id) {
+            return { 
+                success: false, 
+                message: 'Not enough data' 
             };
-        }
-
-        // Defect D1: Future date check
-        const today = new Date();
-        today.setHours(23, 59, 59, 999); // Set to end of today
-        for (const day of period_days) {
-            if (new Date(day) > today) {
-                return {
-                    success: false,
-                    message: 'Cannot log period days in the future.'
-                };
-            }
-        }
-
-        console.log(' Processing period days:', period_days.map(d => d.toISOString().split('T')[0]));
-
-        // Normalize dates to avoid timezone issues
-        const normalizedDates = period_days.map(date => {
-            const normalized = new Date(date);
-            normalized.setUTCHours(0, 0, 0, 0);
-            return normalized;
-        });
-
-        console.log('Normalized dates:', normalizedDates.map(d => d.toISOString().split('T')[0]));  
-        // Remove duplicates based on date string
-
-        const sorted = [...normalizedDates].sort((a, b) => a.getTime() - b.getTime());
-        console.log('Sorted dates:', sorted.map(d => d.toISOString().split('T')[0]));
-     
-        // SIMPLE GROUPING: Consecutive days = same cycle
-        const groups: Date[][] = [];
-        let current: Date[] = [sorted[0]];
-
-        for (let i = 1; i < sorted.length; i++) {
-            const currentDate = sorted[i];
-            const prevDate = sorted[i - 1];
-            
-            // Tính diff bằng ngày
-            const diffMs = currentDate.getTime() - prevDate.getTime();
-            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-            
-            console.log(`Date diff between ${prevDate.toISOString().split('T')[0]} and ${currentDate.toISOString().split('T')[0]}: ${diffDays} days`);
-            
-            // LOGIC ĐỠN GIẢN: Nếu liền nhau (1 ngày) thì cùng chu kì, không thì chu kì mới
-            if (diffDays === 1) {
-                current.push(currentDate);
-                console.log(`Consecutive day - adding to current cycle: ${currentDate.toISOString().split('T')[0]}`);
-            } else {
-                console.log(`Gap detected (${diffDays} days) - starting new cycle at: ${currentDate.toISOString().split('T')[0]}`);
-                groups.push(current);
-                current = [currentDate];
-            }
-        }
-        groups.push(current);
-
-        console.log('Final groups:', groups.map(group => 
-            group.map(d => d.toISOString().split('T')[0])
-        ));
-
-        // Validate groups - kiểm tra logic grouping
-        console.log('Validating groups...');
-        groups.forEach((group, index) => {
-            console.log(`Group ${index + 1}:`, {
-                dates: group.map(d => d.toISOString().split('T')[0]),
-                span: group.length > 1 ? `${Math.round((group[group.length - 1].getTime() - group[0].getTime()) / (1000 * 60 * 60 * 24))} days` : '1 day',
-                startMonth: group[0].getUTCMonth() + 1,
-                endMonth: group[group.length - 1].getUTCMonth() + 1
-            });
-        });
-
-        // Final validation: check for suspicious groupings
-        for (let i = 0; i < groups.length; i++) {
-            const group = groups[i];
-            if (group.length > 1) {
-                const span = Math.round((group[group.length - 1].getTime() - group[0].getTime()) / (1000 * 60 * 60 * 24));
-                if (span > 30) {
-                    console.warn(`Warning: Group ${i + 1} spans ${span} days, might be multiple cycles`);
-                }
-            }
         }
 
         const cycles: IMenstrualCycle[] = [];
         const cycle_lengths: number[] = [];
-        
-        for (let i = 0; i < groups.length; i++) {
-            const period = groups[i];
+
+        for (let i = 0; i < grouped_period_days.length; i++) {
+            const period = grouped_period_days[i];
             const start = period[0];
-            
-            console.log(`Creating cycle ${i + 1} with start date: ${start.toISOString().split('T')[0]}`);
-            
+
             const cycle: Partial<IMenstrualCycle> = {
                 user_id: new mongoose.Types.ObjectId(user_id),
                 cycle_start_date: start,
                 period_days: period,
-                notification_enabled: true,
-                notification_types: ['period', 'ovulation'],
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                notes,
+                notes
             };
 
-            if (i + 1 < groups.length) {
-                const nextStart = groups[i + 1][0];
-                const timeDiff = nextStart.getTime() - start.getTime();
-                const len = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+            if (i + 1 < grouped_period_days.length) {
+                const nextStart = grouped_period_days[i + 1][0];
+                const len = Math.round((nextStart.getTime() - start.getTime()) / 86400000);
                 cycle.cycle_length = len;
                 cycle_lengths.push(len);
-                console.log(`Cycle length: ${len} days (from ${start.toISOString().split('T')[0]} to ${nextStart.toISOString().split('T')[0]})`);
             } else {
                 cycle.cycle_length = 0;
-                console.log(`Last cycle (no next cycle) — cycle_length is undefined`);
             }
+
             cycles.push(cycle as IMenstrualCycle);
         }
-        console.log('Creating cycles from groups...');
-        const regularity = this.calculateCycleRegularity(cycle_lengths);
-        console.log('Calculated regularity (initial):', regularity);
-
+        
         for (let i = 0; i < cycles.length; i++) {
             const cycle = cycles[i];
-            
-            // For the first cycle or cycles without cycle_length, use standard 28-day cycle for predictions
-            let len = cycle.cycle_length;
-            if (!len) {
-                len = 28; // Use standard cycle length for first cycle
-                console.log(`Using standard 28-day cycle for predictions (cycle ${i + 1})`);
-            }
-            
-            console.log(`Processing predictions for cycle ${i + 1}, length: ${len} days, regularity: ${regularity}`);
-            
-            // Allow predictions for reasonable cycle lengths (21-35 days)
+            const len = cycle.cycle_length || 0;
+
             if (len >= 21 && len <= 35) {
                 const ov = len - 14;
                 const start = cycle.cycle_start_date.getTime();
-                
+
                 cycle.predicted_cycle_end = new Date(start + len * 86400000);
                 cycle.predicted_ovulation_date = new Date(start + ov * 86400000);
                 cycle.predicted_fertile_start = new Date(start + (ov - 5) * 86400000);
                 cycle.predicted_fertile_end = new Date(start + (ov + 1) * 86400000);
-            }
-            else{
-                cycle.predicted_cycle_end = null;
-                cycle.predicted_ovulation_date = null;
-                cycle.predicted_fertile_start = null;
-                cycle.predicted_fertile_end = null;
-                console.log(`No predictions for cycle ${i + 1} - length: ${len}, regularity: ${regularity}`);
+                cycle.predicted_fertile_end.setHours(23, 59, 59, 999);
             }
         }
 
-        if (cycles.length === 0) {
-            console.error('No valid cycles created');
-            return {
-                success: false,
-                message: 'No valid cycles found'
-            };
-        }
-        
-        console.log('Saving cycles to database...');
-        console.log('Final cycles summary:', cycles.map((cycle, index) => ({
-            cycleNum: index + 1,
-            startDate: cycle.cycle_start_date.toISOString().split('T')[0],
-            periodDays: cycle.period_days.map(d => d.toISOString().split('T')[0]),
-            cycleLength: cycle.cycle_length || 'N/A',
-            hasPredictions: !!cycle.predicted_cycle_end
-        })));
-        
         await MenstrualCycleRepository.deleteCyclesByUser(user_id);
         const result = await MenstrualCycleRepository.insertCycles(cycles);
-        
-        if (!result || result.length === 0) {
-            console.error('Failed to save cycles to database');
-            return {
-                success: false,
-                message: 'Failed to save cycles'
+
+        return result && result.length
+            ? { 
+                success: true, 
+                message: 'Save menstrual cycle data successfully', 
+                data: result 
+            }
+            : { 
+                success: false, 
+                message: 'Cannot save menstrual cycle data' 
             };
-        }
-        
-        console.log('Successfully saved cycles:', result.length);
-        return {
-            success: true,
-            message: 'Saving Menstrual Cycles successfully',
-            data: result
-        };
     }
 
     public static async getCycles(user_id: string) {

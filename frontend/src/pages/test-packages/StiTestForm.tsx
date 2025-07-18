@@ -132,12 +132,9 @@ const StiTestForm: React.FC = () => {
           rules={[{ required: true, message: 'Vui lòng chọn phương pháp' }]}
         >
           <Select>
-            <Option value="máu">Máu</Option>
-            <Option value="nước tiểu">Nước tiểu</Option>
-            <Option value="dịch ngoáy">Dịch ngoáy</Option>
-            <Option value="dịch tiết">Dịch tiết</Option>
-            <Option value="dịch ngoáy">Dịch ngoáy</Option>
-            <Option value="dịch tiết">Dịch tiết</Option>
+            <Option value="blood">Máu</Option>
+            <Option value="urine">Nước tiểu</Option>
+            <Option value="swab">Dịch tiết</Option>
           </Select>
         </Form.Item>
 
