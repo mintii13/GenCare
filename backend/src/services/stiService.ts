@@ -28,9 +28,9 @@ export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
             const duplicate = await StiTestRepository.findByStiTestCode(stiTest.sti_test_code);
-            if (duplicate){
-                if (duplicate.is_active){
-                    return{
+            if (duplicate) {
+                if (duplicate.is_active) {
+                    return {
                         success: false,
                         message: 'Sti test code is duplicated'
                     }
@@ -38,7 +38,7 @@ export class StiService {
                 else {
                     //update is_active thành true
                     const result = await StiTestRepository.updateIsActive(duplicate._id);
-                    return{
+                    return {
                         success: true,
                         message: 'Insert StiTest to database successfully',
                         stitest: result
@@ -46,8 +46,8 @@ export class StiService {
                 }
             }
             const result: Partial<IStiTest> = await StiTestRepository.insertStiTest(stiTest);
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Cannot insert StiTest to database'
                 }
@@ -69,8 +69,8 @@ export class StiService {
     public static async getAllStiTest(): Promise<AllStiTestResponse> {
         try {
             const allOfTest = await StiTestRepository.getAllStiTest();
-            if (!allOfTest){
-                return{
+            if (!allOfTest) {
+                return {
                     success: false,
                     message: 'Fail in getting Sti Test'
                 }
@@ -132,7 +132,7 @@ export class StiService {
                     message: 'StiTest not found or you are not authorized to update it'
                 }
             }
-          
+
             // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
             return {
                 success: true,
@@ -421,7 +421,7 @@ export class StiService {
                 order_date,
                 notes
             });
-            
+
             const result = await StiOrderRepository.insertStiOrder(sti_order);
 
             if (!result) {
@@ -430,14 +430,14 @@ export class StiService {
                     message: 'Order already exists or failed to insert'
                 };
             }
-            
+
             schedule.number_current_orders += 1;
             if (schedule.number_current_orders >= 10) {
                 schedule.is_locked = true;
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id);
-            
+
             await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email);
             return {
                 success: true,
@@ -632,11 +632,7 @@ export class StiService {
                     message: 'Order not found'
                 };
             }
-<<<<<<< HEAD
             if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.is_paid === false && updates.order_status !== null) {
-=======
-            if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.payment_status !== 'Paid' && updates.order_status !== null) {
->>>>>>> 82dbe4ccf45567298842e5a0fa34030df427e454
                 return {
                     success: false,
                     message: 'Cannot update order that is already completed or canceled'
@@ -713,7 +709,7 @@ export class StiService {
                             success: false,
                             message: 'Consultant must be a valid consultant with specialization in Sexual Health'
                         };
-                    }   
+                    }
                     const consultantExists = await ConsultantRepository.findById(updates.consultant_id.toString());
                     if (!consultantExists) {
                         return {
@@ -766,7 +762,7 @@ export class StiService {
                     };
                 }
 
-                const sti_package_id  = updates.sti_package_item.sti_package_id;
+                const sti_package_id = updates.sti_package_item.sti_package_id;
                 const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id.toString());
                 sti_package_name = await StiPackageRepository.getPackageNameById(sti_package_id.toString());
                 if (!stiPackageTests || stiPackageTests.length === 0) {
@@ -835,15 +831,15 @@ export class StiService {
             const validFields = Object.keys(order.toObject());
             for (const [key, value] of Object.entries(updates)) {
                 if (
-                    key !== 'order_status' && 
+                    key !== 'order_status' &&
                     key !== 'sti_test_items' &&
-                    key !== 'sti_package_item' && 
-                    key !== 'consultant_id' && 
-                    key !== 'staff_id' && 
+                    key !== 'sti_package_item' &&
+                    key !== 'consultant_id' &&
+                    key !== 'staff_id' &&
                     key !== 'order_date' &&
                     key !== 'is_paid' &&
                     validFields.includes(key)
-                ){
+                ) {
                     (order as any)[key] = value;
                 }
             }
@@ -940,7 +936,7 @@ export class StiService {
     public static async getStiOrdersWithPagination(query: StiOrderQuery): Promise<StiOrderPaginationResponse> {
         try {
             console.log('🔍 [DEBUG] STI Service - Input query:', query);
-            
+
             // Validate pagination parameters
             const { page, limit, sort_by, sort_order } = PaginationUtils.validateStiOrderPagination(query);
             console.log('📊 [DEBUG] STI Service - Validated params:', { page, limit, sort_by, sort_order });
@@ -1071,19 +1067,19 @@ export class StiService {
     }
 
     //STI RESULT SERVICE
-    public static async createStiResult(orderId: string, additionalData?: Partial<IStiResult>){
+    public static async createStiResult(orderId: string, additionalData?: Partial<IStiResult>) {
         try {
-            if (!orderId){
-                return{
+            if (!orderId) {
+                return {
                     success: false,
                     message: 'Result id is not found'
                 }
             }
             // Get order information
             const order = await StiResultRepository.getStiOrderWithTests(orderId);
-            
+
             if (!order) {
-                return{
+                return {
                     success: false,
                     message: 'Cannot find the order'
                 }
@@ -1098,7 +1094,7 @@ export class StiService {
                 };
             }
 
-            if (order.order_status === 'Booked' || order.order_status === 'Accepted' || order.order_status === 'Canceled'){
+            if (order.order_status === 'Booked' || order.order_status === 'Accepted' || order.order_status === 'Canceled') {
                 return {
                     success: false,
                     message: 'STI result can be created where order_status after processing (money is paid)'
@@ -1136,8 +1132,8 @@ export class StiService {
                 ...additionalData
             };
             const result = await StiResultRepository.create(stiResultData);
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Fail to create sti result'
                 }
@@ -1149,23 +1145,23 @@ export class StiService {
             }
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
         }
     }
 
-    public static async getStiResultByOrderId(orderId: string, userId: string, role: string){
+    public static async getStiResultByOrderId(orderId: string, userId: string, role: string) {
         try {
             const result = await StiResultRepository.findByOrderId(orderId);
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Fail to fetch sti result by order'
                 }
             }
-            
+
             // Authorization check
             if (role === 'customer' && result.sti_order_id.customer_id.toString() !== userId) {
                 return {
@@ -1173,40 +1169,40 @@ export class StiService {
                     message: 'Không có quyền truy cập'
                 };
             }
-            
+
             // Staff, consultant, and admin can access all results
             // Customer can only access their own results (checked above)
-            
-            return{
+
+            return {
                 success: true,
                 message: 'Fetched sti result by order successfully',
                 data: result
             }
         } catch (error) {
             console.error('Error in getStiResultByOrderId:', error);
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
         }
     }
 
-    public static async getAllStiResult(){
+    public static async getAllStiResult() {
         try {
             const result = await StiResultRepository.findAll();
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Fail to fetch sti result'
                 }
             }
-            return{
+            return {
                 success: true,
                 message: 'Fetched sti result successfully',
                 data: result
             }
         } catch (error) {
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
@@ -1241,7 +1237,7 @@ export class StiService {
                             success: false,
                             message: 'Consultant must be a valid consultant with specialization in Sexual Health'
                         };
-                    }   
+                    }
                     const consultantExists = await ConsultantRepository.findById(updateData.consultant_id.toString());
                     if (!consultantExists) {
                         return {
@@ -1300,11 +1296,7 @@ export class StiService {
                 updateData.time_result = new Date();
             }
 
-<<<<<<< HEAD
             const allowedSampleQualities = ['blood', 'urine', 'swab'];
-=======
-            const allowedSampleQualities = ['máu', 'nước tiểu', 'dịch âm đạo', 'dịch niệu đạo', 'dịch cổ tử cung'];
->>>>>>> 82dbe4ccf45567298842e5a0fa34030df427e454
 
             if (updateData.sample?.sampleQualities) {
                 const newQualities = updateData.sample.sampleQualities;
@@ -1330,8 +1322,8 @@ export class StiService {
                 result.sample = {
                     ...(result.sample || {}),
                     sampleQualities: {
-                    ...(result.sample?.sampleQualities || {}),
-                    ...updatedQualities
+                        ...(result.sample?.sampleQualities || {}),
+                        ...updatedQualities
                     }
                 };
             }
@@ -1376,8 +1368,8 @@ export class StiService {
         // Loại bỏ giá trị null, undefined và ID không hợp lệ
         const uniqueValidIds = [...new Set(
             testIds
-            .map(id => id?.toString())
-            .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+                .map(id => id?.toString())
+                .filter(id => id && mongoose.Types.ObjectId.isValid(id))
         )].map(id => new mongoose.Types.ObjectId(id!));
 
         if (uniqueValidIds.length === 0) {
@@ -1402,8 +1394,8 @@ export class StiService {
             const order = await StiOrderRepository.getOrderWithTests(orderId);
             if (!order) {
                 return {
-                success: false,
-                message: 'Order not found'
+                    success: false,
+                    message: 'Order not found'
                 };
             }
 
@@ -1412,8 +1404,8 @@ export class StiService {
             console.log('Order Test Types:', orderTestTypes);
             if (orderTestTypes.length === 0) {
                 return {
-                success: false,
-                message: 'No test types found in order'
+                    success: false,
+                    message: 'No test types found in order'
                 };
             }
 
@@ -1421,7 +1413,7 @@ export class StiService {
             let result = await StiResultRepository.findByOrderId(orderId);
 
             if (!result) {
-                return{
+                return {
                     success: false,
                     message: 'Cannot find the sti result'
                 }
@@ -1431,11 +1423,11 @@ export class StiService {
 
             // Maintain the old type and quality in sampleQualities
             orderTestTypes.forEach(testType => {
-            if (currentQualities.hasOwnProperty(testType)) {
-                newSampleQualities[testType] = currentQualities[testType];
-            } else {
-                newSampleQualities[testType] = null;
-            }
+                if (currentQualities.hasOwnProperty(testType)) {
+                    newSampleQualities[testType] = currentQualities[testType];
+                } else {
+                    newSampleQualities[testType] = null;
+                }
             });
 
             // Update new sample qualities
@@ -1464,9 +1456,9 @@ export class StiService {
         try {
             const result = await StiResultRepository.getFullResult(stiResultId);
             if (!result || !result.sti_order_id) {
-                return { 
-                    success: false, 
-                    message: "Cannot find the result" 
+                return {
+                    success: false,
+                    message: "Cannot find the result"
                 };
             }
             if (!result.is_confirmed) {
@@ -1496,7 +1488,7 @@ export class StiService {
             const consultantName = consultantUser?.full_name ?? 'Chưa có';
             const staffName = staffUser?.full_name ?? 'Chưa có';
             let testNames: string[] = [];
-            
+
             if (staffName === 'Chưa có' && consultantName === 'Chưa có') {
                 return {
                     success: false,
@@ -1544,8 +1536,8 @@ export class StiService {
                 resultDate,
                 emailSendTo
             );
-            if (!mailResult){
-                return{
+            if (!mailResult) {
+                return {
                     success: false,
                     message: 'Fail to send mail'
                 }
@@ -1553,20 +1545,20 @@ export class StiService {
             return mailResult;
         } catch (error) {
             console.error(error);
-            return{
+            return {
                 success: false,
                 message: 'Internal server error'
             }
-        }    
+        }
     }
 
-    public static async getStiResultById(resultId: string){
+    public static async getStiResultById(resultId: string) {
         try {
             const result = await StiResultRepository.getFullResult(resultId);
             if (!result || !result.sti_order_id) {
-                return { 
-                    success: false, 
-                    message: "Cannot find the result" 
+                return {
+                    success: false,
+                    message: "Cannot find the result"
                 };
             }
             const order = result.sti_order_id as any;
@@ -1618,7 +1610,7 @@ export class StiService {
                 resultDate,
             };
         } catch (error) {
-            return{
+            return {
                 success: false,
                 message: 'Server error'
             }
@@ -1638,7 +1630,7 @@ export class StiService {
             }
 
             const orders = await StiOrderRepository.getOrdersByCustomer(customerId);
-            
+
             return {
                 success: true,
                 message: 'STI orders retrieved successfully',
@@ -1666,7 +1658,7 @@ export class StiService {
             }
 
             const order = await StiOrderRepository.findOrderById(orderId);
-            
+
             if (!order) {
                 return {
                     success: false,
@@ -1701,7 +1693,7 @@ export class StiService {
             }
 
             const result = await StiResultRepository.findByOrderId(orderId);
-            
+
             if (!result) {
                 return {
                     success: false,
@@ -1723,5 +1715,5 @@ export class StiService {
         }
     }
 
-    
+
 }
