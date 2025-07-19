@@ -6,113 +6,34 @@ import '../models/StiPackageTest';
 import '../models/StiTest';
 
 export class StiResultRepository {
-    public static async create(data: Partial<IStiResult>): Promise<IStiResult> {
+    public static async findByOrderId(orderId: string): Promise<IStiResult | null> {
         try {
-            const stiResult = new StiResult(data);
-            return await stiResult.save();
+            return await StiResult.findOne({ sti_order_id: orderId });
         } catch (error) {
-            throw new Error(`Error creating STI result: ${error}`);
+            console.error('Error finding STI result by order ID:', error);
+            throw error;
         }
     }
 
-    public static async findById(id: string){
+    public static async createStiResult(resultData: IStiResult): Promise<IStiResult> {
         try {
-            return await StiResult.findById(id).populate<{ sti_order_id: IStiOrder }>('sti_order_id');
+            return await resultData.save();
         } catch (error) {
-            throw new Error(`Error finding STI result by ID: ${error}`);
-        }
-    }
-    public static async findByActiveId(id: string) {
-        try {
-            return await StiResult.findOne({ _id: id, is_active: true, is_confirmed: false })
-                .populate<{ sti_order_id: IStiOrder }>('sti_order_id');
-        } catch (error) {
-            throw new Error(`Error finding active STI result by ID: ${error}`);
+            console.error('Error creating STI result:', error);
+            throw error;
         }
     }
 
-    public static async saveStiOrder(result: any): Promise<IStiOrder> {
+    public static async updateStiResult(result: Partial<IStiResult>): Promise<IStiResult | null> {
         try {
-            return await result.sti_order_id.save();
-        } catch (error) {
-            throw new Error(`Error finding STI result by ID: ${error}`);
-        }
-    }
-
-    public static async findExistedResult(orderId: string): Promise<IStiResult | null> {
-        try {
-            return await StiResult.findOne({
-                sti_order_id: orderId,
-                is_active: true
-            });
-        } catch (error) {
-            throw new Error(`Error finding STI result by ID: ${error}`);
-        }
-    }
-
-    public static async findByOrderId(orderId: string) {
-        try {
-            return await StiResult.findOne({ sti_order_id: orderId }).populate<{ sti_order_id: IStiOrder }>('sti_order_id').lean();
-        } catch (error) {
-            throw new Error(`Error finding STI result by order ID: ${error}`);
-        }
-    }
-
-    public static async findAll(): Promise<IStiResult[]> {
-        try {
-            return await StiResult.find({}).populate('sti_order_id');
-        } catch (error) {
-            throw new Error(`Error finding STI results: ${error}`);
-        }
-    }
-
-    public static async getStiOrderWithTests(orderId: string) {
-        try {
-            return await StiOrder.findById(orderId)
-                .populate('sti_test_items')
-                .populate('sti_package_item.sti_package_id')
-                .populate('sti_package_item.sti_test_ids')
-                .populate('order_status');
-        } catch (error) {
-            throw new Error(`Error retrieving STI order with tests: ${error}`);
-        }
-    }
-
-    public static async updateById(id: string, updateData: UpdateStiResultRequest){
-        try {
-            const updatedResult = await StiResult.findByIdAndUpdate(
-                id,
-                { $set: updateData },
-                { new: true, runValidators: true }
-            ).populate<{ sti_order_id: IStiOrder }>('sti_order_id').exec();
+            const updatedResult = await StiResult.findByIdAndUpdate(result._id, result, { new: true });
+            if (!updatedResult) {
+                throw new Error('STI result not found');
+            }
             return updatedResult;
         } catch (error) {
-            throw new Error(`Error updating STI result: ${error}`);
-        }
-    }
-
-    public static async getFullResult(stiResultId: string){
-        try {
-            return await StiResult.findById(stiResultId)
-                    .populate({
-                        path: 'sti_order_id',
-                        populate: [
-                            { path: 'customer_id', select: 'full_name email gender date_of_birth' },
-                            { path: 'consultant_id', populate: { path: 'user_id', select: 'full_name' } },
-                            { path: 'staff_id', populate: { path: 'user_id', select: 'full_name' } },
-                            { path: 'sti_test_items', select: 'sti_test_name' },
-                            {
-                                path: 'sti_package_item',
-                                populate: {
-                                    path: 'sti_test_ids',
-                                    select: 'sti_test_name'
-                                }
-                            }
-
-                        ]
-                    });
-        } catch (error) {
-            throw new Error(`Error getting STI result: ${error}`);
+            console.error('Error updating STI result:', error);
+            throw error;
         }
     }
 }

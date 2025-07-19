@@ -41,7 +41,7 @@ export const stiPackageSchema = Joi.object({
 
   is_active: Joi.boolean().optional(),
 
-  createdBy: objectId.required().messages({
+  created_by: objectId.required().messages({
     'any.required': 'Người tạo là bắt buộc'
   }),
 

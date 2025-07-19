@@ -19,10 +19,12 @@ import { PaginationUtils } from '../utils/paginationUtils';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 import { StiResultRepository } from '../repositories/stiResultRepository';
-import { IStiResult, Sample } from '../models/StiResult';
+import { IStiResult, StiResult } from '../models/StiResult';
 import { ConsultantRepository } from '../repositories/consultantRepository';
 import { SpecializationType } from '../models/Consultant';
 import { StaffRepository } from '../repositories/staffRepository';
+import { TimeUtils } from '../utils/timeUtils';
+import { JWTPayload } from '../utils/jwtUtils';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
@@ -625,6 +627,7 @@ export class StiService {
 
     public static async updateOrder(orderId: string, updates: Partial<IStiOrder>, userId: string, role: string) {
         try {
+            let sti_package_name = '';
             const order = await StiOrderRepository.findOrderById(orderId);
             if (!order) {
                 return {
@@ -632,19 +635,8 @@ export class StiService {
                     message: 'Order not found'
                 };
             }
-<<<<<<< HEAD
-            if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.is_paid === false && updates.order_status !== null) {
-=======
-            if (['Processsing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'].includes(order.order_status) && updates.payment_status !== 'Paid' && updates.order_status !== null) {
->>>>>>> 82dbe4ccf45567298842e5a0fa34030df427e454
-                return {
-                    success: false,
-                    message: 'Cannot update order that is already completed or canceled'
-                };
-            }
-
             if (role === 'staff' || role === 'admin' || role === 'consultant') {
-                if (updates.order_status === 'Completed') {
+                if (updates.order_status === 'Completed' || updates.order_status === 'Canceled') {
                     if (
                         order.is_paid === false ||
                         !order.order_date ||
@@ -684,6 +676,7 @@ export class StiService {
 
                 if (role === 'customer') {
                     if (currentStatus === nextStatus) {
+                        //No change needed
                     }
                     else if (currentStatus === 'Booked' && nextStatus === 'Canceled') {
                         order.order_status = 'Canceled';
@@ -695,8 +688,13 @@ export class StiService {
                         };
                     }
                 } else if (role === 'staff' || role === 'admin' || role === 'consultant') {
-                    if (nextStatus !== 'Processing')
-                        order.order_status = nextStatus;
+                    if (nextStatus === 'Processing'){
+                        return {
+                            success: false,
+                            message: 'Order status "Processing" can be updated by the change status of payment.'
+                        };
+                    }
+                    order.order_status = nextStatus;
                 } else {
                     return {
                         success: false,
@@ -704,149 +702,150 @@ export class StiService {
                     };
                 }
             }
-
-            if (updates.consultant_id) {
-                if (['consultant', 'staff', 'admin'].includes(role)) {
-                    const isValidConsultant = await ConsultantRepository.findConsultantsByIdAndSpecialization(updates.consultant_id.toString(), SpecializationType.SexualHealth);
-                    if (!isValidConsultant) {
+            if (order.order_status === 'Accepted' || order.order_status === 'Booked'){
+                if (updates.consultant_id) {
+                    if (['staff', 'admin'].includes(role)) {
+                        const isValidConsultant = await ConsultantRepository.findConsultantsByIdAndSpecialization(updates.consultant_id.toString(), SpecializationType.SexualHealth);
+                        if (!isValidConsultant) {
+                            return {
+                                success: false,
+                                message: 'Consultant must be a valid consultant with specialization in Sexual Health'
+                            };
+                        }   
+                        const consultantExists = await ConsultantRepository.findById(updates.consultant_id.toString());
+                        if (!consultantExists) {
+                            return {
+                                success: false,
+                                message: 'Consultant not found'
+                            };
+                        }
+                        order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
+                    } else {
                         return {
                             success: false,
-                            message: 'Consultant must be a valid consultant with specialization in Sexual Health'
-                        };
-                    }   
-                    const consultantExists = await ConsultantRepository.findById(updates.consultant_id.toString());
-                    if (!consultantExists) {
-                        return {
-                            success: false,
-                            message: 'Consultant not found'
-                        };
-                    }
-                    order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
-                } else {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update consultant_id'
-                    };
-                }
-            }
-
-            if (updates.staff_id) {
-                if (['staff', 'admin'].includes(role)) {
-                    const staffExists = await StaffRepository.findById(updates.staff_id.toString());
-                    if (!staffExists) {
-                        return {
-                            success: false,
-                            message: 'Staff not found'
+                            message: 'Unauthorized to update consultant_id'
                         };
                     }
-                    order.staff_id = new mongoose.Types.ObjectId(updates.staff_id);
-                } else {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update staff_id'
-                    };
-                }
-            }
-
-            if (Array.isArray(updates.sti_test_items)) {
-                if (!['staff', 'consultant', 'admin'].includes(role)) {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update STI test items'
-                    };
-                }
-                order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
-            }
-            let sti_package_name = '';
-            if (updates.sti_package_item) {
-                if (!['staff', 'consultant', 'admin'].includes(role)) {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update STI package item'
-                    };
                 }
 
-                const sti_package_id  = updates.sti_package_item.sti_package_id;
-                const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id.toString());
-                sti_package_name = await StiPackageRepository.getPackageNameById(sti_package_id.toString());
-                if (!stiPackageTests || stiPackageTests.length === 0) {
-                    return {
-                        success: false,
-                        message: 'No STI tests found for this package'
-                    };
-                }
-
-                // Gán lại vào order
-                order.sti_package_item = {
-                    sti_package_id: new mongoose.Types.ObjectId(sti_package_id),
-                    sti_test_ids: stiPackageTests.map(test => new mongoose.Types.ObjectId(test.sti_test_id))
-                };
-            }
-
-            if (updates.is_paid === true) {
-                if (['staff', 'admin'].includes(role)) {
-                    order.is_paid = updates.is_paid;
-                    if (['Booked', 'Accepted'].includes(order.order_status)) {
-                        order.order_status = 'Processing';
-                    }
-                } else {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update is_paid status'
-                    };
-                }
-            }
-
-            if (updates.order_date && updates.order_date.toString() !== order.order_date.toString()) {
-                let newSchedule = await StiTestScheduleRepository.findOrderDate(updates.order_date);
-                const oldSchedule = await StiTestScheduleRepository.findById(order.sti_schedule_id);
-
-                if (!newSchedule) {
-                    newSchedule = new StiTestSchedule({
-                        order_date: updates.order_date,
-                        number_current_orders: 1,
-                        is_locked: false,
-                    });
-                    await newSchedule.save();
-                } else {
-                    if (newSchedule.is_locked) {
+                if (updates.staff_id) {
+                    if (['staff', 'admin'].includes(role)) {
+                        const staffExists = await StaffRepository.findByUserId(userId);
+                        if (!staffExists) {
+                            return {
+                                success: false,
+                                message: 'Staff not found'
+                            };
+                        }
+                        order.staff_id = staffExists._id;
+                    } else {
                         return {
                             success: false,
-                            message: 'Cannot get schedule on locked date and holiday'
+                            message: 'Unauthorized to update staff_id'
+                        };
+                    }
+                }
+
+                if (Array.isArray(updates.sti_test_items)) {
+                    if (!['consultant'].includes(role)) {
+                        return {
+                            success: false,
+                            message: 'Unauthorized to update STI test items'
+                        };
+                    }
+                    order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
+                }
+                if (updates.sti_package_item) {
+                    if (!['consultant'].includes(role)) {
+                        return {
+                            success: false,
+                            message: 'Unauthorized to update STI package item'
                         };
                     }
 
-                    if (!oldSchedule || oldSchedule._id.toString() !== newSchedule._id.toString()) {
-                        newSchedule.number_current_orders += 1;
+                    const sti_package_id  = updates.sti_package_item.sti_package_id;
+                    const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id.toString());
+                    sti_package_name = await StiPackageRepository.getPackageNameById(sti_package_id.toString());
+                    if (!stiPackageTests || stiPackageTests.length === 0) {
+                        return {
+                            success: false,
+                            message: 'No STI tests found for this package'
+                        };
+                    }
+
+                    // Gán lại vào order
+                    order.sti_package_item = {
+                        sti_package_id: new mongoose.Types.ObjectId(sti_package_id),
+                        sti_test_ids: stiPackageTests.map(test => new mongoose.Types.ObjectId(test.sti_test_id))
+                    };
+                }
+
+                if (updates.is_paid === true) {
+                    if (['staff', 'admin'].includes(role)) {
+                        order.is_paid = updates.is_paid;
+                        if (['Booked', 'Accepted'].includes(order.order_status)) {
+                            order.order_status = 'Processing';
+                        }
+                    } else {
+                        return {
+                            success: false,
+                            message: 'Unauthorized to update is_paid status'
+                        };
+                    }
+                }
+
+                if (['staff', 'adimin', 'customer'].includes(role) && updates.order_date && updates.order_date.toString() !== order.order_date.toString()) {
+                    let newSchedule = await StiTestScheduleRepository.findOrderDate(updates.order_date);
+                    const oldSchedule = await StiTestScheduleRepository.findById(order.sti_schedule_id);
+
+                    if (!newSchedule) {
+                        newSchedule = new StiTestSchedule({
+                            order_date: updates.order_date,
+                            number_current_orders: 1,
+                            is_locked: false,
+                        });
                         await newSchedule.save();
+                    } else {
+                        if (newSchedule.is_locked) {
+                            return {
+                                success: false,
+                                message: 'Cannot get schedule on locked date and holiday'
+                            };
+                        }
+
+                        if (!oldSchedule || oldSchedule._id.toString() !== newSchedule._id.toString()) {
+                            newSchedule.number_current_orders += 1;
+                            await newSchedule.save();
+                        }
+                    }
+
+                    if (oldSchedule && oldSchedule._id.toString() !== newSchedule._id.toString()) {
+                        oldSchedule.number_current_orders = Math.max(0, oldSchedule.number_current_orders - 1);
+                        oldSchedule.is_locked = false;
+                        await oldSchedule.save();
+                    }
+
+                    order.order_date = updates.order_date;
+                    order.sti_schedule_id = newSchedule._id;
+                }
+
+                const validFields = Object.keys(order.toObject());
+                for (const [key, value] of Object.entries(updates)) {
+                    if (
+                        key !== 'order_status' && 
+                        key !== 'sti_test_items' &&
+                        key !== 'sti_package_item' && 
+                        key !== 'consultant_id' && 
+                        key !== 'staff_id' && 
+                        key !== 'order_date' &&
+                        key !== 'is_paid' &&
+                        validFields.includes(key)
+                    ){
+                        (order as any)[key] = value;
                     }
                 }
-
-                if (oldSchedule && oldSchedule._id.toString() !== newSchedule._id.toString()) {
-                    oldSchedule.number_current_orders = Math.max(0, oldSchedule.number_current_orders - 1);
-                    oldSchedule.is_locked = false;
-                    await oldSchedule.save();
-                }
-
-                order.order_date = updates.order_date;
-                order.sti_schedule_id = newSchedule._id;
             }
-
-            const validFields = Object.keys(order.toObject());
-            for (const [key, value] of Object.entries(updates)) {
-                if (
-                    key !== 'order_status' && 
-                    key !== 'sti_test_items' &&
-                    key !== 'sti_package_item' && 
-                    key !== 'consultant_id' && 
-                    key !== 'staff_id' && 
-                    key !== 'order_date' &&
-                    key !== 'is_paid' &&
-                    validFields.includes(key)
-                ){
-                    (order as any)[key] = value;
-                }
-            }
+            
 
             const result = await StiOrderRepository.saveOrder(order);
             return {
@@ -1070,652 +1069,128 @@ export class StiService {
         }
     }
 
-    //STI RESULT SERVICE
-    public static async createStiResult(orderId: string, additionalData?: Partial<IStiResult>){
+    //Processing the STI result
+
+    public static async getStiTestDropdownByOrderId(order_id: string){
         try {
-            if (!orderId){
-                return{
-                    success: false,
-                    message: 'Result id is not found'
-                }
-            }
-            // Get order information
-            const order = await StiResultRepository.getStiOrderWithTests(orderId);
-            
-            if (!order) {
-                return{
-                    success: false,
-                    message: 'Cannot find the order'
-                }
-            }
-
-            const existing = await StiResultRepository.findExistedResult(orderId);
-
-            if (existing) {
-                return {
-                    success: false,
-                    message: 'STI result for this order already exists and is active'
-                };
-            }
-
-            if (order.order_status === 'Booked' || order.order_status === 'Accepted' || order.order_status === 'Canceled'){
-                return {
-                    success: false,
-                    message: 'STI result can be created where order_status after processing (money is paid)'
-                };
-            }
-            const allTests: any[] = [];
-
-            // Collect all tests from direct tests
-            if (order.sti_test_items && order.sti_test_items.length > 0) {
-                allTests.push(...order.sti_test_items);
-            }
-
-            // Collect all tests from package items
-            if (order.sti_package_item && order.sti_package_item.sti_test_ids?.length > 0) {
-                allTests.push(...order.sti_package_item.sti_test_ids);
-            }
-
-            const sampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
-            // Tạo StiResult cho từng test
-            for (const test of allTests) {
-                if (test?.sti_test_type) {
-                    sampleQualities[test.sti_test_type] = null; // Mặc định "Đạt"
-                }
-            }
-
-            const sample: Sample = {
-                sampleQualities,
-                timeReceived: new Date(),
-                timeTesting: new Date()
-            };
-
-            const stiResultData: Partial<IStiResult> = {
-                sti_order_id: new mongoose.Types.ObjectId(orderId),
-                sample,
-                ...additionalData
-            };
-            const result = await StiResultRepository.create(stiResultData);
-            if (!result){
-                return{
-                    success: false,
-                    message: 'Fail to create sti result'
-                }
-            }
-            return {
-                success: true,
-                message: 'Create sti result successfully',
-                data: result
-            }
-        } catch (error) {
-            console.error(error);
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
-
-    public static async getStiResultByOrderId(orderId: string, userId: string, role: string){
-        try {
-            const result = await StiResultRepository.findByOrderId(orderId);
-            if (!result){
-                return{
-                    success: false,
-                    message: 'Fail to fetch sti result by order'
-                }
-            }
-            
-            // Authorization check
-            if (role === 'customer' && result.sti_order_id.customer_id.toString() !== userId) {
-                return {
-                    success: false,
-                    message: 'Không có quyền truy cập'
-                };
-            }
-            
-            // Staff, consultant, and admin can access all results
-            // Customer can only access their own results (checked above)
-            
-            return{
-                success: true,
-                message: 'Fetched sti result by order successfully',
-                data: result
-            }
-        } catch (error) {
-            console.error('Error in getStiResultByOrderId:', error);
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
-
-    public static async getAllStiResult(){
-        try {
-            const result = await StiResultRepository.findAll();
-            if (!result){
-                return{
-                    success: false,
-                    message: 'Fail to fetch sti result'
-                }
-            }
-            return{
-                success: true,
-                message: 'Fetched sti result successfully',
-                data: result
-            }
-        } catch (error) {
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
-
-
-    public static async updateStiResult(resultId: string, updateData: UpdateStiResultRequest, userId: string, role: string) {
-        try {
-            // Validate input
-            if (!resultId || !updateData) {
-                return {
-                    success: false,
-                    message: 'ID và updated data cannot be null'
-                };
-            }
-
-            // Check if result exists
-            const result = await StiResultRepository.findByActiveId(resultId);
-            if (!result) {
-                return {
-                    success: false,
-                    message: 'Cannot find the sti result or sti result is deactivated or confirmed'
-                };
-            }
-            const order = result.sti_order_id;
-            if (updateData.consultant_id) {
-                if (['consultant', 'staff', 'admin'].includes(role)) {
-                    const isValidConsultant = await ConsultantRepository.findConsultantsByIdAndSpecialization(updateData.consultant_id.toString(), SpecializationType.SexualHealth);
-                    if (!isValidConsultant) {
-                        return {
-                            success: false,
-                            message: 'Consultant must be a valid consultant with specialization in Sexual Health'
-                        };
-                    }   
-                    const consultantExists = await ConsultantRepository.findById(updateData.consultant_id.toString());
-                    if (!consultantExists) {
-                        return {
-                            success: false,
-                            message: 'Consultant not found'
-                        };
-                    }
-                    order.consultant_id = new mongoose.Types.ObjectId(updateData.consultant_id);
-                } else {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update consultant_id'
-                    };
-                }
-            }
-
-            if (updateData.staff_id) {
-                if (['staff', 'admin'].includes(role)) {
-                    const staffExists = await StaffRepository.findById(updateData.staff_id.toString());
-                    if (!staffExists) {
-                        return {
-                            success: false,
-                            message: 'Staff not found'
-                        };
-                    }
-                    order.staff_id = new mongoose.Types.ObjectId(updateData.staff_id);
-                } else {
-                    return {
-                        success: false,
-                        message: 'Unauthorized to update staff_id'
-                    };
-                }
-            }
-            if (updateData.consultant_id || updateData.staff_id) {
-                const resultOrder = await StiResultRepository.saveStiOrder(result);
-                if (!resultOrder) {
-                    return {
-                        success: false,
-                        message: 'Cannot update consultant or staff in sti order'
-                    };
-                }
-            }
-
-            if (updateData.hasOwnProperty('is_confirmed')) {
-                const consultant = await ConsultantRepository.findByUserId(userId);
-                if (!consultant || consultant._id.toString() != result.sti_order_id.consultant_id?.toString()) {
-                    return {
-                        success: false,
-                        message: 'You are not authorized to confirm this result'
-                    };
-                }
-            }
-
-            // Set time_result if result_value is provided and time_result is not set
-            if (updateData.result_value && !updateData.time_result && !result.time_result) {
-                updateData.time_result = new Date();
-            }
-
-<<<<<<< HEAD
-            const allowedSampleQualities = ['blood', 'urine', 'swab'];
-=======
-            const allowedSampleQualities = ['máu', 'nước tiểu', 'dịch âm đạo', 'dịch niệu đạo', 'dịch cổ tử cung'];
->>>>>>> 82dbe4ccf45567298842e5a0fa34030df427e454
-
-            if (updateData.sample?.sampleQualities) {
-                const newQualities = updateData.sample.sampleQualities;
-                const updatedQualities: Record<string, any> = {};
-                const invalidKeys: string[] = [];
-
-                for (const key in newQualities) {
-                    if (allowedSampleQualities.includes(key)) {
-                        updatedQualities[key] = newQualities[key];
-                    } else {
-                        invalidKeys.push(key);
-                    }
-                }
-
-                if (invalidKeys.length > 0) {
-                    return {
-                        success: false,
-                        message: `Invalid sampleQualities keys: ${invalidKeys.join(', ')}`
-                    };
-                }
-
-                // Merge với sample hiện tại (nếu có)
-                result.sample = {
-                    ...(result.sample || {}),
-                    sampleQualities: {
-                    ...(result.sample?.sampleQualities || {}),
-                    ...updatedQualities
-                    }
-                };
-            }
-            // Update the result
-            const updatedResult = await StiResultRepository.updateById(resultId, updateData);
-
-            if (!updatedResult) {
-                return {
-                    success: false,
-                    message: 'Cannot update sti result'
-                };
-            }
-
-            return {
-                success: true,
-                message: 'Update sti result successfully',
-                data: updatedResult
-            };
-
-        } catch (error) {
-            console.error('StiResultService - updateStiResult error:', error);
-            return {
-                success: false,
-                message: 'Server error'
-            };
-        }
-    }
-
-    private static async getTestTypesFromOrder(order: IStiOrder): Promise<string[]> {
-        const testIds: (mongoose.Types.ObjectId | string | null | undefined)[] = [];
-
-        // Lấy test IDs từ package
-        if (Array.isArray(order.sti_package_item?.sti_test_ids)) {
-            testIds.push(...order.sti_package_item.sti_test_ids);
-        }
-
-        // Lấy test IDs từ individual tests
-        if (Array.isArray(order.sti_test_items)) {
-            testIds.push(...order.sti_test_items);
-        }
-
-        // Loại bỏ giá trị null, undefined và ID không hợp lệ
-        const uniqueValidIds = [...new Set(
-            testIds
-            .map(id => id?.toString())
-            .filter(id => id && mongoose.Types.ObjectId.isValid(id))
-        )].map(id => new mongoose.Types.ObjectId(id!));
-
-        if (uniqueValidIds.length === 0) {
-            return [];
-        }
-
-        // Lấy test types từ repository
-        return await StiTestRepository.getTestTypesByIds(uniqueValidIds);
-    }
-
-    public static async syncSampleFromOrder(orderId: string) {
-        try {
-            // Validate order_id
-            if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
-                return {
-                    success: false,
-                    message: 'Invalid order id'
-                };
-            }
-
-            // Lấy order với tests
-            const order = await StiOrderRepository.getOrderWithTests(orderId);
-            if (!order) {
-                return {
-                success: false,
-                message: 'Order not found'
-                };
-            }
-
-            // Lấy tất cả test types từ order
-            const orderTestTypes = await this.getTestTypesFromOrder(order);
-            console.log('Order Test Types:', orderTestTypes);
-            if (orderTestTypes.length === 0) {
-                return {
-                success: false,
-                message: 'No test types found in order'
-                };
-            }
-
-            // Tìm hoặc tạo result record
-            let result = await StiResultRepository.findByOrderId(orderId);
-
-            if (!result) {
-                return{
-                    success: false,
-                    message: 'Cannot find the sti result'
-                }
-            }
-            const currentQualities = result.sample?.sampleQualities || {};
-            const newSampleQualities: Partial<Record<TestTypes, boolean | null>> = {};
-
-            // Maintain the old type and quality in sampleQualities
-            orderTestTypes.forEach(testType => {
-            if (currentQualities.hasOwnProperty(testType)) {
-                newSampleQualities[testType] = currentQualities[testType];
-            } else {
-                newSampleQualities[testType] = null;
-            }
-            });
-
-            // Update new sample qualities
-            result = await StiResultRepository.updateById(result._id.toString(), {
-                sample: {
-                    ...result.sample,
-                    sampleQualities: newSampleQualities
-                }
-            });
-
-            return {
-                success: true,
-                message: 'Updated sti result successfully',
-                data: result
-            };
-        } catch (error) {
-            console.error('Error syncing sample qualities:', error);
-            return {
-                success: false,
-                message: 'Internal server error',
-            };
-        }
-    }
-
-    public static async sendStiResultNotificationFromDB(stiResultId: string) {
-        try {
-            const result = await StiResultRepository.getFullResult(stiResultId);
-            if (!result || !result.sti_order_id) {
-                return { 
-                    success: false, 
-                    message: "Cannot find the result" 
-                };
-            }
-            if (!result.is_confirmed) {
-                return {
-                    success: false,
-                    message: 'Result is not confirmed.'
-                };
-            }
-            if (result.is_notified) {
-                return {
-                    success: false,
-                    message: 'Result is sent before.'
-                };
-            }
-            const order = result.sti_order_id as any;
-            const user = order.customer_id;
-            const consultantUser = order.consultant_id?.user_id;
-            const staffUser = order.staff_id?.user_id;
-
-            const customerName = user?.full_name ?? 'Khách hàng';
-            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
-            const gender = user?.gender ?? 'Không rõ';
-            const diagnosis = result.diagnosis ?? '';
-            const resultValue = result.result_value ?? '';
-            const notes = result.notes ?? '';
-            const isCritical = result.is_critical ?? false;
-            const consultantName = consultantUser?.full_name ?? 'Chưa có';
-            const staffName = staffUser?.full_name ?? 'Chưa có';
-            let testNames: string[] = [];
-            
-            if (staffName === 'Chưa có' && consultantName === 'Chưa có') {
-                return {
-                    success: false,
-                    message: 'Consultant and Staff is not found'
-                };
-            }
-
-            // Nếu có sti_test_items
-            if (order.sti_test_items && order.sti_test_items.length > 0) {
-                // Populate trước đó để có sti_test_items là mảng StiTest
-                testNames = order.sti_test_items.map((t: IStiTest) => t.sti_test_name);
-            }
-
-            // Nếu không có mà có package item
-            else if (order.sti_package_item?.sti_test_ids && order.sti_package_item.sti_test_ids.length > 0) {
-                // Cần populate sti_package_item.sti_test_ids (vì là ObjectId)
-                testNames = order.sti_package_item.sti_test_ids.map((t: IStiTest) => t.sti_test_name);
-            }
-
-            const sampleInfo = {
-                timeReceived: result.sample?.timeReceived,
-                timeTesting: result.sample?.timeTesting,
-                sampleQualities: result.sample?.sampleQualities ?? {}
-            };
-
-            const resultDate = result.time_result;
-            const emailSendTo = user?.email;
-
-            if (!emailSendTo) {
-                return { success: false, message: 'Người dùng không có email' };
-            }
-
-            const mailResult = await MailUtils.sendStiResultNotification(
-                customerName,
-                birthYear,
-                gender,
-                diagnosis,
-                resultValue,
-                notes,
-                isCritical,
-                consultantName,
-                staffName,
-                sampleInfo,
-                testNames,
-                resultDate,
-                emailSendTo
-            );
-            if (!mailResult){
-                return{
-                    success: false,
-                    message: 'Fail to send mail'
-                }
-            }
-            return mailResult;
-        } catch (error) {
-            console.error(error);
-            return{
-                success: false,
-                message: 'Internal server error'
-            }
-        }    
-    }
-
-    public static async getStiResultById(resultId: string){
-        try {
-            const result = await StiResultRepository.getFullResult(resultId);
-            if (!result || !result.sti_order_id) {
-                return { 
-                    success: false, 
-                    message: "Cannot find the result" 
-                };
-            }
-            const order = result.sti_order_id as any;
-            const user = order.customer_id;
-            const consultantUser = order.consultant_id?.user_id;
-            const staffUser = order.staff_id?.user_id;
-
-            const customerName = user?.full_name ?? 'Khách hàng';
-            const birthYear = user?.date_of_birth ? new Date(user.date_of_birth).getFullYear() : null;
-            const gender = user?.gender ?? 'Không rõ';
-            const diagnosis = result.diagnosis ?? '';
-            const resultValue = result.result_value ?? '';
-            const notes = result.notes ?? '';
-            const isCritical = result.is_critical ?? false;
-            const consultantName = consultantUser?.full_name ?? 'Chưa có';
-            const staffName = staffUser?.full_name ?? 'Chưa có';
-            let testNames: string[] = [];
-            // Nếu có sti_test_items
-            if (order.sti_test_items && order.sti_test_items.length > 0) {
-                // Populate trước đó để có sti_test_items là mảng StiTest
-                testNames = order.sti_test_items.map((t: IStiTest) => t.sti_test_name);
-            }
-
-            // Nếu không có mà có package item
-            else if (order.sti_package_item?.sti_test_ids && order.sti_package_item.sti_test_ids.length > 0) {
-                // Cần populate sti_package_item.sti_test_ids (vì là ObjectId)
-                testNames = order.sti_package_item.sti_test_ids.map((t: IStiTest) => t.sti_test_name);
-            }
-
-            const resultDate = result.time_result;
-            return {
-                success: true,
-                message: 'Send result successfully',
-                customerName,
-                birthYear,
-                gender,
-                diagnosis,
-                resultValue,
-                notes,
-                isCritical,
-                consultantName,
-                staffName,
-                sample: {
-                    timeReceived: result.sample?.timeReceived,
-                    timeTesting: result.sample?.timeTesting,
-                    sampleQualities: result.sample?.sampleQualities ?? {}
-                },
-                testNames,
-                resultDate,
-            };
-        } catch (error) {
-            return{
-                success: false,
-                message: 'Server error'
-            }
-        }
-    }
-
-    /**
-     * Lấy tất cả STI orders của một customer
-     */
-    public static async getStiOrdersByCustomer(customerId: string) {
-        try {
-            if (!customerId) {
-                return {
-                    success: false,
-                    message: 'Customer ID is required'
-                };
-            }
-
-            const orders = await StiOrderRepository.getOrdersByCustomer(customerId);
-            
-            return {
-                success: true,
-                message: 'STI orders retrieved successfully',
-                data: orders
-            };
-        } catch (error) {
-            console.error('Error getting STI orders by customer:', error);
-            return {
-                success: false,
-                message: 'Internal server error'
-            };
-        }
-    }
-
-    /**
-     * Lấy STI order theo ID
-     */
-    public static async getStiOrderById(orderId: string) {
-        try {
-            if (!orderId) {
-                return {
-                    success: false,
-                    message: 'Order ID is required'
-                };
-            }
-
-            const order = await StiOrderRepository.findOrderById(orderId);
-            
+            const order = await StiOrderRepository.findOrderById(order_id);
             if (!order) {
                 return {
                     success: false,
                     message: 'Order not found'
                 };
             }
-
+            if (order.order_status !== 'Testing') {
+                return {
+                    success: false,
+                    message: 'Order is not in Testing status'
+                };
+            }
+            const orderWithTests = await StiOrderRepository.getStiTestInOrder(order_id);
+            if (!orderWithTests) {
+                return {
+                    success: false,
+                    message: 'No STI tests found in this order'
+                };
+            }
+            if (!orderWithTests.sti_package_item || !orderWithTests.sti_package_item.sti_test_ids || orderWithTests.sti_package_item.sti_test_ids.length === 0) {
+                return {
+                    success: false,
+                    message: 'No STI tests found in this order package'
+                };
+            }
+            const sti_tests_from_package = await StiTestRepository.getStiTestsByIds(orderWithTests.sti_package_item.sti_test_ids);
+            const sti_tests = await StiTestRepository.getStiTestsByIds(orderWithTests.sti_test_items);
+            sti_tests.push(...sti_tests_from_package);
+            if (!sti_tests || sti_tests.length === 0) {
+                return {
+                    success: false,
+                    message: 'No STI tests found for the given order'
+                };
+            }
             return {
                 success: true,
-                message: 'STI order retrieved successfully',
-                data: order
+                message: 'Fetched STI tests successfully',
+                sti_tests: sti_tests
             };
+
         } catch (error) {
-            console.error('Error getting STI order by ID:', error);
+            console.error('Error fetching STI test dropdown by order ID:', error);
             return {
                 success: false,
                 message: 'Internal server error'
             };
+            
         }
     }
 
-    /**
-     * Lấy STI result theo order ID cho customer
-     */
-    public static async getCustomerStiResultByOrderId(orderId: string) {
+    public static async createStiResult(
+        user: JWTPayload,
+        order_id: string,
+        sti_test_id: string, 
+        sti_test_type: TestTypes, 
+        sample_quality: boolean, 
+        urine?: any, blood?: any, swab?: any
+    ){
         try {
-            if (!orderId) {
+            if (user.role !== 'staff'){
                 return {
                     success: false,
-                    message: 'Order ID is required'
+                    message: 'You must be a staff member to create STI results'
+                };
+            }
+            const order = await StiOrderRepository.findOrderById(order_id);
+            if (!order) {
+                return {
+                    success: false,
+                    message: 'Order not found'
+                };
+            }
+            // Check if the order is in Testing status
+            if (order.order_status !== 'Testing') {
+                return {
+                    success: false,
+                    message: 'Order is not in Testing status'
                 };
             }
 
-            const result = await StiResultRepository.findByOrderId(orderId);
-            
+            // Check if the order already has a result
+            const existingResult = await StiResultRepository.findByOrderId(order_id);
+            if (existingResult) {
+                return {
+                    success: false,
+                    message: 'Result already exists for this order'
+                };
+            };
+            const staff_id = await StaffRepository.findByUserId(user.userId);
+            const newResult = new StiResult({
+                sti_order_id: order_id,
+                sti_result_items: [{
+                    sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
+                    result: {
+                        sample_type: sti_test_type,
+                        sample_quality: sample_quality,
+                        ...(urine ? urine : (blood ? blood: (swab ? swab : {})))
+                    },
+                    time_completed: TimeUtils.getCurrentTimeInZone(), // Set the current time as completed time
+                    staff_id: staff_id // Assuming staff_id is available in the order
+                }],
+                
+            })
+            const result = await StiResultRepository.createStiResult(newResult);
             if (!result) {
                 return {
                     success: false,
-                    message: 'STI result not found'
+                    message: 'Failed to create STI result'
                 };
             }
-
-            return {
+            return{
                 success: true,
-                message: 'STI result retrieved successfully',
-                data: result
-            };
+                message: 'STI result created successfully',
+                result: result
+            }
         } catch (error) {
-            console.error('Error getting STI result by order ID:', error);
+            console.error('Error creating STI result:', error);
             return {
                 success: false,
                 message: 'Internal server error'
@@ -1723,5 +1198,79 @@ export class StiService {
         }
     }
 
-    
+    public static async updateStiResult(
+        user: JWTPayload,
+        order_id: string,
+        sti_test_id: string,
+        sti_test_type: TestTypes,
+        sample_quality: boolean,
+        urine?: any,
+        blood?: any,
+        swab?: any,
+        diagnosis?:string,
+        is_confirmed?: boolean,
+        medical_notes?: string
+    ) {
+        try {
+            const order = await StiOrderRepository.findOrderById(order_id);
+            if (!order) {
+                return {
+                    success: false,
+                    message: 'Order not found'
+                };
+            }
+            // Check if the order is in Testing status
+            if (order.order_status !== 'Testing') {
+                return {
+                    success: false,
+                    message: 'Order is not in Testing status'
+                };
+            }
+            const result = await StiResultRepository.findByOrderId(order_id);
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'No STI result found for this order. Please create a result first.'
+                };
+            }
+            
+            if (user.role === 'Staff'){
+                result.sti_result_items.push({
+                    sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
+                    result: {
+                        sample_type: sti_test_type,
+                        sample_quality: sample_quality,
+                        ...(urine ? urine : (blood ? blood : (swab ? swab : {}))),
+                        time_completed: TimeUtils.getCurrentTimeInZone(), // Set the current time as completed
+                        staff_id: (await StaffRepository.findByUserId(user.userId))._id // Assuming staff_id is available in the order
+                    } 
+                });
+            }
+            if (user.role === 'Consultant'){
+                result.received_time = TimeUtils.getCurrentTimeInZone(); // Set the received time to current time
+                result.diagnosis = diagnosis;
+                result.is_confirmed = is_confirmed;
+                // result.is_critical = is_critical;
+                result.medical_notes = medical_notes;
+            }
+            const updatedResult = await StiResultRepository.updateStiResult(result);
+            if (!result) {
+                return {
+                    success: false,
+                    message: 'Failed to update STI result'
+                };
+            }
+            return {
+                success: true,
+                message: 'STI result updated successfully',
+                result: updatedResult
+            };
+        } catch (error) {
+            console.error('Error updating STI result:', error);
+            return {
+                success: false,
+                message: 'Internal server error'
+            };
+        }
+    }
 }

@@ -10,7 +10,7 @@ export interface StiTestRequest {
     isActive?: boolean;
     category?: 'bacterial' | 'viral' | 'parasitic';
     sti_test_type?: 'blood' | 'urine' | 'swab';
-    createdBy: ObjectId;
+    created_by: ObjectId;
 }
 export interface StiOrderQuery extends PaginationQuery {
     customer_id?: string;
