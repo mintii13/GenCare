@@ -26,6 +26,7 @@ import appointmentHistoryController from './controllers/appointmentHistoryContro
 import stiAssessmentRoutes from './controllers/stiAssessmentController';
 import userController from './controllers/userController';
 import homeController from './controllers/homeController';
+import paymentController from './controllers/paymentController';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,6 +79,7 @@ app.use('/api/menstrual-cycle', menstrualCycleController);
 app.use('/api/pill-tracking', pillTrackingController);
 app.use('/api/sti-assessment', stiAssessmentRoutes);
 app.use('/api/home', homeController);
+app.use('/api/payment', paymentController);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -97,7 +99,7 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-      console.log(' Starting GenCare Backend Server...');
+    console.log(' Starting GenCare Backend Server...');
 
     // 1. Connect to RedisClient
     console.log(' Connecting to Redis...');

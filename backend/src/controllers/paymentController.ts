@@ -2,7 +2,7 @@
 import { Router, Request, Response } from 'express';
 import { MoMoPaymentService, MoMoIPNRequest } from '../services/momoPaymentService';
 import { PaymentRepository } from '../repositories/paymentRepository';
-import { IPayment } from '../models/Payment';
+import { IPayment, Payment } from '../models/Payment';
 import { StiOrder } from '../models/StiOrder';
 import { authenticateToken } from '../middlewares/jwtMiddleware';
 import mongoose from 'mongoose';
@@ -10,11 +10,46 @@ import mongoose from 'mongoose';
 const router = Router();
 const momoService = new MoMoPaymentService();
 
+// Helper function để update payment và order
+async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
+    if (ipnData.resultCode === 0) {
+        // Thanh toán thành công
+        payment.status = 'Completed';
+        payment.completedAt = new Date();
+        payment.momoTransId = ipnData.transId.toString();
+        payment.momoMessage = ipnData.message;
+        payment.momoResultCode = ipnData.resultCode;
+        await payment.save();
+
+        // Cập nhật trạng thái order liên quan
+        if (payment.paymentType === 'STI_Test') {
+            await StiOrder.findByIdAndUpdate(
+                payment.orderId,
+                {
+                    is_paid: true,
+                    order_status: 'Accepted'
+                }
+            );
+        }
+
+        console.log(`Payment ${payment._id} completed successfully`);
+    } else {
+        // Thanh toán thất bại
+        payment.status = 'Failed';
+        payment.failedAt = new Date();
+        payment.errorMessage = ipnData.message;
+        payment.momoResultCode = ipnData.resultCode;
+        await payment.save();
+
+        console.log(`Payment ${payment._id} failed:`, ipnData.message);
+    }
+}
+
 interface CreatePaymentRequest {
     orderId: string; // ID của order được thanh toán (STI Order, Appointment...)
     paymentType: 'STI_Test' | 'Consultation' | 'Package' | 'Other';
     paymentMethod: 'MoMo' | 'Cash';
-    amount: number;
+    // Bỏ amount - sẽ lấy từ order
 }
 
 /**
@@ -23,7 +58,7 @@ interface CreatePaymentRequest {
  */
 router.post('/create', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const { orderId, paymentType, paymentMethod, amount }: CreatePaymentRequest = req.body;
+        const { orderId, paymentType, paymentMethod }: CreatePaymentRequest = req.body;
         const customerId = req.jwtUser?.userId;
 
         if (!customerId) {
@@ -34,17 +69,10 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         }
 
         // Validation
-        if (!orderId || !paymentType || !paymentMethod || !amount) {
+        if (!orderId || !paymentType || !paymentMethod) {
             return res.status(400).json({
                 success: false,
                 message: 'Thiếu thông tin bắt buộc'
-            });
-        }
-
-        if (amount <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Số tiền phải lớn hơn 0'
             });
         }
 
@@ -57,6 +85,69 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
 
         // Convert orderId to ObjectId
         const orderObjectId = new mongoose.Types.ObjectId(orderId);
+
+        // Lấy thông tin order và amount dựa trên paymentType
+        let orderData: any = null;
+        let amount: number = 0;
+
+        switch (paymentType) {
+            case 'STI_Test':
+                orderData = await StiOrder.findById(orderObjectId);
+                if (!orderData) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'STI Order không tìm thấy'
+                    });
+                }
+                // Kiểm tra customer có quyền thanh toán order này không
+                if (orderData.customer_id.toString() !== customerId) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Bạn không có quyền thanh toán order này'
+                    });
+                }
+                // Kiểm tra order đã thanh toán chưa
+                if (orderData.is_paid) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Order này đã được thanh toán rồi'
+                    });
+                }
+                amount = orderData.total_amount;
+                break;
+
+            case 'Consultation':
+                // TODO: Implement Appointment logic
+                return res.status(400).json({
+                    success: false,
+                    message: 'Consultation payment chưa được implement'
+                });
+
+            case 'Package':
+                // TODO: Implement Package logic
+                return res.status(400).json({
+                    success: false,
+                    message: 'Package payment chưa được implement'
+                });
+
+            case 'Other':
+                // Cho phép amount = 0 cho Other type (testing)
+                amount = 10000; // Default amount cho testing
+                break;
+
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: 'Payment type không hợp lệ'
+                });
+        }
+
+        if (amount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Số tiền thanh toán phải lớn hơn 0'
+            });
+        }
 
         // Kiểm tra xem đã có payment nào cho order này với status Completed chưa
         const existingPayment = await PaymentRepository.findByOrderId(orderObjectId);
@@ -73,7 +164,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
             customerId: new mongoose.Types.ObjectId(customerId),
             paymentType,
             paymentMethod,
-            amount,
+            amount, // Amount được lấy từ order
             currency: 'VND',
             status: paymentMethod === 'Cash' ? 'Completed' : 'Pending',
             initiatedAt: new Date(),
@@ -161,53 +252,52 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
     try {
         const ipnData: MoMoIPNRequest = req.body;
 
-        console.log('Received MoMo IPN:', JSON.stringify(ipnData, null, 2));
+        console.log('🔔 Received MoMo IPN:', JSON.stringify(ipnData, null, 2));
 
         // Xác thực chữ ký
         const isValidSignature = momoService.verifyIPNSignature(ipnData);
         if (!isValidSignature) {
-            console.error('Invalid MoMo IPN signature');
             return res.status(400).json({
                 success: false,
                 message: 'Invalid signature'
             });
         }
 
-        // Tìm payment record
-        const payment = await PaymentRepository.findByOrderId(ipnData.orderId);
+
+        // Tìm payment record - prioritize momoRequestId
+        let payment = await Payment.findOne({
+            momoRequestId: ipnData.requestId
+        });
+
         if (!payment) {
-            console.error('Payment not found for orderId:', ipnData.orderId);
+            console.log('🔍 Payment not found by requestId, trying orderId as Payment._id');
+            try {
+                // MoMo orderId chính là Payment._id
+                if (mongoose.Types.ObjectId.isValid(ipnData.orderId)) {
+                    payment = await Payment.findById(ipnData.orderId);
+                }
+            } catch (e) {
+                console.error('Error finding payment by _id:', e);
+            }
+        }
+
+        if (!payment) {
             return res.status(404).json({
                 success: false,
                 message: 'Payment not found'
             });
         }
 
-        if (ipnData.resultCode === 0) {
-            // Thanh toán thành công
-            await PaymentRepository.markAsCompleted(ipnData.orderId, {
-                momoTransId: ipnData.transId.toString(),
-                momoMessage: ipnData.message,
-                momoResultCode: ipnData.resultCode
+
+        // Check if already processed
+        if (payment.status === 'Completed') {
+            return res.status(200).json({
+                success: true,
+                message: 'Payment already processed'
             });
-
-            // Cập nhật trạng thái order liên quan
-            if (payment.paymentType === 'STI_Test') {
-                await StiOrder.findByIdAndUpdate(
-                    payment.orderId,
-                    {
-                        is_paid: true,
-                        order_status: 'Accepted'
-                    }
-                );
-            }
-
-            console.log(`Payment ${payment.orderId} completed successfully`);
-        } else {
-            // Thanh toán thất bại
-            await PaymentRepository.markAsFailed(ipnData.orderId, ipnData.message, ipnData.resultCode);
-            console.log(`Payment ${payment.orderId} failed:`, ipnData.message);
         }
+
+        await updatePaymentAndOrder(payment, ipnData);
 
         // Phản hồi cho MoMo
         res.status(200).json({
@@ -216,7 +306,6 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
         });
 
     } catch (error: any) {
-        console.error('MoMo IPN processing error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -396,5 +485,6 @@ router.get('/test/simple', async (req: Request, res: Response) => {
         });
     }
 });
+
 
 export default router;
