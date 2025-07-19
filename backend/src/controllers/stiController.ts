@@ -11,7 +11,7 @@ import { stiAuditLogger } from '../middlewares/stiAuditLogger';
 import { TargetType } from '../models/StiAuditLog';
 import { StiOrder } from '../models/StiOrder';
 import { validateStiOrderPagination } from '../middlewares/paginationValidation';
-import { StiOrderQuery, UpdateStiResultRequest } from '../dto/requests/StiRequest';
+import { StiOrderQuery } from '../dto/requests/StiRequest';
 import { validateAuditLogPagination } from '../middlewares/paginationValidation';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { StiResultRepository } from '../repositories/stiResultRepository';
@@ -658,7 +658,6 @@ router.patch('/order/:orderId/status',
 //                 message: 'Order not found'
 //             });
 //         }
-
 //         const { getAvailableTransitions } = await import('../middlewares/stiValidation');
 //         const availableTransitions = getAvailableTransitions(order.order_status, order.is_paid);
 

@@ -13,7 +13,7 @@ import { validTransitions } from '../middlewares/stiValidation';
 import { StiAuditLogRepository } from '../repositories/stiAuditLogRepository';
 import { MailUtils } from '../utils/mailUtils';
 import { UserRepository } from '../repositories/userRepository';
-import { StiOrderQuery, UpdateStiResultRequest } from '../dto/requests/StiRequest';
+import { StiOrderQuery } from '../dto/requests/StiRequest';
 import { StiOrderPaginationResponse } from '../dto/responses/StiOrderPaginationResponse';
 import { PaginationUtils } from '../utils/paginationUtils';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
@@ -30,9 +30,9 @@ export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
         try {
             const duplicate = await StiTestRepository.findByStiTestCode(stiTest.sti_test_code);
-            if (duplicate){
-                if (duplicate.is_active){
-                    return{
+            if (duplicate) {
+                if (duplicate.is_active) {
+                    return {
                         success: false,
                         message: 'Sti test code is duplicated'
                     }
@@ -40,7 +40,7 @@ export class StiService {
                 else {
                     //update is_active thành true
                     const result = await StiTestRepository.updateIsActive(duplicate._id);
-                    return{
+                    return {
                         success: true,
                         message: 'Insert StiTest to database successfully',
                         stitest: result
@@ -48,8 +48,8 @@ export class StiService {
                 }
             }
             const result: Partial<IStiTest> = await StiTestRepository.insertStiTest(stiTest);
-            if (!result){
-                return{
+            if (!result) {
+                return {
                     success: false,
                     message: 'Cannot insert StiTest to database'
                 }
@@ -71,8 +71,8 @@ export class StiService {
     public static async getAllStiTest(): Promise<AllStiTestResponse> {
         try {
             const allOfTest = await StiTestRepository.getAllStiTest();
-            if (!allOfTest){
-                return{
+            if (!allOfTest) {
+                return {
                     success: false,
                     message: 'Fail in getting Sti Test'
                 }
@@ -134,7 +134,7 @@ export class StiService {
                     message: 'StiTest not found or you are not authorized to update it'
                 }
             }
-          
+
             // Bỏ kiểm tra quyền, ai cũng update được nếu là staff hoặc admin
             return {
                 success: true,
@@ -423,7 +423,7 @@ export class StiService {
                 order_date,
                 notes
             });
-            
+
             const result = await StiOrderRepository.insertStiOrder(sti_order);
 
             if (!result) {
@@ -432,14 +432,14 @@ export class StiService {
                     message: 'Order already exists or failed to insert'
                 };
             }
-            
+
             schedule.number_current_orders += 1;
             if (schedule.number_current_orders >= 10) {
                 schedule.is_locked = true;
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id);
-            
+
             await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email);
             return {
                 success: true,
@@ -846,7 +846,6 @@ export class StiService {
                 }
             }
             
-
             const result = await StiOrderRepository.saveOrder(order);
             return {
                 success: true,
@@ -939,7 +938,7 @@ export class StiService {
     public static async getStiOrdersWithPagination(query: StiOrderQuery): Promise<StiOrderPaginationResponse> {
         try {
             console.log('🔍 [DEBUG] STI Service - Input query:', query);
-            
+
             // Validate pagination parameters
             const { page, limit, sort_by, sort_order } = PaginationUtils.validateStiOrderPagination(query);
             console.log('📊 [DEBUG] STI Service - Validated params:', { page, limit, sort_by, sort_order });
@@ -1070,7 +1069,6 @@ export class StiService {
     }
 
     //Processing the STI result
-
     public static async getStiTestDropdownByOrderId(order_id: string){
         try {
             const order = await StiOrderRepository.findOrderById(order_id);

@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { TestTypes } from './StiTest';
-import { DateTime } from 'luxon';
 import { Staff } from './Staff';
 
 export type StiResultItem = {
