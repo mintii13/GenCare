@@ -780,7 +780,7 @@ export class StiService {
                     };
                 }
 
-                if (updates.is_paid === true) {
+                if (updates.is_paid === true && order.order_status === 'Accepted') {
                     if (['staff', 'admin'].includes(role)) {
                         order.is_paid = updates.is_paid;
                         if (['Booked', 'Accepted'].includes(order.order_status)) {
@@ -1100,6 +1100,11 @@ export class StiService {
             const sti_tests_from_package = await StiTestRepository.getStiTestsByIds(orderWithTests.sti_package_item.sti_test_ids);
             const sti_tests = await StiTestRepository.getStiTestsByIds(orderWithTests.sti_test_items);
             sti_tests.push(...sti_tests_from_package);
+            const uniqueTestsMap = new Map<string, any>();
+            for (const test of sti_tests) {
+                uniqueTestsMap.set(test._id.toString(), test); // toString() phòng trường hợp _id là ObjectId
+            }
+            const uniqueTests = Array.from(uniqueTestsMap.values());
             if (!sti_tests || sti_tests.length === 0) {
                 return {
                     success: false,
@@ -1109,7 +1114,7 @@ export class StiService {
             return {
                 success: true,
                 message: 'Fetched STI tests successfully',
-                sti_tests: sti_tests
+                sti_tests: uniqueTests
             };
 
         } catch (error) {
@@ -1122,77 +1127,42 @@ export class StiService {
         }
     }
 
-    public static async createStiResult(
+    public static async buildStiResultItem(
         user: JWTPayload,
-        order_id: string,
-        sti_test_id: string, 
-        sti_test_type: TestTypes, 
-        sample_quality: boolean, 
-        urine?: any, blood?: any, swab?: any
-    ){
+        sti_test_id: string,
+        sti_test_type: TestTypes,
+        result: {
+            sample_type: TestTypes,
+            sample_quality: boolean,
+            urine?: any,
+            blood?: any,
+            swab?: any
+        }
+    ) {
         try {
-            if (user.role !== 'staff'){
-                return {
-                    success: false,
-                    message: 'You must be a staff member to create STI results'
-                };
-            }
-            const order = await StiOrderRepository.findOrderById(order_id);
-            if (!order) {
-                return {
-                    success: false,
-                    message: 'Order not found'
-                };
-            }
-            // Check if the order is in Testing status
-            if (order.order_status !== 'Testing') {
-                return {
-                    success: false,
-                    message: 'Order is not in Testing status'
-                };
-            }
-
-            // Check if the order already has a result
-            const existingResult = await StiResultRepository.findByOrderId(order_id);
-            if (existingResult) {
-                return {
-                    success: false,
-                    message: 'Result already exists for this order'
-                };
-            };
+            if (user.role !== 'staff') return null;
+    
             const staff_id = await StaffRepository.findByUserId(user.userId);
-            const newResult = new StiResult({
-                sti_order_id: order_id,
-                sti_result_items: [{
-                    sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
-                    result: {
-                        sample_type: sti_test_type,
-                        sample_quality: sample_quality,
-                        ...(urine ? urine : (blood ? blood: (swab ? swab : {})))
-                    },
-                    time_completed: TimeUtils.getCurrentTimeInZone(), // Set the current time as completed time
-                    staff_id: staff_id // Assuming staff_id is available in the order
-                }],
-                
-            })
-            const result = await StiResultRepository.createStiResult(newResult);
-            if (!result) {
-                return {
-                    success: false,
-                    message: 'Failed to create STI result'
-                };
-            }
-            return{
-                success: true,
-                message: 'STI result created successfully',
-                result: result
-            }
-        } catch (error) {
-            console.error('Error creating STI result:', error);
-            return {
-                success: false,
-                message: 'Internal server error'
+            if (!staff_id) return null;
+    
+            const resultItem: any = {
+                sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
+                result: {
+                    sample_type: sti_test_type,
+                    sample_quality: result.sample_quality,
+                    time_completed: TimeUtils.getCurrentTimeInZone(),
+                    staff_id: staff_id,
+                }
             };
+    
+            if (result.urine) resultItem.result.urine = result.urine;
+            if (result.blood) resultItem.result.blood = result.blood;
+            if (result.swab) resultItem.result.swab = result.swab;
+    
+            return resultItem;
+        } catch (error) {
+            console.error('Error building result item:', error);
+            return null;
         }
     }
 
@@ -1205,70 +1175,89 @@ export class StiService {
         urine?: any,
         blood?: any,
         swab?: any,
-        diagnosis?:string,
+        diagnosis?: string,
         is_confirmed?: boolean,
         medical_notes?: string
-    ) {
+      ) {
         try {
             const order = await StiOrderRepository.findOrderById(order_id);
-            if (!order) {
-                return {
-                    success: false,
-                    message: 'Order not found'
-                };
-            }
-            // Check if the order is in Testing status
-            if (order.order_status !== 'Testing') {
-                return {
-                    success: false,
-                    message: 'Order is not in Testing status'
-                };
-            }
+            if (!order) return { success: false, message: 'Order not found' };
+            if (order.order_status !== 'Testing') return { success: false, message: 'Order is not in Testing status' };
+        
             const result = await StiResultRepository.findByOrderId(order_id);
-            if (!result) {
-                return {
-                    success: false,
-                    message: 'No STI result found for this order. Please create a result first.'
-                };
+            if (!result) return { success: false, message: 'No STI result found for this order. Please create a result first.' };
+            console.log("Result =>>>>", result);
+
+            const exists = result.sti_result_items.some(item => item.sti_test_id.toString() === sti_test_id);
+            if (exists) {
+                return { success: false, message: 'This test already has a result' };
             }
-            
-            if (user.role === 'Staff'){
-                result.sti_result_items.push({
+            if (user.role === 'staff') {
+                const newItem = {
                     sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
                     result: {
-                        sample_type: sti_test_type,
-                        sample_quality: sample_quality,
-                        ...(urine ? urine : (blood ? blood : (swab ? swab : {}))),
-                        time_completed: TimeUtils.getCurrentTimeInZone(), // Set the current time as completed
-                        staff_id: (await StaffRepository.findByUserId(user.userId))._id // Assuming staff_id is available in the order
-                    } 
-                });
+                      sample_type: sti_test_type,
+                      sample_quality,
+                      ...(sti_test_type === 'urine' && urine ? { urine } : {}),
+                      ...(sti_test_type === 'blood' && blood ? { blood } : {}),
+                      ...(sti_test_type === 'swab' && swab ? { swab } : {}),
+                      time_completed: TimeUtils.getCurrentTimeInZone(),
+                      staff_id: (await StaffRepository.findByUserId(user.userId))._id
+                    }
+                  };
+                console.log("New item: ===>", newItem);
+                result.sti_result_items.push(newItem);
+                result.markModified('sti_result_items');
             }
-            if (user.role === 'Consultant'){
-                result.received_time = TimeUtils.getCurrentTimeInZone(); // Set the received time to current time
+        
+            if (user.role === 'consultant') {
+                result.received_time = TimeUtils.getCurrentTimeInZone();
                 result.diagnosis = diagnosis;
                 result.is_confirmed = is_confirmed;
-                // result.is_critical = is_critical;
                 result.medical_notes = medical_notes;
             }
-            const updatedResult = await StiResultRepository.updateStiResult(result);
-            if (!result) {
-                return {
-                    success: false,
-                    message: 'Failed to update STI result'
-                };
-            }
+        
+            const updatedResult = await result.save(); // <- save lại toàn bộ
+            console.log('✅ All result items:', updatedResult.sti_result_items.map(item => ({
+                sti_test_id: item.sti_test_id.toString(),
+                sample_type: item.result.sample_type,
+                urine: item.result.urine,
+                blood: item.result.blood,
+                swab: item.result.swab
+              })));
             return {
                 success: true,
                 message: 'STI result updated successfully',
                 result: updatedResult
             };
+      
         } catch (error) {
-            console.error('Error updating STI result:', error);
-            return {
-                success: false,
-                message: 'Internal server error'
-            };
+          console.error('Error updating STI result:', error);
+          return {
+            success: false,
+            message: 'Internal server error'
+          };
+        }
+    }
+      
+
+    public static async getStiResultByOrderId(orderId: string) {
+        try {
+            const result = await StiResultRepository.getStiResultByOrder(orderId);
+        
+            if (!result) 
+                return{
+                    success: false,
+                    message: 'Result is not found'
+                };
+            return{
+                success: true,
+                message: 'Fetch sti result by order successfully',
+                data: result
+            } 
+        } catch (error) {
+          console.error('Error in getStiResultByOrderId:', error);
+          throw error;
         }
     }
 }

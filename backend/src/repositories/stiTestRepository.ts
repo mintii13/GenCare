@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { StiTest, IStiTest } from '../models/StiTest';
+import { StiTest, IStiTest, TestTypes } from '../models/StiTest';
 
 export class StiTestRepository{
     public static async findByIdAndUpdateStiTest(id: string, updateData: Partial<IStiTest>): Promise<IStiTest | null>{
@@ -90,7 +90,7 @@ export class StiTestRepository{
         }
     }
 
-    public static async getStiTestTypeById(sti_test_id: string): Promise<string | null> {
+    public static async getStiTestTypeById(sti_test_id: string): Promise<TestTypes | null> {
         try {
             const test = await StiTest.findById(sti_test_id).select('sti_test_type').lean<IStiTest>();
             return test ? test.sti_test_type : null;

@@ -55,11 +55,11 @@ export interface IStiResult extends Document{
         sti_test_id: mongoose.Types.ObjectId;
         result: StiResultItem;
     }[];
-    received_time: Date;                            //time will be predicted, then updated to true time after result is received
-    diagnosis: string;
+    received_time?: Date;                            //time will be predicted, then updated to true time after result is received
+    diagnosis?: string;
     is_confirmed: boolean;
     is_critical: boolean;                           //will be first determined by the backend, then recommended to consultant
-    medical_notes: string;                          //notes for consultant
+    medical_notes?: string;                          //notes for consultant
 }
 
 const stiResultSchema = new Schema<IStiResult>({
@@ -114,11 +114,11 @@ const stiResultSchema = new Schema<IStiResult>({
             staff_id: { type: Schema.Types.ObjectId, ref: 'Staff', required: true } // Reference to the staff who created/updated the result
         }
     }],
-    received_time: { type: Date, required: true },
-    diagnosis: { type: String, required: true },
+    received_time: { type: Date },
+    diagnosis: { type: String },
     is_confirmed: { type: Boolean, default: false },
     is_critical: { type: Boolean, default: false },
-    medical_notes: { type: String, required: false }
+    medical_notes: { type: String }
 }, { timestamps: true });
 
 export const StiResult = mongoose.model<IStiResult>('StiResult', stiResultSchema);

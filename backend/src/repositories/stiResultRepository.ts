@@ -1,9 +1,9 @@
 import { StiResult, IStiResult } from '../models/StiResult';
 import { IStiOrder, StiOrder } from '../models/StiOrder'; // Assuming this exists
-import { UpdateStiResultRequest } from '../dto/requests/StiRequest';
 import '../models/StiPackage';
 import '../models/StiPackageTest';
 import '../models/StiTest';
+import { JwtPayload } from 'jsonwebtoken';
 
 export class StiResultRepository {
     public static async findByOrderId(orderId: string): Promise<IStiResult | null> {
@@ -33,6 +33,38 @@ export class StiResultRepository {
             return updatedResult;
         } catch (error) {
             console.error('Error updating STI result:', error);
+            throw error;
+        }
+    }
+
+    public static async getStiResultsByCustomerId(customerId: string) {
+        try {
+            return await StiResult.find({ customer_id: customerId }).populate('sti_result_items.sti_test_id');
+        } catch (error) {
+            console.error('Error getting STI result by customer:', error);
+            throw error;
+        }
+    }
+
+    public static async getMyStiResultByOrder(user: JwtPayload, orderId: string){
+        try {
+            return await StiResult.findOne({
+                customer_id: user._id,
+                sti_order_id: orderId
+            }).populate('sti_result_items.sti_test_id');
+        } catch (error) {
+            console.error('Error getting STI result by customer:', error);
+            throw error;
+        }
+    }
+
+    public static async getStiResultByOrder(orderId: string){
+        try {
+            return await StiResult.findOne({
+                sti_order_id: orderId
+            }).populate('sti_result_items.sti_test_id');
+        } catch (error) {
+            console.error('Error getting STI result by order:', error);
             throw error;
         }
     }
