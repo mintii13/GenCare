@@ -14,11 +14,14 @@ import {
   AlertCircle,
   Edit,
   Trash2,
-  X
+  X,
+  FileText,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuillEditor from '../../components/common/QuillEditor';
 import BlogCard from '../../components/blog/BlogCard';
+import { Button } from '../../components/ui/button';
     
 const BlogDetailPage: React.FC = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -202,7 +205,7 @@ const BlogDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
         {/* Navigation */}
         <button
           onClick={handleBack}
@@ -348,12 +351,9 @@ const BlogDetailPage: React.FC = () => {
           {/* Sidebar Column */}
           <aside className="lg:col-span-1 lg:order-first">
             {/* Related Blogs Section - Grid Layout */}
-            {relatedBlogs.length > 0 && (
-              <div className="sticky top-24">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Bài viết khác từ chuyên gia
-                </h2>
-                <div className="space-y-6">
+            <div className="mt-6">
+              {relatedBlogs.length > 0 ? (
+                <div className="space-y-4">
                   {relatedBlogs.map(relatedBlog => (
                     <BlogCard 
                       key={relatedBlog.blog_id} 
@@ -362,8 +362,22 @@ const BlogDetailPage: React.FC = () => {
                     />
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                !loading && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <div className="text-center">
+                      <FileText className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                      <h3 className="text-sm font-medium text-gray-900 mb-1">Consultant không có bài blog liên quan</h3>
+                      <p className="text-sm text-gray-500 mb-4">Hãy bắt đầu tạo bài viết đầu tiên của bạn.</p>
+                      <Button onClick={() => navigate('/blogs/create')} size="sm">
+                        <Plus className="-ml-1 mr-2 h-4 w-4" />
+                        Tạo Blog Mới
+                      </Button>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
           </aside>
         </div>
       </div>
@@ -382,7 +396,7 @@ const BlogDetailPage: React.FC = () => {
               </button>
             </div>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc chắn muốn xóa bài viết "{blog.title}"? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa bài viết &quot;{blog.title}&quot;? Hành động này không thể hoàn tác.
             </p>
             <div className="flex justify-end gap-3">
               <button

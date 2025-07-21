@@ -12,12 +12,35 @@ interface STIResult {
     order_id: string;
     order_date: string;
     order_status: string;
-    result: any;
+    result: {
+        is_confirmed: boolean;
+        time_result: string;
+        result_value: string;
+        diagnosis: string;
+        notes: string;
+    };
 }
 
 interface STIResultDetail {
-    order: any;
-    result: any;
+    order: {
+        _id: string;
+        order_date: string;
+        order_status: string;
+        notes: string;
+    };
+    result: {
+        is_confirmed: boolean;
+        time_result: string;
+        result_value: string;
+        diagnosis: string;
+        notes: string;
+        is_critical: boolean;
+        sample: {
+            timeReceived: string;
+            timeTesting: string;
+            sampleQualities: Record<string, boolean>;
+        };
+    };
 }
 
 const MySTIResults: React.FC = () => {
@@ -37,7 +60,7 @@ const MySTIResults: React.FC = () => {
             setLoading(true);
             const response = await getMySTIResults() as StiResultListResponse;
             if (response.success) {
-                setResults(response.data || [] as any);
+                    setResults(response.data as any); // TODO: fix this    
             } else {
                 toast.error('Không thể tải kết quả STI');
             }
@@ -57,7 +80,7 @@ const MySTIResults: React.FC = () => {
             const response = await getMySTIResultByOrderId(orderId) as StiResultResponse;
             if (response.success) {
                 console.log(response.data);
-                setSelectedResult(response.data as any);
+                setSelectedResult(response.data as unknown as STIResultDetail);
             } else {
                 toast.error('Không thể tải chi tiết kết quả');
                 setDetailModalVisible(false);
@@ -111,7 +134,7 @@ const MySTIResults: React.FC = () => {
             dataIndex: 'order_id',
             key: 'order_id',
             render: (text: string) => (
-                <Text code>{text.slice(-8)}</Text>
+                <Text code>{text ? text.slice(-8) : 'N/A'}</Text>
             )
         },
         {
@@ -218,8 +241,8 @@ const MySTIResults: React.FC = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Ghi chú" span={2}>
                             {result.notes || 'Không có ghi chú'}
-                        </Descriptions.Item>
-                        {result.is_critical && (
+                            </Descriptions.Item>
+                            {result.is_critical && (
                             <Descriptions.Item label="Mức độ" span={2}>
                                 <Tag color="red">Quan trọng</Tag>
                             </Descriptions.Item>

@@ -66,11 +66,11 @@ class StiResultService {
     try {
       const response = await apiClient.post(`${API.STI.STI_RESULT}?orderId=${orderId}`, data);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating STI result:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Lỗi khi tạo kết quả STI'
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi tạo kết quả STI'
       };
     }
   }
@@ -83,11 +83,11 @@ class StiResultService {
       const url = orderId ? `${API.STI.STI_RESULT}?orderId=${orderId}` : API.STI.STI_RESULT;
       const response = await apiClient.get(url);
       return response.data as StiResultListResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching STI results:', error);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Lỗi khi lấy danh sách kết quả STI'
+        success: false, 
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi lấy danh sách kết quả STI'
       };
     }
   }
@@ -99,11 +99,11 @@ class StiResultService {
     try {
       const response = await apiClient.get(`${API.STI.STI_RESULT}/${resultId}`);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching STI result:', error);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Lỗi khi lấy chi tiết kết quả STI'
+        success: false, 
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi lấy chi tiết kết quả STI'
       };
     }
   }
@@ -115,11 +115,11 @@ class StiResultService {
     try {
       const response = await apiClient.patch(`${API.STI.STI_RESULT}/${resultId}`, data);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating STI result:', error);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Lỗi khi cập nhật kết quả STI'
+        success: false, 
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi cập nhật kết quả STI'
       };
     }
   }
@@ -131,11 +131,11 @@ class StiResultService {
     try {
       const response = await apiClient.patch(`${API.STI.STI_RESULT}/sync-sample?orderId=${orderId}`);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error syncing sample from order:', error);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Lỗi khi đồng bộ sample từ order'
+        success: false, 
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi đồng bộ sample từ order'
       };
     }
   }

@@ -346,7 +346,7 @@ const MyAppointments: React.FC = () => {
       title: 'Chuyên gia',
       dataIndex: 'consultant',
       key: 'consultant',
-      render: (value: unknown, record: Appointment) => (
+      render: (_value: unknown, record: Appointment) => (
         <div className="flex items-center gap-2">
           <img
             src={consultantDetails[record.consultant_id?._id]?.avatar || '/default-avatar.png'}
@@ -364,7 +364,7 @@ const MyAppointments: React.FC = () => {
       title: 'Chuyên khoa',
       dataIndex: 'specialization',
       key: 'specialization',
-      render: (value: unknown, record: Appointment) => getConsultantSpecialization(record),
+      render: (_value: unknown, record: Appointment) => getConsultantSpecialization(record),
     },
     {
       title: 'Ngày',
@@ -376,7 +376,7 @@ const MyAppointments: React.FC = () => {
       title: 'Thời gian',
       dataIndex: 'start_time',
       key: 'start_time',
-      render: (value: unknown, record: Appointment) => `${formatTime(record.start_time)} - ${formatTime(record.end_time)}`,
+      render: (_value: unknown, record: Appointment) => `${formatTime(record.start_time)} - ${formatTime(record.end_time)}`,
     },
     {
       title: 'Trạng thái',
@@ -407,7 +407,7 @@ const MyAppointments: React.FC = () => {
       title: 'Hành động',
       key: 'actions',
       width: 120,
-      render: (value: unknown, record: Appointment) => (
+      render: (_value: unknown, record: Appointment) => (
         <div className="flex flex-col gap-1">
           <button onClick={() => setSelectedAppointment(record)} className="text-blue-600 hover:underline">Chi tiết</button>
           {record.status === 'pending' && (
@@ -438,7 +438,7 @@ const MyAppointments: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
 
 
       {/* Search and Filters */}

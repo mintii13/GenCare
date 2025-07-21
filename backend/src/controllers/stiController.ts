@@ -422,7 +422,11 @@ router.post('/createStiOrder', validateStiOrderCreate, authenticateToken, author
         const customer_id = (req.user as any).userId;
         const {order_date, notes } = req.body;
         console.log("BODY===>", req.body)
-        const result = await StiService.createStiOrder(customer_id, order_date, notes);
+        
+        // Convert order_date string to Date object
+        const orderDate = new Date(order_date);
+        
+        const result = await StiService.createStiOrder(customer_id, orderDate, notes);
         if (result.success) {
             return res.status(201).json(result);
         }

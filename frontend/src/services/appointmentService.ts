@@ -12,9 +12,10 @@ import {
   BookAppointmentRequest,
   AppointmentStats
 } from '../types/appointment';
+import { GetAppointmentHistoryListResponse } from './appointmentHistoryService';
 
 // Helper function to remove undefined/null properties from an object
-const cleanQuery = (obj: any) => {
+const cleanQuery = (obj: unknown) => {
   if (!obj) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v != null && v !== ''));
 };
@@ -25,13 +26,13 @@ export const appointmentService = {
   // Lấy appointments với pagination cho customer
   getMyAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
     try {
-      console.log('📝 Calling API with cleaned query:', cleanQuery(query));
+      console.log('Calling API with cleaned query:', cleanQuery(query));
       const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.MY_APPOINTMENTS, {
         params: cleanQuery(query)
       }, { attempts: 1 }); // Disable retry temporarily
       return response.data;
     } catch (error) {
-      console.error('❌ API call failed:', error);
+      console.error('API call failed:', error);
       throw error;
     }
   },
@@ -75,7 +76,7 @@ export const appointmentService = {
   // EXISTING APIs (giữ lại để backward compatibility)
   
   // Customer APIs
-  async bookAppointment(data: BookAppointmentRequest): Promise<ApiResponse<any>> {
+  async bookAppointment(data: BookAppointmentRequest): Promise<ApiResponse<GetAppointmentHistoryListResponse>> {
     return apiClient.safePost(API.Appointment.BOOK, data);
   },
 
@@ -92,7 +93,7 @@ export const appointmentService = {
         params: params || {} 
       });
       return { success: true, message: 'Success', data: response.data };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Fallback to old logic
       const legacyParams: { status?: string } = {};
       if (params?.status) {
@@ -103,8 +104,8 @@ export const appointmentService = {
         // First attempt: customer endpoint
         const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY_APPOINTMENTS, { params: legacyParams });
         return { success: true, message: 'Success', data: response.data };
-      } catch (error: any) {
-        if (error?.response?.status === 403) {
+      } catch (error: unknown) {
+        if ((error as { response?: { status?: number } }).response?.status === 403) {
           // If forbidden, try the consultant endpoint as a fallback
           const altResponse = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.CONSULTANT_APPOINTMENTS, { params: legacyParams });
           return { success: true, message: 'Success', data: altResponse.data };
@@ -114,7 +115,7 @@ export const appointmentService = {
     }
   },
 
-  async cancelAppointment(appointmentId: string): Promise<ApiResponse<any>> {
+  async cancelAppointment(appointmentId: string): Promise<ApiResponse<GetAppointmentHistoryListResponse>> {
     return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/cancel`);
   },
 
@@ -129,9 +130,9 @@ export const appointmentService = {
       const response = await apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}`, data);
       console.log('🔄 [DEBUG] rescheduleAppointment response:', response);
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('🔄 [ERROR] rescheduleAppointment failed:', error);
-      console.error('🔄 [ERROR] Error response:', error?.response?.data);
+      console.error('🔄 [ERROR] Error response:', (error as { response?: { data?: unknown } }).response?.data);
       throw error;
     }
   },

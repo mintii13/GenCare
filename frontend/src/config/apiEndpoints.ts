@@ -166,9 +166,12 @@ export const API = {
   // Pill tracking endpoints
   PillTracking: {
     SETUP: '/pill-tracking/setup',
-    GET_SCHEDULE_BY_USER: (userId: string) => `/pill-tracking/${userId}`,
-    UPDATE_SCHEDULE_BY_USER: (userId: string) => `/pill-tracking/${userId}`,
-    TAKE_PILL: (scheduleId: string) => `/pill-tracking/${scheduleId}/take`
+    GET_SCHEDULE: '/pill-tracking',
+    UPDATE_SCHEDULE: '/pill-tracking',
+    TAKE_PILL: (scheduleId: string) => `/pill-tracking/mark-as-taken/${scheduleId}`,
+    WEEKLY: '/pill-tracking/weekly',
+    MONTHLY: '/pill-tracking/monthly',
+    STATISTICS: '/pill-tracking/statistics'
   },
 
   // ----------------------- STI (TESTS, PACKAGES, ORDERS) --------------------
@@ -176,15 +179,23 @@ export const API = {
     // Tests
     CREATE_TEST: '/sti/createStiTest',
     GET_ALL_TESTS: '/sti/getAllStiTest',
+    GET_ALL_TESTS_PAGINATED: '/sti/getAllStiTest', // Tạm thời dùng endpoint cũ
     GET_TEST: (id: string) => `/sti/getStiTest/${id}`,
     UPDATE_TEST: (id: string) => `/sti/updateStiTest/${id}`,
     DELETE_TEST: (id: string) => `/sti/deleteStiTest/${id}`, // Note: Backend uses PUT method
+    GET_TEST_STATS: '/sti/tests/stats', // Stats cho tests
+    
     // Packages
     CREATE_PACKAGE: '/sti/createStiPackage',
     GET_ALL_PACKAGES: '/sti/getAllStiPackage',
+    GET_ALL_PACKAGES_PAGINATED: '/sti/getAllStiPackage', // Tạm thời dùng endpoint cũ
     GET_PACKAGE: (id: string) => `/sti/getStiPackage/${id}`,
     UPDATE_PACKAGE: (id: string) => `/sti/updateStiPackage/${id}`,
     DELETE_PACKAGE: (id: string) => `/sti/deleteStiPackage/${id}`, // Note: Backend uses PUT method
+    GET_PACKAGE_STATS: '/sti/packages/stats', // Stats cho packages
+    GET_PACKAGE_TESTS: (packageId: string) => `/sti/packages/${packageId}/tests`, // Lấy tests trong package
+    UPDATE_PACKAGE_TESTS: (packageId: string) => `/sti/packages/${packageId}/tests`, // Cập nhật tests trong package
+    
     // Orders - NEW PAGINATED ENDPOINTS
     GET_ALL_ORDERS_PAGINATED: '/sti/orders', // Staff/Admin với pagination
     GET_MY_ORDERS: '/sti/my-orders', // Customer orders với pagination

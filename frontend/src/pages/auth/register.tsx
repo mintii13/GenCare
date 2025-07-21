@@ -24,7 +24,7 @@ const Register: React.FC = () => {
   const [resendCountdown, setResendCountdown] = useState(60);
   const [resendLoading, setResendLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState<boolean>(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();

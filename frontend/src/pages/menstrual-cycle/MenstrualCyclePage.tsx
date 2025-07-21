@@ -276,7 +276,7 @@ const MenstrualCyclePage: React.FC = () => {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-4 py-3 space-y-3">
         {/* Enhanced Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import OrdersManagement from './components/OrdersManagement';
 import ScheduleManagement from './components/ScheduleManagement';
 import ResultsManagement from './components/ResultsManagement';
+import TestsManagement from './components/TestsManagement';
+import PackagesManagement from './components/PackagesManagement';
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -52,6 +54,16 @@ const STIManagement: React.FC = () => {
       key: 'results',
       label: '🧪 Kết quả xét nghiệm',
       children: <ResultsManagement refreshTrigger={refreshTrigger} />,
+    },
+    {
+      key: 'tests',
+      label: '🔬 Quản lý xét nghiệm',
+      children: <TestsManagement refreshTrigger={refreshTrigger} />,
+    },
+    {
+      key: 'packages',
+      label: '📦 Quản lý gói xét nghiệm',
+      children: <PackagesManagement refreshTrigger={refreshTrigger} />,
     },
   ];
 

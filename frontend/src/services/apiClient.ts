@@ -1,16 +1,16 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, AxiosRequestHeaders } from 'axios';
 import { log } from '../utils/logger';
 import { env } from '../config/environment';
   const AUTH_TOKEN_KEY = "gencare_auth_token";
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
   errorType?: string;
   details?: string;
-  errors?: any[];
+  errors?: unknown[];
   timestamp?: string;
 }
 
@@ -44,8 +44,8 @@ class ApiClient {
         
         if (token) {
           // ensure header object exists and add Authorization
-          (config.headers = (config.headers || {}) as any);
-          (config.headers as any)['Authorization'] = `Bearer ${token}`;
+          (config.headers = (config.headers || {}) as AxiosRequestHeaders);
+          (config.headers as AxiosRequestHeaders)['Authorization'] = `Bearer ${token}`;
         }
 
         log.api(config.method?.toUpperCase() || 'REQUEST', config.url || '', {
@@ -178,7 +178,7 @@ class ApiClient {
 
   async post<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
@@ -190,7 +190,7 @@ class ApiClient {
 
   async put<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
@@ -202,7 +202,7 @@ class ApiClient {
 
   async patch<T>(
     url: string, 
-    data?: any, 
+      data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
@@ -243,7 +243,7 @@ class ApiClient {
 
   async safePost<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
@@ -261,7 +261,7 @@ class ApiClient {
 
   async safePut<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
@@ -279,7 +279,7 @@ class ApiClient {
 
   async safePatch<T>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
@@ -314,13 +314,13 @@ class ApiClient {
 
   private handleError<T>(error: AxiosError): ApiResponse<T> {
     const status = error.response?.status || 0;
-    const responseData = error.response?.data as any;
+    const responseData = error.response?.data as { type?: string; message?: string; details?: string; errors?: unknown[]; timestamp?: string };
     
     // Extract detailed error information from backend
     const errorType = responseData?.type || 'UNKNOWN_ERROR';
     const message = responseData?.message || error.message || 'Có lỗi xảy ra';
-    const details = responseData?.details || null;
-    const errors = responseData?.errors || null;
+    const details = responseData?.details || undefined;
+    const errors = responseData?.errors || undefined;
     
     // Create comprehensive error response
     const errorResponse: ApiResponse<T> = {

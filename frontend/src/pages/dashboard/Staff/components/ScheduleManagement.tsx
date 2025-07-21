@@ -205,7 +205,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ refreshTrigger 
       dataIndex: '_id',
       key: '_id',
       width: 120,
-      render: (id: string) => <span>{id.slice(-8)}</span>,
+      render: (id: string) => <span>{id ? id.slice(-8) : 'N/A'}</span>,
     },
     {
       title: 'Khách hàng',
@@ -493,7 +493,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ refreshTrigger 
             <Card style={{ marginBottom: 16 }}>
               <Row gutter={16}>
                 <Col span={12}>
-                  <p><strong>Mã đơn:</strong> {selectedOrder._id.slice(-8)}</p>
+                  <p><strong>Mã đơn:</strong> {selectedOrder._id ? selectedOrder._id.slice(-8) : 'N/A'}</p>
                   <p><strong>Khách hàng:</strong> {selectedOrder.customer_id?.full_name}</p>
                 </Col>
                 <Col span={12}>

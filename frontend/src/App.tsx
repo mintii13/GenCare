@@ -51,6 +51,7 @@ const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/Consulta
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
 const ConsultantLayout = lazy(() => import('./components/layout/ConsultantLayout'));
+const CustomerLayout = lazy(() => import('./components/layout/CustomerLayout'));
 const AdminAppointmentManagement = lazy(() => import('./pages/dashboard/Admin/AdminAppointmentManagement'));
 const AdminAuditLog = lazy(() => import('./pages/dashboard/Admin/AdminAuditLog'));
 
@@ -71,6 +72,7 @@ const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestSc
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
+
 
 interface AppContentProps {
   showLogin: boolean;
@@ -168,6 +170,17 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="consultation-stats" element={<ConsultationStats />} />
               <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
               <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
+            </Route>
+
+            {/* Customer Dashboard routes */}
+            <Route path="/customer/*" element={<CustomerLayout />}>
+              <Route path="appointments" element={<MyAppointments />} />
+              <Route path="consultants" element={<ConsultantList />} />
+              <Route path="sti-results" element={<MySTIResults />} />
+              <Route path="menstrual-cycle" element={<MenstrualCyclePage />} />
+              <Route path="feedback" element={<CustomerFeedbackPage />} />
+              <Route path="sti-assessment-history" element={<STIAssessmentHistory />} />
+              <Route path="profile" element={<UserProfilePage />} />
             </Route>
 
                         {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}

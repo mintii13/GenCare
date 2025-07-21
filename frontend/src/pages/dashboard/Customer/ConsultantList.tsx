@@ -256,7 +256,7 @@ const ConsultantList: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
       <div className="bg-white rounded-lg shadow-sm">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import ConsultantSidebar from '../../pages/dashboard/Consultant/components/ConsultantSidebar';
+import CustomerSidebar from '../../pages/dashboard/Customer/components/CustomerSidebar';
 
-const ConsultantLayout: React.FC = () => {
+const CustomerLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
@@ -17,14 +17,14 @@ const ConsultantLayout: React.FC = () => {
     );
   }
 
-  // Redirect if not authenticated or not a consultant
-  if (!isAuthenticated || user?.role !== 'consultant') {
+  // Redirect if not authenticated or not a customer
+  if (!isAuthenticated || user?.role !== 'customer') {
     return <Navigate to="/" replace />;
   }
 
-  // Nếu đang ở route gốc /consultant, chuyển hướng đến trang schedule
-  if (location.pathname === '/consultant' || location.pathname === '/consultant/') {
-    return <Navigate to="/consultant/schedule" replace />;
+  // Nếu đang ở route gốc /customer, chuyển hướng đến trang appointments
+  if (location.pathname === '/customer' || location.pathname === '/customer/') {
+    return <Navigate to="/customer/appointments" replace />;
   }
 
   return (
@@ -51,10 +51,10 @@ const ConsultantLayout: React.FC = () => {
         </button>
 
         {/* Sidebar */}
-        <ConsultantSidebar isOpen={isSidebarOpen} />
+        <CustomerSidebar isOpen={isSidebarOpen} />
 
         {/* Main Content */}
-        <main className={`flex-1 p-6 pt-16 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+        <main className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
           <Outlet />
         </main>
       </div>
@@ -62,4 +62,4 @@ const ConsultantLayout: React.FC = () => {
   );
 };
 
-export default ConsultantLayout;
+export default CustomerLayout; 

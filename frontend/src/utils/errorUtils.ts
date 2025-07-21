@@ -95,7 +95,7 @@ export const showValidationErrorToast = (errors: string[] | any[], title = 'Dữ
 
   const errorMessages = Array.isArray(errors) 
     ? errors.map(err => typeof err === 'string' ? err : err.message || err.toString())
-    : [errors.toString()];
+    : [String(errors)];
 
   const message = `${title}\n\n• ${errorMessages.join('\n• ')}`;
   

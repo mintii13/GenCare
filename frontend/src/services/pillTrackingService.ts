@@ -48,18 +48,16 @@ export const pillTrackingService = {
 
   /**
    * Retrieves the pill schedule for the current user.
-   * Note: The backend endpoint seems to expect a userId in the path,
-   * so we get it from auth context or similar, not as a direct parameter here.
    */
-  getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE_BY_USER(userId));
+  getSchedule: async (): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
+    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE);
   },
 
   /**
    * Updates a user's pill tracking schedule or settings.
    */
-  updateSchedule: async (userId: string, data: UpdatePillTrackingRequest): Promise<ApiResponse<any>> => {
-    return apiClient.safePatch(API.PillTracking.UPDATE_SCHEDULE_BY_USER(userId), data);
+  updateSchedule: async (data: UpdatePillTrackingRequest): Promise<ApiResponse<any>> => {
+    return apiClient.safePatch(API.PillTracking.UPDATE_SCHEDULE, data);
   },
 
   /**

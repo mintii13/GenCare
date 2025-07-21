@@ -582,7 +582,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       key: 'order_code',
       width: 120,
       render: (code: string, record: StiOrder) => (
-        <span>{code || record._id.slice(-8)}</span>
+        <span>{code || (record._id ? record._id.slice(-8) : 'N/A')}</span>
       )
     },
     {

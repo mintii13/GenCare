@@ -307,7 +307,7 @@ const OrdersPage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Title level={2} className="text-3xl font-bold">

@@ -295,7 +295,7 @@ const StiOrdersManagement: React.FC = () => {
       key: '_id',
       width: 120,
       render: (id: string) => (
-        <Text code>{id.slice(-8)}</Text>
+        <Text code>{id ? id.slice(-8) : 'N/A'}</Text>
       )
     },
     {
