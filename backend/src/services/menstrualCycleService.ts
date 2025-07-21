@@ -259,30 +259,6 @@ export class MenstrualCycleService {
                 success: true, 
                 message: 'Notification settings updated successfully', 
             };
-            for (const key of allowedFields) {
-                if (settings.hasOwnProperty(key)) {
-                        validSettings[key] = settings[key];
-                }
-            }
-
-            if (Object.keys(validSettings).length === 0) {
-                return {
-                    success: false,
-                    message: 'No valid fields to update.'
-                };
-            }
-
-            const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, validSettings);
-            if (!result) { 
-                return { 
-                    success: false, 
-                    message: 'Failed to update notification settings' 
-                }; 
-            }
-            return { 
-                success: true, 
-                message: 'Notification settings updated successfully', 
-            };
         } 
         catch (error) { 
             console.error('Error updating notification settings:', error); 
