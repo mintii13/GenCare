@@ -45,6 +45,9 @@ const BookSTIPage: React.FC = () => {
   const testId = searchParams.get('testId');
   const recommendedPackage = searchParams.get('recommendedPackage');
 
+  // Debug: log giá trị params và mode
+  console.log('DEBUG STI:', { packageId, testId, isConsultationMode: !testId && !packageId });
+
   // Cho phép consultation mode (không cần test hoặc package cụ thể)
   const isConsultationMode = !testId && !packageId;
 

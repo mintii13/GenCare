@@ -7,11 +7,12 @@ interface SkeletonProps {
   rounded?: boolean;
 }
 
-const Skeleton: React.FC<SkeletonProps> = ({ 
+const Skeleton: React.FC<SkeletonProps & React.HTMLAttributes<HTMLDivElement>> = ({ 
   className = '', 
   width,
   height,
-  rounded = false 
+  rounded = false,
+  ...rest
 }) => {
   const style: React.CSSProperties = {};
   if (width) style.width = typeof width === 'number' ? `${width}px` : width;
@@ -21,6 +22,7 @@ const Skeleton: React.FC<SkeletonProps> = ({
     <div 
       className={`animate-pulse bg-gray-200 ${rounded ? 'rounded-full' : 'rounded'} ${className}`}
       style={style}
+      {...rest}
     />
   );
 };

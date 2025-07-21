@@ -1,3 +1,5 @@
+import getBaseUrl from './getBaseUrl';
+
 /*
   Centralised API endpoint map.
   ------------------------------------------------------
@@ -7,8 +9,7 @@
 */
 
 export const API = {
-  // Base URL for API calls
-  BASE_URL: import.meta.env.VITE_API_URL,
+  BASE_URL: getBaseUrl(),
   
   // ----------------------- AUTH -----------------------
   Auth: {

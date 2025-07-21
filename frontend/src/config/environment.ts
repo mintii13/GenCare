@@ -18,27 +18,28 @@ export interface EnvironmentConfig {
 }
 
 const createEnvironmentConfig = (): EnvironmentConfig => {
-  const nodeEnv = import.meta.env.NODE_ENV ?? 'development';
+  // Thay import.meta.env thành process.env cho tương thích Node/Jest
+  const nodeEnv = process.env.NODE_ENV || 'development';
   const isDevelopment = nodeEnv === 'development';
   const isProduction = nodeEnv === 'production';
   const isTest = nodeEnv === 'test';
 
   return {
-    API_BASE_URL: import.meta.env.VITE_API_URL ,
-    VITE_CHATBOX_API: import.meta.env.VITE_CHATBOX_API || '',
+    API_BASE_URL: process.env.VITE_API_URL || '',
+    VITE_CHATBOX_API: process.env.VITE_CHATBOX_API || '',
     NODE_ENV: nodeEnv,
     isDevelopment,
     isProduction,
     isTest,
-    enableLogging: isDevelopment || import.meta.env.VITE_ENABLE_LOGGING === 'true',
-    enableErrorTracking: isProduction || import.meta.env.VITE_ENABLE_ERROR_TRACKING === 'true',
-    enablePerformanceMonitoring: isProduction || import.meta.env.VITE_ENABLE_PERFORMANCE_MONITORING === 'true',
-    apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT ?? '5000', 10),
-    retryAttempts: parseInt(import.meta.env.VITE_RETRY_ATTEMPTS ?? '3', 10),
+    enableLogging: isDevelopment || process.env.VITE_ENABLE_LOGGING === 'true',
+    enableErrorTracking: isProduction || process.env.VITE_ENABLE_ERROR_TRACKING === 'true',
+    enablePerformanceMonitoring: isProduction || process.env.VITE_ENABLE_PERFORMANCE_MONITORING === 'true',
+    apiTimeout: parseInt(process.env.VITE_API_TIMEOUT ?? '5000', 10),
+    retryAttempts: parseInt(process.env.VITE_RETRY_ATTEMPTS ?? '3', 10),
     features: {
-      enableExperimentalFeatures: isDevelopment && import.meta.env.VITE_ENABLE_EXPERIMENTAL_FEATURES === 'true',
-      enableBetaFeatures: import.meta.env.VITE_ENABLE_BETA_FEATURES === 'true',
-      enableDebugMode: isDevelopment || import.meta.env.VITE_ENABLE_DEBUG_MODE === 'true'
+      enableExperimentalFeatures: isDevelopment && process.env.VITE_ENABLE_EXPERIMENTAL_FEATURES === 'true',
+      enableBetaFeatures: process.env.VITE_ENABLE_BETA_FEATURES === 'true',
+      enableDebugMode: isDevelopment || process.env.VITE_ENABLE_DEBUG_MODE === 'true'
     }
   };
 };
@@ -47,7 +48,7 @@ export const env = createEnvironmentConfig();
 
 // Type-safe environment variable access
 export const getEnvVar = (key: string, defaultValue?: string): string => {
-  const value = import.meta.env[key];
+  const value = process.env[key];
   if (value === undefined && defaultValue === undefined) {
     throw new Error(`Environment variable ${key} is required but not defined`);
   }
@@ -62,7 +63,7 @@ export const getN8nWebhookUrl = (): string => {
 // Validation helper
 export const validateEnvironment = (): void => {
   const requiredVars = ['VITE_API_URL'];
-  const missingVars = requiredVars.filter(varName => !import.meta.env[varName]);
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
     console.warn('Missing required environment variables:', missingVars);

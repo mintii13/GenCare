@@ -41,7 +41,7 @@ class ErrorBoundary extends Component<Props, State> {
     });
 
     // In production, you might want to send this to an error tracking service
-    if (import.meta.env.PROD) {
+    if (process.env.NODE_ENV === 'production') {
       // Example: Send to error tracking service
       // errorTrackingService.captureException(error, {
       //   extra: errorInfo,
@@ -103,7 +103,7 @@ class ErrorBoundary extends Component<Props, State> {
             )}
 
             {/* Development mode: Show error details */}
-            {import.meta.env.DEV && this.state.errorInfo && (
+            {process.env.NODE_ENV !== 'production' && this.state.errorInfo && (
               <div className="bg-red-50 border border-red-200 rounded p-3 mb-6 text-left">
                 <p className="text-xs text-red-600 mb-2 font-semibold">
                   Chi tiết lỗi (chỉ hiển thị trong development):

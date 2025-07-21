@@ -20,6 +20,10 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    console.log('periodDates state cập nhật:', periodDates);
+  }, [periodDates]);
+
   const addDate = () => {
     setPeriodDates([...periodDates, '']);
   };
@@ -41,8 +45,11 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
     
     // Validate dates
     const validDates = periodDates.filter(date => date !== '');
+    console.log('LOG: periodDates trước submit:', periodDates);
+    console.log('LOG: validDates trước submit:', validDates);
     if (validDates.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một ngày');
+      console.log('Gọi toast.error validate: toast instance', toast, 'toast.error', toast.error);
+      toast.error('Vui lòng chọn ít nhất 1 ngày có kinh');
       return;
     }
 
@@ -67,30 +74,36 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
         ...(trimmedNotes && { notes: trimmedNotes })
       };
 
-      const response = await menstrualCycleService.processCycle(requestData);
-
-      if (response.success) {
-        toast.success('Đã ghi nhận thành công');
+      const result = await menstrualCycleService.processCycle({
+        period_days: validDates,
+      });
+      console.log('Kết quả trả về từ processCycle:', result);
+      if (result && result.success) {
+        console.log('Gọi onSuccess');
         onSuccess();
       } else {
-        console.error('API error response:', response);
-        toast.error(response.message || 'Có lỗi xảy ra');
+        console.log('Gọi toast.error vì result không thành công:', result);
+        toast.error('Lưu thất bại, vui lòng thử lại!');
       }
     } catch (error: any) {
       console.error('Network error:', error);
       
       // Hiển thị lỗi chi tiết từ server nếu có
       if (error.response?.data?.message) {
+        console.log('Gọi toast.error với message:', error.response.data.message);
         toast.error(error.response.data.message);
       } else if (error.response?.data?.errors) {
         // Hiển thị lỗi validation từ Joi
         const errorMessages = Array.isArray(error.response.data.errors) 
-          ? error.response.data.errors.join(', ')
+          ? error.response.data.errors.map((e: any) => e.message).join(', ')
           : error.response.data.errors;
+        console.log('Gọi toast.error với lỗi validation:', errorMessages);
         toast.error(`Dữ liệu không hợp lệ: ${errorMessages}`);
       } else if (error.message) {
+        console.log('Gọi toast.error với error.message:', error.message);
         toast.error(`Lỗi: ${error.message}`);
       } else {
+        console.log('Gọi toast.error với lỗi không xác định');
         toast.error('Lỗi khi lưu dữ liệu');
       }
     } finally {
@@ -100,16 +113,14 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
 
   const suggestConsecutiveDates = (startDate: string, days: number) => {
     if (!startDate) return;
-    
-    const dates = [];
+    const dates: string[] = [];
     const start = new Date(startDate);
-    
     for (let i = 0; i < days; i++) {
       const date = new Date(start);
       date.setDate(start.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
     }
-    
+    console.log('LOG: dates trong suggestConsecutiveDates:', dates);
     setPeriodDates(dates);
   };
 

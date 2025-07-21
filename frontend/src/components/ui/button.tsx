@@ -39,13 +39,15 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, href, ...props }, ref) => {
     if (href) {
-      const { onClick, ...rest } = props;
+      const { onClick, children } = props;
       return (
         <Link
           to={href}
           className={cn(buttonVariants({ variant, size, className }))}
           onClick={onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}
-        />
+        >
+          {children}
+        </Link>
       );
     }
 

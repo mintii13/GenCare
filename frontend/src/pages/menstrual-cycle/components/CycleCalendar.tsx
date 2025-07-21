@@ -26,6 +26,7 @@ import {
 interface CycleCalendarProps {
   cycles: CycleData[];
   onRefresh: () => void;
+  activeStartDate?: Date; // Thêm prop optional cho test
 }
 
 interface MoodData {
@@ -35,7 +36,81 @@ interface MoodData {
   notes?: string;
 }
 
-const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
+// Helper function to convert date to local date string (fix timezone issue)
+export const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const parseNotesWithMood = (notes?: string) => {
+  if (!notes) return { cleanNotes: '', moodData: null };
+  const moodDataIndex = notes.indexOf('MOOD_DATA:');
+  if (moodDataIndex === -1) {
+    return { cleanNotes: notes, moodData: null };
+  }
+  const cleanNotes = notes.substring(0, moodDataIndex).trim();
+  const moodDataStr = notes.substring(moodDataIndex + 10);
+  try {
+    const moodData = JSON.parse(moodDataStr);
+    return { cleanNotes, moodData };
+  } catch (error) {
+    return { cleanNotes: notes, moodData: null };
+  }
+};
+
+export const isSameDay = (date1: Date, date2: Date) => {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+};
+
+// Các hàm phụ trợ cần cycles/currentCycle truyền vào
+export const isPeriodDay = (date: Date, cycles: any[]) => {
+  return cycles.some(cycle =>
+    cycle.period_days.some((periodDay: string) => {
+      const periodDate = new Date(periodDay);
+      return isSameDay(date, periodDate);
+    })
+  );
+};
+
+export const isPredictedPeriodDay = (date: Date, currentCycle: any) => {
+  if (!currentCycle?.predicted_cycle_end) {
+    return false;
+  }
+  const predictedDateStr = new Date(currentCycle.predicted_cycle_end).toISOString().split('T')[0];
+  const dateStr = date.toISOString().split('T')[0];
+  const nowStr = new Date(Date.now()).toISOString().split('T')[0];
+  const isSame = dateStr === predictedDateStr;
+  const isFuture = dateStr > nowStr;
+  return isSame && isFuture;
+};
+
+export const isOvulationDay = (date: Date, currentCycle: any) => {
+  if (!currentCycle?.predicted_ovulation_date) {
+    return false;
+  }
+  const ovulationDate = new Date(currentCycle.predicted_ovulation_date);
+  return isSameDay(date, ovulationDate);
+};
+
+export const isFertileDay = (date: Date, currentCycle: any) => {
+  if (!currentCycle?.predicted_fertile_start || !currentCycle?.predicted_fertile_end) {
+    return false;
+  }
+  const fertileStart = new Date(currentCycle.predicted_fertile_start);
+  const fertileEnd = new Date(currentCycle.predicted_fertile_end);
+  return date >= fertileStart && date <= fertileEnd;
+};
+
+export const isDateSelected = (date: Date, selectedPeriodDays: Date[]) => {
+  return selectedPeriodDays.some(selectedDate => isSameDay(selectedDate, date));
+};
+
+const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, activeStartDate }) => {
+  const safeCycles = cycles ?? [];
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<Date[]>([]);
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -48,87 +123,14 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
   const [hoverMoodData, setHoverMoodData] = useState<{ data: MoodData; date: Date; position: { x: number; y: number } } | null>(null);
 
   // Current cycle for predictions
-  const currentCycle = cycles && cycles.length > 0 ? cycles[0] : null;
-
-  // Helper function to convert date to local date string (fix timezone issue)
-  const getLocalDateString = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const parseNotesWithMood = (notes?: string) => {
-    if (!notes) return { cleanNotes: '', moodData: null };
-    
-    const moodDataIndex = notes.indexOf('MOOD_DATA:');
-    if (moodDataIndex === -1) {
-      return { cleanNotes: notes, moodData: null };
-    }
-    
-    const cleanNotes = notes.substring(0, moodDataIndex).trim();
-    const moodDataStr = notes.substring(moodDataIndex + 10);
-    
-    try {
-      const moodData = JSON.parse(moodDataStr);
-      return { cleanNotes, moodData };
-    } catch (error) {
-      return { cleanNotes: notes, moodData: null };
-    }
-  };
-
-  const isSameDay = (date1: Date, date2: Date) => {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
-  };
-
-  const isDateSelected = (date: Date) => {
-    return selectedPeriodDays.some(selectedDate => isSameDay(selectedDate, date));
-  };
-
-  const isPeriodDay = (date: Date) => {
-    return cycles.some(cycle => 
-      cycle.period_days.some(periodDay => {
-        const periodDate = new Date(periodDay);
-        return isSameDay(date, periodDate);
-      })
-    );
-  };
-
-  const isPredictedPeriodDay = (date: Date) => {
-    if (!currentCycle?.predicted_cycle_end) {
-      return false;
-    }
-    const predictedDate = new Date(currentCycle.predicted_cycle_end);
-    const isSame = isSameDay(date, predictedDate);
-    const isFuture = date > new Date();
-    return isSame && isFuture;
-  };
-
-  const isOvulationDay = (date: Date) => {
-    if (!currentCycle?.predicted_ovulation_date) {
-      return false;
-    }
-    const ovulationDate = new Date(currentCycle.predicted_ovulation_date);
-    return isSameDay(date, ovulationDate);
-  };
-
-  const isFertileDay = (date: Date) => {
-    if (!currentCycle?.predicted_fertile_start || !currentCycle?.predicted_fertile_end) {
-      return false;
-    }
-    const fertileStart = new Date(currentCycle.predicted_fertile_start);
-    const fertileEnd = new Date(currentCycle.predicted_fertile_end);
-    return date >= fertileStart && date <= fertileEnd;
-  };
+  const currentCycle = safeCycles && safeCycles.length > 0 ? safeCycles[0] : null;
 
   const handleDateClick = (date: Date) => {
-    if (isPeriodDay(date)) {
+    if (isPeriodDay(date, safeCycles)) {
       return;
     }
 
-    if (isDateSelected(date)) {
+    if (isDateSelected(date, selectedPeriodDays)) {
       const dateKey = getLocalDateString(date);
       
       // Remove from mood data if exists
@@ -357,17 +359,31 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
     if (view !== 'month') return '';
 
     const classes = [];
-    
-    if (isDateSelected(date)) {
+    const dateStr = date.toISOString().split('T')[0];
+    const selected = isDateSelected(date, selectedPeriodDays);
+    const period = isPeriodDay(date, safeCycles);
+    const ovulation = isOvulationDay(date, currentCycle);
+    const fertile = isFertileDay(date, currentCycle);
+    const predicted = isPredictedPeriodDay(date, currentCycle);
+
+    if (dateStr === '2024-06-28') {
+      console.log('[getTileClassName]', { dateStr, selected, period, ovulation, fertile, predicted });
+    }
+
+    if (selected) {
       classes.push('selected-period');
-    } else if (isPeriodDay(date)) {
+    } else if (period) {
       classes.push('period-day');
-    } else if (isOvulationDay(date)) {
+    } else if (ovulation) {
       classes.push('ovulation-day');
-    } else if (isFertileDay(date)) {
+    } else if (fertile) {
       classes.push('fertile-day');
-    } else if (isPredictedPeriodDay(date)) {
+    } else if (predicted) {
       classes.push('predicted-period');
+    }
+
+    if (dateStr === '2024-06-28') {
+      console.log('[getTileClassName return]', { dateStr, classes: classes.join(' ') });
     }
 
     return classes.join(' ');
@@ -410,7 +426,7 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
 
     const content = [];
     
-    if (isPeriodDay(date)) {
+    if (isPeriodDay(date, safeCycles)) {
       content.push(
         <div key="period" className="absolute inset-0 flex items-center justify-center">
           <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
@@ -422,25 +438,25 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
           </div>
         </div>
       );
-    } else if (isDateSelected(date)) {
+    } else if (isDateSelected(date, selectedPeriodDays)) {
       content.push(
         <div key="selected" className="absolute inset-0 flex items-center justify-center">
           <FaCircle className="text-pink-500 text-lg" />
         </div>
       );
-    } else if (isOvulationDay(date)) {
+    } else if (isOvulationDay(date, currentCycle)) {
       content.push(
         <div key="ovulation" className="absolute top-0 right-0">
           <FaEgg className="text-yellow-500 text-xs" />
         </div>
       );
-    } else if (isFertileDay(date)) {
+    } else if (isFertileDay(date, currentCycle)) {
       content.push(
         <div key="fertile" className="absolute top-0 right-0">
           <FaVenus className="text-blue-400 text-xs" />
         </div>
       );
-    } else if (isPredictedPeriodDay(date)) {
+    } else if (isPredictedPeriodDay(date, currentCycle)) {
       content.push(
         <div key="predicted" className="absolute top-0 right-0">
           <FaRegCircle className="text-pink-300 text-xs" />
@@ -541,6 +557,7 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
               locale="vi-VN"
               prev2Label={null}
               next2Label={null}
+              activeStartDate={activeStartDate}
             />
           </div>
         </CardContent>
