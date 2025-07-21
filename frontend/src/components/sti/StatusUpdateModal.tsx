@@ -3,26 +3,23 @@ import { Modal, Form, Select, Alert, Space, Tag, Button, message } from 'antd';
 import { ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import {
   OrderStatus,
-  PaymentStatus,
   getAvailableOrderStatuses,
   getAvailablePaymentStatuses,
-  getAllValidOrderStatuses,
-  getAllValidPaymentStatuses,
   getOrderStatusLabel,
-  getPaymentStatusLabel,
   getOrderStatusColor,
   getPaymentStatusColor,
   validateStatusUpdate,
   getAvailableActions,
-  isValidStatusPair
+  isValidStatusPair,
+  getPaymentStatusLabel
 } from '../../utils/stiStatusUtils';
 
 interface StatusUpdateModalProps {
   visible: boolean;
   onClose: () => void;
-  onUpdate: (orderStatus: OrderStatus, paymentStatus: PaymentStatus) => Promise<void>;
+  onUpdate: (orderStatus: OrderStatus, paymentStatus: boolean) => Promise<void>;
   currentOrderStatus: OrderStatus;
-  currentPaymentStatus: PaymentStatus;
+  currentPaymentStatus: boolean;
   orderId: string;
   orderCode?: string;
   customerName?: string;
@@ -44,7 +41,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [selectedOrderStatus, setSelectedOrderStatus] = useState<OrderStatus>(currentOrderStatus);
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<PaymentStatus>(currentPaymentStatus);
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<boolean>(currentPaymentStatus);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [availableActions, setAvailableActions] = useState<any>({});
 
@@ -54,7 +51,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
       setSelectedPaymentStatus(currentPaymentStatus);
       form.setFieldsValue({
         order_status: currentOrderStatus,
-        payment_status: currentPaymentStatus
+        is_paid: currentPaymentStatus
       });
       
       // Cập nhật available actions
@@ -82,12 +79,12 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
       const availablePaymentStatuses = getAvailablePaymentStatuses(selectedPaymentStatus, value);
       if (availablePaymentStatuses.length > 0) {
         setSelectedPaymentStatus(availablePaymentStatuses[0]);
-        form.setFieldValue('payment_status', availablePaymentStatuses[0]);
+        form.setFieldValue('is_paid', availablePaymentStatuses[0]);
       }
     }
   };
 
-  const handlePaymentStatusChange = (value: PaymentStatus) => {
+  const handlePaymentStatusChange = (value: boolean) => {
     setSelectedPaymentStatus(value);
     
     // Tự động điều chỉnh order status nếu cần
@@ -114,7 +111,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
         return;
       }
 
-      await onUpdate(selectedOrderStatus, selectedPaymentStatus);
+      await onUpdate(selectedOrderStatus, Boolean(selectedPaymentStatus));
       message.success('Cập nhật trạng thái thành công');
       onClose();
     } catch (error) {
@@ -205,7 +202,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
 
         <Form.Item
           label="Trạng thái thanh toán"
-          name="payment_status"
+          name="is_paid"
           rules={[{ required: true, message: 'Vui lòng chọn trạng thái thanh toán' }]}
         >
           <Select
@@ -214,7 +211,7 @@ const StatusUpdateModal: React.FC<StatusUpdateModalProps> = ({
             disabled={!availableActions.canUpdatePayment}
           >
             {getAvailablePaymentOptions().map(option => (
-              <Select.Option key={option.value} value={option.value}>
+              <Select.Option key={option.value.toString()} value={option.value}>
                 <Tag color={option.color}>{option.label}</Tag>
               </Select.Option>
             ))}

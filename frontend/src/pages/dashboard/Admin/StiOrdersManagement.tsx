@@ -27,7 +27,7 @@ interface STIOrder {
   total_amount: number;
   notes?: string;
   status?: string;
-  payment_status?: string;
+  is_paid?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,7 +36,7 @@ interface OrderFilters {
   page: number;
   limit: number;
   order_status?: string;
-  payment_status?: string;
+  is_paid?: boolean;
   date_from?: string;
   date_to?: string;
   min_amount?: number;
@@ -201,7 +201,7 @@ const StiOrdersManagement: React.FC = () => {
 
   const handlePaymentStatusFilterChange = (value: string) => {
     setPaymentStatusFilter(value);
-    handleFilterChange('payment_status', value === 'all' ? undefined : value);
+    handleFilterChange('is_paid', value === 'all' ? undefined : value);
   };
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
@@ -248,9 +248,8 @@ const StiOrdersManagement: React.FC = () => {
 
   const getPaymentStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
-      Pending: 'orange',
-      Paid: 'green',
-      Failed: 'red'
+      false: 'orange',
+      true: 'green'
     };
     return colors[status] || 'default';
   };
@@ -270,9 +269,8 @@ const StiOrdersManagement: React.FC = () => {
 
   const getPaymentStatusText = (status: string) => {
     const texts: { [key: string]: string } = {
-      Pending: 'Chờ thanh toán',
-      Paid: 'Đã thanh toán',
-      Failed: 'Thanh toán thất bại'
+      false: 'Chờ thanh toán',
+      true: 'Đã thanh toán'
     };
     return texts[status] || status;
   };
@@ -356,10 +354,10 @@ const StiOrdersManagement: React.FC = () => {
     },
     {
       title: 'Thanh toán',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      dataIndex: 'is_paid',
+      key: 'is_paid',
       width: 140,
-      render: (status: string = 'Pending') => (
+      render: (status: string = 'false') => (
         <Tag color={getPaymentStatusColor(status)}>
           {getPaymentStatusText(status)}
         </Tag>
@@ -470,9 +468,8 @@ const StiOrdersManagement: React.FC = () => {
               onChange={handlePaymentStatusFilterChange}
             >
               <Select.Option value="all">Tất cả</Select.Option>
-              <Select.Option value="Pending">Chờ thanh toán</Select.Option>
-              <Select.Option value="Paid">Đã thanh toán</Select.Option>
-              <Select.Option value="Failed">Thanh toán thất bại</Select.Option>
+              <Select.Option value="false">Chờ thanh toán</Select.Option>
+              <Select.Option value="true">Đã thanh toán</Select.Option>
             </Select>
           </Col>
 

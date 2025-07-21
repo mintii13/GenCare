@@ -931,7 +931,7 @@ router.patch('/order/:orderId/status',
     async (req: Request, res: Response) => {
         try {
             const orderId  = req.params.orderId;
-            const {order_status, payment_status} = req.body;
+            const {order_status, is_paid} = req.body;
             const user = req.jwtUser as JWTPayload;
 
             if (!order_status) {
@@ -941,7 +941,7 @@ router.patch('/order/:orderId/status',
                 });
             }
 
-            const updateData: any = { order_status, payment_status };
+            const updateData: any = { order_status, is_paid };
 
             const result = await StiService.updateOrder(orderId, updateData, user.userId, user.role);
 
@@ -968,39 +968,39 @@ router.patch('/order/:orderId/status',
  * Get available status transitions for an order
  * GET /api/sti/orders/:id/available-transitions
  */
-router.get('/orders/:id/available-transitions', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) => {
-    try {
-        const orderId = req.params.id;
-        const order = await StiOrderRepository.findOrderById(orderId);
+// router.get('/orders/:id/available-transitions', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) => {
+//     try {
+//         const orderId = req.params.id;
+//         const order = await StiOrderRepository.findOrderById(orderId);
         
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
+//         if (!order) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Order not found'
+//             });
+//         }
 
-        const { getAvailableTransitions } = await import('../middlewares/stiValidation');
-        const availableTransitions = getAvailableTransitions(order.order_status, order.payment_status);
+//         const { getAvailableTransitions } = await import('../middlewares/stiValidation');
+//         const availableTransitions = getAvailableTransitions(order.order_status, order.is_paid);
 
-        return res.status(200).json({
-            success: true,
-            message: 'Available transitions retrieved successfully',
-            data: {
-                current: {
-                    order_status: order.order_status,
-                    payment_status: order.payment_status
-                },
-                available: availableTransitions
-            }
-        });
-    } catch (error) {
-        console.error('Error getting available transitions:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-});
+//         return res.status(200).json({
+//             success: true,
+//             message: 'Available transitions retrieved successfully',
+//             data: {
+//                 current: {
+//                     order_status: order.order_status,
+//                     is_paid: order.is_paid
+//                 },
+//                 available: availableTransitions
+//             }
+//         });
+//     } catch (error) {
+//         console.error('Error getting available transitions:', error);
+//         return res.status(500).json({
+//             success: false,
+//             message: 'Internal server error'
+//         });
+//     }
+// });
 
 export default router;

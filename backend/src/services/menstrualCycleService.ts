@@ -113,18 +113,14 @@ export class MenstrualCycleService {
         for (let i = 0; i < groups.length; i++) {
             const period = groups[i];
             const start = period[0];
-            
-            console.log(`Creating cycle ${i + 1} with start date: ${start.toISOString().split('T')[0]}`);
-            
+
             const cycle: Partial<IMenstrualCycle> = {
                 user_id: new mongoose.Types.ObjectId(user_id),
                 cycle_start_date: start,
                 period_days: period,
-                notification_enabled: true,
-                notification_types: ['period', 'ovulation'],
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                notes,
+                notes
             };
 
             if (i + 1 < groups.length) {
@@ -133,82 +129,42 @@ export class MenstrualCycleService {
                 const len = Math.round(timeDiff / (1000 * 60 * 60 * 24));
                 cycle.cycle_length = len;
                 cycle_lengths.push(len);
-                console.log(`Cycle length: ${len} days (from ${start.toISOString().split('T')[0]} to ${nextStart.toISOString().split('T')[0]})`);
             } else {
                 cycle.cycle_length = 0;
-                console.log(`Last cycle (no next cycle) — cycle_length is undefined`);
             }
+
             cycles.push(cycle as IMenstrualCycle);
         }
-        console.log('Creating cycles from groups...');
-        const regularity = this.calculateCycleRegularity(cycle_lengths);
-        console.log('Calculated regularity (initial):', regularity);
-
+        
         for (let i = 0; i < cycles.length; i++) {
             const cycle = cycles[i];
-            
-            // For the first cycle or cycles without cycle_length, use standard 28-day cycle for predictions
-            let len = cycle.cycle_length;
-            if (!len) {
-                len = 28; // Use standard cycle length for first cycle
-                console.log(`Using standard 28-day cycle for predictions (cycle ${i + 1})`);
-            }
-            
-            console.log(`Processing predictions for cycle ${i + 1}, length: ${len} days, regularity: ${regularity}`);
-            
-            // Allow predictions for reasonable cycle lengths (21-35 days)
+            const len = cycle.cycle_length || 0;
+
             if (len >= 21 && len <= 35) {
                 const ov = len - 14;
                 const start = cycle.cycle_start_date.getTime();
-                
+
                 cycle.predicted_cycle_end = new Date(start + len * 86400000);
                 cycle.predicted_ovulation_date = new Date(start + ov * 86400000);
                 cycle.predicted_fertile_start = new Date(start + (ov - 5) * 86400000);
                 cycle.predicted_fertile_end = new Date(start + (ov + 1) * 86400000);
-            }
-            else{
-                cycle.predicted_cycle_end = null;
-                cycle.predicted_ovulation_date = null;
-                cycle.predicted_fertile_start = null;
-                cycle.predicted_fertile_end = null;
-                console.log(`No predictions for cycle ${i + 1} - length: ${len}, regularity: ${regularity}`);
+                cycle.predicted_fertile_end.setHours(23, 59, 59, 999);
             }
         }
 
-        if (cycles.length === 0) {
-            console.error('No valid cycles created');
-            return {
-                success: false,
-                message: 'No valid cycles found'
-            };
-        }
-        
-        console.log('Saving cycles to database...');
-        console.log('Final cycles summary:', cycles.map((cycle, index) => ({
-            cycleNum: index + 1,
-            startDate: cycle.cycle_start_date.toISOString().split('T')[0],
-            periodDays: cycle.period_days.map(d => d.toISOString().split('T')[0]),
-            cycleLength: cycle.cycle_length || 'N/A',
-            hasPredictions: !!cycle.predicted_cycle_end
-        })));
-        
         await MenstrualCycleRepository.deleteCyclesByUser(user_id);
         const result = await MenstrualCycleRepository.insertCycles(cycles);
-        
-        if (!result || result.length === 0) {
-            console.error('Failed to save cycles to database');
-            return {
-                success: false,
-                message: 'Failed to save cycles'
+
+        return result && result.length
+            ? { 
+                success: true, 
+                message: 'Save menstrual cycle data successfully', 
+                data: result 
+            }
+            : { 
+                success: false, 
+                message: 'Cannot save menstrual cycle data' 
             };
-        }
-        
-        console.log('Successfully saved cycles:', result.length);
-        return {
-            success: true,
-            message: 'Saving Menstrual Cycles successfully',
-            data: result
-        };
     }
 
     public static async getCycles(user_id: string) {
@@ -278,14 +234,34 @@ export class MenstrualCycleService {
             }
 
             // Defect D6: Whitelist allowed fields to prevent malicious updates
-            const allowedFields = ['notification_enabled', 'notification_types'];
+            const allowedFields = ['notification_enabled', 'notification_types', 'notification_time'];
             const validSettings: any = {};
-
             for (const key of allowedFields) {
                 if (settings.hasOwnProperty(key)) {
-                    // Thêm validation chi tiết hơn nếu cần
-                    // Ví dụ: kiểm tra notification_types là một mảng các giá trị hợp lệ
                     validSettings[key] = settings[key];
+                }
+            }
+            if (Object.keys(validSettings).length === 0) {
+                return {
+                    success: false,
+                    message: 'No valid fields to update.'
+                };
+            }
+
+            const result = await MenstrualCycleRepository.updateNotificationByUserId(user_id, validSettings);
+            if (!result) { 
+                return { 
+                    success: false, 
+                    message: 'Failed to update notification settings' 
+                }; 
+            }
+            return { 
+                success: true, 
+                message: 'Notification settings updated successfully', 
+            };
+            for (const key of allowedFields) {
+                if (settings.hasOwnProperty(key)) {
+                        validSettings[key] = settings[key];
                 }
             }
 

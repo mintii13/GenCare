@@ -277,8 +277,8 @@ export class PaginationUtils {
         }
 
         // Payment status filter
-        if (query.payment_status) {
-            filter.payment_status = query.payment_status;
+        if (query.is_paid) {
+            filter.is_paid = query.is_paid;
         }
 
         // Date range filter

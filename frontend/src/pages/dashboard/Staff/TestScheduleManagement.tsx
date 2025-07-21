@@ -6,6 +6,7 @@ import { API } from '@/config/apiEndpoints';
 import apiClient from '@/services/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { FaKaaba } from 'react-icons/fa';
 
 interface STIOrder {
   _id: string;
@@ -15,7 +16,7 @@ interface STIOrder {
     email: string;
   };
   order_status: string;
-  payment_status: string;
+  is_paid: boolean;
   total_amount: number;
   notes?: string;
   order_date: string;
@@ -94,7 +95,7 @@ const TestScheduleManagement: React.FC = () => {
             _id: t.id,
             customer_id: t.customer_id,
             order_status: t.status,
-            payment_status: t.payment_status || 'Pending',
+            is_paid: t.is_paid || false,
             total_amount: t.amount,
             notes: t.notes,
             order_date: sch.date,
@@ -157,8 +158,8 @@ const TestScheduleManagement: React.FC = () => {
     },
     {
       title: 'Thanh toán',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      dataIndex: 'is_paid',
+      key: 'is_paid',
       render: (sts: string) => <Tag>{sts}</Tag>,
     },
     {

@@ -40,7 +40,7 @@ interface STIOrder {
     email: string;
   };
   order_status: string;
-  payment_status: string;
+  is_paid: string;
   total_amount: number;
   notes?: string;
   order_date: string;
@@ -99,7 +99,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ refreshTrigger 
             _id: t.id,
             customer_id: t.customer_id,
             order_status: t.status,
-            payment_status: t.payment_status || 'Pending',
+            is_paid: t.is_paid || false,
             total_amount: t.amount,
             notes: t.notes,
             order_date: sch.date,
@@ -167,9 +167,8 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ refreshTrigger 
 
   const getPaymentStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      Pending: 'orange',
-      Paid: 'green',
-      Failed: 'red',
+      false: 'orange',
+      true: 'green'
     };
     return colors[status] || 'default';
   };
@@ -229,8 +228,8 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ refreshTrigger 
     },
     {
       title: 'Thanh toán',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      dataIndex: 'is_paid',
+      key: 'is_paid',
       width: 120,
       render: (status: string) => (
         <Tag color={getPaymentStatusColor(status)}>{status}</Tag>

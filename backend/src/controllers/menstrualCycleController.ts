@@ -2,46 +2,28 @@
 import { Router, Request, Response} from 'express';
 import { MenstrualCycleService } from '../services/menstrualCycleService';
 import { authenticateToken } from '../middlewares/jwtMiddleware';
-import { validateMenstrualCycle } from '../middlewares/menstrualCycleValidation';
+import { validateMenstrualCycle, groupPeriodDays } from '../middlewares/menstrualCycleValidation';
 
 const router = Router();
 
-router.post('/processMenstrualCycle', validateMenstrualCycle, authenticateToken, async (req: Request, res: Response) => {
+router.post('/processMenstrualCycle', validateMenstrualCycle, groupPeriodDays, authenticateToken, async (req: Request, res: Response) => {
     try {
         const user_id = (req.user as any).userId;
-        
-        // Validation đã được thực hiện ở middleware, nhưng thêm safety check
-        if (!req.body.period_days || !Array.isArray(req.body.period_days)) {
-            return res.status(400).json({
-                success: false,
-                message: 'period_days phải là một mảng'
-            });
-        }
-
-        // Convert string dates to Date objects với error handling
-        let period_days: Date[];
-        try {
-            period_days = req.body.period_days.map((day: string) => {
-                const date = new Date(day);
-                if (isNaN(date.getTime())) {
-                    throw new Error(`Invalid date format: ${day}`);
-                }
-                return date;
-            });
-        } catch (dateError) {
-            return res.status(400).json({
-                success: false,
-                message: `Định dạng ngày không hợp lệ: ${dateError.message}`
-            });
-        }
-
+        const grouped_period_days = req.body.grouped_period_days;
+        console.log('Received grouped_period_days:', grouped_period_days);
         const notes = req.body.notes || '';
-        const result = await MenstrualCycleService.processPeriodDays(user_id, period_days, notes);
+        // Validation đã được thực hiện ở middleware, nhưng thêm safety check
+        if (!grouped_period_days || !Array.isArray(grouped_period_days) || grouped_period_days.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'grouped period days are not valid or empty'
+            });
+        }
+        const result = await MenstrualCycleService.processPeriodDays(user_id, grouped_period_days, notes);
         
         if (!Array.isArray(result) && result.success === false) {
             return res.status(400).json(result);
         }
-        
         return res.status(201).json(result);
     } catch (error) {
         console.error('Error in /processMenstrualCycle:', error);
@@ -60,7 +42,7 @@ router.get('/getCycles', authenticateToken, async (req: Request, res: Response) 
         
         if (result.success) {
             return res.status(200).json(result);
-        } else {
+        } else {4
             return res.status(400).json(result);
         }
     } catch (error) {

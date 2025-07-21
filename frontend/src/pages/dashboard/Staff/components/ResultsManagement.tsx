@@ -62,7 +62,7 @@ interface StiOrder {
   customer_phone?: string;
   total_amount: number;
   order_status: string;
-  payment_status: string;
+  is_paid: boolean;
   order_date: string;
   notes?: string;
   created_at: string;

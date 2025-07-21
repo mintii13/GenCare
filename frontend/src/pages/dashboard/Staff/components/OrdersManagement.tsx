@@ -36,7 +36,6 @@ import StiResultService, { StiResult, CreateStiResultRequest, UpdateStiResultReq
 import StatusUpdateModal from '../../../../components/sti/StatusUpdateModal';
 import { 
   OrderStatus, 
-  PaymentStatus, 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getOrderStatusLabel, 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -93,7 +92,7 @@ interface StiOrder {
   customer_phone?: string;
   total_amount: number;
   order_status: string;
-  payment_status: string;
+  is_paid: boolean;
   order_date: string;
   notes?: string;
   created_at: string;
@@ -112,7 +111,7 @@ interface OrderFilters {
   page: number;
   limit: number;
   order_status?: string;
-  payment_status?: string;
+  is_paid?: boolean;
   date_from?: string;
   date_to?: string;
   min_amount?: number;
@@ -305,7 +304,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   const handlePaymentStatusFilterChange = (value: string) => {
     setPaymentStatusFilter(value);
-    handleFilterChange('payment_status', value === 'all' ? undefined : value);
+    handleFilterChange('is_paid', value === 'all' ? undefined : value);
   };
 
   // Order management handlers
@@ -318,7 +317,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       sti_test_items: order.sti_test_items || [],
       total_amount: order.total_amount,
       order_status: order.order_status,
-      payment_status: order.payment_status
+      is_paid: order.is_paid
     });
     setOrderModalVisible(true);
   };
@@ -353,7 +352,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           sti_test_items: values.sti_test_items || [],
           total_amount: calculatedTotal,
           order_status: values.order_status,
-          payment_status: values.payment_status
+          is_paid: values.is_paid === true || values.is_paid === 'true',
         };
         
         const response = await apiClient.patch(API.STI.UPDATE_ORDER(editingOrder._id), updateData);
@@ -489,13 +488,13 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     setStatusUpdateModalVisible(true);
   };
 
-  const handleStatusUpdateSubmit = async (orderStatus: OrderStatus, paymentStatus: PaymentStatus) => {
+  const handleStatusUpdateSubmit = async (orderStatus: OrderStatus, is_paid: boolean|string) => {
     if (!selectedOrder) return;
 
     try {
       const response = await apiClient.patch(API.STI.UPDATE_ORDER_STATUS(selectedOrder._id), {
         order_status: orderStatus,
-        payment_status: paymentStatus
+        is_paid: is_paid === true || is_paid === 'true'
       });
 
       if ((response as any).data?.success) {
@@ -534,9 +533,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   const getPaymentStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
-      Pending: 'orange',
-      Paid: 'green',
-      Failed: 'red'
+      false: 'orange',
+      true: 'green'
     };
     return colors[status] || 'default';
   };
@@ -556,9 +554,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   const getPaymentStatusText = (status: string) => {
     const texts: { [key: string]: string } = {
-      Pending: 'Chờ thanh toán',
-      Paid: 'Đã thanh toán',
-      Failed: 'Thanh toán thất bại'
+      false: 'Chờ thanh toán',
+      true: 'Đã thanh toán'
     };
     return texts[status] || status;
   };
@@ -660,8 +657,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     },
     {
       title: 'Thanh toán',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      dataIndex: 'is_paid',
+      key: 'is_paid',
       width: 120,
       render: (status: string) => (
         <Tag color={getPaymentStatusColor(status)}>
@@ -809,9 +806,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
               onChange={handlePaymentStatusFilterChange}
             >
               <Option value="all">Tất cả</Option>
-              <Option value="Pending">Chờ thanh toán</Option>
-              <Option value="Paid">Đã thanh toán</Option>
-              <Option value="Failed">Thanh toán thất bại</Option>
+              <Option value="false">Chờ thanh toán</Option>
+              <Option value="true">Đã thanh toán</Option>
             </Select>
           </Col>
 
@@ -1017,13 +1013,12 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
             <Col span={12}>
               <Form.Item
                 label="Trạng thái thanh toán"
-                name="payment_status"
+                name="is_paid"
                 rules={[{ required: true, message: 'Vui lòng chọn trạng thái thanh toán' }]}
               >
                 <Select>
-                  <Option value="Pending">Chờ thanh toán</Option>
-                  <Option value="Paid">Đã thanh toán</Option>
-                  <Option value="Failed">Thanh toán thất bại</Option>
+                  <Option value="false">Chờ thanh toán</Option>
+                  <Option value="true">Đã thanh toán</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -1162,7 +1157,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           onClose={() => setStatusUpdateModalVisible(false)}
           onUpdate={handleStatusUpdateSubmit}
           currentOrderStatus={selectedOrder.order_status as OrderStatus}
-          currentPaymentStatus={selectedOrder.payment_status as PaymentStatus}
+          currentPaymentStatus={selectedOrder.is_paid}
           orderId={selectedOrder._id}
           orderCode={selectedOrder.order_code}
           customerName={selectedOrder.customer_name || selectedOrder.customer_id?.full_name}

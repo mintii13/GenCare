@@ -1,3 +1,4 @@
+import mongoose, { mongo } from 'mongoose';
 import { Staff, IStaff } from '../models/Staff';
 
 interface StaffDropdownItem {
@@ -30,7 +31,8 @@ export class StaffRepository {
 
     public static async findById(staffId: string): Promise<IStaff | null> {
         try {
-            return await Staff.findById(staffId);
+            const objectedStaffId = new mongoose.Types.ObjectId(staffId);
+            return await Staff.findById(objectedStaffId);
         } catch (error) {
             console.error('Error finding staff by ID:', error);
             throw error;

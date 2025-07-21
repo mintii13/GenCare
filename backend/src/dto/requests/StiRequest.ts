@@ -15,7 +15,7 @@ export interface StiTestRequest {
 export interface StiOrderQuery extends PaginationQuery {
     customer_id?: string;
     order_status?: 'Booked' | 'Accepted' | 'Processing' | 'SpecimenCollected' | 'Testing' | 'Completed' | 'Canceled';
-    payment_status?: 'Pending' | 'Paid' | 'Failed';
+    is_paid?: boolean;
     date_from?: string;
     date_to?: string;
     min_amount?: number;
