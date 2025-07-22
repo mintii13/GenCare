@@ -7,7 +7,7 @@
 
 **The Gencare: Smart Gender Healthcare System** is a web application that facilitates online medical testing and consultation services. The system enables users to book lab tests, receive expert consultations, and securely access their health records. It includes a built-in chatbot for 24/7 user support. Additionally, the system offers robust management features for staff and administrators to handle appointments, test records, and user data efficiently.
 
-Software Requirement Specification for GenCare: Smart Gender Healthcare System: [SRS](./SRS/SRS_for_GenCare_System.pdf)
+**Software Requirement Specification for GenCare: Smart Gender Healthcare System:** [SRS](./SRS/SRS_for_GenCare_System.pdf)
 
 ## System Architecture
 ## Docker Compose Instructions
