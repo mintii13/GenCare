@@ -90,7 +90,7 @@ VITE_GOOGLE_CLIENT_ID=779602867295-1sn72ljqpjj8oahsq57erurckr2c609v.apps.googleu
 # # Other Services
 # VITE_SOCKET_URL=ws://localhost:3000
 # VITE_UPLOAD_URL=http://localhost:3000/upload
-VITE_CHATBOX_API=http://n8n-swo.duckdns.org:5678/webhook/af68b43e-c9f5-46d7-9ad1-dc059baf2984/chat
+VITE_CHATBOX_API=your-ai-api-key
 ```
 ### Setup Instructions
 #### 1. Clone the Repository
