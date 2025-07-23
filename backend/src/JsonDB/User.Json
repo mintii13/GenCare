@@ -2,7 +2,7 @@
   "_id": {
     "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
   },
-  "email": "consultant1@gencare.com",
+  "email": "hktu2004@gmail.com",
   "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
   "full_name": "BS. Nguyễn Thị Lan",
   "phone": "0901234567",
@@ -109,7 +109,7 @@
   "_id": {
     "$oid": "675e1a2b3c4d5e6f7a8b9c12"
   },
-  "email": "staff1@gencare.com",
+  "email": "chinjsu1302052@gmail.com",
   "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
   "full_name": "Trần Thị Staff",
   "phone": "0908888888",

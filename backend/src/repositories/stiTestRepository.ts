@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { StiTest, IStiTest } from '../models/StiTest';
+import { StiTest, IStiTest, TestTypes } from '../models/StiTest';
 
 export class StiTestRepository{
     public static async findByIdAndUpdateStiTest(id: string, updateData: Partial<IStiTest>): Promise<IStiTest | null>{
@@ -77,6 +77,25 @@ export class StiTestRepository{
             return tests.map(test => test.sti_test_type);
         } catch (error) {
             console.error(error);
+            throw error;
+        }
+    }
+
+    public static async getStiTestsByIds(stiTestIds: mongoose.Types.ObjectId[]): Promise<IStiTest[]> {
+        try {
+            return await StiTest.find({ _id: { $in: stiTestIds } }).lean<IStiTest[]>();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+
+    public static async getStiTestTypeById(sti_test_id: string): Promise<TestTypes | null> {
+        try {
+            const test = await StiTest.findById(sti_test_id).select('sti_test_type').lean<IStiTest>();
+            return test ? test.sti_test_type : null;
+        } catch (error) {
+            console.error('Error getting STI test type by ID:', error);
             throw error;
         }
     }

@@ -61,7 +61,7 @@ export class StiPackageRepository{
             const objectStiId = new mongoose.Types.ObjectId(sti_package_id);
             const objectUserId = new mongoose.Types.ObjectId(userId);
             return await StiPackage.findOneAndUpdate(
-                { _id: objectStiId, createdBy: objectUserId },
+                { _id: objectStiId, created_by: objectUserId },
                 { is_active: false },
                 { new: true }
             );
