@@ -4,16 +4,15 @@ import { useAuth } from '../contexts/AuthContext';
 import GenCareLogo from '../pages/home/components/GenCareLogo';
 
 interface NavigationProps {
-  onLoginClick?: () => void;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, isSidebarOpen }) => {
+const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false); // New state for user dropdown
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, openModal } = useAuth();
   const timeoutRef = useRef<NodeJS.Timeout>();
   const userMenuTimeoutRef = useRef<NodeJS.Timeout>(); // New ref for user menu timeout
   const location = useLocation();
@@ -95,7 +94,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
               </button>
               {isServicesOpen && (
                 <div 
-                  className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                  className="absolute left-0 top-full w-56 bg-white rounded-md shadow-lg py-1 z-50"
                 >
                   <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
@@ -194,17 +193,17 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
             ) : (
               <>
                 <button
-                  onClick={onLoginClick}
+                  onClick={() => openModal('login')}
                   className="text-gray-600 hover:text-primary-700"
                 >
                   Đăng nhập
                 </button>
-                <Link 
-                  to="/register" 
+                <button
+                  onClick={() => openModal('register')}
                   className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition"
                 >
                   Đăng ký
-                </Link>
+                </button>
               </>
             )}
           </div>
@@ -262,11 +261,18 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                 {isServicesOpen && (
                   <div className="pl-4 space-y-2">
                     <Link 
-                      to="/period-tracking" 
+                      to="/menstrual-cycle" 
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Theo dõi kinh nguyệt
+                    </Link>
+                    <Link 
+                      to="/consultation/book-appointment" 
+                      className="block text-gray-600 hover:text-primary-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Đặt lịch tư vấn
                     </Link>
                     <Link 
                       to="/test-packages/sti" 
@@ -277,11 +283,11 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     </Link>
                     {isAuthenticated && user?.role === 'customer' && (
                       <Link 
-                        to="/my-appointments" 
+                        to="/sti-assessment" 
                         className="block text-gray-600 hover:text-primary-700"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        Lịch hẹn của tôi
+                        Đánh giá sàng lọc STI
                       </Link>
                     )}
                   </div>
@@ -345,18 +351,20 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     className="block text-gray-600 hover:text-primary-700 mb-4"
                     onClick={() => {
                       setIsMenuOpen(false);
-                      if (onLoginClick) onLoginClick();
+                      openModal('login');
                     }}
                   >
                     Đăng nhập
                   </button>
-                  <Link 
-                    to="/register" 
-                    className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center"
-                    onClick={() => setIsMenuOpen(false)}
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      openModal('register');
+                    }}
+                    className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center w-full"
                   >
                     Đăng ký
-                  </Link>
+                  </button>
                 </>
               )}
             </div>

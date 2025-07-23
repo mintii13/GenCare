@@ -89,7 +89,12 @@ export interface ApiResponse<T> {
 export const menstrualCycleService = {
   // Xử lý và lưu dữ liệu chu kì
   async processCycle(data: ProcessCycleRequest): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.post(API.MenstrualCycle.PROCESS, data);
+    const response = await apiClient.post('/menstrual-cycle/processMenstrualCycle', data);
+    return response.data as ApiResponse<CycleData[]>;
+  },
+
+  async updateCycle(data: ProcessCycleRequest): Promise<ApiResponse<CycleData[]>> {
+    const response = await apiClient.post(API.MenstrualCycle.UPDATE, data);
     return response.data as ApiResponse<CycleData[]>;
   },
 

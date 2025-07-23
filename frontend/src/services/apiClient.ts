@@ -1,7 +1,9 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, AxiosRequestHeaders } from 'axios';
 import { log } from '../utils/logger';
 import { env } from '../config/environment';
-  const AUTH_TOKEN_KEY = "gencare_auth_token";
+
+// Sử dụng environment config thống nhất
+const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -28,7 +30,7 @@ class ApiClient {
     backoff: true
   };
 
-  constructor(baseURL: string = env.API_BASE_URL || 'http://localhost:3000/api') {
+  constructor(baseURL: string = env.API_BASE_URL) {
     this.instance = axios.create({
       baseURL,
       timeout: 30000, // 30 seconds - increased for heavy data operations
@@ -88,18 +90,20 @@ class ApiClient {
           
           // Don't auto-logout for getUserProfile requests (let AuthContext handle it)
           if (requestUrl.includes('/getUserProfile')) {
-            console.log("getUserProfile failed - AuthContext will handle token validation");
             return Promise.reject(error);
           }
           
           // Don't auto-logout for login requests (let login form handle the error)
           if (requestUrl.includes('/auth/login')) {
-            console.log("Login failed - form will handle the error");
+            return Promise.reject(error);
+          }
+
+          // Don't auto-logout for profile requests (let AuthContext handle it)
+          if (requestUrl.includes('/profile/')) {
             return Promise.reject(error);
           }
           
           // Token expired or invalid for other requests - clear immediately
-          console.error("Token expired or invalid, logging out.");
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');
           

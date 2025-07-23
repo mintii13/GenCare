@@ -20,7 +20,8 @@ import {
   FaSmile,
   FaFrown,
   FaMeh,
-  FaRegCircle
+  FaRegCircle,
+  FaTint
 } from 'react-icons/fa';
 
 interface CycleCalendarProps {
@@ -35,6 +36,22 @@ interface MoodData {
   notes?: string;
 }
 
+// Custom toast cho chu kỳ kinh nguyệt
+function customMenstrualToast(message: string, type: 'success' | 'error' = 'success') {
+  toast.custom((t) => (
+    <div
+      className={`flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border-2 ${type === 'success' ? 'bg-gradient-to-r from-pink-400 to-purple-400 border-pink-300' : 'bg-gradient-to-r from-rose-400 to-pink-500 border-rose-300'} text-white font-semibold animate-in fade-in-0 zoom-in-95`}
+      style={{ minWidth: 260, maxWidth: 400 }}
+    >
+      <span className="text-2xl">
+        {type === 'success' ? <FaHeart /> : <FaTint />}
+      </span>
+      <span className="text-base font-bold">{message}</span>
+      <button onClick={() => toast.dismiss(t.id)} className="ml-auto text-white/70 hover:text-white text-lg">×</button>
+    </div>
+  ));
+}
+
 const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<Date[]>([]);
   const [notes, setNotes] = useState('');
@@ -46,6 +63,8 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
   
   // Hover mood tooltip state
   const [hoverMoodData, setHoverMoodData] = useState<{ data: MoodData; date: Date; position: { x: number; y: number } } | null>(null);
+  // State cho tooltip mood
+  const [hoverMood, setHoverMood] = useState<{date: Date, mood: MoodData} | null>(null);
 
   // Current cycle for predictions
   const currentCycle = cycles && cycles.length > 0 ? cycles[0] : null;
@@ -154,100 +173,63 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
     }
   };
 
-  const handleRemoveFromDatabase = async (dateToRemove: Date) => {
+  const handleRemovePeriodDay = async (dateToRemove: Date) => {
     if (!confirm(`Bạn có chắc muốn xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} khỏi chu kì?`)) {
       return;
     }
 
-    setIsSaving(true);
-    
     try {
-      let allExistingPeriodDays: string[] = [];
-      
-      try {
-        const existingResponse = await menstrualCycleService.getCycles();
-        
-        if (existingResponse.success && existingResponse.data && existingResponse.data.length > 0) {
-          allExistingPeriodDays = existingResponse.data
-            .flatMap(cycle => cycle.period_days)
-            .filter((v, i, arr) => arr.indexOf(v) === i);
-        }
-      } catch (error) {
-        toast.error('Không thể lấy dữ liệu chu kì hiện tại');
-        return;
-      }
+      const allExistingPeriodDays = cycles.flatMap(cycle => 
+        cycle.period_days?.map(day => new Date(day)) || []
+      );
 
       const dateToRemoveStr = getLocalDateString(dateToRemove);
-      
-      // Debug: Hiển thị dữ liệu để kiểm tra
-      console.log('Debug xóa ngày:');
-      console.log('Ngày cần xóa:', dateToRemoveStr);
-      console.log('Danh sách ngày hiện có:', allExistingPeriodDays);
-      
-      // Kiểm tra với nhiều format khác nhau
       const dateToRemoveISOStr = dateToRemove.toISOString().split('T')[0];
-      console.log('Ngày cần xóa (ISO):', dateToRemoveISOStr);
       
-      // Tạo Vietnam time zone date để tránh lỗi múi giờ
-      const vietnamDate = new Date(dateToRemove.getTime() - (dateToRemove.getTimezoneOffset() * 60000));
+      // Thử nhiều format khác nhau
+      const vietnamOffset = 7 * 60; // UTC+7 in minutes
+      const vietnamDate = new Date(dateToRemove.getTime() + vietnamOffset * 60 * 1000);
       const vietnamDateStr = vietnamDate.toISOString().split('T')[0];
-      console.log('Ngày cần xóa (Vietnam):', vietnamDateStr);
-      
-      // Thử filter với tất cả các format
-      let updatedPeriodDays = allExistingPeriodDays.filter(day => 
-        day !== dateToRemoveStr && 
-        day !== dateToRemoveISOStr && 
-        day !== vietnamDateStr
-      );
-      
-      // Nếu vẫn không tìm thấy, thử so sánh theo Date object
-      if (updatedPeriodDays.length === allExistingPeriodDays.length) {
-        console.log('Thử so sánh Date objects...');
-        updatedPeriodDays = allExistingPeriodDays.filter(day => {
-          const dayDate = new Date(day);
-          const isSame = isSameDay(dayDate, dateToRemove);
-          console.log(`So sánh ${day} với ${dateToRemoveStr}: ${isSame}`);
-          return !isSame;
-        });
-      }
 
-      console.log('Danh sách sau khi filter:', updatedPeriodDays);
-      console.log('Số lượng trước/sau:', allExistingPeriodDays.length, '/', updatedPeriodDays.length);
+      // Filter out the date to remove
+      const updatedPeriodDays = allExistingPeriodDays.filter(day => {
+        const dayStr = getLocalDateString(day);
+        const dayISOStr = day.toISOString().split('T')[0];
+        
+        // So sánh Date objects trực tiếp
+        const isSame = day.getTime() === dateToRemove.getTime() || 
+                      dayStr === dateToRemoveStr || 
+                      dayISOStr === dateToRemoveISOStr ||
+                      dayISOStr === vietnamDateStr;
+        
+        return !isSame;
+      });
 
-      // Kiểm tra xem có xóa được ngày nào không
       if (updatedPeriodDays.length === allExistingPeriodDays.length) {
-        toast.error(`Không tìm thấy ngày ${dateToRemoveStr} trong dữ liệu chu kì`);
-        console.warn('Không tìm thấy ngày để xóa');
+        customMenstrualToast('Không tìm thấy ngày để xóa', 'error');
         return;
       }
 
-      // Nếu xóa hết ngày thì xóa toàn bộ chu kì
+      // Nếu không còn ngày nào
       if (updatedPeriodDays.length === 0) {
-        console.log('Xóa hết ngày trong chu kì - sẽ xóa toàn bộ chu kì');
-        // Có thể gọi API xóa chu kì hoặc để trống
-        toast.success(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} - chu kì đã trống`);
-        onRefresh();
+        await menstrualCycleService.updateCycle({ period_days: [] });
+        customMenstrualToast(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} - chu kì đã trống`, 'success');
+        await onRefresh();
         return;
       }
 
-      const requestData = {
-        period_days: updatedPeriodDays,
+      // Cập nhật với danh sách mới
+      const periodDaysStrings = updatedPeriodDays.map(day => getLocalDateString(day));
+      await menstrualCycleService.updateCycle({
+        period_days: periodDaysStrings,
         notes: undefined
-      };
+      });
 
-      const response = await menstrualCycleService.processCycle(requestData);
-
-      if (response && response.success) {
-        toast.success(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} khỏi chu kì`);
-        onRefresh();
-      } else {
-        toast.error('Có lỗi khi xóa ngày khỏi chu kì');
-      }
-    } catch (error: any) {
+      customMenstrualToast(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} khỏi chu kì`, 'success');
+      await onRefresh();
+    } catch (error) {
       console.error('Lỗi khi xóa ngày:', error);
-      toast.error('Lỗi khi xóa ngày khỏi chu kì');
-    } finally {
-      setIsSaving(false);
+      customMenstrualToast('Lỗi khi xóa ngày khỏi chu kì', 'error');
     }
   };
 
@@ -278,7 +260,7 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
 
   const saveCycle = async () => {
     if (selectedPeriodDays.length === 0) {
-      toast.error('Vui lòng chọn ít nhất 1 ngày có kinh');
+      customMenstrualToast('Vui lòng chọn ít nhất 1 ngày có kinh', 'error');
       return;
     }
 
@@ -331,17 +313,17 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
       const response = await menstrualCycleService.processCycle(requestData);
 
       if (response && response.success) {
-        toast.success('Đã lưu chu kì thành công!');
+        customMenstrualToast('Đã lưu chu kì thành công!', 'success');
         setSelectedPeriodDays([]);
         setNotes('');
         setDayMoodData({});
         
         await onRefresh();
       } else {
-        toast.error(`Lỗi khi lưu chu kì: ${response.message || 'Unknown error'}`);
+        customMenstrualToast(`Lỗi khi lưu chu kì: ${response.message || 'Unknown error'}`, 'error');
       }
     } catch (error: any) {
-      toast.error('Lỗi khi lưu chu kì');
+      customMenstrualToast('Lỗi khi lưu chu kì', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -353,24 +335,84 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
     setDayMoodData({});
   };
 
-  const getTileClassName = ({ date, view }: { date: Date; view: string }) => {
-    if (view !== 'month') return '';
-
-    const classes = [];
-    
-    if (isDateSelected(date)) {
-      classes.push('selected-period');
-    } else if (isPeriodDay(date)) {
-      classes.push('period-day');
-    } else if (isOvulationDay(date)) {
-      classes.push('ovulation-day');
-    } else if (isFertileDay(date)) {
-      classes.push('fertile-day');
-    } else if (isPredictedPeriodDay(date)) {
-      classes.push('predicted-period');
+  // Thêm hàm tạo lưới ngày tháng custom
+  const renderCustomCalendar = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay(); // 0: CN, 1: T2, ...
+    const blanks = (firstDay === 0 ? 6 : firstDay - 1);
+    const daysArray = [
+      ...Array(blanks).fill(null),
+      ...Array.from({ length: daysInMonth }, (_, i) => i + 1)
+    ];
+    const rows = [];
+    for (let i = 0; i < daysArray.length; i += 7) {
+      rows.push(daysArray.slice(i, i + 7));
     }
-
-    return classes.join(' ');
+    const weekDays = ['T.H.2', 'T.H.3', 'T.H.4', 'T.H.5', 'T.H.6', 'T.H.7', 'C.N'];
+    return (
+      <div className="w-full">
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {weekDays.map((d, i) => (
+            <div key={i} className="text-center font-bold text-purple-500 uppercase text-sm tracking-wider">{d}</div>
+          ))}
+        </div>
+        {rows.map((week, idx) => (
+          <div key={idx} className="grid grid-cols-7 gap-2 mb-2">
+            {week.map((day, i) => {
+              // Tính ngày thực tế
+              if (!day) return <div key={i}></div>;
+              const dateObj = new Date(year, month, day);
+              // Highlight logic giữ nguyên như cũ
+              let className = "rounded-xl text-center py-3 text-base font-semibold transition-all ";
+              if (isPeriodDay(dateObj)) className += "bg-gradient-to-r from-pink-400 to-pink-600 text-white shadow-md ";
+              else if (isOvulationDay(dateObj)) className += "bg-yellow-100 text-yellow-700 border border-yellow-300 ";
+              else if (isFertileDay(dateObj)) className += "bg-blue-100 text-blue-700 border border-blue-300 ";
+              else if (isDateSelected(dateObj)) className += "bg-purple-100 text-purple-700 border border-purple-300 ";
+              else className += "bg-white text-gray-700 border border-gray-200 ";
+              // Lấy mood
+              const mood = getMoodDataForDate(dateObj);
+              return (
+                <div key={i} className={className + " relative cursor-pointer select-none"} onClick={() => handleDateClick(dateObj)}>
+                  {day}
+                  {/* icon mood, period, ... */}
+                  {isPeriodDay(dateObj) && (
+                    <span
+                      className="absolute left-1 bottom-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
+                      onClick={e => { e.stopPropagation(); handleRemovePeriodDay(dateObj); }}
+                    >
+                      <FaTimes className="text-white text-xs" />
+                    </span>
+                  )}
+                  {isOvulationDay(dateObj) && <span className="absolute right-1 top-1"><FaEgg className="text-yellow-500 text-xs" /></span>}
+                  {isFertileDay(dateObj) && <span className="absolute right-1 top-1"><FaVenus className="text-blue-400 text-xs" /></span>}
+                  {isDateSelected(dateObj) && <span className="absolute left-1 top-1"><FaCircle className="text-pink-500 text-xs" /></span>}
+                  {mood && (
+                    <span
+                      className="absolute bottom-1 left-1 text-xs cursor-pointer"
+                      onMouseEnter={() => setHoverMood({date: dateObj, mood})}
+                      onMouseLeave={() => setHoverMood(null)}
+                    >
+                      {mood.mood === 'happy' ? <FaSmile className="text-green-500" /> :
+                       mood.mood === 'sad' ? <FaFrown className="text-red-500" /> :
+                       <FaMeh className="text-gray-500" />}
+                    </span>
+                  )}
+                  {/* Tooltip mood */}
+                  {hoverMood && isSameDay(hoverMood.date, dateObj) && (
+                    <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-10 bg-white border rounded shadow px-2 py-1 text-xs whitespace-nowrap">
+                      {hoverMood.mood.notes ? hoverMood.mood.notes : hoverMood.mood.mood}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const getMoodDataForDate = (date: Date) => {
@@ -416,7 +458,7 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
           <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
                onClick={(e) => {
                  e.stopPropagation();
-                 handleRemoveFromDatabase(date);
+                 handleRemovePeriodDay(date);
                }}>
             <FaTimes className="text-white text-xs cursor-pointer" />
           </div>
@@ -531,17 +573,8 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
         )}
 
         <CardContent className="p-6">
-
           <div className="calendar-container">
-            <Calendar
-              onClickDay={handleDateClick}
-              tileClassName={getTileClassName}
-              tileContent={getTileContent}
-              showNeighboringMonth={false}
-              locale="vi-VN"
-              prev2Label={null}
-              next2Label={null}
-            />
+            {renderCustomCalendar()}
           </div>
         </CardContent>
       </Card>

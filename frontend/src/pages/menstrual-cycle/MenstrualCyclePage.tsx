@@ -88,25 +88,6 @@ const MenstrualCyclePage: React.FC = () => {
     }
   }, [isFirstTimeUser, user]);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl border-0">
-          <CardContent className="pt-8 pb-8 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaHeart className="text-2xl text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Chào mừng bạn!</h3>
-            <p className="text-gray-600 mb-6">Vui lòng đăng nhập để theo dõi chu kì kinh nguyệt của bạn</p>
-            <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
-              Đăng nhập ngay
-            </Button>
-          </CardContent>
-        </Card> 
-      </div>
-    );
-  }
-
   // Error state - chỉ hiển thị khi có lỗi thật sự (network/server error)
   if (cycleError && !isLoading) {
     return (
@@ -345,15 +326,7 @@ const MenstrualCyclePage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                <FaCalendarAlt className="text-sm text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Lịch Chu Kì</h2>
-                <p className="text-sm text-gray-600">Ghi nhận và theo dõi hàng ngày</p>
-              </div>
-            </div>
+
             <CycleCalendar 
               cycles={cycles} 
               onRefresh={refreshCycle}

@@ -47,27 +47,3 @@ export type {
   UpdateProfileRequest,
   ChangePasswordRequest
 } from './userService';
-
-export type {
-  STIOrder,
-  CreateSTIOrderRequest,
-  UpdateSTIOrderRequest,
-  STIOrderQuery,
-  STIOrdersPaginatedResponse,
-  STIOrderResponse
-} from './stiOrderService';
-
-export type {
-  STITest,
-  STIPackage,
-  CreateSTITestRequest,
-  UpdateSTITestRequest,
-  CreateSTIPackageRequest,
-  UpdateSTIPackageRequest,
-  STIQuery,
-  STITestResponse,
-  STITestsResponse,
-  STIPackageResponse,
-  STIPackagesResponse,
-  STIPaginatedResponse
-} from './stiService';
