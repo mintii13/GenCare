@@ -6,7 +6,7 @@ export interface IStiPackage extends Document {
     price: number;
     description: string;
     is_active: boolean;
-    createdBy: mongoose.Types.ObjectId;
+    created_by: mongoose.Types.ObjectId;
 }
 
 const stiPackageSchema: Schema<IStiPackage> = new Schema({
@@ -15,7 +15,7 @@ const stiPackageSchema: Schema<IStiPackage> = new Schema({
     price: { type: Number, required: true, min: 0},
     description: {type: String, required: true, trim: true},
     is_active: {type: Boolean, default: true},
-    createdBy: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
+    created_by: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
   },
   { 
     timestamps: true 

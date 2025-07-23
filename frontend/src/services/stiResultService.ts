@@ -2,28 +2,75 @@ import apiClient from './apiClient';
 import { API } from '../config/apiEndpoints';
 
 // Types for STI Result
+export type TestTypes = 'blood' | 'urine' | 'swab';
+
+export interface StiResultItem {
+  sti_test_id: string;
+  result: {
+    sample_type: TestTypes;
+    sample_quality: boolean;
+    urine?: {
+      color?: string;
+      clarity?: string;
+      URO?: number;
+      GLU?: number;
+      KET?: number;
+      BIL?: number;
+      PRO?: number;
+      NIT?: number;
+      pH?: number;
+      blood?: boolean;
+      specific_gravity?: number;
+      LEU?: number;
+    };
+    blood?: {
+      platelets?: number;
+      red_blood_cells?: number;
+      white_blood_cells?: number;
+      hemo_level?: number;
+      hiv?: boolean | null;
+      HBsAg?: boolean | null;
+      anti_HBs?: boolean | null;
+      anti_HBc?: boolean | null;
+      anti_HCV?: boolean | null;
+      HCV_RNA?: boolean | null;
+      TPHA_syphilis?: boolean | null;
+      VDRL_syphilis?: boolean | null;
+      RPR_syphilis?: boolean | null;
+      treponema_pallidum_IgM?: boolean | null;
+      treponema_pallidum_IgG?: boolean | null;
+    };
+    swab?: {
+      bacteria?: string[];
+      virus?: string[];
+      parasites?: string[];
+      PCR_HSV?: boolean | null;
+      HPV?: boolean | null;
+      NAAT_Trichomonas?: boolean | null;
+      rapidAntigen_Trichomonas?: boolean | null;
+      culture_Trichomonas?: boolean | null;
+    };
+    time_completed: string;
+    staff_id?: string;
+  };
+}
+
 export interface StiResult {
   _id: string;
-  order_id: string;
-  sample: {
-    sampleQualities: Record<string, boolean | null>;
-    timeReceived?: Date;
-    timeTesting?: Date;
-  };
-  time_result?: Date;
-  result_value?: string;
-  diagnosis?: string;
+  sti_order_id: string;
+  sti_result_items: StiResultItem[];
+  received_time: string;
+  diagnosis: string;
   is_confirmed: boolean;
-  is_critical?: boolean;
-  is_notified?: boolean;
-  notes?: string;
-  is_active: boolean;
-  created_at: Date;
-  updated_at?: Date;
+  is_critical: boolean;
+  medical_notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateStiResultRequest {
-  result_value?: string;
+  sti_order_id: string;
+  sti_result_items: StiResultItem[];
   diagnosis?: string;
   is_confirmed?: boolean;
   is_critical?: boolean;
@@ -31,19 +78,15 @@ export interface CreateStiResultRequest {
   notes?: string;
 }
 
-export interface UpdateStiResultRequest {
-  sample?: {
-    sampleQualities?: Record<string, boolean | null>;
-    timeReceived?: Date;
-    timeTesting?: Date;
-  };
-  time_result?: Date;
-  result_value?: string;
+export interface UpdateStiResultByStaffRequest {
+  sti_order_id: string;
+  sti_result_items: StiResultItem[];
+}
+
+export interface UpdateStiResultByConsultantRequest {
   diagnosis?: string;
   is_confirmed?: boolean;
-  is_critical?: boolean;
-  notes?: string;
-  is_active?: boolean;
+  medical_notes?: string;
 }
 
 export interface StiResultResponse {
@@ -59,12 +102,9 @@ export interface StiResultListResponse {
 }
 
 class StiResultService {
-  /**
-   * Tạo kết quả STI mới
-   */
   static async createStiResult(orderId: string, data: CreateStiResultRequest): Promise<StiResultResponse> {
     try {
-      const response = await apiClient.post(`${API.STI.STI_RESULT}?orderId=${orderId}`, data);
+      const response = await apiClient.post(`${API.STI.CREATE_STI_RESULT(orderId)}`, data);
       return response.data as StiResultResponse;
     } catch (error: unknown) {
       console.error('Error creating STI result:', error);
@@ -75,12 +115,9 @@ class StiResultService {
     }
   }
 
-  /**
-   * Lấy danh sách kết quả STI
-   */
   static async getStiResults(orderId?: string): Promise<StiResultListResponse> {
     try {
-      const url = orderId ? `${API.STI.STI_RESULT}?orderId=${orderId}` : API.STI.STI_RESULT;
+      const url = orderId ? `${API.STI.GET_STI_RESULT(orderId)}` : '';
       const response = await apiClient.get(url);
       return response.data as StiResultListResponse;
     } catch (error: unknown) {
@@ -92,34 +129,28 @@ class StiResultService {
     }
   }
 
-  /**
-   * Lấy chi tiết kết quả STI theo ID
-   */
-  static async getStiResultById(resultId: string): Promise<StiResultResponse> {
+  static async updateStiResultByStaff(orderId: string, data: UpdateStiResultByStaffRequest): Promise<StiResultResponse> {
     try {
-      const response = await apiClient.get(`${API.STI.STI_RESULT}/${resultId}`);
+      const response = await apiClient.patch(`${API.STI.UPDATE_STI_RESULT(orderId)}`, data);
       return response.data as StiResultResponse;
     } catch (error: unknown) {
-      console.error('Error fetching STI result:', error);
+      console.error('Error updating STI result by staff:', error);
       return {
-        success: false, 
-        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi lấy chi tiết kết quả STI'
+        success: false,
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi cập nhật kết quả bởi staff'
       };
     }
   }
 
-  /**
-   * Cập nhật kết quả STI
-   */
-  static async updateStiResult(resultId: string, data: UpdateStiResultRequest): Promise<StiResultResponse> {
+  static async updateStiResultByConsultant(orderId: string, data: UpdateStiResultByConsultantRequest): Promise<StiResultResponse> {
     try {
-      const response = await apiClient.patch(`${API.STI.STI_RESULT}/${resultId}`, data);
+      const response = await apiClient.patch(`${API.STI.UPDATE_STI_RESULT(orderId)}`, data);
       return response.data as StiResultResponse;
     } catch (error: unknown) {
-      console.error('Error updating STI result:', error);
+      console.error('Error updating STI result by consultant:', error);
       return {
-        success: false, 
-        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi cập nhật kết quả STI'
+        success: false,
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi cập nhật kết quả bởi consultant'
       };
     }
   }
@@ -129,7 +160,7 @@ class StiResultService {
    */
   static async syncSampleFromOrder(orderId: string): Promise<StiResultResponse> {
     try {
-      const response = await apiClient.patch(`${API.STI.STI_RESULT}/sync-sample?orderId=${orderId}`);
+      const response = await apiClient.patch(`/sti/sti-result/sync-sample?orderId=${orderId}`);
       return response.data as StiResultResponse;
     } catch (error: unknown) {
       console.error('Error syncing sample from order:', error);
@@ -145,42 +176,36 @@ class StiResultService {
    */
   static async notifyResult(resultId: string): Promise<StiResultResponse> {
     try {
-      const response = await apiClient.post(`${API.STI.STI_RESULT}/notify?result_id=${resultId}`);
+      const response = await apiClient.post(`/sti/sti-result/notify?result_id=${resultId}`);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error notifying result:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Lỗi khi gửi thông báo kết quả'
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi gửi thông báo kết quả'
       };
     }
   }
 }
 
-/**
- * Lấy danh sách kết quả STI của customer hiện tại
- */
 export const getMySTIResults = async () => {
-    try {
-        const response = await apiClient.get(API.STI.MY_STI_RESULTS);
-        return response.data as StiResultListResponse;
-    } catch (error) {
-        console.error('Error fetching my STI results:', error);
-        throw error;
-    }
+  try {
+    const response = await apiClient.get(API.STI.MY_STI_RESULTS);
+    return response.data as StiResultListResponse;
+  } catch (error) {
+    console.error('Error fetching my STI results:', error);
+    throw error;
+  }
 };
 
-/**
- * Lấy kết quả STI chi tiết cho một order cụ thể
- */
 export const getMySTIResultByOrderId = async (orderId: string) => {
-    try {
-        const response = await apiClient.get(API.STI.MY_STI_RESULT(orderId));
-        return response.data as StiResultResponse;
-    } catch (error) {
-        console.error('Error fetching my STI result:', error);
-        throw error;
-    }
+  try {
+    const response = await apiClient.get(API.STI.MY_STI_RESULT(orderId));
+    return response.data as StiResultResponse;
+  } catch (error) {
+    console.error('Error fetching my STI result:', error);
+    throw error;
+  }
 };
 
-export default StiResultService; 
+export default StiResultService;

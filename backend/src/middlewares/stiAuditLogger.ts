@@ -27,7 +27,7 @@ export const stiAuditLogger = (targetType: TargetType, action: string) => {
                 if (parsedBody?.success === true){
                     let finalId = parsedBody?._id || targetId;
                     if (!finalId && action === 'Create') {
-                        const createdRecord = await modelMap[targetType].findOne({ createdBy: user_id }).sort({ createdAt: -1 }); // cần có `timestamps: true` trong schema
+                        const createdRecord = await modelMap[targetType].findOne({ created_by: user_id }).sort({ createdAt: -1 }); // cần có `timestamps: true` trong schema
                         finalId = createdRecord?._id;
                     }
                     if (!finalId) return;

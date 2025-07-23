@@ -99,6 +99,17 @@ export class StiOrderRepository {
             const aggregationPipeline = [
                 { $match: filters },
                 {
+                    $addFields: {
+                      consultant_id: {
+                        $cond: {
+                          if: { $eq: [{ $type: "$consultant_id" }, "string"] },
+                          then: { $toObjectId: "$consultant_id" },
+                          else: "$consultant_id"
+                        }
+                      }
+                    }
+                },
+                {
                     $lookup: {
                         from: 'users',
                         localField: 'customer_id',
@@ -191,5 +202,17 @@ export class StiOrderRepository {
         return await StiOrder.findById(orderId)
         .populate('sti_package_item.sti_test_ids')
         .populate('sti_test_items');
+    }
+
+    public static async getStiTestInOrder(orderId: string): Promise<IStiOrder | null> {
+        try {
+            return await StiOrder.findById(orderId)
+                .populate({ path: 'sti_test_items', model: 'StiTest' })
+                .populate({ path: 'sti_package_item.sti_test_ids', model: 'StiTest' })
+                .lean<IStiOrder>();
+        } catch (error) {
+            console.error('Error fetching STI tests in order:', error);
+            throw error;
+        }
     }
 }

@@ -6,6 +6,8 @@
   - Gom nhóm endpoints theo module để dễ tra cứu.
 */
 
+import { SpecializationType } from "../../../backend/src/models/Consultant";
+
 export const API = {
   // Base URL for API calls
   BASE_URL: import.meta.env.VITE_API_URL,
@@ -77,6 +79,7 @@ export const API = {
   // ----------------------- CONSULTANT -----------------
   Consultant: {
     LIST: '/consultants',//48
+    DROPDOWN_LIST_SPECIALIZATION: (specialization: SpecializationType) => `/consultants/dropdown/${specialization}`,
     PUBLIC_LIST: '/consultants/public',//49
     PUBLIC_DETAIL: (id: string) => `/consultants/public/${id}`,//50
     TOP_RATED: '/consultants/top-rated',//51
@@ -208,11 +211,11 @@ export const API = {
     UPDATE_ORDER: (id: string) => `/sti/updateStiOrder/${id}`, // Backend uses PATCH method//136
     UPDATE_ORDER_STATUS: (id: string) => `/sti/order/${id}/status`, // Backend uses PATCH method//137
     // STI Results - NEW ENDPOINTS
-    STI_RESULT: '/sti/sti-result',//138
+    CREATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     GET_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,//139
     UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,//140
-    SYNC_SAMPLE: '/sti/sti-result/sync-sample',//141
-    NOTIFY_RESULT: '/sti/sti-result/notify',//142
+    GET_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/${id}`,
+    GET_NONUPDATED_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/non-updated/${id}`,
     // Customer STI Results
     MY_STI_RESULTS: '/sti/my-results',//143
     MY_STI_RESULT: (orderId: string) => `/sti/my-result/${orderId}`,//144

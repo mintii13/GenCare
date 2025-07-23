@@ -5,7 +5,7 @@
   "user_id": {
     "$oid": "675e1a2b3c4d5e6f7a8b9c0d"
   },
-  "specialization": "Sản phụ khoa",
+  "specialization": "Sexual Health",
   "qualifications": "Bác sĩ chuyên khoa I Sản phụ khoa",
   "experience_years": 8,
   "consultation_rating": 4.8,
@@ -18,7 +18,7 @@
   "user_id": {
     "$oid": "675e1a2b3c4d5e6f7a8b9c0e"
   },
-  "specialization": "Y học dự phòng",
+  "specialization": "Sexual Health",
   "qualifications": "Thạc sĩ Y học dự phòng",
   "experience_years": 5,
   "consultation_rating": 4.6,
@@ -30,7 +30,7 @@
   "user_id": {
     "$oid": "6846a7f7103fa089556cea82"
   },
-  "specialization": "Y học dự phòng",
+  "specialization": "Sexual Health",
   "qualifications": "Thạc sĩ Y học dự phòng",
   "experience_years": 5,
   "consultation_rating": 4.6,

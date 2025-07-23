@@ -12,7 +12,7 @@ export interface IStiTest extends Document {
     // vi khuẩn, vi-rút, kí sinh trùng
     category: 'bacterial' | 'viral' | 'parasitic';
     sti_test_type: TestTypes;
-    createdBy: mongoose.Types.ObjectId;
+    created_by: mongoose.Types.ObjectId;
 }
 
 const stiTestSchema = new Schema<IStiTest>({
@@ -31,7 +31,7 @@ const stiTestSchema = new Schema<IStiTest>({
     is_active: { type: Boolean, default: true },
     category: { type: String, enum: ['bacterial', 'viral', 'parasitic'], required: true },
     sti_test_type: {type: String, enum: ['blood', 'urine', 'swab'], required: true},
-    createdBy: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
+    created_by: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
 }, { timestamps: true }
 );
 
