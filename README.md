@@ -10,7 +10,11 @@
 **Software Requirement Specification for GenCare: Smart Gender Healthcare System:** [SRS](./SRS/SRS_for_GenCare_System.pdf)
 
 ## System Architecture
-## Docker Compose Instructions
+## Docker Running Instructions
+```
+cd backend
+bash src/script/run-redis.sh
+```
 ## Tagging Images After Build
 ## Environment Configuration (.env)
 ### Backend Environment Setup
@@ -91,7 +95,7 @@ VITE_CHATBOX_API=http://n8n-swo.duckdns.org:5678/webhook/af68b43e-c9f5-46d7-9ad1
 ### Setup Instructions
 #### 1. Clone the Repository
 ```
-https://github.com/mintii13/GenCare.git
+git clone https://github.com/mintii13/GenCare.git
 cd GenCare 
 ```
 #### 2. Install Dependencies
