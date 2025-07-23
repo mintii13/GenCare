@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import {SpecializationType} from '../../../../../../backend/src/models/Consultant'
 import { 
   Table, 
   Button, 
@@ -253,8 +254,9 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       const url = API.STI.GET_TESTS_FROM_ORDER(orderId);
       const response = await apiClient.get(url);
       if (response.status === 200 && (response.data as any)?.success) {
-        const data = (response.data as any)?.sti_tests || [];
+        const data = (response.data as any)?.data || [];
         setAvailableTests(data);
+        console.log('availableTests:', data);
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách test:', error);
@@ -553,7 +555,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         {
           sti_test_id: values.sti_test_id,
           result: {
-            sample_type: selectedTestType,
+            sample_type: selectedTestType || 'blood',     //để blood đỡ
             sample_quality: values.sample_quality,
             ...(selectedTestType === 'urine' && values.urine ? { urine: normalizeUrineBooleans(values.urine) } : {}),
       ...(selectedTestType === 'blood' && values.blood ? { blood: normalizeBloodBooleans(values.blood) } : {}),
@@ -791,8 +793,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       width: 160,
       render: (record: StiOrder) => (
         <span>{
-          record.consultant_id && consultantList.length > 0
-            ? (consultantList.find(c => c.consultant_id === record.consultant_id)?.full_name || 'Chưa có')
+          record.consultant_id
+            ? (typeof record.consultant_id === 'object'
+                ? record.consultant_id.full_name
+                : consultantList.find(c => c.consultant_id === record.consultant_id)?.full_name || 'Chưa có')
             : 'Chưa có'
         }</span>
       )
@@ -1079,7 +1083,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [consultantList, setConsultantList] = useState<any[]>([]);
   const fetchConsultants = async () => {
     try {
-      const consultantRes = await apiClient.get(API.Consultant.DROPDOWN_LIST_SPECIALIZATION('SexualHealth'));
+      const consultantRes = await apiClient.get(API.Consultant.DROPDOWN_LIST_SPECIALIZATION(SpecializationType.SexualHealth));
       const data: any = consultantRes.data ? consultantRes.data : {};
       setConsultantList(data.data || []);
     } catch {}
@@ -1384,7 +1388,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 <Select
                   placeholder="Chọn xét nghiệm"
                   onChange={handleTestChange}
-                  options={editingResult ? availableTests.map(test => ({ label: test.sti_test_name, value: test._id })) : availableTests.map(test => ({ label: test.sti_test_name, value: test._id }))}
+                  options={availableTests.map(test => ({
+                    label: test.sti_test_name,
+                    value: test._id
+                  }))}
                 />
               </Form.Item>
             </Col>

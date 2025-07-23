@@ -371,9 +371,9 @@ export class StiService {
     public static async createStiOrder(customer_id: string, order_date: Date, notes: string): Promise<StiOrderResponse> {
         try {
             // =================== VALIDATION START ===================
-
+            const orderDate = new Date(order_date);
             // Defect D1 (Improved): Kiểm tra ngày hợp lệ
-            if (!order_date || !(order_date instanceof Date) || isNaN(order_date.getTime())) {
+            if (!order_date || isNaN(orderDate.getTime())) {
                 return {
                     success: false,
                     message: 'Order date is required and must be a valid date'
@@ -383,7 +383,7 @@ export class StiService {
             // Defect D2: Kiểm tra ngày không được ở trong quá khứ
             const today = new Date();
             today.setHours(0, 0, 0, 0); // Reset giờ về đầu ngày để so sánh
-            if (new Date(order_date) < today) {
+            if (orderDate < today) {
                 return {
                     success: false,
                     message: 'Order date cannot be in the past'
@@ -720,6 +720,11 @@ export class StiService {
                             };
                         }
                         order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
+                        const staff = await StaffRepository.findByUserId(userId);
+                        console.log(userId);
+                        console.log(staff);
+                        order.staff_id = new mongoose.Types.ObjectId(staff._id);
+                        order.order_status = 'Accepted';                    //trick lỏ xíu, sửa sau
                     } else {
                         return {
                             success: false,
@@ -727,25 +732,7 @@ export class StiService {
                         };
                     }
                 }
-
-                if (updates.staff_id) {
-                    if (['staff', 'admin'].includes(role)) {
-                        const staffExists = await StaffRepository.findByUserId(userId);
-                        if (!staffExists) {
-                            return {
-                                success: false,
-                                message: 'Staff not found'
-                            };
-                        }
-                        order.staff_id = staffExists._id;
-                    } else {
-                        return {
-                            success: false,
-                            message: 'Unauthorized to update staff_id'
-                        };
-                    }
-                }
-
+                let total_amount = 0;
                 if (Array.isArray(updates.sti_test_items)) {
                     if (!['consultant'].includes(role)) {
                         return {
@@ -754,6 +741,8 @@ export class StiService {
                         };
                     }
                     order.sti_test_items = updates.sti_test_items.map(id => new mongoose.Types.ObjectId(id));
+                    const stiTests = await StiTest.find({ _id: { $in: order.sti_test_items }, is_active: true }).select('price');
+                    total_amount = stiTests.reduce((sum, test) => sum + test.price, 0);
                 }
                 if (updates.sti_package_item) {
                     if (!['consultant'].includes(role)) {
@@ -778,7 +767,14 @@ export class StiService {
                         sti_package_id: new mongoose.Types.ObjectId(sti_package_id),
                         sti_test_ids: stiPackageTests.map(test => new mongoose.Types.ObjectId(test.sti_test_id))
                     };
+                    const pkg = await StiPackageRepository.findPackageById(sti_package_id.toString());
+                    total_amount += pkg.price;
                 }
+
+                if (updates.sti_package_item || Array.isArray(updates.sti_test_items)){
+                    order.total_amount = total_amount;
+                }
+                
 
                 if (updates.is_paid === true && order.order_status === 'Accepted') {
                     if (['staff', 'admin'].includes(role)) {
@@ -978,6 +974,8 @@ export class StiService {
             if (query.sort_by) filters_applied.sort_by = query.sort_by;
             if (query.sort_order) filters_applied.sort_order = query.sort_order;
 
+            console.log('[DEBUG] Order sample:', JSON.stringify(result.orders[0], null, 2));
+
             return {
                 success: true,
                 message: result.orders.length > 0
@@ -1169,9 +1167,9 @@ export class StiService {
     public static async updateStiResult(
         user: JWTPayload,
         order_id: string,
-        sti_test_id: string,
-        sti_test_type: TestTypes,
-        sample_quality: boolean,
+        sti_test_id?: string,
+        sti_test_type?: TestTypes,
+        sample_quality?: boolean,
         urine?: any,
         blood?: any,
         swab?: any,
@@ -1225,6 +1223,7 @@ export class StiService {
                 blood: item.result.blood,
                 swab: item.result.swab
               })));
+            console.log(updatedResult);
             return {
                 success: true,
                 message: 'STI result updated successfully',

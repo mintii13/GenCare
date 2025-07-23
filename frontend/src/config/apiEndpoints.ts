@@ -6,6 +6,8 @@
   - Gom nhóm endpoints theo module để dễ tra cứu.
 */
 
+import { SpecializationType } from "../../../backend/src/models/Consultant";
+
 export const API = {
   // Base URL for API calls
   BASE_URL: import.meta.env.VITE_API_URL,
@@ -13,7 +15,7 @@ export const API = {
   // ----------------------- AUTH -----------------------
   Auth: {
     LOGIN: '/auth/login',
-    REGISTER: '/register/send-otp',
+    REGISTER: '/auth/register/send-otp',
     CHECK_EMAIL: '/auth/check-email',
     VERIFY_OTP: '/auth/register/verify-otp',
     RESEND_OTP: '/auth/resendOTP',
@@ -77,7 +79,7 @@ export const API = {
   // ----------------------- CONSULTANT -----------------
   Consultant: {
     LIST: '/consultants',
-    DROPDOWN_LIST_SPECIALIZATION: (specialization: 'General' | 'SexualHealth' | 'Psychological') => `/consultants/dropdown/${specialization}`,
+    DROPDOWN_LIST_SPECIALIZATION: (specialization: SpecializationType) => `/consultants/dropdown/${specialization}`,
     PUBLIC_LIST: '/consultants/public',
     PUBLIC_DETAIL: (id: string) => `/consultants/public/${id}`,
     TOP_RATED: '/consultants/top-rated',
@@ -200,7 +202,7 @@ export const API = {
     CREATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     GET_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
-    GET_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/dropdown/${id}`,
+    GET_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/${id}`,
     GET_NONUPDATED_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/non-updated/${id}`,
     // Customer STI Results
     MY_STI_RESULTS: '/sti/my-results',

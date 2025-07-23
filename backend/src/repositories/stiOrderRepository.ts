@@ -99,6 +99,17 @@ export class StiOrderRepository {
             const aggregationPipeline = [
                 { $match: filters },
                 {
+                    $addFields: {
+                      consultant_id: {
+                        $cond: {
+                          if: { $eq: [{ $type: "$consultant_id" }, "string"] },
+                          then: { $toObjectId: "$consultant_id" },
+                          else: "$consultant_id"
+                        }
+                      }
+                    }
+                },
+                {
                     $lookup: {
                         from: 'users',
                         localField: 'customer_id',

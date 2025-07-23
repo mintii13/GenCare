@@ -19,6 +19,7 @@ import { StiOrderRepository } from '../repositories/stiOrderRepository';
 import session from 'express-session';
 import { StiTestRepository } from '../repositories/stiTestRepository';
 import { StiResult } from '../models/StiResult';
+import { StiPackageTest } from '../models/StiPackageTest';
 
 const router = Router();
 /**
@@ -419,6 +420,35 @@ router.put('/deleteStiPackage/:id', authenticateToken, authorizeRoles('staff', '
     }
 });
 
+router.get('/getStiTestByPackageId/:id', authenticateToken, async (req: Request, res: Response) => {
+    const sti_package_id  = req.params.id;
+  
+    if (!sti_package_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'sti_package_id is required'
+      });
+    }
+    try {
+      const packageTests = await StiPackageTest.find({
+        sti_package_id,
+        is_active: true
+      }).populate('sti_test_id');
+  
+      const stiTests = packageTests.map(item => item.sti_test_id);
+  
+      return res.status(200).json({
+        success: true,
+        message: 'STI tests fetched successfully',
+        data: stiTests
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching STI tests',
+        error: error.message
+      });
+    }});
 //create orders                                         (post)
 router.post('/createStiOrder', validateStiOrderCreate, authenticateToken, authorizeRoles('customer'), stiAuditLogger('StiOrder', 'Create StiOrder'), async (req: Request, res: Response) => {
     try {
@@ -769,50 +799,64 @@ router.post('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', '
 
 router.patch('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) => {
     try {
-      const order_id = req.params.orderId;
-      const user = req.user as any;
-      const { sti_result_items, diagnosis, is_confirmed, medical_notes } = req.body;
+        const order_id = req.params.orderId;
+        const user = req.user as any;
+        const { sti_result_items, diagnosis, is_confirmed, medical_notes } = req.body;
+        
+        // Validate: chỉ chấp nhận 1 item duy nhất
+        if (!sti_result_items || !Array.isArray(sti_result_items) || sti_result_items.length !== 1) {
+            if (!diagnosis && !is_confirmed && !medical_notes){
+                return res.status(400).json({
+                    success: false,
+                    message: 'You must provide exactly one result item to update.'
+                });
+            }
+        }
+        let updateResult = null;
+        if (!diagnosis && !is_confirmed && !medical_notes){
+            const { sti_test_id, result } = sti_result_items[0];
   
-      // Validate: chỉ chấp nhận 1 item duy nhất
-      if (!sti_result_items || !Array.isArray(sti_result_items) || sti_result_items.length !== 1) {
-        return res.status(400).json({
-            success: false,
-            message: 'You must provide exactly one result item to update.'
-        });
-      }
-  
-      const { sti_test_id, result } = sti_result_items[0];
-  
-      if (!sti_test_id || !result?.sample_quality) {
-        return res.status(400).json({
-          success: false,
-          message: 'Missing sti_test_id or sample_quality in result'
-        });
-      }
-  
-      const sti_test_type = await StiTestRepository.getStiTestTypeById(sti_test_id);
-      if (!sti_test_type) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid sti_test_id'
-        });
-      }
-  
-      // Gọi service để update 1 item
-      const updateResult = await StiService.updateStiResult(
-        user,
-        order_id,
-        sti_test_id,
-        sti_test_type,
-        result.sample_quality,
-        result.urine,
-        result.blood,
-        result.swab,
-        diagnosis,
-        is_confirmed,
-        medical_notes
-      );
-  
+            if (!sti_test_id || !result?.sample_quality) {
+                return res.status(400).json({
+                success: false,
+                message: 'Missing sti_test_id or sample_quality in result'
+                });
+            }
+    
+            const sti_test_type = await StiTestRepository.getStiTestTypeById(sti_test_id);
+            if (!sti_test_type) {
+                return res.status(400).json({
+                success: false,
+                message: 'Invalid sti_test_id'
+                });
+            }
+            updateResult = await StiService.updateStiResult(
+                user,
+                order_id,
+                sti_test_id,
+                sti_test_type,
+                result.sample_quality,
+                result.urine,
+                result.blood,
+                result.swab
+            );
+        }
+        else{
+            updateResult = await StiService.updateStiResult(
+                user,
+                order_id,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                diagnosis,
+                is_confirmed,
+                medical_notes
+            );
+        }
+        
       if (!updateResult || !updateResult.success) {
         return res.status(400).json({
           success: false,

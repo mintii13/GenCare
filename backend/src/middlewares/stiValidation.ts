@@ -1,6 +1,7 @@
 import Joi, { valid } from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import { OrderStatus, IStiOrder } from '../models/StiOrder';
 
 // Extend Request interface để thêm currentOrder
@@ -111,10 +112,16 @@ export const validateStiTest = (req: Request, res: Response, next: NextFunction)
   next();
 }
 
+dayjs.extend(isSameOrAfter);
+
 export const stiOrderCreateSchema = Joi.object({
-  order_date: Joi.date().required().custom((value, helpers) => {
+  order_date: Joi.string().required().custom((value, helpers) => {
+    const inputDate = dayjs(value, 'YYYY-MM-DD', true);
     const today = dayjs().startOf('day');
-    const inputDate = dayjs(value).startOf('day');
+
+    if (!inputDate.isValid()) {
+      return helpers.error('any.invalid');
+    }
 
     if (!inputDate.isAfter(today)) {
       return helpers.error('date.futureOnly');
@@ -122,8 +129,9 @@ export const stiOrderCreateSchema = Joi.object({
 
     return value;
   }).messages({
-    'date.base': 'Ngày đặt không hợp lệ',
-    'any.required': 'Ngày đặt là bắt buộc'
+    'any.required': 'Ngày đặt là bắt buộc',
+    'date.futureOnly': 'Ngày đặt phải sau hôm nay',
+    'any.invalid': 'Ngày không hợp lệ'
   }),
 
   notes: Joi.string().max(500).allow('').optional().messages({
@@ -166,9 +174,11 @@ export const stiOrderUpdateSchema = Joi.object({
     'string.pattern.base': 'Staff ID không hợp lệ'
   }),
 
-  sti_package_id: objectId.allow(null).optional().messages({
-    'string.pattern.base': 'STI Package ID không hợp lệ',
-  }),
+  sti_package_item: Joi.object({
+    sti_package_id: objectId.allow(null).optional().messages({
+      'any.invalid': 'STI Package ID không hợp lệ',
+    }),
+  }).optional(),
 
   sti_test_items: Joi.array().items(objectId).optional().messages({
     'array.base': 'STI Test Items phải là một mảng',
