@@ -116,6 +116,14 @@ interface StiOrder {
     _id: string;
     full_name: string;
   };
+  consultant_user?: { // Thêm consultant_user object
+    _id: string;
+    full_name: string;
+  };
+  staff_user?: { // Thêm staff_user object
+    _id: string;
+    full_name: string;
+  };
 }
 
 interface OrderFilters {
@@ -167,6 +175,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [hasResultModalVisible, setHasResultModalVisible] = useState(false);
   const [invalidStatusModalVisible, setInvalidStatusModalVisible] = useState(false);
   const [cannotEditModalVisible, setCannotEditModalVisible] = useState(false);
+  const [cannotEditAtTestingStatus, setCannotEditAtTestingStatus] = useState(false);
+  
   
   // Selected items
   const [selectedOrder, setSelectedOrder] = useState<StiOrder | null>(null);
@@ -374,6 +384,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       setCannotEditModalVisible(true);
       return;
     }
+    if (order.order_status === 'Testing') {
+      setCannotEditAtTestingStatus(true);
+      return;
+    }
     setEditingOrder(order);
     if (order.order_status === 'Booked') fetchConsultants();
     orderForm.setFieldsValue({
@@ -399,7 +413,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         } else if (editingOrder.order_status === 'Booked') {
           updateData.consultant_id = values.consultant_id;
         } else if ([
-          'Processing', 'SpecimenCollected', 'Testing'
+          'Processing', 'SpecimenCollected'
         ].includes(editingOrder.order_status)) {
           updateData.order_status = values.order_status;
         }
@@ -791,26 +805,20 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       title: 'Consultant',
       key: 'consultant',
       width: 160,
-      render: (record: StiOrder) => (
-        <span>{
-          record.consultant_id
-            ? (typeof record.consultant_id === 'object'
-                ? record.consultant_id.full_name
-                : consultantList.find(c => c.consultant_id === record.consultant_id)?.full_name || 'Chưa có')
-            : 'Chưa có'
-        }</span>
+      render: (record: StiOrder & { consultant_user?: { full_name?: string } }) => (
+        <span>
+          {record.consultant_user?.full_name || 'Chưa có'}
+        </span>
       )
     },
     {
       title: 'Staff',
       key: 'staff',
       width: 160,
-      render: (record: StiOrder) => (
-        <span>{
-          record.staff_id && record.staff && record.staff.full_name
-            ? record.staff.full_name
-            : 'Chưa có'
-        }</span>
+      render: (record: StiOrder & { staff_user?: { full_name?: string } }) => (
+        <span>
+          {record.staff_user?.full_name || 'Chưa có'}
+        </span>
       )
     },
     {
@@ -1308,7 +1316,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           </div>
         )}
         <Form form={orderForm} layout="vertical">
-          {editingOrder && ['Booked', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing'].includes(editingOrder.order_status) ? (
+          {editingOrder && ['Booked', 'Accepted', 'Processing', 'SpecimenCollected'].includes(editingOrder.order_status) ? (
             <>
               {editingOrder.order_status === 'Booked' && (
                 <Form.Item
@@ -1336,7 +1344,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                   </Select>
                 </Form.Item>
               )}
-              {['Processing', 'SpecimenCollected', 'Testing'].includes(editingOrder.order_status) && (
+              {['Processing', 'SpecimenCollected'].includes(editingOrder.order_status) && (
                 <Form.Item
                   label="Trạng thái đơn hàng"
                   name="order_status"
@@ -1469,6 +1477,15 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         <p>Chỉ có thể tạo kết quả khi đơn hàng ở trạng thái Đang xét nghiệm (Testing).</p>
       </Modal>
       <Modal
+        open={cannotEditAtTestingStatus}
+        onCancel={() => setCannotEditAtTestingStatus(false)}
+        footer={null}
+        title="Thông báo"
+      >
+        <p>Không thể chỉnh sửa đơn hàng đang xét nghiệm</p>
+      </Modal>
+
+      <Modal
         open={cannotEditModalVisible}
         onCancel={() => setCannotEditModalVisible(false)}
         footer={null}
@@ -1476,6 +1493,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       >
         <p>Không thể chỉnh sửa đơn hàng đã hoàn thành hoặc đã hủy.</p>
       </Modal>
+      
     </div>
   );
 };

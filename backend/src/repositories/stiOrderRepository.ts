@@ -98,78 +98,150 @@ export class StiOrderRepository {
 
             const aggregationPipeline = [
                 { $match: filters },
+              
+                // Chuyển string ID sang ObjectId nếu cần
+                {
+                  $addFields: {
+                    consultant_id: {
+                      $cond: [
+                        { $eq: [{ $type: "$consultant_id" }, "string"] },
+                        { $toObjectId: "$consultant_id" },
+                        "$consultant_id"
+                      ]
+                    },
+                    staff_id: {
+                      $cond: [
+                        { $eq: [{ $type: "$staff_id" }, "string"] },
+                        { $toObjectId: "$staff_id" },
+                        "$staff_id"
+                      ]
+                    }
+                  }
+                },
+              
+                // Lookup consultant → user
+                {
+                  $lookup: {
+                    from: "consultants",
+                    localField: "consultant_id",
+                    foreignField: "_id",
+                    as: "consultant_doc"
+                  }
+                },
+                {
+                  $unwind: {
+                    path: "$consultant_doc",
+                    preserveNullAndEmptyArrays: true
+                  }
+                },
+                {
+                  $lookup: {
+                    from: "users",
+                    localField: "consultant_doc.user_id",
+                    foreignField: "_id",
+                    as: "consultant_user"
+                  }
+                },
+              
+                // Lookup staff → user
+                {
+                  $lookup: {
+                    from: "staffs",
+                    localField: "staff_id",
+                    foreignField: "_id",
+                    as: "staff"
+                  }
+                },
+                {
+                  $unwind: {
+                    path: "$staff",
+                    preserveNullAndEmptyArrays: true
+                  }
+                },
+                {
+                    $lookup: {
+                      from: 'users',
+                      localField: 'staff.user_id',
+                      foreignField: '_id',
+                      as: 'staff_user'
+                    }
+                  },
+                  {
+                    $unwind: {
+                      path: '$staff_user',
+                      preserveNullAndEmptyArrays: true
+                    }
+                  },
+              
+                // Lookup customer
+                {
+                  $lookup: {
+                    from: "users",
+                    localField: "customer_id",
+                    foreignField: "_id",
+                    as: "customer"
+                  }
+                },
+              
+                // Lookup STI Package name
+                {
+                  $lookup: {
+                    from: "stipackages",
+                    localField: "sti_package_item.sti_package_id",
+                    foreignField: "_id",
+                    as: "sti_package_lookup"
+                  }
+                },
+                {
+                  $addFields: {
+                    sti_package_item: {
+                      sti_package_id: "$sti_package_item.sti_package_id",
+                      sti_package_name: { $arrayElemAt: ["$sti_package_lookup.name", 0] }
+                    }
+                  }
+                },
+              
+                // Lookup STI tests & schedule
+                {
+                  $lookup: {
+                    from: "stitests",
+                    localField: "sti_test_items",
+                    foreignField: "_id",
+                    as: "sti_test_details"
+                  }
+                },
+                {
+                  $lookup: {
+                    from: "stipackages",
+                    localField: "sti_package_item.sti_package_id",
+                    foreignField: "_id",
+                    as: "sti_package_details"
+                  }
+                },
+                {
+                  $lookup: {
+                    from: "stitestschedules",
+                    localField: "sti_schedule_id",
+                    foreignField: "_id",
+                    as: "schedule_details"
+                  }
+                },
+              
+                // Flatten các trường lookup
                 {
                     $addFields: {
-                      consultant_id: {
-                        $cond: {
-                          if: { $eq: [{ $type: "$consultant_id" }, "string"] },
-                          then: { $toObjectId: "$consultant_id" },
-                          else: "$consultant_id"
-                        }
-                      }
+                      customer: { $arrayElemAt: ["$customer", 0] },
+                      consultant_user: { $arrayElemAt: ["$consultant_user", 0] },
+                      consultant_full_name: "$consultant_user.full_name",
+                      staff_full_name: "$staff_user.full_name",
+                      sti_package_details: { $arrayElemAt: ["$sti_package_details", 0] },
+                      schedule_details: { $arrayElemAt: ["$schedule_details", 0] }
                     }
                 },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'customer_id',
-                        foreignField: '_id',
-                        as: 'customer'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'consultant_id',
-                        foreignField: '_id',
-                        as: 'consultant'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'staff_id',
-                        foreignField: '_id',
-                        as: 'staff'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'stitests',
-                        localField: 'sti_test_items',
-                        foreignField: '_id',
-                        as: 'sti_test_details'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'stipackages',
-                        localField: 'sti_package_item.sti_package_id',
-                        foreignField: '_id',
-                        as: 'sti_package_details'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'stitestschedules',
-                        localField: 'sti_schedule_id',
-                        foreignField: '_id',
-                        as: 'schedule_details'
-                    }
-                },
-                {
-                    $addFields: {
-                        customer: { $arrayElemAt: ['$customer', 0] },
-                        consultant: { $arrayElemAt: ['$consultant', 0] },
-                        staff: { $arrayElemAt: ['$staff', 0] },
-                        sti_package_details: { $arrayElemAt: ['$sti_package_details', 0] },
-                        schedule_details: { $arrayElemAt: ['$schedule_details', 0] }
-                    }
-                },
-                {
-                    $sort: { [sortBy]: sortOrder }
-                }
-            ];
+              
+                { $sort: { [sortBy]: sortOrder } }
+              ];
+              
 
             // Count total documents
             const totalCountPipeline = [

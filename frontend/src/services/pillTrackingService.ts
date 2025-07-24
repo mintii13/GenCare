@@ -52,7 +52,7 @@ export const pillTrackingService = {
    * so we get it from auth context or similar, not as a direct parameter here.
    */
   getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE_BY_USER(userId));
+    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE_BY_USER);
   },
 
   /**
