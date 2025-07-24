@@ -116,7 +116,6 @@ interface StiOrder {
     _id: string;
     full_name: string;
   };
-<<<<<<< HEAD
   consultant_user?: { // Thêm consultant_user object
     _id: string;
     full_name: string;
@@ -125,8 +124,6 @@ interface StiOrder {
     _id: string;
     full_name: string;
   };
-=======
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
 }
 
 interface OrderFilters {
@@ -178,11 +175,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [hasResultModalVisible, setHasResultModalVisible] = useState(false);
   const [invalidStatusModalVisible, setInvalidStatusModalVisible] = useState(false);
   const [cannotEditModalVisible, setCannotEditModalVisible] = useState(false);
-<<<<<<< HEAD
   const [cannotEditAtTestingStatus, setCannotEditAtTestingStatus] = useState(false);
   
-=======
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
   
   // Selected items
   const [selectedOrder, setSelectedOrder] = useState<StiOrder | null>(null);
@@ -390,13 +384,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       setCannotEditModalVisible(true);
       return;
     }
-<<<<<<< HEAD
     if (order.order_status === 'Testing') {
       setCannotEditAtTestingStatus(true);
       return;
     }
-=======
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
     setEditingOrder(order);
     if (order.order_status === 'Booked') fetchConsultants();
     orderForm.setFieldsValue({
@@ -422,11 +413,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         } else if (editingOrder.order_status === 'Booked') {
           updateData.consultant_id = values.consultant_id;
         } else if ([
-<<<<<<< HEAD
           'Processing', 'SpecimenCollected'
-=======
-          'Processing', 'SpecimenCollected', 'Testing'
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
         ].includes(editingOrder.order_status)) {
           updateData.order_status = values.order_status;
         }
@@ -818,40 +805,20 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       title: 'Consultant',
       key: 'consultant',
       width: 160,
-<<<<<<< HEAD
       render: (record: StiOrder & { consultant_user?: { full_name?: string } }) => (
         <span>
           {record.consultant_user?.full_name || 'Chưa có'}
         </span>
-=======
-      render: (record: StiOrder) => (
-        <span>{
-          record.consultant_id
-            ? (typeof record.consultant_id === 'object'
-                ? record.consultant_id.full_name
-                : consultantList.find(c => c.consultant_id === record.consultant_id)?.full_name || 'Chưa có')
-            : 'Chưa có'
-        }</span>
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
       )
     },
     {
       title: 'Staff',
       key: 'staff',
       width: 160,
-<<<<<<< HEAD
       render: (record: StiOrder & { staff_user?: { full_name?: string } }) => (
         <span>
           {record.staff_user?.full_name || 'Chưa có'}
         </span>
-=======
-      render: (record: StiOrder) => (
-        <span>{
-          record.staff_id && record.staff && record.staff.full_name
-            ? record.staff.full_name
-            : 'Chưa có'
-        }</span>
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
       )
     },
     {
@@ -1149,7 +1116,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         }
       });
     }
-    // eslint-disable-next-line
   }, [orders]);
 
   return (
@@ -1349,11 +1315,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           </div>
         )}
         <Form form={orderForm} layout="vertical">
-<<<<<<< HEAD
           {editingOrder && ['Booked', 'Accepted', 'Processing', 'SpecimenCollected'].includes(editingOrder.order_status) ? (
-=======
-          {editingOrder && ['Booked', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing'].includes(editingOrder.order_status) ? (
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
             <>
               {editingOrder.order_status === 'Booked' && (
                 <Form.Item
@@ -1381,11 +1343,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                   </Select>
                 </Form.Item>
               )}
-<<<<<<< HEAD
               {['Processing', 'SpecimenCollected'].includes(editingOrder.order_status) && (
-=======
-              {['Processing', 'SpecimenCollected', 'Testing'].includes(editingOrder.order_status) && (
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
                 <Form.Item
                   label="Trạng thái đơn hàng"
                   name="order_status"
@@ -1518,7 +1476,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         <p>Chỉ có thể tạo kết quả khi đơn hàng ở trạng thái Đang xét nghiệm (Testing).</p>
       </Modal>
       <Modal
-<<<<<<< HEAD
         open={cannotEditAtTestingStatus}
         onCancel={() => setCannotEditAtTestingStatus(false)}
         footer={null}
@@ -1528,8 +1485,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       </Modal>
 
       <Modal
-=======
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
         open={cannotEditModalVisible}
         onCancel={() => setCannotEditModalVisible(false)}
         footer={null}
@@ -1537,10 +1492,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       >
         <p>Không thể chỉnh sửa đơn hàng đã hoàn thành hoặc đã hủy.</p>
       </Modal>
-<<<<<<< HEAD
-      
-=======
->>>>>>> 82cfa34b15d9b196d38c652611d43eed0e91b71d
     </div>
   );
 };
