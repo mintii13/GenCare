@@ -4,8 +4,7 @@ import { Blog, Comment } from '../../types/blog';
 import { blogService } from '../../services/blogService';
 import { useAuth } from '../../contexts/AuthContext';
 import CommentSection from '../../components/blog/CommentSection';
-import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { formatDateSafe } from '../../utils/dateUtils';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -110,12 +109,7 @@ const BlogDetailPage: React.FC = () => {
     await fetchComments();
   }, [fetchComments]);
 
-  const formatDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), { 
-      addSuffix: true, 
-      locale: vi 
-    });
-  };
+  const formatDate = formatDateSafe;
 
   const handleBack = () => {
     navigate('/blogs');
@@ -205,19 +199,19 @@ const BlogDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6 lg:pb-10">
         {/* Navigation */}
         <button
           onClick={handleBack}
-          className="flex items-center text-blue-600 hover:text-blue-800 transition-colors mb-6"
+          className="flex items-center text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200 mb-6 group"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
           Quay lại danh sách blog
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 xl:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
           {/* Main Content Column */}
-          <div className="lg:col-span-2 lg:order-last">
+          <div className="lg:col-span-3 lg:order-first">
             {/* Blog content */}
             <article className="bg-white rounded-lg shadow-sm border border-gray-200">
               {/* Header */}
@@ -300,9 +294,9 @@ const BlogDetailPage: React.FC = () => {
                 <div className="flex items-center text-sm text-gray-600 space-x-6">
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-1" />
-                    <span>Đăng {formatDate(blog.publish_date)}</span>
+                    <span>Đăng {formatDate(blog?.publish_date)}</span>
                   </div>
-                  {blog.updated_date !== blog.publish_date && (
+                  {blog?.updated_date && blog?.updated_date !== blog?.publish_date && (
                     <div className="flex items-center">
                       <Edit className="w-4 h-4 mr-1" />
                       <span>Cập nhật {formatDate(blog.updated_date)}</span>
@@ -339,44 +333,68 @@ const BlogDetailPage: React.FC = () => {
 
             {/* Comments Section */}
             <div className="mt-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <CommentSection
                 blogId={blog?.blog_id || ''}
                 comments={comments}
                 onCommentsUpdate={handleCommentsUpdate}
                 onLoginRequired={() => setShowLoginModal(true)}
               />
+              </div>
             </div>
           </div>
           
           {/* Sidebar Column */}
-          <aside className="lg:col-span-1 lg:order-first">
-            {/* Related Blogs Section - Grid Layout */}
-            <div className="mt-6">
-              {relatedBlogs.length > 0 ? (
+          <aside className="lg:col-span-1 lg:order-last">
+            {/* Related Blogs Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 lg:sticky lg:top-6">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900">Bài viết liên quan</h3>
+              </div>
+              <div className="p-6">
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : relatedBlogs.length > 0 ? (
                 <div className="space-y-4">
                   {relatedBlogs.map(relatedBlog => (
-                    <BlogCard 
+                      <div
                       key={relatedBlog.blog_id} 
-                      blog={relatedBlog} 
                       onClick={() => navigate(`/blogs/${relatedBlog.blog_id}`)}
-                    />
+                        className="cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+                      >
+                        <h4 className="font-medium text-gray-900 text-sm mb-1 leading-tight">
+                          {relatedBlog.title.length > 60 
+                            ? `${relatedBlog.title.substring(0, 60)}...` 
+                            : relatedBlog.title
+                          }
+                        </h4>
+                        <p className="text-xs text-gray-600">
+                          {formatDate(relatedBlog.publish_date)}
+                        </p>
+                      </div>
                   ))}
                 </div>
               ) : (
-                !loading && (
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div className="text-center">
+                  <div className="text-center py-8">
                       <FileText className="mx-auto h-8 w-8 text-gray-400 mb-3" />
-                      <h3 className="text-sm font-medium text-gray-900 mb-1">Consultant không có bài blog liên quan</h3>
-                      <p className="text-sm text-gray-500 mb-4">Hãy bắt đầu tạo bài viết đầu tiên của bạn.</p>
+                    <h4 className="text-sm font-medium text-gray-900 mb-1">Chưa có bài viết liên quan</h4>
+                    <p className="text-xs text-gray-500 mb-4">Các bài viết từ cùng tác giả sẽ hiển thị ở đây.</p>
+                    {user?.role === 'consultant' && (
                       <Button onClick={() => navigate('/blogs/create')} size="sm">
                         <Plus className="-ml-1 mr-2 h-4 w-4" />
                         Tạo Blog Mới
                       </Button>
-                    </div>
+                    )}
                   </div>
-                )
               )}
+              </div>
             </div>
           </aside>
         </div>

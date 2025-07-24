@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { formatDateLocal } from '../../../utils/dateUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
 import { appointmentService } from '../../../services/appointmentService';
@@ -946,10 +947,28 @@ setAppointments(weekAppointments);
                       <span className="font-medium">Được tạo bởi:</span> {existingSchedule.created_by.name}
                     </div>
                     <div>
-                      <span className="font-medium">Ngày tạo:</span> {format(new Date(existingSchedule.created_date), 'dd/MM/yyyy HH:mm')}
+                      <span className="font-medium">Ngày tạo:</span> {
+                        existingSchedule.created_date ? 
+                          (() => {
+                            try {
+                              return format(new Date(existingSchedule.created_date), 'dd/MM/yyyy HH:mm');
+                            } catch {
+                              return 'Không xác định';
+                            }
+                          })() : 'Không xác định'
+                        }
                     </div>
                     <div>
-                      <span className="font-medium">Cập nhật:</span> {format(new Date(existingSchedule.updated_date), 'dd/MM/yyyy HH:mm')}
+                      <span className="font-medium">Cập nhật:</span> {
+                        existingSchedule.updated_date ? 
+                          (() => {
+                            try {
+                              return format(new Date(existingSchedule.updated_date), 'dd/MM/yyyy HH:mm');
+                            } catch {
+                              return 'Không xác định';
+                            }
+                          })() : 'Không xác định'
+                        }
                     </div>
                   </div>
                 </div>

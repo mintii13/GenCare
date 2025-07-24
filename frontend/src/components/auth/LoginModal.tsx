@@ -606,6 +606,28 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                   >
                     {isCheckingEmail ? 'Đang kiểm tra...' : 'Tiếp tục'}
                   </button>
+
+                  {/* Divider */}
+                  <div className="flex items-center my-4">
+                    <hr className="flex-1 border-gray-300" />
+                    <span className="px-4 text-gray-400 text-sm">HOẶC</span>
+                    <hr className="flex-1 border-gray-300" />
+                  </div>
+
+                  {/* Google Register Button */}
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={modalState !== 'register'}
+                    className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                  >
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      className="w-5 h-5"
+                      alt="Google"
+                    />
+                    Đăng ký với Google
+                  </button>
                 </form>
               )}
 

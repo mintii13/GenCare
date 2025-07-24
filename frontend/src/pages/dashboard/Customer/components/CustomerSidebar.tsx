@@ -23,11 +23,10 @@ const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ isOpen }) => {
   const menuItems = [
     // Main features
     { name: 'Lịch hẹn của tôi', path: '/customer/appointments', icon: FaCalendarAlt },
-    { name: 'Danh sách chuyên gia', path: '/customer/consultants', icon: FaUser },
     { name: 'Kết quả xét nghiệm STI', path: '/customer/sti-results', icon: FaFlask },
     { name: 'Chu kì kinh nguyệt', path: '/customer/menstrual-cycle', icon: FaHeart },
     { name: 'Đánh giá của tôi', path: '/customer/feedback', icon: FaStar },
-    { name: 'Lịch sử sàng lọc STI', path: '/customer/sti-assessment-history', icon: FaClipboardList },
+    { name: 'Lịch sử đánh giá', path: '/customer/test-results', icon: FaClipboardList },
     { name: 'Hồ sơ cá nhân', path: '/customer/profile', icon: FaUser },
   ];
 

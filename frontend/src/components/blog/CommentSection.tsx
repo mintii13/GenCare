@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Comment } from '../../types/blog';
 import { useAuth } from '../../contexts/AuthContext';
 import { blogService } from '../../services/blogService';
-import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { formatDateSafe } from '../../utils/dateUtils';
 import {
   MessageCircle,
   Reply,
@@ -85,12 +84,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
   const canComment = !!user;
 
-  const formatDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), {
-      addSuffix: true,
-      locale: vi
-    });
-  };
+  const formatDate = formatDateSafe;
 
   const handleSubmitComment = async (content: string, parentId?: string) => {
     if (!content.trim()) return;

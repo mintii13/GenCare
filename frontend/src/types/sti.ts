@@ -1,32 +1,30 @@
-export interface StiTest {
-  _id: string;
-  sti_test_name: string;
-  sti_test_code: string;
-  description: string;
-  price: number;
-  is_active: boolean;
-  category: string;
-  sti_test_type: string;
-}
+import { PaginationInfo, ApiResponse } from './api';
 
 export interface StiPackage {
   _id: string;
-  sti_package_name: string;
-  sti_package_code: string;
-  description: string;
-  price: number;
-  is_active: boolean;
-  tests?: StiTest[]; // populated tests in package
+  name: string;
 }
 
-export interface StiTestResponse {
-  success: boolean;
-  message?: string;
-  stitest: StiTest | StiTest[];
+export interface StiOrder {
+  _id: string;
+  order_code: string;
+  package_id?: StiPackage;
+  total_amount: number;
+  order_status: 'pending' | 'confirmed' | 'processing' | 'completed' | 'cancelled';
+  createdAt: string;
 }
 
-export interface StiPackageResponse {
-  success: boolean;
-  message?: string;
-  stipackage: StiPackage | StiPackage[];
+export interface StiOrdersPaginatedData {
+    items: StiOrder[];
+    pagination: PaginationInfo;
+}
+
+export type StiOrdersPaginatedResponse = ApiResponse<StiOrdersPaginatedData>;
+
+export interface StiOrderQuery {
+  page?: number;
+  limit?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  order_status?: string;
 }

@@ -1,111 +1,227 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { User } from '../types/user';
-import { isAuthenticated as checkIsAuthenticated, getUser, getToken, login as authLogin, logout as authLogout } from '../utils/authUtils';
-import apiClient from '../services/apiClient';
+import { apiClient } from '../services/apiClient';
 import { API } from '../config/apiEndpoints';
+import { getToken, getUser, isAuthenticated } from '../utils/authUtils';
 import { env } from '../config/environment';
   
 const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
 
+// Define missing interfaces
 interface GetUserProfileResponse {
   success: boolean;
   user: User;
+  message?: string;
 }
 
-type ModalMode = 'login' | 'register';
+export type ModalMode = 'login' | 'register';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   token: string | null;
-  login: (user: User, token: string) => void;
-  logout: () => void;
   isModalOpen: boolean;
   modalMode: ModalMode;
-  openModal: (mode: ModalMode) => void;
+  isLoading: boolean;
+  login: (userData: User, token: string) => void;
+  logout: () => Promise<void>;
+  updateUserInfo: (userData: Partial<User>) => void;
+  openModal: (mode?: ModalMode) => void;
   closeModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(checkIsAuthenticated());
+  const [isAuthenticatedState, setIsAuthenticated] = useState<boolean>(() => isAuthenticated());
   const [user, setUser] = useState<User | null>(getUser());
   const [token, setToken] = useState<string | null>(getToken());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>('login');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Race condition protection
+  const isValidatingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const validateToken = async () => {
+      // Prevent concurrent validations
+      if (isValidatingRef.current) {
+        return;
+      }
+      
+      // Cancel previous request if exists
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const cachedUser = localStorage.getItem('user');
       
-      if (token) {
-        // Sử dụng cached user trước khi validate
-        if (cachedUser) {
+      if (!token) {
+        if (isMounted) {
+          setUser(null);
+          setIsAuthenticated(false);
+          setToken(null);
+        }
+        return;
+      }
+
+      isValidatingRef.current = true;
+      setIsLoading(true);
+      
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+      
+      try {
+        // Use cached user first
+        if (cachedUser && isMounted) {
           try {
             const parsedUser = JSON.parse(cachedUser);
             setUser(parsedUser);
-          } catch (_e) {
+            setIsAuthenticated(true);
+            setToken(token);
+          } catch (e) {
             console.error('Failed to parse cached user');
+            localStorage.removeItem('user');
           }
         }
         
-        try {
-          // Sử dụng endpoint đúng từ apiEndpoints
-          const response = await apiClient.get<GetUserProfileResponse>(API.Profile.GET);
+        // Validate with server (with timeout and abort signal)
+        const response = await Promise.race([
+          apiClient.get<GetUserProfileResponse>(API.Profile.GET, {
+            signal: abortControllerRef.current.signal
+          }),
+          new Promise<never>((_, reject) => {
+            timeoutRef.current = setTimeout(() => reject(new Error('Request timeout')), 10000);
+          })
+        ]);
           
-          if (response.data.success && response.data.user) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        
+        if (isMounted && response.data.success && response.data.user) {
             setUser(response.data.user);
+          setIsAuthenticated(true);
+          setToken(token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
           } else {
             throw new Error('Invalid API response format');
           }
-        } catch (error) {
-          // Chỉ logout nếu token thực sự invalid (401/403), không phải network error
-          if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
+        
+      } catch (error: any) {
+        if (error.name === 'AbortError' || error.message === 'Request timeout') {
+          // Request was cancelled, ignore
+          return;
+        }
+        
+        if (isMounted) {
+          // Only logout on auth errors, not network errors
+          if (error?.response?.status === 401 || error?.response?.status === 403) {
             localStorage.removeItem(AUTH_TOKEN_KEY);
             localStorage.removeItem('user');
             setUser(null);
+            setIsAuthenticated(false);
+            setToken(null);
           }
-          // Giữ cached user nếu chỉ là network error
+          // Keep cached user for network errors
         }
-      } else {
-        setUser(null);
+        
+        console.error('Token validation failed:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        isValidatingRef.current = false;
       }
     };
     
     validateToken();
 
     const handleStorageChange = (event: StorageEvent) => {
-      // Dùng key thống nhất từ environment
       if (event.key === AUTH_TOKEN_KEY || event.key === 'user') {
+        // Debounce storage events
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+          if (isMounted) {
         validateToken();
+          }
+        }, 100);
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
 
+    // Cleanup function
     return () => {
+      isMounted = false;
+      
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
       window.removeEventListener('storage', handleStorageChange);
+      isValidatingRef.current = false;
     };
   }, []);
 
-  const login = (user: User, token: string) => {
-    authLogin(user, token);
+  const login = (userData: User, userToken: string) => {
+    setUser(userData);
+    setToken(userToken);
     setIsAuthenticated(true);
-    setUser(user);
-    setToken(token);
+    localStorage.setItem(AUTH_TOKEN_KEY, userToken);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = () => {
-    authLogout();
-    setIsAuthenticated(false);
+  const logout = async (): Promise<void> => {
+    // Cancel any ongoing validation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    try {
+      // Try to call logout endpoint if token exists
+      const currentToken = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (currentToken) {
+        await apiClient.post('/auth/logout', {}, {
+          headers: { Authorization: `Bearer ${currentToken}` }
+        });
+      }
+    } catch (error) {
+      // Ignore logout API errors
+      console.error('Logout API call failed:', error);
+    } finally {
+      // Always clear local state
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem('user');
     setUser(null);
     setToken(null);
+      setIsAuthenticated(false);
+      closeModal();
+    }
   };
 
-  const openModal = (mode: ModalMode) => {
+  const updateUserInfo = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
+  const openModal = (mode: ModalMode = 'login') => {
     setModalMode(mode);
     setIsModalOpen(true);
   };
@@ -115,13 +231,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, token, login, logout, isModalOpen, modalMode, openModal, closeModal }}>
+      <AuthContext.Provider value={{
+        isAuthenticated: isAuthenticatedState,
+        user,
+        token,
+        isModalOpen,
+        modalMode,
+        isLoading,
+        login,
+        logout,
+        updateUserInfo,
+        openModal,
+        closeModal
+      }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

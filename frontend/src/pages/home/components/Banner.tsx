@@ -117,14 +117,14 @@ const Banner: React.FC = () => {
              </div>
 
             {/* Social Proof */}
-            <div className="pt-8">
+            {/* <div className="pt-8">
               <p className="text-white/70 text-sm mb-4">Được đánh giá cao bởi:</p>
               <div className="flex items-center gap-8 opacity-60">
                 <div className="h-8 w-20 bg-white/20 rounded"></div>
                 <div className="h-8 w-20 bg-white/20 rounded"></div>
                 <div className="h-8 w-20 bg-white/20 rounded"></div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Content - Image/Visual */}
@@ -152,10 +152,10 @@ const Banner: React.FC = () => {
             <div className="text-3xl font-bold text-white">50+</div>
             <div className="text-white/70">Chuyên gia</div>
           </div>
-          <div className="text-center">
+          {/* <div className="text-center">
             <div className="text-3xl font-bold text-white">99.9%</div>
             <div className="text-white/70">Độ chính xác</div>
-          </div>
+          </div> */}
           <div className="text-center">
             <div className="text-3xl font-bold text-white">24/7</div>
             <div className="text-white/70">Hỗ trợ</div>

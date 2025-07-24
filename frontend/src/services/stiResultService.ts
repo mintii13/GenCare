@@ -63,6 +63,7 @@ export interface StiResult {
   diagnosis: string;
   is_confirmed: boolean;
   is_critical: boolean;
+  is_notified?: boolean;
   medical_notes?: string;
   createdAt?: string;
   updatedAt?: string;
