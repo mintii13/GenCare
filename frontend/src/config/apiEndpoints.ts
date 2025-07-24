@@ -92,7 +92,7 @@ export const API = {
     MY_PROFILE: '/consultants/my-profile',
     MY_STATS: '/consultants/my-stats',
     MY_REVIEWS: '/consultants/my-reviews',
-    SEARCH: '/consultants/search'
+    SEARCH: '/consultants/search',
   },
 
   // ----------------------- WEEKLY SCHEDULE ------------
@@ -169,7 +169,7 @@ export const API = {
   // Pill tracking endpoints
   PillTracking: {
     SETUP: '/pill-tracking/setup',
-    GET_SCHEDULE_BY_USER: (userId: string) => `/pill-tracking/${userId}`,
+    GET_SCHEDULE_BY_USER:  `/pill-tracking/`,
     UPDATE_SCHEDULE_BY_USER: (userId: string) => `/pill-tracking/${userId}`,
     TAKE_PILL: (scheduleId: string) => `/pill-tracking/${scheduleId}/take`
   },

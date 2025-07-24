@@ -33,10 +33,10 @@ const PillSetupForm: React.FC<PillSetupFormProps> = ({ onSubmit, isLoading, late
     if (latestPeriodStart) {
       const startDate = new Date(latestPeriodStart);
       const diffDays = Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays > 5) {
-        toast.error('Bạn chỉ có thể bắt đầu uống thuốc trong 5 ngày đầu chu kỳ.');
-        return;
-      }
+      // if (diffDays > 5) {
+      //   toast.error('Bạn chỉ có thể bắt đầu uống thuốc trong 5 ngày đầu chu kỳ.');
+      //   return;
+      // }
     }
 
     const requestData: SetupPillTrackingRequest = {
