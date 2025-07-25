@@ -164,7 +164,7 @@ export class StiAssessmentService {
             reasoning.push('CDC: Người chuyển giới có cổ tử cung tuân theo hướng dẫn sàng lọc như phụ nữ');
         }
 
-        // ✅ FIXED: Check is_pregnant properly (boolean, not string)
+        // FIXED: Check is_pregnant properly (boolean, not string)
         if (data.is_pregnant === true) {
             required_tests.push('HIV', 'Syphilis', 'Hepatitis_B');
 
@@ -209,7 +209,7 @@ export class StiAssessmentService {
 
             // HPV screening regardless of risk
             optional_tests.push('HPV');
-            reasoning.push('CDC: Sàng lọc HPV mỗi 3 năm với tế bào học hoặc mỗi 5 năm với HPV + tế bào học');
+            reasoning.push('CDC: Khuyến cáo sàng lọc HPV cho phụ nữ 21-65 tuổi');
 
             return { required_tests, optional_tests, frequency, anatomical_sites, reasoning, priority };
         }
@@ -275,7 +275,7 @@ export class StiAssessmentService {
                 reasoning.push('CDC: Nam giới có yếu tố nguy cơ cao có thể được hưởng lợi từ việc sàng lọc');
             }
         } else {
-            // ✅ FIXED: Always recommend at least HIV screening for low-risk males
+            // FIXED: Always recommend at least HIV screening for low-risk males
             optional_tests.push('HIV'); // Minimum HIV screening
             reasoning.push('CDC: Không đủ bằng chứng cho việc sàng lọc định kỳ nam giới dị tính có nguy cơ thấp');
             reasoning.push('CDC: Khuyến cáo tối thiểu HIV screening và tư vấn phòng ngừa');
@@ -307,7 +307,7 @@ export class StiAssessmentService {
         const isFrequent = ['every_3_6_months', 'frequent_screening'].includes(cdcRec.frequency);
         const hasExtragenital = cdcRec.anatomical_sites.length > 1;
 
-        // ✅ FIXED: No more CONSULTATION_ONLY - always recommend a package
+        // FIXED: No more CONSULTATION_ONLY - always recommend a package
         // Special case for low-risk individuals - recommend STI-BASIC-01 with consultation note
         if (cdcRec.priority === 'optional' && cdcRec.required_tests.length === 0 &&
             cdcRec.optional_tests.length <= 1) {
@@ -421,14 +421,13 @@ export class StiAssessmentService {
             console.log('Creating STI assessment for customer:', customerId);
             console.log('Assessment data received:', JSON.stringify(assessmentData, null, 2));
 
-            // ✅ FIXED: Enhanced validation
-            if (!assessmentData.age || !assessmentData.gender || !assessmentData.sexually_active || !assessmentData.hiv_status || !assessmentData.test_purpose) {
+            // FIXED: Enhanced validation
+            if (!assessmentData.age || !assessmentData.gender || !assessmentData.sexually_active || !assessmentData.hiv_status) {
                 console.error('Missing required fields:', {
                     age: assessmentData.age,
                     gender: assessmentData.gender,
                     sexually_active: assessmentData.sexually_active,
                     hiv_status: assessmentData.hiv_status,
-                    test_purpose: assessmentData.test_purpose
                 });
                 return {
                     success: false,
@@ -436,7 +435,7 @@ export class StiAssessmentService {
                 };
             }
 
-            // ✅ FIXED: Validate condom_use options
+            // FIXED: Validate condom_use options
             const validCondomUse = ['always', 'sometimes', 'rarely', 'never'];
             if (assessmentData.condom_use && !validCondomUse.includes(assessmentData.condom_use)) {
                 return {
@@ -445,7 +444,7 @@ export class StiAssessmentService {
                 };
             }
 
-            // ✅ FIXED: Validate pregnancy_trimester only if pregnant
+            // FIXED: Validate pregnancy_trimester only if pregnant
             // chống chế
             if (assessmentData.is_pregnant === false) {
                 assessmentData.pregnancy_trimester = 'first';
@@ -616,7 +615,7 @@ export class StiAssessmentService {
     public static async getAssessmentStats(startDate?: Date, endDate?: Date): Promise<AssessmentResponse> {
         try {
             const stats = await StiAssessmentRepository.getStatistics(startDate, endDate);
-            
+
             return {
                 success: true,
                 message: 'Thống kê đánh giá STI được lấy thành công',
@@ -635,11 +634,11 @@ export class StiAssessmentService {
         try {
             // Import StiService để lấy thông tin gói xét nghiệm
             const { StiService } = require('./stiService');
-            
+
             // Lấy tất cả gói xét nghiệm STI
             const packagesResult = await StiService.getAllStiPackage();
             const testsResult = await StiService.getAllStiTest();
-            
+
             if (!packagesResult.success || !testsResult.success) {
                 return {
                     success: false,

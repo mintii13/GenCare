@@ -12,7 +12,7 @@ export interface IStiAssessment extends Document {
         // Thông tin tình dục
         sexually_active: 'not_active' | 'active_single' | 'active_multiple';
         sexual_orientation: 'heterosexual' | 'homosexual' | 'msm' | 'bisexual' | 'other';
-        number_of_partners: 'none' | 'one' | 'two_to_five' | 'multiple';
+        number_of_partners: 'none' | 'one' | 'multiple';
         new_partner_recently: boolean;
         partner_has_sti: boolean;
         condom_use: 'always' | 'sometimes' | 'rarely' | 'never';
@@ -28,9 +28,6 @@ export interface IStiAssessment extends Document {
         risk_factors: string[];
         living_area: string;
 
-        // Mục đích xét nghiệm
-        test_purpose: 'routine' | 'symptoms' | 'partner_positive' | 'pregnancy' | 'new_relationship' | 'occupational';
-        urgency: 'normal' | 'urgent' | 'emergency';
     };
     recommendation: {
         recommended_package: string;
@@ -51,7 +48,7 @@ const stiAssessmentSchema = new Schema<IStiAssessment>({
 
         sexually_active: { type: String, enum: ['not_active', 'active_single', 'active_multiple'], required: true },
         sexual_orientation: { type: String, enum: ['heterosexual', 'homosexual', 'msm', 'bisexual', 'other'] },
-        number_of_partners: { type: String, enum: ['none', 'one', 'two_to_five', 'multiple'] },
+        number_of_partners: { type: String, enum: ['none', 'one', 'multiple'] },
         new_partner_recently: { type: Boolean, default: false },
         partner_has_sti: { type: Boolean, default: false },
         condom_use: { type: String, enum: ['always', 'sometimes', 'rarely', 'never'] },
@@ -65,8 +62,6 @@ const stiAssessmentSchema = new Schema<IStiAssessment>({
         risk_factors: [{ type: String }],
         living_area: { type: String },
 
-        test_purpose: { type: String, enum: ['routine', 'symptoms', 'partner_positive', 'pregnancy', 'new_relationship', 'occupational'], required: true },
-        urgency: { type: String, enum: ['normal', 'urgent', 'emergency'] }
     },
     recommendation: {
         recommended_package: { type: String, required: true },
