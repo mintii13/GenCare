@@ -4,7 +4,7 @@ import { MoMoPaymentService, MoMoIPNRequest } from '../services/momoPaymentServi
 import { PaymentRepository } from '../repositories/paymentRepository';
 import { IPayment, Payment } from '../models/Payment';
 import { StiOrder } from '../models/StiOrder';
-import { authenticateToken } from '../middlewares/jwtMiddleware';
+import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import mongoose from 'mongoose';
 
 const router = Router();
@@ -22,15 +22,13 @@ async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
         await payment.save();
 
         // Cập nhật trạng thái order liên quan
-        if (payment.paymentType === 'STI_Test') {
-            await StiOrder.findByIdAndUpdate(
-                payment.orderId,
-                {
-                    is_paid: true,
-                    order_status: 'Accepted'
-                }
-            );
-        }
+        await StiOrder.findByIdAndUpdate(
+            payment.orderId,
+            {
+                is_paid: true,
+                order_status: 'Accepted'
+            }
+        );
 
         console.log(`Payment ${payment._id} completed successfully`);
     } else {
@@ -46,22 +44,21 @@ async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
 }
 
 interface CreatePaymentRequest {
-    orderId: string; // ID của order được thanh toán (STI Order, Appointment...)
-    paymentType: 'STI_Test' | 'Consultation' | 'Package' | 'Other';
+    orderId: string; // ID của STI Order được thanh toán
     paymentMethod: 'MoMo' | 'Cash';
     // Bỏ amount - sẽ lấy từ order
 }
 
 /**
- * Tạo payment request mới
+ * Tạo payment request mới - Chỉ staff mới được tạo payment
  * POST /api/payment/create
  */
-router.post('/create', authenticateToken, async (req: Request, res: Response) => {
+router.post('/create', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
     try {
-        const { orderId, paymentType, paymentMethod }: CreatePaymentRequest = req.body;
-        const customerId = req.jwtUser?.userId;
+        const { orderId, paymentMethod }: CreatePaymentRequest = req.body;
+        const staffUserId = req.jwtUser?.userId;
 
-        if (!customerId) {
+        if (!staffUserId) {
             return res.status(401).json({
                 success: false,
                 message: 'Unauthorized'
@@ -69,10 +66,10 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         }
 
         // Validation
-        if (!orderId || !paymentType || !paymentMethod) {
+        if (!orderId || !paymentMethod) {
             return res.status(400).json({
                 success: false,
-                message: 'Thiếu thông tin bắt buộc'
+                message: 'Thiếu thông tin bắt buộc: orderId, paymentMethod'
             });
         }
 
@@ -86,61 +83,25 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         // Convert orderId to ObjectId
         const orderObjectId = new mongoose.Types.ObjectId(orderId);
 
-        // Lấy thông tin order và amount dựa trên paymentType
-        let orderData: any = null;
-        let amount: number = 0;
-
-        switch (paymentType) {
-            case 'STI_Test':
-                orderData = await StiOrder.findById(orderObjectId);
-                if (!orderData) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'STI Order không tìm thấy'
-                    });
-                }
-                // Kiểm tra customer có quyền thanh toán order này không
-                if (orderData.customer_id.toString() !== customerId) {
-                    return res.status(403).json({
-                        success: false,
-                        message: 'Bạn không có quyền thanh toán order này'
-                    });
-                }
-                // Kiểm tra order đã thanh toán chưa
-                if (orderData.is_paid) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Order này đã được thanh toán rồi'
-                    });
-                }
-                amount = orderData.total_amount;
-                break;
-
-            case 'Consultation':
-                // TODO: Implement Appointment logic
-                return res.status(400).json({
-                    success: false,
-                    message: 'Consultation payment chưa được implement'
-                });
-
-            case 'Package':
-                // TODO: Implement Package logic
-                return res.status(400).json({
-                    success: false,
-                    message: 'Package payment chưa được implement'
-                });
-
-            case 'Other':
-                // Cho phép amount = 0 cho Other type (testing)
-                amount = 10000; // Default amount cho testing
-                break;
-
-            default:
-                return res.status(400).json({
-                    success: false,
-                    message: 'Payment type không hợp lệ'
-                });
+        // Lấy thông tin STI Order
+        const stiOrder = await StiOrder.findById(orderObjectId);
+        if (!stiOrder) {
+            return res.status(404).json({
+                success: false,
+                message: 'STI Order không tìm thấy'
+            });
         }
+
+        // Kiểm tra order đã thanh toán chưa
+        if (stiOrder.is_paid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order này đã được thanh toán rồi'
+            });
+        }
+
+        const amount = stiOrder.total_amount;
+        const customerId = stiOrder.customer_id.toString();
 
         if (amount <= 0) {
             return res.status(400).json({
@@ -162,9 +123,9 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         const paymentData: Partial<IPayment> = {
             orderId: orderObjectId,
             customerId: new mongoose.Types.ObjectId(customerId),
-            paymentType,
+            paymentType: 'STI_Test', // Fixed type
             paymentMethod,
-            amount, // Amount được lấy từ order
+            amount,
             currency: 'VND',
             status: paymentMethod === 'Cash' ? 'Completed' : 'Pending',
             initiatedAt: new Date(),
@@ -175,24 +136,26 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
 
         // Nếu là Cash payment, cập nhật order luôn
         if (paymentMethod === 'Cash') {
-            if (paymentType === 'STI_Test') {
-                await StiOrder.findByIdAndUpdate(
-                    orderObjectId,
-                    {
-                        is_paid: true,
-                        order_status: 'Accepted'
-                    }
-                );
-            }
+            await StiOrder.findByIdAndUpdate(
+                orderObjectId,
+                {
+                    is_paid: true,
+                    order_status: 'Accepted'
+                }
+            );
 
             return res.json({
                 success: true,
+                message: 'Tạo payment thành công',
                 data: {
                     paymentId: payment._id,
                     orderId: payment.orderId,
+                    customerId: payment.customerId,
                     amount: payment.amount,
                     status: payment.status,
-                    paymentMethod: payment.paymentMethod
+                    paymentMethod: payment.paymentMethod,
+                    paymentType: payment.paymentType,
+                    createdBy: staffUserId
                 }
             });
         }
@@ -222,15 +185,19 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
 
         res.json({
             success: true,
+            message: 'Tạo payment thành công',
             data: {
                 paymentId: updatedPayment!._id,
                 orderId: updatedPayment!.orderId,
+                customerId: updatedPayment!.customerId,
                 amount: updatedPayment!.amount,
                 status: updatedPayment!.status,
                 paymentMethod: updatedPayment!.paymentMethod,
+                paymentType: updatedPayment!.paymentType,
                 paymentUrl: updatedPayment!.paymentUrl,
                 qrCodeUrl: momoResponse.qrCodeUrl,
-                deeplink: momoResponse.deeplink
+                deeplink: momoResponse.deeplink,
+                createdBy: staffUserId
             }
         });
 
@@ -263,7 +230,6 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
             });
         }
 
-
         // Tìm payment record - prioritize momoRequestId
         let payment = await Payment.findOne({
             momoRequestId: ipnData.requestId
@@ -287,7 +253,6 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
                 message: 'Payment not found'
             });
         }
-
 
         // Check if already processed
         if (payment.status === 'Completed') {
@@ -344,12 +309,14 @@ router.get('/momo/callback', async (req: Request, res: Response) => {
  * Lấy thông tin payment theo orderId
  * GET /api/payment/:orderId
  */
-router.get('/:orderId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'customer'), async (req: Request, res: Response) => {
     try {
         const { orderId } = req.params;
-        const customerId = req.jwtUser?.userId;
+        const userId = req.jwtUser?.userId;
+        const userRole = req.jwtUser?.role;
 
-        const payment = await PaymentRepository.findByOrderIdAndCustomerId(orderId, customerId!);
+        // Tìm payment
+        const payment = await PaymentRepository.findByOrderId(orderId);
 
         if (!payment) {
             return res.status(404).json({
@@ -358,13 +325,28 @@ router.get('/:orderId', authenticateToken, async (req: Request, res: Response) =
             });
         }
 
+        // Kiểm tra quyền truy cập
+        if (userRole === 'customer') {
+            // Customer chỉ được xem payment của mình
+            if (payment.customerId.toString() !== userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Không có quyền truy cập payment này'
+                });
+            }
+        }
+        // Staff và Admin có thể xem tất cả
+
         res.json({
             success: true,
             data: {
+                paymentId: payment._id,
                 orderId: payment.orderId,
+                customerId: payment.customerId,
                 amount: payment.amount,
                 status: payment.status,
                 paymentMethod: payment.paymentMethod,
+                paymentType: payment.paymentType,
                 createdAt: payment.createdAt,
                 completedAt: payment.completedAt,
                 failedAt: payment.failedAt,
@@ -382,37 +364,61 @@ router.get('/:orderId', authenticateToken, async (req: Request, res: Response) =
 });
 
 /**
- * Lấy danh sách payments của user
+ * Lấy danh sách payments - Staff và Admin có thể xem tất cả, Customer chỉ xem của mình
  * GET /api/payment/
  */
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
+router.get('/', authenticateToken, authorizeRoles('staff', 'admin', 'customer'), async (req: Request, res: Response) => {
     try {
-        const customerId = req.jwtUser?.userId;
-        const { status, page = 1, limit = 10 } = req.query;
+        const userId = req.jwtUser?.userId;
+        const userRole = req.jwtUser?.role;
+        const { status, page = 1, limit = 10, customerId } = req.query;
 
-        const { payments, total } = await PaymentRepository.findByCustomerId(
-            customerId!,
-            status as any,
-            Number(page),
-            Number(limit)
-        );
+        let targetCustomerId = userId; // Mặc định là user hiện tại
+
+        if (userRole === 'staff' || userRole === 'admin') {
+            // Staff/Admin có thể xem payment của customer khác
+            if (customerId && typeof customerId === 'string') {
+                targetCustomerId = customerId;
+            } else {
+                // Nếu không chỉ định customerId, staff/admin sẽ xem tất cả
+                // Cần implement method getAllPayments trong PaymentRepository
+                // Tạm thời để trống để xem tất cả
+                targetCustomerId = undefined;
+            }
+        }
+
+        let result;
+        if (targetCustomerId) {
+            result = await PaymentRepository.findByCustomerId(
+                targetCustomerId,
+                status as any,
+                Number(page),
+                Number(limit)
+            );
+        } else {
+            // TODO: Implement getAllPayments cho staff/admin
+            result = { payments: [], total: 0 };
+        }
 
         res.json({
             success: true,
             data: {
-                payments: payments.map(p => ({
+                payments: result.payments.map(p => ({
+                    paymentId: p._id,
                     orderId: p.orderId,
+                    customerId: p.customerId,
                     amount: p.amount,
                     status: p.status,
                     paymentMethod: p.paymentMethod,
+                    paymentType: p.paymentType,
                     createdAt: p.createdAt,
                     completedAt: p.completedAt
                 })),
                 pagination: {
                     page: Number(page),
                     limit: Number(limit),
-                    total,
-                    totalPages: Math.ceil(total / Number(limit))
+                    total: result.total,
+                    totalPages: Math.ceil(result.total / Number(limit))
                 }
             }
         });
@@ -427,10 +433,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 });
 
 /**
- * Test endpoint để kiểm tra MoMo integration
+ * Test endpoint để kiểm tra MoMo integration - Chỉ staff/admin mới test được
  * GET /api/payment/test/momo
  */
-router.get('/test/momo', async (req: Request, res: Response) => {
+router.get('/test/momo', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
     try {
         const testResult = await momoService.testConnection();
 
@@ -451,10 +457,10 @@ router.get('/test/momo', async (req: Request, res: Response) => {
 });
 
 /**
- * Test tạo payment đơn giản
+ * Test tạo payment đơn giản - Chỉ staff/admin mới test được
  * GET /api/payment/test/simple
  */
-router.get('/test/simple', async (req: Request, res: Response) => {
+router.get('/test/simple', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
     try {
         const testOrderId = `SIMPLE_${Date.now()}`;
         const testAmount = 10000;
@@ -485,6 +491,5 @@ router.get('/test/simple', async (req: Request, res: Response) => {
         });
     }
 });
-
 
 export default router;
