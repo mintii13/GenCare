@@ -1,10 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { TestTypes } from './StiTest';
-import { Staff } from './Staff';
 
 export type StiResultItem = {
     sample_type: TestTypes;                 // 'blood', 'urine', 'swab'
-    sample_quality: boolean;                // true if sample is good, false if not
     urine?:{
         color: 'light yellow' | 'clear' | 'dark yellow to orange' | 'dark brown' | 'pink or red'  | 'blue or green' | 'black';            // color of urine sample, level: 1, 0, 2, 
         clarity: 'clearly' | 'cloudy';                                                                                                    // clarity of urine sample
@@ -55,6 +53,7 @@ export interface IStiResult extends Document{
         sti_test_id: mongoose.Types.ObjectId;
         result: StiResultItem;
     }[];
+    is_testing_completed: boolean;
     received_time?: Date;                            //time will be predicted, then updated to true time after result is received
     diagnosis?: string;
     is_confirmed: boolean;
@@ -68,7 +67,6 @@ const stiResultSchema = new Schema<IStiResult>({
         sti_test_id: { type: Schema.Types.ObjectId, ref: 'StiTest', required: true },
         result: {
             sample_type: { type: String, enum: ['blood', 'urine', 'swab'], required: true },
-            sample_quality: { type: Boolean, required: true },
             urine: {
                 color: { type: String, enum: ['light yellow', 'clear', 'dark yellow to orange', 'dark brown', 'pink or red', 'blue or green', 'black'], required: false },
                 clarity: { type: String, enum: ['clearly', 'cloudy'], required: false },
@@ -114,6 +112,7 @@ const stiResultSchema = new Schema<IStiResult>({
             staff_id: { type: Schema.Types.ObjectId, ref: 'Staff', required: true } // Reference to the staff who created/updated the result
         }
     }],
+    is_testing_completed: {type: Boolean, default: false},
     received_time: { type: Date },
     diagnosis: { type: String },
     is_confirmed: { type: Boolean, default: false },

@@ -56,9 +56,10 @@ interface CreatePaymentRequest {
  * Tạo payment request mới
  * POST /api/payment/create
  */
-router.post('/create', authenticateToken, async (req: Request, res: Response) => {
+router.post('/create/:orderId', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const { orderId, paymentType, paymentMethod }: CreatePaymentRequest = req.body;
+        const orderId = req.params.orderId
+        const { paymentType, paymentMethod }: CreatePaymentRequest = req.body;
         const customerId = req.jwtUser?.userId;
 
         if (!customerId) {
