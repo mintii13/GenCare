@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { Col, Select, Button, Tag, Space, Typography } from 'antd';
 import { useAuth } from '../../../contexts/AuthContext';
 import { appointmentService } from '../../../services/appointmentService';
 import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
 import { getGoogleAccessToken } from '../../../utils/authUtils';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ResourceList from '../../../components/common/ResourceList';
 import { 
   Appointment,
   AppointmentQuery,
-  PaginationInfo,
-  AppointmentStats
+  AppointmentStats,
+  PaginationInfo
 } from '../../../types/appointment';
 import { 
   FaCalendarAlt, 
@@ -30,6 +32,9 @@ import {
   FaFilter
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+
+const { Option } = Select;
+const { Text } = Typography;
 
 const AppointmentManagement: React.FC = () => {
   const { user } = useAuth();
@@ -321,7 +326,7 @@ const AppointmentManagement: React.FC = () => {
   const handleCancelAppointment = async (appointmentId: string) => {
     setActionLoading(`cancel-${appointmentId}`);
     try {
-      const data = await appointmentService.cancelAppointmentByConsultant(appointmentId);
+      const data = await appointmentService.cancelAppointment(appointmentId);
       
       if (data.success) {
         showNotification('success', 'Đã hủy lịch hẹn');
@@ -395,28 +400,174 @@ const AppointmentManagement: React.FC = () => {
   };
 
   // Generate page numbers for pagination
-  const generatePageNumbers = (): number[] => {
-    const pages: number[] = [];
-    const current_page = pagination?.current_page || 1;
-    const total_pages = pagination?.total_pages || 1;
-    
-    if (total_pages <= 1) return pages;
-    
-    // Always show first page
-    pages.push(1);
-    
-    // Add pages around current page
-    for (let i = Math.max(2, current_page - 1); i <= Math.min(total_pages - 1, current_page + 1); i++) {
-      if (!pages.includes(i)) pages.push(i);
-    }
-    
-    // Always show last page
-    if (total_pages > 1 && !pages.includes(total_pages)) {
-      pages.push(total_pages);
-    }
-    
-    return pages;
-  };
+  // Table columns configuration
+  const getTableColumns = () => [
+    {
+      title: 'Khách hàng',
+      dataIndex: ['customer_id', 'full_name'],
+      key: 'customer_name',
+      render: (name: string, record: Appointment) => (
+        <div>
+          <div className="font-medium text-gray-900">{name || 'N/A'}</div>
+          <div className="text-sm text-gray-500">{record.customer_id?.email || 'N/A'}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Ngày & Giờ',
+      dataIndex: 'appointment_date',
+      key: 'appointment_date',
+      render: (date: string, record: Appointment) => (
+        <div>
+          <div className="font-medium">{formatDate(date)}</div>
+          <div className="text-sm text-gray-500">
+            {record.start_time} - {record.end_time}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => {
+        const colors = {
+          pending: 'orange',
+          confirmed: 'green',
+          in_progress: 'blue',
+          completed: 'green',
+          cancelled: 'red'
+        };
+        return (
+          <Tag color={colors[status as keyof typeof colors]}>
+            {statusLabels[status as keyof typeof statusLabels]}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'customer_notes',
+      key: 'customer_notes',
+      render: (notes: string) => (
+        <div className="max-w-xs">
+          <Text ellipsis={notes ? { tooltip: notes } : false}>
+            {notes || 'Không có ghi chú'}
+          </Text>
+        </div>
+      ),
+    },
+         {
+       title: 'Thao tác',
+       key: 'actions',
+       render: (_: any, record: Appointment) => (
+        <Space size="small">
+          <Button
+            type="link"
+            onClick={() => setSelectedAppointment(record)}
+            size="small"
+          >
+            Chi tiết
+          </Button>
+          
+          {record.status === 'pending' && (
+            <>
+              <Button
+                type="link"
+                onClick={() => handleConfirmAppointment(record._id)}
+                loading={actionLoading === record._id}
+                size="small"
+                style={{ color: '#52c41a' }}
+              >
+                Xác nhận
+              </Button>
+              <Button
+                type="link"
+                onClick={() => handleCancelAppointment(record._id)}
+                loading={actionLoading === record._id}
+                size="small"
+                danger
+              >
+                Hủy
+              </Button>
+            </>
+          )}
+
+          {record.status === 'confirmed' && (
+            <Button
+              type="link"
+              onClick={() => handleStartMeeting(record._id)}
+              loading={actionLoading === record._id}
+              size="small"
+              style={{ color: '#722ed1' }}
+            >
+              Bắt đầu
+            </Button>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  // Filter controls for ResourceList
+  const filterControls = (
+    <>
+      <Col xs={24} sm={12} md={6}>
+        <Select
+          value={query.status || 'all'}
+          onChange={handleStatusFilter}
+          placeholder="Tất cả trạng thái"
+          style={{ width: '100%' }}
+        >
+          <Option value="all">Tất cả trạng thái</Option>
+          <Option value="pending">Chờ xác nhận</Option>
+          <Option value="confirmed">Đã xác nhận</Option>
+          <Option value="in_progress">Đang tư vấn</Option>
+          <Option value="completed">Đã hoàn thành</Option>
+          <Option value="cancelled">Đã hủy</Option>
+        </Select>
+      </Col>
+      
+      <Col xs={24} sm={12} md={6}>
+        <Select
+          value={`${query.sort_by}_${query.sort_order}`}
+          onChange={(value) => {
+            // Split từ cuối để xử lý đúng với "appointment_date_asc"
+            const lastUnderscoreIndex = value.lastIndexOf('_');
+            const sort_by = value.substring(0, lastUnderscoreIndex);
+            const sort_order = value.substring(lastUnderscoreIndex + 1);
+            handleSortChange(sort_by, sort_order as 'asc' | 'desc');
+          }}
+          placeholder="Sắp xếp"
+          style={{ width: '100%' }}
+        >
+          <Option value="appointment_date_asc">Ngày hẹn gần nhất</Option>
+          <Option value="appointment_date_desc">Ngày hẹn xa nhất</Option>
+          <Option value="created_date_desc">Tạo mới nhất</Option>
+          <Option value="created_date_asc">Tạo cũ nhất</Option>
+        </Select>
+      </Col>
+      
+      <Col xs={24} sm={12} md={2}>
+        <Button
+          onClick={handleClearFilters}
+          icon={<FaFilter />}
+          title="Xóa bộ lọc"
+          style={{ width: '100%' }}
+        >
+          Xóa lọc
+        </Button>
+      </Col>
+    </>
+  );
+
+  // Convert appointment PaginationInfo to ResourceList PaginationInfo format
+  const convertPagination = (paginationData: PaginationInfo) => ({
+    current_page: paginationData.current_page,
+    total_pages: paginationData.total_pages,
+    total_items: paginationData.total_items,
+    items_per_page: paginationData.items_per_page
+  });
 
   const getAppointmentPriority = (appointment: Appointment) => {
     const appointmentDate = parseISO(appointment.appointment_date);
@@ -441,7 +592,7 @@ const AppointmentManagement: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 lg:py-6">
         {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -456,353 +607,169 @@ const AppointmentManagement: React.FC = () => {
         </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FaCalendarAlt className="w-6 h-6 text-blue-600" />
-              </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-gray-600">Tổng lịch hẹn</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <FaHourglassHalf className="w-6 h-6 text-yellow-600" />
-              </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-              <p className="text-gray-600">Chờ xác nhận</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <FaCheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-gray-900">{stats.confirmed}</p>
-              <p className="text-gray-600">Đã xác nhận</p>
-              </div>
-            </div>
-          </div>
           
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <FaClock className="w-6 h-6 text-purple-600" />
-              </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-gray-900">{stats.today}</p>
-              <p className="text-gray-600">Hôm nay</p>
-            </div>
-              </div>
-            </div>
-          </div>
-          
-      {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-          {/* Search */}
-          <div className="lg:col-span-5">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên, email, SĐT khách hàng, ghi chú..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              </div>
-              </div>
-
-          {/* Status Filter */}
-          <div className="lg:col-span-3">
-            <select
-              value={query.status || 'all'}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="in_progress">Đang tư vấn</option>
-              <option value="completed">Đã hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-            </div>
-
-          {/* Sort */}
-          <div className="lg:col-span-3">
-            <select
-              value={`${query.sort_by}_${query.sort_order}`}
-              onChange={(e) => {
-                const [sort_by, sort_order] = e.target.value.split('_');
-                handleSortChange(sort_by, sort_order as 'asc' | 'desc');
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="appointment_date_asc">Ngày hẹn gần nhất</option>
-              <option value="appointment_date_desc">Ngày hẹn xa nhất</option>
-              <option value="created_date_desc">Tạo mới nhất</option>
-              <option value="created_date_asc">Tạo cũ nhất</option>
-            </select>
-          </div>
-          
-          {/* Clear Filters */}
-          <div className="lg:col-span-1">
-            <button
-              onClick={handleClearFilters}
-              className="w-full px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Xóa bộ lọc"
-            >
-              <FaFilter className="w-4 h-4 mx-auto" />
-            </button>
-              </div>
-              </div>
-            </div>
-
-      {/* Appointments List */}
-      {appointments.length > 0 ? (
-        <>
-          <div className="space-y-6 mb-8">
-            {appointments.map((appointment) => (
-              <div key={appointment._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-3">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {appointment.customer_id?.full_name || 'Khách hàng'}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[appointment.status]}`}>
-                        {statusLabels[appointment.status]}
-                      </span>
-          </div>
-          
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-            <div className="flex items-center">
-                        <FaCalendarAlt className="w-4 h-4 mr-2" />
-                        <span>
-                          {formatDate(appointment.appointment_date)} • {appointment.start_time} - {appointment.end_time}
-                        </span>
-              </div>
-                      <div>
-                        <span className="font-medium">Email:</span> {appointment.customer_id?.email || 'N/A'}
-                </div>
-            </div>
-
-                    {appointment.customer_notes && (
-                      <div className="mt-3 text-sm text-gray-600">
-                        <span className="font-medium">Ghi chú từ khách hàng:</span> {appointment.customer_notes}
-          </div>
-                    )}
-
-                    {appointment.consultant_notes && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <span className="font-medium">Ghi chú của bạn:</span> {appointment.consultant_notes}
-              </div>
-                    )}
-              </div>
-
-                  <div className="flex flex-col gap-2 ml-4">
-                    <button
-                      onClick={() => setSelectedAppointment(appointment)}
-                      className="px-3 py-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      Chi tiết
-                    </button>
-                    
-                    {appointment.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleConfirmAppointment(appointment._id)}
-                          disabled={actionLoading === appointment._id}
-                          className="px-3 py-1 text-green-600 hover:text-green-800 text-sm font-medium disabled:opacity-50"
-                        >
-                          {actionLoading === appointment._id ? 'Đang xử lý...' : 'Xác nhận'}
-                        </button>
-                        <button
-                          onClick={() => handleCancelAppointment(appointment._id)}
-                          disabled={actionLoading === appointment._id}
-                          className="px-3 py-1 text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-                        >
-                          Hủy
-                        </button>
-                      </>
-                    )}
-
-                    {appointment.status === 'confirmed' && (
-                      <button
-                        onClick={() => handleStartMeeting(appointment._id)}
-                        disabled={actionLoading === appointment._id}
-                        className="px-3 py-1 text-purple-600 hover:text-purple-800 text-sm font-medium disabled:opacity-50"
-                      >
-                        {actionLoading === appointment._id ? 'Đang xử lý...' : 'Bắt đầu'}
-                      </button>
-                    )}
-            </div>
-          </div>
-              </div>
-            ))}
-        </div>
-
-          {/* Pagination */}
-          {pagination?.total_pages && pagination.total_pages > 1 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium">{((pagination.current_page || 1) - 1) * (pagination.items_per_page || 10) + 1}</span> - <span className="font-medium">{Math.min((pagination.current_page || 1) * (pagination.items_per_page || 10), pagination.total_items || 0)}</span> trong tổng số <span className="font-medium">{pagination.total_items || 0}</span> lịch hẹn
-                </p>
-                
-                <div className="flex items-center space-x-1">
-              <button
-                    onClick={() => handlePageChange((pagination.current_page || 1) - 1)}
-                    disabled={!pagination?.has_prev}
-                    className="flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    <FaChevronLeft className="w-4 h-4 mr-1" />
-                    Trước
-                  </button>
-
-                  {generatePageNumbers().map((page: number, index: number, array: number[]) => (
-                    <React.Fragment key={page}>
-                      {index > 0 && array[index - 1] < page - 1 && (
-                        <span className="px-2 text-gray-400">...</span>
-                      )}
-                      <button
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 rounded-md font-medium transition-colors ${
-                          page === (pagination.current_page || 1)
-                    ? 'bg-blue-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-100 border border-gray-300'
-                }`}
-              >
-                        {page}
-              </button>
-                    </React.Fragment>
-            ))}
-
-                  <button
-                    onClick={() => handlePageChange((pagination.current_page || 1) + 1)}
-                    disabled={!pagination?.has_next}
-                    className="flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    Sau
-                    <FaChevronRight className="w-4 h-4 ml-1" />
-                  </button>
-          </div>
-        </div>
-            </div>
-          )}
-        </>
-      ) : !loading && (
-                <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaCalendarAlt className="w-8 h-8 text-gray-400" />
-                  </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Chưa có lịch hẹn nào
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {query.search || query.status 
+      {/* Appointments List using ResourceList */}
+      <ResourceList
+        resourceTitle=""
+        tableColumns={getTableColumns()}
+        rowKey="_id"
+        data={appointments}
+        loading={loading}
+        pagination={convertPagination(pagination)}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        handlePageChange={handlePageChange}
+        filterControls={filterControls}
+        emptyText={
+          query.search || query.status 
               ? 'Không tìm thấy lịch hẹn nào phù hợp với bộ lọc.'
               : 'Bạn chưa có lịch hẹn nào từ khách hàng.'
                     }
-                  </p>
-          {(query.search || query.status) && (
-            <button
-              onClick={handleClearFilters}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Xóa bộ lọc
-            </button>
-          )}
-                </div>
-      )}
+      />
 
       {/* Detail Modal */}
       {selectedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">Chi tiết lịch hẹn</h3>
-              <button 
+          <div 
+            className="bg-white rounded-xl shadow-2xl relative max-h-[90vh] overflow-hidden"
+            style={{ 
+              width: '60vw', 
+              maxWidth: '800px'
+            }}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-800">Chi tiết lịch hẹn</h3>
+              <button
                 onClick={() => setSelectedAppointment(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
               >
-                <FaTimes className="w-5 h-5" />
+                ✕
               </button>
-          </div>
-            
-            <div className="space-y-3">
-              <div>
-                <span className="font-medium text-gray-700">Khách hàng:</span>
-                <p className="text-gray-900">{selectedAppointment.customer_id?.full_name || 'N/A'}</p>
-        </div>
-
-              <div>
-                <span className="font-medium text-gray-700">Email:</span>
-                <p className="text-gray-900">{selectedAppointment.customer_id?.email || 'N/A'}</p>
-              </div>
-              
-              <div>
-                <span className="font-medium text-gray-700">Ngày giờ:</span>
-                <p className="text-gray-900">
-                  {formatDate(selectedAppointment.appointment_date)} • {selectedAppointment.start_time} - {selectedAppointment.end_time}
-                </p>
-              </div>
-              
-              <div>
-                <span className="font-medium text-gray-700">Trạng thái:</span>
-                <span className={`ml-2 px-2 py-1 rounded-full text-sm ${statusColors[selectedAppointment.status]}`}>
-                  {statusLabels[selectedAppointment.status]}
-                </span>
-              </div>
-              
-              {selectedAppointment.customer_notes && (
-                <div>
-                  <span className="font-medium text-gray-700">Ghi chú từ khách hàng:</span>
-                  <p className="text-gray-900">{selectedAppointment.customer_notes}</p>
-                </div>
-              )}
-              
-              {selectedAppointment.consultant_notes && (
-                <div>
-                  <span className="font-medium text-gray-700">Ghi chú của bạn:</span>
-                  <p className="text-gray-900">{selectedAppointment.consultant_notes}</p>
-                </div>
-              )}
             </div>
 
-            {selectedAppointment.status === 'in_progress' && (
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ghi chú hoàn thành:
-                </label>
-                <textarea
-                  value={consultantNotes}
-                  onChange={(e) => setConsultantNotes(e.target.value)}
-                  placeholder="Nhập ghi chú về cuộc tư vấn..."
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                  onClick={handleCompleteAppointment}
-                  disabled={actionLoading === selectedAppointment._id}
-                  className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : 'Hoàn thành lịch hẹn'}
-                </button>
+            {/* Content */}
+            <div className="flex" style={{ height: '500px' }}>
+              {/* Left Half - Appointment Info */}
+              <div className="w-1/2 p-6 border-r border-gray-200">
+                <div className="h-full flex flex-col">
+                  {/* Status */}
+                  <div className="mb-6">
+                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${statusColors[selectedAppointment.status]}`}>
+                      {statusLabels[selectedAppointment.status]}
+                    </span>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="space-y-4 flex-1">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Khách hàng:</span>
+                      <p className="font-medium text-gray-800">{selectedAppointment.customer_id?.full_name || 'N/A'}</p>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Email:</span>
+                      <p className="font-medium text-gray-800">{selectedAppointment.customer_id?.email || 'N/A'}</p>
+                    </div>
+
+                    {selectedAppointment.customer_id?.phone && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <span className="text-gray-600 text-sm font-medium block mb-1">Điện thoại:</span>
+                        <p className="font-medium text-gray-800">{selectedAppointment.customer_id.phone}</p>
+                      </div>
+                    )}
+
+
+                  </div>
+
+                  {/* Complete Action for In Progress */}
+                  {selectedAppointment.status === 'in_progress' && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ghi chú hoàn thành:
+                      </label>
+                      <textarea
+                        value={consultantNotes}
+                        onChange={(e) => setConsultantNotes(e.target.value)}
+                        placeholder="Nhập ghi chú về cuộc tư vấn..."
+                        rows={3}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+                      />
+                      <button
+                        onClick={handleCompleteAppointment}
+                        disabled={actionLoading === selectedAppointment._id}
+                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                      >
+                        {actionLoading === selectedAppointment._id ? 'Đang xử lý...' : 'Hoàn thành lịch hẹn'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-        )}
-      </div>
+
+              {/* Right Half - Notes & Details */}
+              <div className="w-1/2 p-6">
+                <div className="h-full flex flex-col">
+                  <h5 className="text-lg font-bold text-gray-800 mb-4">Ghi chú & Chi tiết</h5>
+                  <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-4">
+                      {selectedAppointment.customer_notes && (
+                        <div>
+                          <h6 className="font-semibold text-gray-800 mb-2">Ghi chú từ khách hàng:</h6>
+                          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedAppointment.customer_notes}</p>
+                        </div>
+                      )}
+                      
+                      {selectedAppointment.consultant_notes && (
+                        <div className={selectedAppointment.customer_notes ? "border-t border-gray-200 pt-4" : ""}>
+                          <h6 className="font-semibold text-gray-800 mb-2">Ghi chú của bạn:</h6>
+                          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedAppointment.consultant_notes}</p>
+                        </div>
+                      )}
+
+                      <div className={selectedAppointment.customer_notes || selectedAppointment.consultant_notes ? "border-t border-gray-200 pt-4" : ""}>
+                        <h6 className="font-semibold text-gray-800 mb-2">Thông tin buổi hẹn:</h6>
+                        <div className="text-gray-700 space-y-2">
+                          <p>• Trạng thái: {statusLabels[selectedAppointment.status]}</p>
+                          <p>• Ngày hẹn: {formatDate(selectedAppointment.appointment_date)}</p>
+                          <p>• Thời gian: {selectedAppointment.start_time} - {selectedAppointment.end_time}</p>
+                          <p>• Khách hàng: {selectedAppointment.customer_id?.full_name || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4">
+                        <h6 className="font-semibold text-gray-800 mb-2">Hướng dẫn:</h6>
+                        <div className="text-gray-700 space-y-1">
+                          {selectedAppointment.status === 'pending' && (
+                            <p>• Cuộc hẹn đang chờ xác nhận</p>
+                          )}
+                          {selectedAppointment.status === 'confirmed' && (
+                            <p>• Cuộc hẹn đã được xác nhận, sẵn sàng bắt đầu</p>
+                          )}
+                          {selectedAppointment.status === 'in_progress' && (
+                            <p>• Cuộc hẹn đang diễn ra, có thể hoàn thành khi kết thúc</p>
+                          )}
+                          {selectedAppointment.status === 'completed' && (
+                            <p>• Cuộc hẹn đã hoàn thành</p>
+                          )}
+                          <p>• Thời gian tư vấn: 30-60 phút/buổi</p>
+                          <p>• Liên hệ khách hàng qua email hoặc điện thoại nếu cần</p>
+                        </div>
+                      </div>
+
+                      {!selectedAppointment.customer_notes && !selectedAppointment.consultant_notes && (
+                        <div className="text-center text-gray-500 mt-8">
+                          <p>Chưa có ghi chú nào cho cuộc hẹn này.</p>
+                          <p className="mt-2">Thông tin chi tiết sẽ được hiển thị tại đây.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

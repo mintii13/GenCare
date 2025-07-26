@@ -217,7 +217,16 @@ const ConsultantBlogList: React.FC = () => {
                       {blog.status ? 'Đã xuất bản' : 'Bản nháp'}
                     </span>
                     <span>
-                      Cập nhật: {new Date(blog.updated_date).toLocaleDateString()}
+                      Cập nhật: {
+                        blog.updated_date ? 
+                          (() => {
+                            try {
+                              return new Date(blog.updated_date).toLocaleDateString();
+                            } catch {
+                              return 'Không xác định';
+                            }
+                          })() : 'Không xác định'
+                        }
                     </span>
                     <span className="flex items-center">
                       <MessageSquare className="w-4 h-4 mr-1" /> {commentCounts[blog.blog_id] || 0}

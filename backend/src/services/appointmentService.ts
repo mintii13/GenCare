@@ -1614,12 +1614,13 @@ export class AppointmentService {
                 query.search = PaginationUtils.sanitizeSearch(query.search);
             }
 
-            // Get data từ repository
+            // Get data từ repository - with appointment-specific default
+            const final_sort_by = sort_by === '_id' ? 'appointment_date' : sort_by;
             const result = await AppointmentRepository.findWithPagination(
                 filters,
                 page,
                 limit,
-                sort_by || 'appointment_date',
+                final_sort_by,
                 sort_order
             );
 

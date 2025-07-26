@@ -6,17 +6,17 @@ import ChatBot from '../common/ChatBot';
 
 interface LayoutProps {
   children: ReactNode;
-  onLoginClick?: () => void;
+    onLoginClick?: () => void;
 }
 
-export default function Layout({ children, onLoginClick }: LayoutProps) {
+export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation onLoginClick={onLoginClick} />
-      <main className={`flex-grow ${isHomePage ? '' : 'pt-16'}`}>
+      <Navigation />
+      <main className="flex-grow">
         {children}
       </main>
       <Footer />

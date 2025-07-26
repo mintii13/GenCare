@@ -1,32 +1,59 @@
-export interface StiTest {
-  _id: string;
+import { PaginationInfo, ApiResponse, BaseEntity, OrderStatus } from './common';
+
+// STI Test Types
+export type TestTypes = 'blood' | 'urine' | 'swab';
+export type TestCategory = 'bacterial' | 'viral' | 'parasitic';
+
+export interface StiTest extends BaseEntity {
   sti_test_name: string;
   sti_test_code: string;
   description: string;
   price: number;
   is_active: boolean;
-  category: string;
-  sti_test_type: string;
+  category: TestCategory;
+  sti_test_type: TestTypes;
+  created_by: string;
 }
 
-export interface StiPackage {
-  _id: string;
+// STI Package Types  
+export interface StiPackage extends BaseEntity {
   sti_package_name: string;
   sti_package_code: string;
-  description: string;
   price: number;
+  description: string;
   is_active: boolean;
-  tests?: StiTest[]; // populated tests in package
+  created_by: string;
 }
 
-export interface StiTestResponse {
-  success: boolean;
-  message?: string;
-  stitest: StiTest | StiTest[];
+// STI Order Types
+export interface StiOrder extends BaseEntity {
+  order_code: string;
+  customer_id: string;
+  sti_package_item?: {
+    sti_package_id: string;
+    sti_test_ids: string[];
+  };
+  sti_test_items?: string[];
+  total_amount: number;
+  order_status: OrderStatus;
+  order_date: string;
+  appointment_date?: string;
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+  payment_method?: string;
+  notes?: string;
 }
 
-export interface StiPackageResponse {
-  success: boolean;
-  message?: string;
-  stipackage: StiPackage | StiPackage[];
+export interface StiOrdersPaginatedData {
+    items: StiOrder[];
+    pagination: PaginationInfo;
+}
+
+export type StiOrdersPaginatedResponse = ApiResponse<StiOrdersPaginatedData>;
+
+export interface StiOrderQuery {
+  page?: number;
+  limit?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  order_status?: string;
 }

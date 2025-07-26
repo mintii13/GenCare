@@ -439,7 +439,7 @@ export class StiService {
             }
             await StiTestScheduleRepository.updateStiTestSchedule(schedule);
             const customer = await UserRepository.findById(customer_id);
-
+            
             await MailUtils.sendStiOrderConfirmation(customer.full_name, order_date.toString(), customer.email);
             return {
                 success: true,

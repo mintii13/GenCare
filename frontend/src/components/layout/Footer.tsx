@@ -1,8 +1,8 @@
 import React from 'react';
 
 const Footer = () => (
-  <footer className="bg-blue-900 text-white py-6 px-4">
-    <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+  <footer className="bg-blue-900 text-white py-6 px-4 relative z-50">
+    <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="text-center md:text-left">
         <div className="font-bold text-lg mb-1">GENCARE</div>
         <div className="text-sm">Hệ thống Sức khỏe Sinh sản Toàn diện</div>

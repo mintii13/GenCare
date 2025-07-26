@@ -44,7 +44,7 @@ const Banner: React.FC = () => {
   }, []);
 
   return (
-    <section ref={bannerRef} className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 py-20 md:py-32 overflow-hidden pt-20 md:pt-24">
+    <section ref={bannerRef} className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 py-20 md:py-32 overflow-hidden pt-16 md:pt-24">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -117,25 +117,25 @@ const Banner: React.FC = () => {
              </div>
 
             {/* Social Proof */}
-            <div className="pt-8">
+            {/* <div className="pt-8">
               <p className="text-white/70 text-sm mb-4">Được đánh giá cao bởi:</p>
               <div className="flex items-center gap-8 opacity-60">
                 <div className="h-8 w-20 bg-white/20 rounded"></div>
                 <div className="h-8 w-20 bg-white/20 rounded"></div>
                 <div className="h-8 w-20 bg-white/20 rounded"></div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Content - Image/Visual */}
-          <div className="flex-1 flex justify-center lg:justify-end">
-            <div className="relative">
+          <div className="flex-1 flex justify-center lg:justify-end lg:pl-8">
+            <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
               {/* Main Image Container */}
-              <div className="relative w-full max-w-lg">
+              <div className="relative mx-auto lg:mx-0 p-4 lg:p-8">
                 <img 
                   src={homepageImg} 
                   alt="GenCare homepage" 
-                  className="rounded-3xl shadow-2xl border border-white/20 w-full object-cover aspect-[4/3] bg-white/10 transition-transform duration-300 origin-right lg:scale-[1.35]" 
+                  className="rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border border-white/20 w-full object-cover aspect-square sm:aspect-[4/3] md:aspect-[3/2] lg:aspect-[4/3] bg-white/10 transition-transform duration-300 hover:scale-105" 
                 />
               </div>
             </div>
@@ -145,20 +145,20 @@ const Banner: React.FC = () => {
         {/* Bottom Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 pt-12 border-t border-white/20">
           <div className="text-center">
-            <div className="text-3xl font-bold text-white">10K+</div>
-            <div className="text-white/70">Khách hàng</div>
+            <div className="text-3xl font-bold text-white"></div>
+            <div className="text-white/70"></div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-white">50+</div>
-            <div className="text-white/70">Chuyên gia</div>
+            <div className="text-3xl font-bold text-white"></div>
+            <div className="text-white/70"></div>
           </div>
-          <div className="text-center">
+          {/* <div className="text-center">
             <div className="text-3xl font-bold text-white">99.9%</div>
             <div className="text-white/70">Độ chính xác</div>
-          </div>
+          </div> */}
           <div className="text-center">
-            <div className="text-3xl font-bold text-white">24/7</div>
-            <div className="text-white/70">Hỗ trợ</div>
+            <div className="text-3xl font-bold text-white"></div>
+            <div className="text-white/70"></div>
           </div>
                  </div>
        </div>

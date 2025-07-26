@@ -17,8 +17,8 @@ const DashboardRedirect: React.FC = () => {
     case 'consultant':
       return <Navigate to="/consultant/schedule" replace />;
     case 'customer':
-      // Customer không có dashboard, redirect đến chức năng chính
-      return <Navigate to="/consultation/book-appointment" replace />;
+      // Customer có dashboard riêng
+      return <Navigate to="/customer/appointments" replace />;
     default:
       // Fallback về homepage nếu role không xác định
       return <Navigate to="/" replace />;

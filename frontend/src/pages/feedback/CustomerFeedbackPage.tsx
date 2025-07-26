@@ -3,6 +3,8 @@ import { MessageSquare, Star, Calendar, Search, Filter, AlertCircle, Clock, Edit
 import { FeedbackService } from '../../services/feedbackService';
 import { toast } from 'react-hot-toast';
 import { ResourceTable } from '../../components/common/ResourceTable';
+import useConfirmModal from '../../hooks/useConfirmModal';
+import { ConfirmModal } from '../../components/ui/confirm-modal';
 
 interface CustomerFeedback {
   appointment_id: string;
@@ -39,6 +41,9 @@ const CustomerFeedbackPage: React.FC = () => {
     current: FeedbackFormData;
     info: any;
   } | null>(null);
+
+  // Confirm modal hook
+  const { modalState, showConfirm, hideConfirm } = useConfirmModal();
 
   useEffect(() => {
     loadFeedbacks();
@@ -133,22 +138,29 @@ const CustomerFeedbackPage: React.FC = () => {
   };
 
   const handleDeleteFeedback = async (appointmentId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) {
-      return;
-    }
-
-    try {
-      const response = await FeedbackService.deleteFeedback(appointmentId);
-      if (response.success) {
-        await loadFeedbacks(); // Reload to reflect changes
-        toast.success('Đánh giá đã được xóa thành công!');
-      } else {
-        toast.error('Không thể xóa đánh giá. Vui lòng thử lại.');
+    showConfirm(
+      {
+        title: 'Xác nhận xóa đánh giá',
+        description: 'Bạn có chắc chắn muốn xóa đánh giá này?',
+        confirmText: 'Xóa',
+        cancelText: 'Hủy',
+        confirmVariant: 'destructive'
+      },
+      async () => {
+        try {
+          const response = await FeedbackService.deleteFeedback(appointmentId);
+          if (response.success) {
+            await loadFeedbacks(); // Reload to reflect changes
+            toast.success('Đánh giá đã được xóa thành công!');
+          } else {
+            toast.error('Không thể xóa đánh giá. Vui lòng thử lại.');
+          }
+        } catch (error) {
+          console.error('Error deleting feedback:', error);
+          toast.error('Không thể xóa đánh giá. Vui lòng thử lại.');
+        }
       }
-    } catch (error) {
-      console.error('Error deleting feedback:', error);
-      toast.error('Không thể xóa đánh giá. Vui lòng thử lại.');
-    }
+    );
   };
 
   const getAverageRating = () => {
@@ -167,7 +179,7 @@ const CustomerFeedbackPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -245,7 +257,20 @@ const CustomerFeedbackPage: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        onClose={hideConfirm}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+        description={modalState.description}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        confirmVariant={modalState.confirmVariant}
+        isLoading={modalState.isLoading}
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">

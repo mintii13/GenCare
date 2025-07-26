@@ -2,6 +2,7 @@ export interface EnvironmentConfig {
   API_BASE_URL: string;
   VITE_CHATBOX_API: string;
   NODE_ENV: string;
+  AUTH_TOKEN_KEY: string;
   isDevelopment: boolean;
   isProduction: boolean;
   isTest: boolean;
@@ -27,6 +28,7 @@ const createEnvironmentConfig = (): EnvironmentConfig => {
     API_BASE_URL: import.meta.env.VITE_API_URL ,
     VITE_CHATBOX_API: import.meta.env.VITE_CHATBOX_API || '',
     NODE_ENV: nodeEnv,
+    AUTH_TOKEN_KEY: import.meta.env.VITE_AUTH_TOKEN_KEY ,
     isDevelopment,
     isProduction,
     isTest,

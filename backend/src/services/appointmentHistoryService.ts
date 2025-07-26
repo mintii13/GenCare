@@ -96,12 +96,13 @@ export class AppointmentHistoryService {
             // Build filter query
             const filters = PaginationUtils.buildAppointmentHistoryFilter(query);
 
-            // Get data từ repository
+            // Get data từ repository - with history-specific default
+            const final_sort_by = sort_by === '_id' ? 'timestamp' : sort_by;
             const result = await AppointmentHistoryRepository.findWithPagination(
                 filters,
                 page,
                 limit,
-                sort_by || 'timestamp',
+                final_sort_by,
                 sort_order
             );
 
@@ -473,12 +474,13 @@ export class AppointmentHistoryService {
             // Build filter for specific user
             const filters = { performed_by_user_id: userId };
 
-            // Get data từ repository với pagination
+            // Get data từ repository với pagination - with history-specific default
+            const final_sort_by = sort_by === '_id' ? 'timestamp' : sort_by;
             const result = await AppointmentHistoryRepository.findWithPagination(
                 filters,
                 validPage,
                 validLimit,
-                sort_by,
+                final_sort_by,
                 sort_order
             );
 

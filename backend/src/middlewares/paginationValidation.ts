@@ -309,6 +309,17 @@ export const validateStiOrderPagination = (req: Request, res: Response, next: Ne
             }
         }
 
+        // ✅ ADDED: Validate sort_by parameter with actual database field names
+        if (query.sort_by !== undefined) {
+            const validSortFields = ['order_date', 'total_amount', 'order_status', 'createdAt', 'updatedAt'];
+            if (!validSortFields.includes(query.sort_by.toString())) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid sort_by parameter. Must be one of: ${validSortFields.join(', ')}`
+                });
+            }
+        }
+
         // Validate order_status parameter
         if (query.order_status !== undefined) {
             const validStatuses = ['Booked', 'Accepted', 'Processing', 'SpecimenCollected', 'Testing', 'Completed', 'Canceled'];

@@ -1,8 +1,74 @@
 /**
- * Authentication utilities for managing tokens
+  * Authentication utilities for managing tokens
  */
+import { User } from '@/types/user';
+import { env } from '../config/environment';
 
-const AUTH_TOKEN_KEY = "gencare_auth_token";
+const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
+const USER_INFO_KEY = 'user';
+
+// --- Token Management ---
+
+/**
+ * Lấy JWT token của ứng dụng
+ * @returns JWT token hoặc null
+ */
+export const getToken = (): string | null => {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+};
+
+/**
+ * Kiểm tra xem user đã đăng nhập hay chưa
+ * @returns true nếu có JWT token
+ */
+export const isAuthenticated = (): boolean => {
+  return !!getToken();
+};
+
+/**
+ * Xóa tất cả token và thông tin người dùng khi logout
+ */
+export const clearAllAuthData = (): void => {
+  const keysToRemove = [AUTH_TOKEN_KEY, USER_INFO_KEY, "google_access_token"];
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+};
+
+// --- User Management ---
+
+/**
+ * Lấy thông tin người dùng từ localStorage
+ * @returns User object hoặc null
+ */
+export const getUser = (): User | null => {
+  const userJson = localStorage.getItem(USER_INFO_KEY);
+  if (!userJson) return null;
+  try {
+    return JSON.parse(userJson) as User;
+  } catch (e) {
+    console.error("Failed to parse user data from localStorage", e);
+    return null;
+  }
+};
+
+// --- Combined Auth Actions ---
+
+/**
+ * Xử lý logic khi người dùng đăng nhập thành công
+ * @param user User object
+ * @param token JWT token
+ */
+export const login = (user: User, token: string): void => {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem(USER_INFO_KEY, JSON.stringify(user));
+};
+
+/**
+ * Xử lý logic khi người dùng đăng xuất
+ */
+export const logout = (): void => {
+  clearAllAuthData();
+};
+
 
 /**
  * Lấy Google access token từ localStorage
@@ -33,29 +99,4 @@ export const setGoogleAccessToken = (token: string): void => {
  */
 export const removeGoogleAccessToken = (): void => {
   localStorage.removeItem("google_access_token");
-};
-
-/**
- * Lấy JWT token của ứng dụng
- * @returns JWT token hoặc null
- */
-export const getAuthToken = (): string | null => {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
-};
-
-/**
- * Kiểm tra xem user đã đăng nhập hay chưa
- * @returns true nếu có JWT token
- */
-export const isAuthenticated = (): boolean => {
-  return !!getAuthToken();
-};
-
-/**
- * Xóa tất cả token khi logout - optimized for performance
- */
-export const clearAllTokens = (): void => {
-  // Batch localStorage operations for better performance
-  const keysToRemove = [AUTH_TOKEN_KEY, "google_access_token", "user"];
-  keysToRemove.forEach(key => localStorage.removeItem(key));
 }; 

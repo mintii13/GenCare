@@ -415,7 +415,7 @@ export class BlogService {
 
     public static async deleteBlogComment(commentId: string, requestUserId: string, requestUserRole: string) {
         try {
-            const comment = await BlogCommentRepository.findByIdIncludingDeleted(commentId);
+            const comment = await BlogCommentRepository.findById(commentId);
             if (!comment) {
                 return {
                     success: false,
@@ -518,7 +518,8 @@ export class BlogService {
             // Validate và normalize pagination, đặt giá trị mặc định nếu cần
             const { page, limit, sort_by, sort_order } = PaginationUtils.validatePagination(query);
             
-            const final_sort_by = sort_by || 'publish_date';
+            // ✅ FIXED: Blog-specific default sort field
+            const final_sort_by = sort_by === '_id' ? 'publish_date' : sort_by;
             const final_sort_order = sort_order || -1;
 
             console.log(`--- [BlogService] Sorting by: ${final_sort_by}, Order: ${final_sort_order === 1 ? 'asc' : 'desc'}`);
@@ -613,12 +614,13 @@ export class BlogService {
                 query.search = PaginationUtils.sanitizeSearch(query.search);
             }
 
-            // Get data từ repository
+            // Get data từ repository - with comment-specific default
+            const final_sort_by = sort_by === '_id' ? 'comment_date' : sort_by;
             const result = await BlogCommentRepository.findWithPagination(
                 filters,
                 page,
                 limit,
-                sort_by || 'comment_date',
+                final_sort_by,
                 sort_order
             );
 

@@ -94,7 +94,8 @@ const CycleCheckPage: React.FC = () => {
   const [analysis, setAnalysis] = useState<CycleAnalysis | null>(null)
   const [progress, setProgress] = useState(0)
 
-  const handleInputChange = (field: keyof CycleData, value: any) => {
+  // Thay thế hàm handleInputChange để không dùng any
+  const handleInputChange = <K extends keyof CycleData>(field: K, value: CycleData[K]) => {
     setCycleData((prev) => ({ ...prev, [field]: value }))
   }
 

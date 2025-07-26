@@ -139,7 +139,7 @@ const TestScheduleManagement: React.FC = () => {
       title: 'Mã đơn',
       dataIndex: '_id',
       key: '_id',
-      render: (id: string) => <span>{id.slice(-8)}</span>,
+      render: (id: string) => <span>{id ? id.slice(-8) : 'N/A'}</span>,
     },
     {
       title: 'Khách hàng',

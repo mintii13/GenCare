@@ -19,7 +19,9 @@ router.post('/processMenstrualCycle', validateMenstrualCycle, groupPeriodDays, a
                 message: 'grouped period days are not valid or empty'
             });
         }
-        const result = await MenstrualCycleService.processPeriodDays(user_id, grouped_period_days, notes);
+        // Flatten grouped_period_days back to flat array for service
+        const flatPeriodDays = grouped_period_days.flat();
+        const result = await MenstrualCycleService.processPeriodDays(user_id, flatPeriodDays, notes);
         
         if (!Array.isArray(result) && result.success === false) {
             return res.status(400).json(result);

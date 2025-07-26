@@ -20,7 +20,7 @@ const ConsultantDashboard: React.FC = () => {
           isSidebarOpen ? 'ml-64' : 'ml-0'
         } pt-16 min-h-screen`}
       >
-        <div className="container mx-auto px-4 py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
           <Outlet />
         </div>
       </main>
