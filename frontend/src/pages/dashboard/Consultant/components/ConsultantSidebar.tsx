@@ -32,7 +32,8 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
     // Content management
     { name: 'Quản lý Blog', path: '/consultant/blogs', icon: FaEdit },
     // { name: 'Thư viện tài liệu', path: '/consultant/documents', icon: FaFile },
-    
+    // STI Results management
+    { name: 'Đơn hàng STI', path: '/consultant/sti-orders', icon: FaFlask },
     // STI Results management
     { name: 'Kết quả STI', path: '/consultant/sti-results', icon: FaFlask },
     

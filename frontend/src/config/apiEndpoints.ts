@@ -88,7 +88,7 @@ export const API = {
     FEEDBACK_STATS_PUBLIC: (id: string) => `/consultants/${id}/feedback-stats-public`,//54
     FEEDBACK_STATS_DETAILED: (id: string) => `/consultants/${id}/feedback-stats-detailed`,//55
     // From previous config
-    WITH_RATINGS: '/consultants/with-ratings',//56
+      WITH_RATINGS: '/consultants/with-ratings',//56
     MY_PROFILE: '/consultants/my-profile',//57
     MY_STATS: '/consultants/my-stats',//58
     MY_REVIEWS: '/consultants/my-reviews',//59

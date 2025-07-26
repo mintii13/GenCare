@@ -130,7 +130,8 @@ export class MenstrualCycleService {
                 cycle.cycle_length = len;
                 cycle_lengths.push(len);
             } else {
-                cycle.cycle_length = 0;
+                const avg = Math.round(cycle_lengths.reduce((a, b) => a + b, 0) / cycle_lengths.length || 28);
+                cycle.cycle_length = avg;
             }
 
             cycles.push(cycle as IMenstrualCycle);

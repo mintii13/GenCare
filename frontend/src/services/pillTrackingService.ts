@@ -49,8 +49,8 @@ export const pillTrackingService = {
   /**
    * Retrieves the pill schedule for the current user.
    */
-  getSchedule: async (): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE);
+  getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
+    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE_BY_USER);
   },
 
   /**

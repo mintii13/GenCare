@@ -382,4 +382,24 @@ router.get('/dropdown/:specialization', async (req, res) => {
         });
     }
 });
+
+router.get('/my-profile', authenticateToken, authorizeRoles('consultant'), async (req, res) => {
+    try {
+        const user = req.jwtUser as any;
+        const consultant = await Consultant.findOne({ user_id: user.userId });
+        if (!consultant) {
+            return res.status(400).json({
+                success: false,
+                message: 'Consultant profile not found'
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: 'Consultant profile retrieved successfully',
+            data: consultant
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 export default router;

@@ -80,7 +80,7 @@ router.get('/audit-logs',
  */
 router.get('/orders',
     authenticateToken,
-    authorizeRoles('staff', 'admin'),
+    authorizeRoles('staff', 'admin', 'consultant'),
     validateStiOrderPagination,
     async (req: Request, res: Response) => {
         try {

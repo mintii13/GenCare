@@ -72,6 +72,7 @@ const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestSc
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
+const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/ConsultantStiOrdersPage'));
 
 
 const AppContent: React.FC = () => {
@@ -170,6 +171,7 @@ const AppContent: React.FC = () => {
               <Route path="consultation-stats" element={<ConsultationStats />} />
               <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
               <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
+              <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
             </Route>
 
             {/* Customer Dashboard Routes */}
