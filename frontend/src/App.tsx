@@ -12,6 +12,7 @@ import AutoConfirmNotification from './components/notifications/AutoConfirmNotif
 import RoleGuard from './components/guards/RoleGuard';
 import DashboardRedirect from './components/common/DashboardRedirect';
 import LoginRedirect from './components/common/LoginRedirect';
+import OrdersManagement from './pages/dashboard/Staff/components/OrdersManagement';
 
 // Lazy load all major pages for better performance
 const HomePage = lazy(() => import('./pages/home'));
@@ -69,6 +70,9 @@ const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrders
 const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
+const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
+
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
 const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/ConsultantStiOrdersPage'));
@@ -80,6 +84,8 @@ interface AppContentProps {
 
 const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
   const { isAuthenticated, user } = useAuth();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
 
   useEffect(() => {
     // Khởi động AutoConfirmService khi user đăng nhập
@@ -198,6 +204,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
                 <MySTIResults />
               </RoleGuard>
             } />
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
               {/* STI Booking routes */}
               <Route path="/sti-booking/book" element={
               <RoleGuard allowedRoles={['customer']} showError={true}>
@@ -260,9 +267,10 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
               <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
-              <Route path="sti-management" element={<STIManagement />} />
+              <Route path="sti-management" element={<OrdersManagement refreshTrigger={refreshTrigger}/>} />
               <Route path="sti-orders" element={<StiOrdersManagement />} />
               <Route path="sti-results" element={<StiResultsManagement />} />
+              <Route path="orders/:orderId/result" element={<TestResultEntryPage />} />
               <Route path="test-schedules" element={<TestScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />

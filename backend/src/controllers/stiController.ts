@@ -730,16 +730,8 @@ router.get('/sti-test/dropdown/:orderId', authenticateToken, authorizeRoles('sta
 });
 router.post('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
     try {
-        const { sti_result_items } = req.body;
         const order_id = req.params.orderId;
         const user = req.user as any;
-
-        if (!sti_result_items || !Array.isArray(sti_result_items)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing or invalid sti_result_items'
-            });
-        }
 
         const existing = await StiResultRepository.findByOrderId(order_id);
         if (existing) {
@@ -748,44 +740,11 @@ router.post('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', '
                 message: 'STI result already exists. Use UPDATE to update items.'
             });
         }
-
-        const resultItems = [];
-
-        for (const item of sti_result_items) {
-            const { sti_test_id, result } = item;
-
-            if (!sti_test_id || !result?.sample_quality)
-                continue;
-
-            const sti_test_type = await StiTestRepository.getStiTestTypeById(sti_test_id);
-            if (!sti_test_type)
-                continue;
-
-            const resultItem = await StiService.buildStiResultItem(user, sti_test_id, sti_test_type, result);
-            if (resultItem) {
-                resultItems.push(resultItem);
-            }
+        const finalResult = await StiService.createResultIfNotExists(order_id);
+        if (!finalResult.success){
+            res.status(404).json(finalResult);
         }
-
-        if (resultItems.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No valid STI result items to create'
-            });
-        }
-
-        const finalResult = new StiResult({
-            sti_order_id: order_id,
-            sti_result_items: resultItems
-        });
-
-        const savedResult = await finalResult.save();
-
-        return res.status(201).json({
-            success: true,
-            message: 'Created STI results successfully',
-            data: savedResult
-        });
+        return res.status(201).json(finalResult);
 
     } catch (error) {
         console.error('Error creating STI results:', error);
@@ -796,86 +755,50 @@ router.post('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', '
     }
 });
 
-
+  
 router.patch('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) => {
     try {
-        const order_id = req.params.orderId;
+        const { sti_result_items, is_testing_completed, diagnosis, is_confirmed, medical_notes } = req.body;
+        const orderId = req.params.orderId;
         const user = req.user as any;
-        const { sti_result_items, diagnosis, is_confirmed, medical_notes } = req.body;
-        
-        // Validate: chỉ chấp nhận 1 item duy nhất
-        if (!sti_result_items || !Array.isArray(sti_result_items) || sti_result_items.length !== 1) {
-            if (!diagnosis && !is_confirmed && !medical_notes){
-                return res.status(400).json({
-                    success: false,
-                    message: 'You must provide exactly one result item to update.'
-                });
-            }
+
+        const result = await StiService.saveOrUpdateResult(
+            orderId,
+            user,
+            sti_result_items,
+            is_testing_completed,
+            diagnosis,
+            is_confirmed,
+            medical_notes
+        );
+        if (result.success){
+            return res.status(200).json(result);
         }
-        let updateResult = null;
-        if (!diagnosis && !is_confirmed && !medical_notes){
-            const { sti_test_id, result } = sti_result_items[0];
-  
-            if (!sti_test_id || !result?.sample_quality) {
-                return res.status(400).json({
-                success: false,
-                message: 'Missing sti_test_id or sample_quality in result'
-                });
-            }
-    
-            const sti_test_type = await StiTestRepository.getStiTestTypeById(sti_test_id);
-            if (!sti_test_type) {
-                return res.status(400).json({
-                success: false,
-                message: 'Invalid sti_test_id'
-                });
-            }
-            updateResult = await StiService.updateStiResult(
-                user,
-                order_id,
-                sti_test_id,
-                sti_test_type,
-                result.sample_quality,
-                result.urine,
-                result.blood,
-                result.swab
-            );
-        }
-        else{
-            updateResult = await StiService.updateStiResult(
-                user,
-                order_id,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                diagnosis,
-                is_confirmed,
-                medical_notes
-            );
-        }
-        
-      if (!updateResult || !updateResult.success) {
-        return res.status(400).json({
-          success: false,
-          message: updateResult?.message || 'Failed to update result'
-        });
-      }
-  
-      return res.status(200).json(updateResult);
-  
+        return (result.message === 'Only staff can enter test results') ? res.status(403).json(result) : res.status(404).json(result);
     } catch (error) {
-      console.error('Error updating STI result:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
+        console.error('Error saving STI results:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
     }
-  });
-  
-  
+});
+
+router.patch('/sti-result/:orderId/completed', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) =>{
+    try {
+        const orderId = req.params.orderId;
+        const result = await StiResultRepository.completedResult(orderId);
+        console.log(result);
+        if (!result) {
+            return res.status(404).json({ success: false, message: 'Result not found' });
+        }
+        return res.status(200).json({ success: true, message: 'Result updated successfully', result });
+    } catch (error) {
+        console.error('Error updating result:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+)
 
 router.get('/sti-test/:orderId', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -970,15 +893,20 @@ router.get('/my-result/:orderId', authenticateToken, authorizeRoles('customer'),
 router.get('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'customer'), async (req: Request, res: Response) => {
     try {
         const orderId = req.params.orderId;
-        if (!orderId){
+        if (!orderId || orderId.trim() === '' || orderId === 'undefined') {
             return res.status(400).json({
                 success: false,
-                message: 'Order id not found'
+                message: 'Invalid order ID'
             });
         }
+
         const result = await StiService.getStiResultByOrderId(orderId);
         if (!result.success){
-            return res.status(404).json(result);
+            const finalResult = await StiService.createResultIfNotExists(orderId);
+            if (!finalResult.success){
+                return res.status(404).json(finalResult);
+            }
+            return res.status(200).json(result);
         }
         return res.status(200).json(result);
     } catch (error) {

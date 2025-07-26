@@ -85,7 +85,7 @@ export class MoMoPaymentService {
                 amount,
                 extraData = '',
                 requestType = 'payWithMethod',
-                redirectUrl = process.env.MOMO_REDIRECT_URL || 'http://localhost:3000/payment/success',
+                redirectUrl = process.env.MOMO_REDIRECT_URL || 'http://localhost:5173/payment/success',
                 ipnUrl = process.env.MOMO_IPN_URL || 'http://localhost:3000/api/payment/momo/ipn',
                 lang = 'vi'
             } = paymentData;

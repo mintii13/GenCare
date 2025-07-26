@@ -19,7 +19,7 @@ import { PaginationUtils } from '../utils/paginationUtils';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { AuditLogPaginationResponse } from '../dto/responses/AuditLogPaginationResponse';
 import { StiResultRepository } from '../repositories/stiResultRepository';
-import { IStiResult, StiResult } from '../models/StiResult';
+import { IStiResult, StiResult, StiResultItem } from '../models/StiResult';
 import { ConsultantRepository } from '../repositories/consultantRepository';
 import { SpecializationType } from '../models/Consultant';
 import { StaffRepository } from '../repositories/staffRepository';
@@ -790,7 +790,23 @@ export class StiService {
                     }
                 }
 
-                if (['staff', 'adimin', 'customer'].includes(role) && updates.order_date && updates.order_date.toString() !== order.order_date.toString()) {
+                if (['staff', 'admin', 'customer'].includes(role) && updates.order_date && updates.order_date.toString() !== order.order_date.toString()) {
+                    const today = new Date();
+                    const vnOffsetMs = 7 * 60 * 60 * 1000;
+
+                    const todayInVN = new Date(today.getTime() + vnOffsetMs);
+                    todayInVN.setHours(0, 0, 0, 0);
+                    const updateDate = new Date(new Date(updates.order_date).getTime() + vnOffsetMs);
+                    updateDate.setHours(0, 0, 0, 0);
+
+                    const diffDays = (updateDate.getTime() - todayInVN.getTime()) / (1000 * 60 * 60 * 24);
+                    if (diffDays < 1) {
+                        return {
+                            success: false,
+                            message: 'Ngày đặt lịch phải sau hôm nay ít nhất 1 ngày.'
+                        };
+                    }
+                    
                     let newSchedule = await StiTestScheduleRepository.findOrderDate(updates.order_date);
                     const oldSchedule = await StiTestScheduleRepository.findById(order.sti_schedule_id);
 
@@ -1125,118 +1141,171 @@ export class StiService {
         }
     }
 
-    public static async buildStiResultItem(
-        user: JWTPayload,
-        sti_test_id: string,
-        sti_test_type: TestTypes,
-        result: {
-            sample_type: TestTypes,
-            sample_quality: boolean,
-            urine?: any,
-            blood?: any,
-            swab?: any
+    private static filterValidFields = (obj: any) => {
+        const result = {};
+        for (const key in obj) {
+          const value = obj[key];
+          if (value !== undefined && value !== null && value !== '') {
+            result[key] = value;
+          }
         }
-    ) {
-        try {
-            if (user.role !== 'staff') return null;
+        return result;
+    };
+
+    public static async createResultIfNotExists(orderId: string) {
+        if (!orderId) {
+            return {
+                success: false,
+                message: 'Order id is not found'
+            }
+        }
     
-            const staff_id = await StaffRepository.findByUserId(user.userId);
-            if (!staff_id) return null;
-    
-            const resultItem: any = {
-                sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
-                result: {
-                    sample_type: sti_test_type,
-                    sample_quality: result.sample_quality,
-                    time_completed: TimeUtils.getCurrentTimeInZone(),
-                    staff_id: staff_id,
-                }
+        const order = await StiOrderRepository.findOrderById(orderId);
+        if (!order) {
+            return {
+                success: false,
+                message: 'Order is not found'
             };
+        }
     
-            if (result.urine) resultItem.result.urine = result.urine;
-            if (result.blood) resultItem.result.blood = result.blood;
-            if (result.swab) resultItem.result.swab = result.swab;
+        const existingResult = await StiResultRepository.findByOrderId(orderId);
+        if (existingResult) {
+            return {
+                success: true,
+                message: 'Sti result is created',
+                data: existingResult
+            }
+        }
     
-            return resultItem;
-        } catch (error) {
-            console.error('Error building result item:', error);
-            return null;
+        const newResult = new StiResult({
+            sti_order_id: orderId,
+            sti_result_items: [],
+            diagnosis: '',
+            is_confirmed: false,
+            medical_notes: ''
+        });
+    
+        const savedResult = StiResultRepository.createStiResult(newResult);
+        return {
+            success: true,
+            message: 'Create new sti result successfully',
+            data: savedResult
         }
     }
 
-    public static async updateStiResult(
+    public static async saveOrUpdateResult(
+        orderId: string,
         user: JWTPayload,
-        order_id: string,
-        sti_test_id?: string,
-        sti_test_type?: TestTypes,
-        sample_quality?: boolean,
-        urine?: any,
-        blood?: any,
-        swab?: any,
-        diagnosis?: string,
-        is_confirmed?: boolean,
-        medical_notes?: string
-      ) {
-        try {
-            const order = await StiOrderRepository.findOrderById(order_id);
-            if (!order) return { success: false, message: 'Order not found' };
-            if (order.order_status !== 'Testing') return { success: false, message: 'Order is not in Testing status' };
-        
-            const result = await StiResultRepository.findByOrderId(order_id);
-            if (!result) return { success: false, message: 'No STI result found for this order. Please create a result first.' };
-            console.log("Result =>>>>", result);
-
-            const exists = result.sti_result_items.some(item => item.sti_test_id.toString() === sti_test_id);
-            if (exists) {
-                return { success: false, message: 'This test already has a result' };
+        sti_result_items: StiResultItem,
+        is_testing_completed: boolean,
+        diagnosis: string,
+        is_confirmed: boolean,
+        medical_notes: string
+    ) {
+        if (!orderId){
+            return { success: false, message: 'Order id not found' };
+        }
+        let order = await StiOrderRepository.findOrderById(orderId);
+        if (!order) {
+            return{
+                success: false, 
+                message: 'Order not found'  
             }
-            if (user.role === 'staff') {
-                const newItem = {
+        }
+        let result = await StiResultRepository.findByOrderId(orderId);
+        if (!result){
+            return {
+                success: false,
+                message: 'Result is not found'
+            }
+        }
+    
+        const staff = await StaffRepository.findByUserId(user.userId);
+        if (!staff) {
+            return { success: false, message: 'Staff not found' };
+        }
+    
+        const processedItems = [];
+    
+        if (Array.isArray(sti_result_items)) {
+            for (const item of sti_result_items) {
+                const { sti_test_id, result } = item;
+                if (!sti_test_id || !result) continue;
+        
+                const hasData =
+                (result.urine && Object.values(result.urine).some(v => v != null && v !== '')) ||
+                (result.blood && Object.values(result.blood).some(v => v != null && v !== '')) ||
+                (result.swab && Object.values(result.swab).some(v => v != null && v !== ''));
+        
+                if (!hasData) continue;
+        
+                const sti_test_type = await StiTestRepository.getStiTestTypeById(sti_test_id);
+                if (!sti_test_type) continue;
+        
+                const resultItem: any = {
                     sti_test_id: new mongoose.Types.ObjectId(sti_test_id),
                     result: {
-                      sample_type: sti_test_type,
-                      sample_quality,
-                      ...(sti_test_type === 'urine' && urine ? { urine } : {}),
-                      ...(sti_test_type === 'blood' && blood ? { blood } : {}),
-                      ...(sti_test_type === 'swab' && swab ? { swab } : {}),
-                      time_completed: TimeUtils.getCurrentTimeInZone(),
-                      staff_id: (await StaffRepository.findByUserId(user.userId))._id
+                        sample_type: sti_test_type,
+                        time_completed: TimeUtils.getCurrentTimeInZone(),
+                        staff_id: staff._id
                     }
-                  };
-                console.log("New item: ===>", newItem);
-                result.sti_result_items.push(newItem);
-                result.markModified('sti_result_items');
-            }
+                };
         
-            if (user.role === 'consultant') {
-                result.received_time = TimeUtils.getCurrentTimeInZone();
-                result.diagnosis = diagnosis;
-                result.is_confirmed = is_confirmed;
-                result.medical_notes = medical_notes;
-            }
+                if (result.urine) {
+                    const clean = this.filterValidFields(result.urine);
+                    if (Object.keys(clean).length > 0) 
+                        resultItem.result.urine = clean;
+                }
         
-            const updatedResult = await result.save(); // <- save lại toàn bộ
-            console.log('✅ All result items:', updatedResult.sti_result_items.map(item => ({
-                sti_test_id: item.sti_test_id.toString(),
-                sample_type: item.result.sample_type,
-                urine: item.result.urine,
-                blood: item.result.blood,
-                swab: item.result.swab
-              })));
-            console.log(updatedResult);
-            return {
-                success: true,
-                message: 'STI result updated successfully',
-                result: updatedResult
-            };
-      
-        } catch (error) {
-          console.error('Error updating STI result:', error);
-          return {
-            success: false,
-            message: 'Internal server error'
-          };
+                if (result.blood) {
+                    const clean = this.filterValidFields(result.blood);
+                    if (Object.keys(clean).length > 0) 
+                        resultItem.result.blood = clean;
+                }
+        
+                if (result.swab) {
+                    const clean = this.filterValidFields(result.swab);
+                    if (Object.keys(clean).length > 0) 
+                        resultItem.result.swab = clean;
+                }
+        
+                processedItems.push(resultItem);
+            }
         }
+        
+        let savedResult = null;
+        let existingResult = await StiResultRepository.findByOrderId(orderId);
+    
+        if (existingResult) {
+            existingResult.sti_result_items = processedItems;
+        if (user.role === 'consultant' && user.userId === order.consultant_id.toString()){
+            if (diagnosis !== undefined) 
+                existingResult.diagnosis = diagnosis;
+            if (is_confirmed !== undefined) 
+                existingResult.is_confirmed = is_confirmed;
+            if (medical_notes !== undefined) 
+                existingResult.medical_notes = medical_notes;
+        }
+        
+        existingResult.markModified('sti_result_items');
+        savedResult = await existingResult.save();
+        } else {
+            const newResult = new StiResult({
+                sti_order_id: orderId,
+                sti_result_items: processedItems,
+                is_testing_completed,
+                diagnosis,
+                is_confirmed,
+                medical_notes
+            });
+            savedResult = await newResult.save();
+        }
+    
+        return {
+            success: true,
+            message: `Successfully saved ${processedItems.length} test results`,
+            data: savedResult
+        };
     }
       
 
@@ -1247,7 +1316,8 @@ export class StiService {
             if (!result) 
                 return{
                     success: false,
-                    message: 'Result is not found'
+                    message: 'Result is not found',
+                    data: null
                 };
             return{
                 success: true,

@@ -204,6 +204,8 @@ export const API = {
     UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     GET_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/${id}`,
     GET_NONUPDATED_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/non-updated/${id}`,
+    SAVE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
+    COMPLETED_STI_RESULT: (id: string) => `/sti/sti-result/${id}/completed`,
     // Customer STI Results
     MY_STI_RESULTS: '/sti/my-results',
     MY_STI_RESULT: (orderId: string) => `/sti/my-result/${orderId}`,
@@ -237,6 +239,10 @@ export const API = {
     DELETE: (id: string) => `/users/${id}`, // DELETE - Admin only (soft delete)
     STATISTICS: '/users/statistics/overview' // GET - Admin/Staff
   },
+  Payment:{
+    CREATE_PAYMENT: (id: string) =>  `/payment/create/${id}`,
+    MOMO_IPN_PROXY: '/payment/momo/ipn'
+  }
 
 } as const;
 

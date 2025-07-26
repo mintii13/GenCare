@@ -12,39 +12,41 @@ const momoService = new MoMoPaymentService();
 
 // Helper function để update payment và order
 async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
-    if (ipnData.resultCode === 0) {
-        // Thanh toán thành công
-        payment.status = 'Completed';
-        payment.completedAt = new Date();
-        payment.momoTransId = ipnData.transId.toString();
-        payment.momoMessage = ipnData.message;
-        payment.momoResultCode = ipnData.resultCode;
-        await payment.save();
-
-        // Cập nhật trạng thái order liên quan
-        await StiOrder.findByIdAndUpdate(
-            payment.orderId,
-            {
-                is_paid: true,
-                order_status: 'Accepted'
-            }
-        );
-
-        console.log(`Payment ${payment._id} completed successfully`);
-    } else {
-        // Thanh toán thất bại
-        payment.status = 'Failed';
-        payment.failedAt = new Date();
-        payment.errorMessage = ipnData.message;
-        payment.momoResultCode = ipnData.resultCode;
-        await payment.save();
-
-        console.log(`Payment ${payment._id} failed:`, ipnData.message);
-    }
+    try {
+        console.log("Ipn data:", ipnData)
+        if (ipnData.resultCode.toString() === '0') {
+          // Thanh toán thành công
+          payment.status = 'Completed';
+          payment.completedAt = new Date();
+          payment.momoTransId = ipnData.transId?.toString();
+          payment.momoMessage = ipnData.message;
+          payment.momoResultCode = Number(ipnData.resultCode);
+          await payment.save();
+    
+          // Cập nhật trạng thái order liên quan
+          await StiOrder.findByIdAndUpdate(payment.orderId, {
+            is_paid: true,
+            order_status: 'Processing',
+          });
+    
+          console.log(`✅ Payment ${payment._id} completed successfully`);
+        } else {
+          // Thanh toán thất bại
+          payment.status = 'Failed';
+          payment.failedAt = new Date();
+          payment.errorMessage = ipnData.message;
+          payment.momoResultCode = ipnData.resultCode;
+          await payment.save();
+    
+          console.warn(`❌ Payment ${payment._id} failed:`, ipnData.message);
+        }
+      } catch (error) {
+        console.error('🔴 updatePaymentAndOrder error:', error);
+        throw error;
+      }
 }
 
 interface CreatePaymentRequest {
-    orderId: string; // ID của STI Order được thanh toán
     paymentMethod: 'MoMo' | 'Cash';
     // Bỏ amount - sẽ lấy từ order
 }
@@ -53,11 +55,11 @@ interface CreatePaymentRequest {
  * Tạo payment request mới - Chỉ staff mới được tạo payment
  * POST /api/payment/create
  */
-router.post('/create', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
+router.post('/create/:orderId', authenticateToken, authorizeRoles('staff', 'admin'), async (req: Request, res: Response) => {
     try {
-        const { orderId, paymentMethod }: CreatePaymentRequest = req.body;
+        const orderId = req.params.orderId;
+        const { paymentMethod }: CreatePaymentRequest = req.body;
         const staffUserId = req.jwtUser?.userId;
-
         if (!staffUserId) {
             return res.status(401).json({
                 success: false,
@@ -140,7 +142,7 @@ router.post('/create', authenticateToken, authorizeRoles('staff', 'admin'), asyn
                 orderObjectId,
                 {
                     is_paid: true,
-                    order_status: 'Accepted'
+                    order_status: 'Processing'
                 }
             );
 
@@ -253,6 +255,7 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
                 message: 'Payment not found'
             });
         }
+        await updatePaymentAndOrder(payment, ipnData);
 
         // Check if already processed
         if (payment.status === 'Completed') {
@@ -261,8 +264,6 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
                 message: 'Payment already processed'
             });
         }
-
-        await updatePaymentAndOrder(payment, ipnData);
 
         // Phản hồi cho MoMo
         res.status(200).json({
@@ -293,7 +294,7 @@ router.get('/momo/callback', async (req: Request, res: Response) => {
 
         if (resultCode === '0') {
             // Thanh toán thành công - redirect đến trang success
-            res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${payment.amount}`);
+            res.redirect(`${process.env.MOMO_REDIRECT_URL}?orderId=${orderId}&amount=${payment.amount}`);
         } else {
             // Thanh toán thất bại - redirect đến trang error
             res.redirect(`${process.env.FRONTEND_URL}/payment/error?orderId=${orderId}&message=${message}`);

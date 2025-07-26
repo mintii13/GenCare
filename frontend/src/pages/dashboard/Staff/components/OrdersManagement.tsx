@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {SpecializationType} from '../../../../../../backend/src/models/Consultant'
+import { redirect, useNavigate } from 'react-router-dom';
+import {SpecializationType} from '../../../../../../backend/src/models/Consultant';
+
 import { 
   Table, 
   Button, 
@@ -16,43 +18,28 @@ import {
   Col,
   Input,
   InputNumber,
-  Switch,
-  Checkbox,
 } from 'antd';
 import { 
+  FormOutlined,
   EditOutlined, 
   PlusOutlined, 
-  SearchOutlined,
   ClearOutlined,
-  MailOutlined,
   FileTextOutlined,
   EyeOutlined,
   ShoppingCartOutlined,
-  DollarOutlined,
-  SyncOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import apiClient from '../../../../services/apiClient';
 import { API } from '../../../../config/apiEndpoints';
 import StiResultService, { 
   StiResult, 
-  CreateStiResultRequest, 
-  UpdateStiResultByStaffRequest,
-  UpdateStiResultByConsultantRequest,
-  StiResultItem,
   TestTypes 
 } from '../../../../services/stiResultService';
 import StatusUpdateModal from '../../../../components/sti/StatusUpdateModal';
 import { 
   OrderStatus, 
-  getOrderStatusLabel, 
-  getPaymentStatusLabel, 
-  getOrderStatusColor, 
-  getPaymentStatusColor,
-  getAvailableActions
 } from '../../../../utils/stiStatusUtils';
 import dayjs from 'dayjs';
-import styles from './ResultFormFields.module.css';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -140,26 +127,14 @@ interface OrderFilters {
   search?: string;
 }
 
-// Interface cho form items trong result modal
-interface StiResultItemForm {
-  sti_test_id: string;
-  sample_type: TestTypes;
-  sample_quality: boolean;
-  urine?: Record<string, any>;
-  blood?: Record<string, any>;
-  swab?: Record<string, any>;
-  time_completed: dayjs.Dayjs | null;
-  staff_id?: string;
-}
-
 interface OrdersManagementProps {
   refreshTrigger: number;
 }
 
 const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<StiOrder[]>([]);
-  const [results, setResults] = useState<StiResult[]>([]);
   const [availableTests, setAvailableTests] = useState<StiTest[]>([]);
   const [availablePackages, setAvailablePackages] = useState<StiPackage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,12 +142,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
-  const [resultModalVisible, setResultModalVisible] = useState(false);
   const [statusUpdateModalVisible, setStatusUpdateModalVisible] = useState(false);
   const [viewResult, setViewResult] = useState<any>(null);
   const [viewResultModalVisible, setViewResultModalVisible] = useState(false);
   const [noResultModalVisible, setNoResultModalVisible] = useState(false);
-  const [hasResultModalVisible, setHasResultModalVisible] = useState(false);
   const [invalidStatusModalVisible, setInvalidStatusModalVisible] = useState(false);
   const [cannotEditModalVisible, setCannotEditModalVisible] = useState(false);
   const [cannotEditAtTestingStatus, setCannotEditAtTestingStatus] = useState(false);
@@ -181,15 +154,11 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   // Selected items
   const [selectedOrder, setSelectedOrder] = useState<StiOrder | null>(null);
   const [editingOrder, setEditingOrder] = useState<StiOrder | null>(null);
-  const [editingResult, setEditingResult] = useState<StiResult | null>(null);
-  const [stiTests, setStiTests] = useState<StiTest[]>([]);
-  const [selectedTest, setSelectedTest] = useState<StiTest | null>(null);
   const [form] = Form.useForm();
 
   // Forms
   const [orderForm] = Form.useForm();
-  const [resultForm] = Form.useForm();
-  
+  const paymentMethod = Form.useWatch('paymentMethod', orderForm); // theo dõi real-time
   // Pagination and filters
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -206,18 +175,13 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [amountRange, setAmountRange] = useState<[number?, number?]>([undefined, undefined]);
-  
-  // Result form states
-  const [selectedTestType, setSelectedTestType] = useState<TestTypes>();
-  const [resultFormItems, setResultFormItems] = useState<StiResultItemForm[]>([]);
-  const [nonUpdatedTests, setNonUpdatedTests] = useState<StiTest[]>([]);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Fetch data on mount and refresh
   useEffect(() => {
     fetchOrders();
     fetchAvailableTests();
     fetchAvailablePackages();
-    fetchNonUpdatedTests();
   }, [filters, refreshTrigger]);
 
   const fetchOrders = async () => {
@@ -254,41 +218,14 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     }
   };
 
-  const fetchAvailableTests = async (orderId?: string) => {
+  const fetchAvailableTests = async () => {
     try {
-      if (!orderId) {
-        console.error('orderId is missing for fetchAvailableTests');
-        return;
-      }
-      console.log('Fetching tests for orderId:', orderId);
-      const url = API.STI.GET_TESTS_FROM_ORDER(orderId);
-      const response = await apiClient.get(url);
+      const response = await apiClient.get(API.STI.GET_ALL_TESTS);
       if (response.status === 200 && (response.data as any)?.success) {
-        const data = (response.data as any)?.data || [];
-        setAvailableTests(data);
-        console.log('availableTests:', data);
+        setAvailableTests((response.data as any)?.stitests || (response.data as any)?.data || []);
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách test:', error);
-      message.error('Lỗi khi tải danh sách test:');
-    }
-  };
-
-  const fetchNonUpdatedTests = async (orderId?: string) => {
-    try {
-      if (!orderId) {
-        console.error('orderId is missing for fetch non-updated tests');
-        return;
-      }
-      const url = API.STI.GET_NONUPDATED_TESTS_FROM_ORDER(orderId);
-      const response = await apiClient.get(url);
-      const data = (response.data as any)
-      if (response.status === 200 && data.success) {
-        setAvailableTests(data.data || []);
-      }
-    } catch (error) {
-      console.error('Lỗi khi tải danh sách test:', error);
-      message.error('Lỗi khi tải danh sách test:');
     }
   };
 
@@ -300,17 +237,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách gói test:', error);
-    }
-  };
-
-  const fetchResultsByOrder = async (orderId: string) => {
-    try {
-      const response = await StiResultService.getStiResults(orderId);
-      if (response.success && response.data) {
-        setResults(response.data);
-      }
-    } catch (error) {
-      message.error('Lỗi khi tải kết quả');
     }
   };
 
@@ -380,6 +306,13 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   // Order management handlers
   const handleEditOrder = (order: StiOrder) => {
+    console.log('Opening edit modal for order:', {
+      id: order._id,
+      status: order.order_status,
+      isPaid: order.is_paid,
+      code: order.order_code
+    });
+    
     if (order.order_status === 'Completed' || order.order_status === 'Canceled') {
       setCannotEditModalVisible(true);
       return;
@@ -388,8 +321,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       setCannotEditAtTestingStatus(true);
       return;
     }
+    
     setEditingOrder(order);
     if (order.order_status === 'Booked') fetchConsultants();
+    
     orderForm.setFieldsValue({
       order_date: order.order_date ? dayjs(order.order_date) : null,
       notes: order.notes,
@@ -400,6 +335,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       is_paid: order.is_paid,
       consultant_id: order.consultant_id || null,
     });
+    
     setOrderModalVisible(true);
   };
 
@@ -433,189 +369,17 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     }
   };
 
-  const calculateTotalAmount = () => {
-    const values = orderForm.getFieldsValue();
-    let total = 0;
-    
-    if (values.sti_package_id) {
-      const selectedPackage = availablePackages.find(p => p._id === values.sti_package_id);
-      if (selectedPackage) {
-        total += selectedPackage.price;
-      }
+
+  // Result management handlers - Updated to navigate
+  const handleCreateOrEditResult = (order: StiOrder) => {
+    if (order.order_status !== 'Testing') {
+      setInvalidStatusModalVisible(true);
+      return;
     }
-    
-    if (values.sti_test_items && values.sti_test_items.length > 0) {
-      values.sti_test_items.forEach((testId: string) => {
-        const selectedTest = availableTests.find(t => t._id === testId);
-        if (selectedTest) {
-          total += selectedTest.price;
-        }
-      });
-    }
-    
-    orderForm.setFieldsValue({ total_amount: total });
-  };
-
-  // Result management handlers - Updated to match service types
-  const handleCreateResult = async (order: StiOrder) => {
-    try {
-      const response = await apiClient.get(API.STI.GET_STI_RESULT(order._id));
-      const resData: any = response && response.data ? response.data : {};
-      if (resData.success && resData.data) {
-        setHasResultModalVisible(true);
-        return;
-      }
-    } catch (error) {
-      // Nếu lỗi 404 hoặc không có result thì cho phép tạo mới
-    }
-    setSelectedOrder(order);
-    setEditingResult(null);
-    resultForm.resetFields();
-    setResultFormItems([]);
-    setSelectedTest(null);
-    setSelectedTestType(undefined);
-    fetchAvailableTests(order._id);
-    setResultModalVisible(true);
-  };
-
-  const handleEditResult = async (order: StiOrder) => {
-    try {
-      const response = await apiClient.get(API.STI.GET_STI_RESULT(order._id));
-      const resData: any = response?.data ?? {};
-  
-      if (!resData.success || !resData.data) {
-        message.error('Đơn này chưa có kết quả để cập nhật!');
-        return;
-      }
-  
-      setSelectedOrder(order);
-      setEditingResult(resData.data); // ✅ Gán kết quả thật
-      resultForm.resetFields();
-      setResultFormItems([]); // Bạn có thể thêm mapping lại resultFormItems nếu cần
-      setSelectedTest(null);
-      setSelectedTestType(undefined);
-      fetchNonUpdatedTests(order._id);
-      setResultModalVisible(true);
-    } catch {
-      message.error('Không thể lấy dữ liệu kết quả!');
-    }
-  };
-
-
-  // Reset state khi đóng modal result
-  const handleResultModalClose = () => {
-    setResultModalVisible(false);
-    setSelectedOrder(null);
-    setEditingResult(null);
-    setResultFormItems([]);
-    setSelectedTest(null);
-    setSelectedTestType(undefined);
-  };
-
-  const handleTestChange = (testId: string) => {
-    const selectedTest = availableTests.find(test => test._id === testId);
-    
-    if (selectedTest) {
-      form.resetFields();
-      setSelectedTestType(undefined); // Unmount form fields
-
-      setTimeout(() => {
-        setSelectedTestType(selectedTest.sti_test_type); // Remount đúng loại mới
-        setResultFormItems([{
-          sti_test_id: testId,
-          sample_type: selectedTest.sti_test_type,
-          sample_quality: true,
-          time_completed: dayjs(),
-          staff_id: user?.id
-        }]);
-      }, 0);
-    } else {
-      setSelectedTestType(undefined);
-      setResultFormItems([]);
-    }
-  };
-
-  const handleResultSubmit = async () => {
-    try {
-      const values = resultForm.getFieldsValue();
-      // Build payload từ form values thay vì resultFormItems
-      const normalizeBloodBooleans = (blood: any = {}) => ({
-        ...blood,
-        hiv: blood.hiv ?? false,
-        HBsAg: blood.HBsAg ?? false,
-        anti_HBs: blood.anti_HBs ?? false,
-        anti_HBc: blood.anti_HBc ?? false,
-        anti_HCV: blood.anti_HCV ?? false,
-        HCV_RNA: blood.HCV_RNA ?? false,
-        TPHA_syphilis: blood.TPHA_syphilis ?? false,
-        VDRL_syphilis: blood.VDRL_syphilis ?? false,
-        RPR_syphilis: blood.RPR_syphilis ?? false,
-        treponema_pallidum_IgM: blood.treponema_pallidum_IgM ?? false,
-        treponema_pallidum_IgG: blood.treponema_pallidum_IgG ?? false,
-      });
-      const normalizeUrineBooleans = (urine: any = {}) => ({
-        ...urine,
-        blood: urine.blood ?? false,
-      });
-      const normalizeSwabBooleans = (swab: any = {}) => ({
-        ...swab,
-        PCR_HSV: swab.PCR_HSV ?? false,
-        HPV: swab.HPV ?? false,
-        NAAT_Trichomonas: swab.NAAT_Trichomonas ?? false,
-        rapidAntigen_Trichomonas: swab.rapidAntigen_Trichomonas ?? false,
-        culture_Trichomonas: swab.culture_Trichomonas ?? false,
-      });
-      const stiResultItems: StiResultItem[] = [
-        {
-          sti_test_id: values.sti_test_id,
-          result: {
-            sample_type: selectedTestType || 'blood',     //để blood đỡ
-            sample_quality: values.sample_quality,
-            ...(selectedTestType === 'urine' && values.urine ? { urine: normalizeUrineBooleans(values.urine) } : {}),
-      ...(selectedTestType === 'blood' && values.blood ? { blood: normalizeBloodBooleans(values.blood) } : {}),
-      ...(selectedTestType === 'swab' && values.swab ? { swab: normalizeSwabBooleans(values.swab) } : {}),
-            time_completed: values.time_completed?.toISOString() || new Date().toISOString(),
-            staff_id: user?.id
-          }
-        }
-      ];
-  
-      let response;
-  
-      if (editingResult) {
-        // 🔄 Update kết quả bởi staff
-        const updateData: UpdateStiResultByStaffRequest = {
-          sti_order_id: editingResult.sti_order_id,
-          sti_result_items: stiResultItems
-        };
-  
-        response = await StiResultService.updateStiResultByStaff(editingResult.sti_order_id, updateData);
-      } else if (selectedOrder) {
-        // 🆕 Tạo mới kết quả
-        const createData: CreateStiResultRequest = {
-          sti_order_id: selectedOrder._id,
-          sti_result_items: stiResultItems
-        };
-  
-        response = await StiResultService.createStiResult(selectedOrder._id, createData);
-      }
-  
-      if (response?.success) {
-        message.success(editingResult ? 'Cập nhật kết quả thành công' : 'Tạo kết quả thành công');
-        fetchResultsByOrder(editingResult?.sti_order_id || selectedOrder!._id);
-        setResultModalVisible(false);
-        resultForm.resetFields();
-        setResultFormItems([]);
-      } else {
-        message.error(response?.message || 'Đã có lỗi xảy ra');
-      }
-    } catch (error) {
-      message.error('Vui lòng kiểm tra lại thông tin');
-    }
+    // Navigate to the new result page, which will handle both create and edit
+    navigate(`/staff/orders/${order._id}/result`);
   };
   
-  
-
   const handleStatusUpdateSubmit = async (orderStatus: OrderStatus, is_paid: boolean|string) => {
     if (!selectedOrder) return;
 
@@ -637,6 +401,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       message.error(errorMessage);
     }
   };
+  
 
   const handleViewResults = async (orderId: string) => {
     try {
@@ -651,6 +416,46 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     } catch (error) {
       setNoResultModalVisible(true);
     }
+  };
+
+  const handlePaymentSubmit = async (paymentMethod: 'MoMo' | 'Cash') => {
+    if (!editingOrder) return;
+
+    try {
+      const res = await apiClient.post(API.Payment.CREATE_PAYMENT(editingOrder._id), {
+        paymentMethod: paymentMethod
+      });
+
+      const paymentData = (res.data as any).data;
+
+      if (paymentMethod === 'MoMo' && paymentData?.paymentUrl) {
+        window.location.href = paymentData.paymentUrl;
+      } else {
+        message.success('Tạo thanh toán thành công');
+
+        // Cập nhật lại editingOrder với trạng thái thanh toán
+        setEditingOrder(prev => prev ? {
+          ...prev,
+          is_paid: paymentData.is_paid,
+          paymentMethod: paymentData.paymentMethod,
+        } : prev);
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Lỗi khi tạo thanh toán';
+      message.error(errorMessage);
+    }
+  };
+
+
+  const renderModalFooter = () => {
+    if (!editingOrder) return null;
+    if (['Booked', 'Processing', 'SpecimenCollected'].includes(editingOrder.order_status)) {
+      return [
+        <Button key="back" onClick={() => setOrderModalVisible(false)}>Hủy</Button>,
+        <Button key="submit" type="primary" loading={loading} onClick={handleOrderSubmit}>Lưu</Button>,
+      ];
+    }
+    return [<Button key="back" onClick={() => setOrderModalVisible(false)}>Đóng</Button>];
   };
 
   // Utility functions
@@ -827,6 +632,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       width: 280,
       render: (_: any, record: StiOrder) => {
         const hasResult = !!orderResults[record._id];
+        const canManageResult = record.order_status === 'Testing' ;
+
         return (
           <Space size="small">
             <Tooltip title="Xem chi tiết">
@@ -846,31 +653,13 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 size="small"
               />
             </Tooltip>
-            <Tooltip title="Tạo kết quả">
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  if (record.order_status !== 'Testing') {
-                    setInvalidStatusModalVisible(true);
-                  } else {
-                    handleCreateResult(record);
-                  }
-                }}
-                size="small"
-                disabled={hasResult}
-              />
-            </Tooltip>
             <Tooltip title="Cập nhật kết quả">
               <Button
-                icon={<EditOutlined />}
-                onClick={() => {
-                  const result = orderResults[record._id];
-                  if (result) handleEditResult(record);
-                  else message.warning('Đơn này chưa có kết quả để cập nhật!');
-                }}
+                type="primary"
+                icon={<FormOutlined />}
+                onClick={() => handleCreateOrEditResult(record)}
                 size="small"
-                disabled={!hasResult}
+                disabled={!canManageResult || orderResults[record._id]?.is_testing_completed}
               />
             </Tooltip>
             <Tooltip title="Xem kết quả">
@@ -878,6 +667,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 icon={<FileTextOutlined />}
                 onClick={() => handleViewResults(record._id)}
                 size="small"
+                disabled={!canManageResult}
               />
             </Tooltip>
           </Space>
@@ -885,198 +675,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       }
     }
   ];
-
-  // const resultColumns = [
-  //   {
-  //     title: 'Test',
-  //     dataIndex: 'sti_result_items',
-  //     key: 'test_info',
-  //     render: (items: StiResultItem[]) => (
-  //       <div>
-  //         {items.map((item, index) => (
-  //           <div key={index}>
-  //             <Tag color="blue">Test ID: {item.sti_test_id}</Tag>
-  //             <div>Loại mẫu: {item.result.sample_type}</div>
-  //             <div>Chất lượng: {item.result.sample_quality ? 'Tốt' : 'Kém'}</div>
-  //           </div>
-  //         ))}
-  //       </div>
-  //     )
-  //   },
-  //   {
-  //     title: 'Chẩn đoán',
-  //     dataIndex: 'diagnosis',
-  //     key: 'diagnosis',
-  //     render: (text: string) => text || 'Chưa có chẩn đoán'
-  //   },
-  //   {
-  //     title: 'Trạng thái',
-  //     key: 'status',
-  //     render: (_: any, record: StiResult) => (
-  //       <Space direction="vertical" size="small">
-  //         <Tag color={record.is_confirmed ? 'green' : 'orange'}>
-  //           {record.is_confirmed ? 'Đã xác nhận' : 'Chưa xác nhận'}
-  //         </Tag>
-  //         {record.is_critical && <Tag color="red">Nghiêm trọng</Tag>}
-  //       </Space>
-  //     )
-  //   },
-  //   {
-  //     title: 'Hành động',
-  //     key: 'actions',
-  //     render: (_: any, record: StiResult) => (
-  //       <Space>
-  //         <Button
-  //           icon={<EditOutlined />}
-  //           onClick={() => handleEditResult(record)}
-  //           size="small"
-  //         >
-  //           Sửa
-  //         </Button>
-  //       </Space>
-  //     )
-  //   }
-  // ];
-
-  const renderUrineFields = () => (
-    <div className={styles.groupBox}>
-      <h4 className={styles.groupTitle}>Thông tin nước tiểu</h4>
-      <Row gutter={8} className={styles.formRow}>
-        <Col span={12}>
-          <span className={styles.label}>Color</span>
-          <Form.Item name={['urine', 'color']} noStyle>
-            <Select style={{ width: '100%' }} size="small" options={[
-              { value: 'light yellow', label: 'Light Yellow' },
-              { value: 'clear', label: 'Clear' },
-              { value: 'dark yellow to orange', label: 'Dark Yellow to Orange' },
-              { value: 'dark brown', label: 'Dark Brown' },
-              { value: 'pink or red', label: 'Pink or Red' },
-              { value: 'blue or green', label: 'Blue or Green' },
-              { value: 'black', label: 'Black' },
-            ]} />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <span className={styles.label}>Clarity</span>
-          <Form.Item name={['urine', 'clarity']} noStyle>
-            <Select style={{ width: '100%' }} size="small" options={[
-              { value: 'clearly', label: 'Clearly' },
-              { value: 'cloudy', label: 'Cloudy' },
-            ]} />
-          </Form.Item>
-        </Col>
-      </Row>
-      {/* Gom 3 trường số 1 hàng */}
-      {(['URO', 'GLU', 'KET', 'BIL', 'PRO', 'NIT', 'pH', 'specific_gravity', 'LEU'] as string[]).reduce<string[][]>((rows, key, idx, arr) => {
-        if (idx % 3 === 0) rows.push(arr.slice(idx, idx + 3));
-        return rows;
-      }, []).map((group, i) => (
-        <Row gutter={8} className={styles.formRow} key={i}>
-          {group.map(key => (
-            <Col span={8} key={key}>
-              <span className={styles.label}>{key}</span>
-              <Form.Item name={['urine', key]} noStyle>
-                <InputNumber style={{ width: '100%' }} size="small" />
-              </Form.Item>
-            </Col>
-          ))}
-        </Row>
-      ))}
-      <Row gutter={8} className={styles.formRow}>
-        <Col span={12}>
-          <Form.Item name={['urine', 'blood']} valuePropName="checked" noStyle>
-            <Checkbox>Blood in urine</Checkbox>
-          </Form.Item>
-        </Col>
-      </Row>
-    </div>
-  );
-
-  const renderBloodFields = () => (
-    <div className={styles.groupBox}>
-      <h4 className={styles.groupTitle}>Thông tin máu</h4>
-      {/* Gom 2 trường số 1 hàng */}
-      {(['platelets', 'red_blood_cells', 'white_blood_cells', 'hemo_level'] as string[]).reduce<string[][]>((rows, key, idx, arr) => {
-        if (idx % 2 === 0) rows.push(arr.slice(idx, idx + 2));
-        return rows;
-      }, []).map((group, i) => (
-        <Row gutter={8} className={styles.formRow} key={i}>
-          {group.map(key => (
-            <Col span={12} key={key}>
-              <span className={styles.label}>{key}</span>
-              <Form.Item name={['blood', key]} noStyle>
-                <InputNumber style={{ width: '100%' }} size="small" />
-              </Form.Item>
-            </Col>
-          ))}
-        </Row>
-      ))}
-      {/* Gom 3 checkbox 1 hàng */}
-      {([
-        'hiv', 'HBsAg', 'anti_HBs', 'anti_HBc', 'anti_HCV',
-        'HCV_RNA', 'TPHA_syphilis', 'VDRL_syphilis', 'RPR_syphilis',
-        'treponema_pallidum_IgM', 'treponema_pallidum_IgG'
-      ] as string[]).reduce<string[][]>((rows, key, idx, arr) => {
-        if (idx % 3 === 0) rows.push(arr.slice(idx, idx + 3));
-        return rows;
-      }, []).map((group, i, arr) => {
-        const isLast = i === arr.length - 1 && group.length === 2;
-        return (
-          <Row gutter={8} className={styles.formRow} key={i + 'cb'}>
-            {group.map(key => (
-              <Col span={isLast ? 12 : 8} key={key}>
-                <Form.Item name={['blood', key]} valuePropName="checked" noStyle>
-                  <Checkbox>{key}</Checkbox>
-                </Form.Item>
-              </Col>
-            ))}
-          </Row>
-        );
-      })}
-    </div>
-  );
-
-  const renderSwabFields = () => (
-    <div className={styles.groupBox}>
-      <h4 className={styles.groupTitle}>Thông tin dịch phết</h4>
-      {/* Gom 3 tags 1 hàng */}
-      {(['bacteria', 'virus', 'parasites'] as string[]).reduce<string[][]>((rows, key, idx, arr) => {
-        if (idx % 3 === 0) rows.push(arr.slice(idx, idx + 3));
-        return rows;
-      }, []).map((group, i) => (
-        <Row gutter={8} className={styles.formRow} key={i + 'tags'}>
-          {group.map(key => (
-            <Col span={8} key={key}>
-              <span className={styles.label}>{key}</span>
-              <Form.Item name={['swab', key]} noStyle>
-                <Select mode="tags" style={{ width: '100%' }} placeholder={`Enter ${key}`} size="small" />
-              </Form.Item>
-            </Col>
-          ))}
-        </Row>
-      ))}
-      {/* Gom 3 checkbox 1 hàng */}
-      {([
-        'PCR_HSV', 'HPV', 'NAAT_Trichomonas',
-        'rapidAntigen_Trichomonas', 'culture_Trichomonas'
-      ] as string[]).reduce<string[][]>((rows, key, idx, arr) => {
-        if (idx % 3 === 0) rows.push(arr.slice(idx, idx + 3));
-        return rows;
-      }, []).map((group, i) => (
-        <Row gutter={8} className={styles.formRow} key={i + 'cb'}>
-          {group.map(key => (
-            <Col span={8} key={key}>
-              <Form.Item name={['swab', key]} valuePropName="checked" noStyle>
-                <Checkbox>{key}</Checkbox>
-              </Form.Item>
-            </Col>
-          ))}
-        </Row>
-      ))}
-    </div>
-  );
-
-  const sampleQuality = Form.useWatch('sample_quality', resultForm);
 
   const validTransitions: Record<string, string[]> = {
     Booked: ['Accepted', 'Canceled'],
@@ -1234,20 +832,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         />
       </Card>
 
-      {/* Results Table */}
-      {/* {results.length > 0 && (
-        <Card style={{ marginTop: 16 }}>
-          <h3>Kết quả xét nghiệm</h3>
-          <Table
-            columns={resultColumns}
-            dataSource={results}
-            rowKey="_id"
-            pagination={{ pageSize: 5 }}
-            size="small"
-          />
-        </Card>
-      )} */}
-
       {/* Detail Modal */}
       <Modal
         title="Chi tiết đơn hàng"
@@ -1311,7 +895,11 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         {editingOrder && (
           <div style={{ marginBottom: 16 }}>
             <strong>Mã đơn:</strong> {editingOrder.order_code || editingOrder._id} <br />
-            <strong>Khách hàng:</strong> {editingOrder.customer_name || editingOrder.customer?.full_name || editingOrder.customer_id?.full_name || 'N/A'}
+            <strong>Khách hàng:</strong> {editingOrder.customer_name || editingOrder.customer?.full_name || editingOrder.customer_id?.full_name || 'N/A'} <br/>
+            <strong>Số tiền cần trả:</strong>{' '}
+            {editingOrder.total_amount != null
+              ? editingOrder.total_amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
+              : 'N/A'}
           </div>
         )}
         <Form form={orderForm} layout="vertical">
@@ -1332,16 +920,57 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 </Form.Item>
               )}
               {editingOrder.order_status === 'Accepted' && (
+              <>
                 <Form.Item
-                label="Trạng thái thanh toán"
-                name="is_paid"
-                rules={[{ required: true, message: 'Chọn trạng thái' }]}
+                  label="Loại thanh toán"
+                  name="paymentMethod"
+                  rules={[{ required: true, message: 'Chọn loại thanh toán' }]}
                 >
-                  <Select>
-                    <Option value={false}>Chờ thanh toán</Option>
-                    <Option value={true}>Đã thanh toán</Option>
+                  <Select 
+                    placeholder="Chọn loại thanh toán"
+                    disabled={paymentLoading}
+                  >
+                    <Option value="Cash">Thanh toán bằng tiền mặt</Option>
+                    <Option value="MoMo">Thanh toán bằng MoMo</Option>
                   </Select>
                 </Form.Item>
+
+                {/* Debug info - có thể xóa sau khi fix xong */}
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  marginBottom: '12px',
+                  padding: '8px',
+                  background: '#f9f9f9',
+                  borderRadius: '4px'
+                }}>
+                  Debug: Order ID = {editingOrder._id} | Status = {editingOrder.order_status} | Paid = {editingOrder.is_paid ? 'Yes' : 'No'}
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {paymentMethod === 'MoMo' && (
+                    <Button
+                      type="primary"
+                      loading={paymentLoading}
+                      onClick={() => handlePaymentSubmit('MoMo')}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? 'Đang xử lý...' : 'Thanh toán qua MoMo'}
+                    </Button>
+                  )}
+                  
+                  {paymentMethod === 'Cash' && (
+                    <Button
+                      type="primary"
+                      loading={paymentLoading}
+                      onClick={() => handlePaymentSubmit('Cash')}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? 'Đang xử lý...' : 'Thanh toán tiền mặt'}
+                    </Button>
+                  )}
+                </div>
+              </>
               )}
               {['Processing', 'SpecimenCollected'].includes(editingOrder.order_status) && (
                 <Form.Item
@@ -1367,63 +996,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           )}
         </Form>
       </Modal>
-
-      {/* Create/Edit Result Modal */}
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FileTextOutlined />
-            {editingResult ? 'Cập nhật kết quả' : 'Tạo kết quả mới'}
-          </div>
-        }
-        open={resultModalVisible}
-        onOk={handleResultSubmit}
-        onCancel={handleResultModalClose}
-        width={520}
-        okText="Lưu"
-        cancelText="Hủy"
-      >
-        <Form form={resultForm} layout="vertical">
-          {/* Các trường form giống create, không đổi UI khi update */}
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Chọn xét nghiệm"
-                name="sti_test_id"
-                rules={[{ required: true, message: 'Vui lòng chọn một xét nghiệm' }]}
-              >
-                <Select
-                  placeholder="Chọn xét nghiệm"
-                  onChange={handleTestChange}
-                  options={availableTests.map(test => ({
-                    label: test.sti_test_name,
-                    value: test._id
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Chất lượng mẫu"
-                name="sample_quality"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="Tốt" unCheckedChildren="Hỏng" />
-              </Form.Item>
-            </Col>
-          </Row>
-          {/* Fields động hiển thị dựa trên test được chọn */}
-          {selectedTestType && sampleQuality && (
-            <div style={{ marginTop: 16 }}>
-              {selectedTestType === 'urine' && renderUrineFields()}
-              {selectedTestType === 'blood' && renderBloodFields()}
-              {selectedTestType === 'swab' && renderSwabFields()}
-            </div>
-          )}
-          {/* ... các trường khác nếu có ... */}
-        </Form>
-      </Modal>
-
 
       {/* Status Update Modal */}
       {selectedOrder && (
@@ -1460,20 +1032,12 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
         <p>Chưa có kết quả xét nghiệm cho đơn này.</p>
       </Modal>
       <Modal
-        open={hasResultModalVisible}
-        onCancel={() => setHasResultModalVisible(false)}
-        footer={null}
-        title="Thông báo"
-      >
-        <p>Đơn này đã có kết quả xét nghiệm. Không thể tạo mới!</p>
-      </Modal>
-      <Modal
         open={invalidStatusModalVisible}
         onCancel={() => setInvalidStatusModalVisible(false)}
         footer={null}
         title="Thông báo"
       >
-        <p>Chỉ có thể tạo kết quả khi đơn hàng ở trạng thái Đang xét nghiệm (Testing).</p>
+        <p>Chỉ có thể tạo/cập nhật kết quả khi đơn hàng ở trạng thái Đang xét nghiệm (Testing).</p>
       </Modal>
       <Modal
         open={cannotEditAtTestingStatus}
@@ -1496,4 +1060,4 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   );
 };
 
-export default OrdersManagement; 
+export default OrdersManagement;
