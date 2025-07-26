@@ -70,6 +70,9 @@ const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrders
 const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
+const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
+
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
 const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/ConsultantStiOrdersPage'));

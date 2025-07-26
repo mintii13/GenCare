@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Typography, Tag, Space, message, Modal, Input, Select, Row, Col, DatePicker } from 'antd';
+import { Card, Button, Table, Typography, Tag, Space, message, Modal, Input, Select, Row, Col, DatePicker, Form } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { EyeOutlined, CalendarOutlined, SearchOutlined } from '@ant-design/icons';
+import { EyeOutlined, CalendarOutlined, SearchOutlined, EditOutlined, ExclamationCircleOutlined, CloseOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
@@ -25,7 +25,7 @@ interface STIOrder {
   order_date: string;
   total_amount: number;
   notes?: string;
-  status?: string;
+  order_status?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +40,10 @@ const OrdersPage: React.FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [packageMap, setPackageMap] = useState<{ [id: string]: string }>({});
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedOrderForEdit, setSelectedOrderForEdit] = useState<STIOrder | null>(null);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [selectedOrderForCancel, setSelectedOrderForCancel] = useState<STIOrder | null>(null);
   
   // Detect if this is staff/admin view based on route
   const isStaffView = location.pathname.includes('/staff/') || location.pathname.includes('/admin/');
@@ -241,9 +245,22 @@ const OrdersPage: React.FC = () => {
     return texts[status] || status;
   };
 
+  // Hiển thị modal chi tiết
   const showOrderDetail = (order: STIOrder) => {
     setSelectedOrder(order);
     setDetailModalVisible(true);
+  };
+
+  // Hiển thị modal edit (không mở modal chi tiết)
+  const showModalForEditOrder = (order: STIOrder) => {
+    setSelectedOrderForEdit(order);
+    setEditModalVisible(true);
+  };
+
+  // Hiển thị modal xác nhận hủy đơn
+  const showCancelConfirmModal = (order: STIOrder) => {
+    setSelectedOrderForCancel(order);
+    setCancelModalVisible(true);
   };
 
   const columns = [
@@ -258,7 +275,6 @@ const OrdersPage: React.FC = () => {
         </div>
       )
     },
-
     {
       title: 'Loại xét nghiệm',
       key: 'type',
@@ -284,8 +300,8 @@ const OrdersPage: React.FC = () => {
     },
     {
       title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      dataIndex: 'order_status',
+      key: 'order_status',
       render: (status: string = 'Booked') => (
         <Tag color={getStatusColor(status)}>
           {getStatusText(status)}
@@ -306,14 +322,171 @@ const OrdersPage: React.FC = () => {
           <Button
             type="link"
             icon={<EyeOutlined />}
-            onClick={() => showOrderDetail(record)}
+            onClick={(e) => {
+              e.stopPropagation(); // Ngăn event bubbling
+              showOrderDetail(record);
+            }}
           >
             Chi tiết
+          </Button>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            disabled={record.order_status !== 'Booked'}
+            onClick={(e) => {
+              e.stopPropagation(); // Ngăn event bubbling
+              showModalForEditOrder(record);
+            }}
+          >
+            Sửa
+          </Button>
+          <Button
+            type="link"
+            danger
+            icon={<CloseOutlined />}
+            disabled={record.order_status !== 'Booked'}
+            onClick={(e) => {
+              e.stopPropagation(); // Ngăn event bubbling
+              showCancelConfirmModal(record);
+            }}
+          >
+            Hủy đơn
           </Button>
         </Space>
       )
     }
   ];
+
+  // Modal chỉnh sửa đơn hàng (đã bỏ trường order_status)
+  const EditOrderModal: React.FC<{
+    visible: boolean;
+    order: STIOrder | null;
+    onClose: () => void;
+    onSubmit: (values: { order_date: string; notes: string }) => void;
+  }> = ({ visible, order, onClose, onSubmit }) => {
+    const [form] = Form.useForm();
+
+    useEffect(() => {
+      if (order) {
+        form.setFieldsValue({
+          order_date: order.order_date ? dayjs(order.order_date) : null,
+          notes: order.notes || '',
+        });
+      }
+    }, [order, form]);
+
+    const handleSubmit = () => {
+      form
+        .validateFields()
+        .then(values => {
+          onSubmit({
+            ...values,
+            order_date: values.order_date.format('YYYY-MM-DD'),
+          });
+        })
+        .catch(info => {
+          console.log('Validate Failed:', info);
+        });
+    };
+
+    return (
+      <Modal
+        title="Chỉnh sửa lịch xét nghiệm"
+        open={visible}
+        onCancel={onClose}
+        onOk={handleSubmit}
+        okText="Cập nhật"
+        cancelText="Hủy"
+        confirmLoading={loading}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            label="Ngày xét nghiệm"
+            name="order_date"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày xét nghiệm' }]}
+          >
+            <DatePicker 
+              picker='date' 
+              format="DD/MM/YYYY" 
+              style={{ width: '100%' }}
+              disabledDate={(current) => {
+                // Không cho chọn ngày trong quá khứ
+                return current && current < dayjs().startOf('day');
+              }}
+            />
+          </Form.Item>
+          <Form.Item label="Ghi chú" name="notes">
+            <Input.TextArea rows={3} placeholder="Nhập ghi chú (tùy chọn)" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    );
+  };
+
+  // Hàm cập nhật đơn hàng (đã bỏ order_status)
+  const handleUpdateOrder = async (values: { order_date: string; notes: string }) => {
+    if (!selectedOrderForEdit) return;
+    
+    try {
+      setLoading(true);
+      
+      const updateEndpoint = API.STI.UPDATE_ORDER(selectedOrderForEdit._id);
+      
+      const response = await apiClient.patch(updateEndpoint, {
+        order_date: values.order_date,
+        notes: values.notes,
+      });
+      
+      if ((response.data as any).success) {
+        toast.success('Cập nhật đơn hàng thành công!');
+        setEditModalVisible(false);
+        setSelectedOrderForEdit(null);
+        fetchOrders(); // Tải lại danh sách
+      } else {
+        message.error((response.data as any).message || 'Cập nhật thất bại');
+      }
+    } catch (error: any) {
+      console.error('Error updating order:', error);
+      message.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Xử lý xác nhận hủy đơn
+  const handleConfirmCancel = async () => {
+    if (!selectedOrderForCancel) return;
+    
+    try {
+      setLoading(true);
+      
+      const updateEndpoint = API.STI.UPDATE_ORDER(selectedOrderForCancel._id);
+      
+      const response = await apiClient.patch(updateEndpoint, {
+        order_status: 'Canceled',
+      });
+      
+      if ((response.data as any).success) {
+        toast.success('Hủy đơn hàng thành công!');
+        setCancelModalVisible(false);
+        setSelectedOrderForCancel(null);
+        fetchOrders(); // Tải lại danh sách
+      } else {
+        message.error((response.data as any).message || 'Hủy đơn thất bại');
+      }
+    } catch (error: any) {
+      console.error('Error canceling order:', error);
+      message.error(error.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Xử lý từ chối hủy đơn
+  const handleRejectCancel = () => {
+    setCancelModalVisible(false);
+    setSelectedOrderForCancel(null);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
@@ -329,7 +502,7 @@ const OrdersPage: React.FC = () => {
         )}
       </div>
 
-      {/* Filter (ngay dưới header, trước bảng) */}
+      {/* Filter */}
       <div className="flex flex-row items-center gap-4 justify-center mb-6">
         <Select
           placeholder="Tất cả trạng thái"
@@ -397,15 +570,17 @@ const OrdersPage: React.FC = () => {
             setPageSize(pageSize);
           },
         }}
-    
         onRowClick={showOrderDetail}
       />
 
       {/* Modal chi tiết đơn hàng */}
       <Modal
         title="Chi tiết lịch xét nghiệm"
-        open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
+        open={detailModalVisible && !editModalVisible}
+        onCancel={() => {
+          setSelectedOrder(null);
+          setDetailModalVisible(false);
+        }}
         footer={[
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             Đóng
@@ -429,10 +604,10 @@ const OrdersPage: React.FC = () => {
                     <Tag color="green">Xét nghiệm lẻ</Tag>
                   )}
                 </div>
-                                 <div>
-                   <Text strong>Ngày xét nghiệm: </Text>
-                   <Text>{dayjs(selectedOrder.order_date).format('DD/MM/YYYY')}</Text>
-                 </div>
+                <div>
+                  <Text strong>Ngày xét nghiệm: </Text>
+                  <Text>{dayjs(selectedOrder.order_date).format('DD/MM/YYYY')}</Text>
+                </div>
                 <div>
                   <Text strong>Tổng tiền: </Text>
                   <Text style={{ color: '#1890ff', fontSize: '16px', fontWeight: 'bold' }}>
@@ -441,8 +616,8 @@ const OrdersPage: React.FC = () => {
                 </div>
                 <div>
                   <Text strong>Trạng thái: </Text>
-                  <Tag color={getStatusColor(selectedOrder.status || 'Booked')}>
-                    {getStatusText(selectedOrder.status || 'Booked')}
+                  <Tag color={getStatusColor(selectedOrder.order_status || 'Booked')}>
+                    {getStatusText(selectedOrder.order_status || 'Booked')}
                   </Tag>
                 </div>
                 {selectedOrder.notes && (
@@ -451,18 +626,61 @@ const OrdersPage: React.FC = () => {
                     <Text>{selectedOrder.notes}</Text>
                   </div>
                 )}
-                                 <div>
-                   <Text strong>Ngày đặt: </Text>
-                   <Text>{dayjs(selectedOrder.createdAt).format('DD/MM/YYYY HH:mm')}</Text>
-                 </div>
+                <div>
+                  <Text strong>Ngày đặt: </Text>
+                  <Text>{dayjs(selectedOrder.createdAt).format('DD/MM/YYYY HH:mm')}</Text>
+                </div>
               </Space>
             </Card>
           </div>
         )}
       </Modal>
+
+      {/* Modal chỉnh sửa đơn hàng */}
+      <EditOrderModal
+        visible={editModalVisible}
+        order={selectedOrderForEdit}
+        onClose={() => {
+          setSelectedOrderForEdit(null);
+          setEditModalVisible(false);
+        }}
+        onSubmit={handleUpdateOrder}
+      />
+
+      {/* Modal xác nhận hủy đơn */}
+      <Modal
+        title="Xác nhận hủy đơn hàng"
+        open={cancelModalVisible}
+        onOk={handleConfirmCancel}
+        onCancel={handleRejectCancel}
+        okText="Có, hủy đơn"
+        cancelText="Không"
+        okButtonProps={{ danger: true }}
+        confirmLoading={loading}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+          <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 22, marginRight: 12 }} />
+          <Text strong>Bạn có chắc chắn muốn hủy đơn hàng này không?</Text>
+        </div>
+        <Text type="secondary">
+          Sau khi hủy, đơn hàng sẽ không thể được khôi phục lại. Vui lòng xác nhận quyết định của bạn.
+        </Text>
+        {selectedOrderForCancel && (
+          <div style={{ marginTop: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 6 }}>
+            <Text strong>Thông tin đơn hàng:</Text>
+            <br />
+            <Text>Mã đơn: {selectedOrderForCancel._id}</Text>
+            <br />
+            <Text>Ngày xét nghiệm: {dayjs(selectedOrderForCancel.order_date).format('DD/MM/YYYY')}</Text>
+            <br />
+            <Text>Tổng tiền: {formatPrice(selectedOrderForCancel.total_amount)}</Text>
+          </div>
+        )}
+      </Modal>
+
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };
 
-export default OrdersPage; 
+export default OrdersPage;

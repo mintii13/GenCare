@@ -4,6 +4,7 @@ import '../models/StiPackage';
 import '../models/StiPackageTest';
 import '../models/StiTest';
 import { JwtPayload } from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 export class StiResultRepository {
     public static async findByOrderId(orderId: string): Promise<IStiResult | null> {
@@ -65,6 +66,21 @@ export class StiResultRepository {
             }).populate('sti_result_items.sti_test_id');
         } catch (error) {
             console.error('Error getting STI result by order:', error);
+            throw error;
+        }
+    }
+
+    public static async completedResult(orderId: string){
+        try {
+            const objOrderId = new mongoose.Types.ObjectId(orderId);
+            const result = await StiResult.findOneAndUpdate(
+                { sti_order_id: objOrderId, is_testing_completed: false},
+                { is_testing_completed: true },
+                { new: true }
+            );
+            return result;
+        } catch (error) {
+            console.error('Completed result error');
             throw error;
         }
     }

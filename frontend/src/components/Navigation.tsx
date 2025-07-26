@@ -111,6 +111,10 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                       <Link to="/sti-assessment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Đánh giá sàng lọc STI
                       </Link>
+
+                      <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử đặt lịch STI
+                      </Link>
                     </>
                   )}
                 </div>

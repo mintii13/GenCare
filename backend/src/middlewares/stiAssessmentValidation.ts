@@ -87,12 +87,6 @@ const stiAssessmentSchema = Joi.object({
         'drug_treatment_center', 'emergency_department', 'family_planning_clinic', 'high_prevalence_area'
     ).default('normal'),
 
-    test_purpose: Joi.string().valid('routine', 'symptoms', 'partner_positive', 'pregnancy', 'new_relationship', 'occupational').required().messages({
-        'any.required': 'Mục đích xét nghiệm là bắt buộc',
-        'any.only': 'Mục đích xét nghiệm không hợp lệ'
-    }),
-
-    urgency: Joi.string().valid('normal', 'urgent', 'emergency').default('normal')
 });
 
 // ✅ ENHANCED: Additional custom validation
@@ -123,15 +117,6 @@ const customValidation = (req: Request, res: Response, next: NextFunction) => {
             success: false,
             message: 'Validation error',
             errors: ['Thông tin cervix chỉ áp dụng cho người chuyển giới']
-        });
-    }
-
-    // Custom validation: pregnancy test purpose should match is_pregnant
-    if (data.test_purpose === 'pregnancy' && data.is_pregnant !== true) {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation error',
-            errors: ['Mục đích pregnancy phải kèm theo is_pregnant = true']
         });
     }
 

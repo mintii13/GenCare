@@ -8,7 +8,6 @@ export interface StiResultItem {
   sti_test_id: string;
   result: {
     sample_type: TestTypes;
-    sample_quality: boolean;
     urine?: {
       color?: string;
       clarity?: string;
