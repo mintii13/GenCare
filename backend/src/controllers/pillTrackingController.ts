@@ -70,17 +70,8 @@ router.get('/monthly', authenticateToken, async (req: Request, res: Response): P
 router.patch('/mark-as-taken/:id', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {
         const pill_tracking_id = req.params.id;
-        const taken_time = req.body.taken_time;
 
-        if (!taken_time) {
-            res.status(400).json({
-                success: false, 
-                message: 'is_taken is required' 
-            });
-            return;
-        }
-
-        const result = await PillTrackingService.markPillAsTaken(pill_tracking_id, taken_time);
+        const result = await PillTrackingService.markPillAsTaken(pill_tracking_id);
 
         if (result.success) {
             res.status(200).json(result);
@@ -157,9 +148,6 @@ router.patch('/', authenticateToken, authorizeRoles('customer'), async (req: Req
 
             if (is_taken != null){
                 updateRequest.is_taken = is_taken;
-            }
-            if (is_active != null){
-                updateRequest.is_active = is_active;
             }
             if (reminder_enabled !== undefined) 
                 updateRequest.reminder_enabled = reminder_enabled;
