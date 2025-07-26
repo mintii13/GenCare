@@ -621,9 +621,9 @@ export class PillTrackingService{
         }
     }
 
-    public static async markPillAsTaken(pill_track_id: string, taken_time: string) {
+    public static async markPillAsTaken(pill_track_id: string) {
         try {
-            const updated = await PillTrackingRepository.updateTakenStatus(pill_track_id, taken_time);
+            const updated = await PillTrackingRepository.updateTakenStatus(pill_track_id);
 
             if (!updated) {
                 return { 

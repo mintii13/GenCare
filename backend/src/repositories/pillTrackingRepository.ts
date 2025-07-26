@@ -343,7 +343,6 @@ export class PillTrackingRepository {
             const result = await PillTracking.find({
                 user_id: userId,
                 pill_start_date: { $gte: start, $lte: end },
-                is_active: true,
             }).select('_id is_taken pill_start_date').sort({ pill_start_date: 1 });
             return result.map(item => ({
                 _id: item._id,
@@ -356,12 +355,12 @@ export class PillTrackingRepository {
         }
     }
 
-    public static async updateTakenStatus(pill_tracking_id: string, taken_time: string){
+    public static async updateTakenStatus(pill_tracking_id: string){
         try {
             const pillTrackingId = new mongoose.Types.ObjectId(pill_tracking_id)
             return await PillTracking.findByIdAndUpdate(
                 pillTrackingId,
-                { is_taken: true, taken_time: new Date(taken_time) },
+                { is_taken: true },
                 { new: true }
             );
         } catch (error) {
