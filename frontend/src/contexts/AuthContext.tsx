@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         
       } catch (error: any) {
-        if (error.name === 'AbortError' || error.message === 'Request timeout') {
+        if (error.name === 'AbortError' || error.name === 'CanceledError' || error.message === 'Request timeout' || error.message === 'canceled') {
           // Request was cancelled, ignore
           return;
         }

@@ -95,6 +95,7 @@ const MySTIResults: React.FC = () => {
     };
 
     const getStatusColor = (status: string) => {
+        if (!status) return 'default';
         switch (status.toLowerCase()) {
             case 'completed':
                 return 'green';
@@ -112,6 +113,7 @@ const MySTIResults: React.FC = () => {
     };
 
     const getStatusText = (status: string) => {
+        if (!status) return 'Không xác định';
         switch (status.toLowerCase()) {
             case 'completed':
                 return 'Hoàn thành';
@@ -162,11 +164,11 @@ const MySTIResults: React.FC = () => {
             title: 'Kết quả',
             key: 'result_status',
             render: (record: STIResult) => {
-                if (!record.result) {
+                if (!record?.result) {
                     return <Text type="secondary">Chưa có kết quả</Text>;
                 }
                 
-                if (record.result.is_confirmed) {
+                if (record.result?.is_confirmed) {
                     return (
                         <Tag color="green">
                             <FileTextOutlined style={{ marginRight: 4 }} />
@@ -190,8 +192,8 @@ const MySTIResults: React.FC = () => {
                 <Button
                     type="primary"
                     icon={<EyeOutlined />}
-                    onClick={() => handleViewDetail(record.order_id)}
-                    disabled={!record.result}
+                    onClick={() => handleViewDetail(record?.order_id)}
+                    disabled={!record?.result}
                 >
                     Xem chi tiết
                 </Button>
@@ -306,8 +308,8 @@ const MySTIResults: React.FC = () => {
                 <Card>
                     <Table
                         columns={columns}
-                        dataSource={results}
-                        rowKey="order_id"
+                        dataSource={results || []}
+                        rowKey={(record) => record?.order_id || record?._id || Math.random().toString()}
                         pagination={{
                             pageSize: 10,
                             showSizeChanger: true,

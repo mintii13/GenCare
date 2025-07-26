@@ -10,7 +10,11 @@ import {
   FaBlog
 } from 'react-icons/fa';
 
-const StaffSidebar: React.FC = () => {
+interface StaffSidebarProps {
+  isOpen: boolean;
+}
+
+const StaffSidebar: React.FC<StaffSidebarProps> = ({ isOpen }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
 
@@ -49,9 +53,12 @@ const StaffSidebar: React.FC = () => {
   ];
 
   return (
-    <div className="w-64 bg-white shadow-lg min-h-screen">
+    <div className={`fixed left-0 top-16 h-[calc(100vh-10rem)] bg-white shadow-lg transition-all duration-300 z-40 ${
+      isOpen ? 'w-64' : 'w-0'
+    } overflow-hidden`}>
+      <div className="h-full overflow-y-auto pt-6 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+        <div className="px-6 pb-6 border-b border-gray-200">
         <div className="flex items-center">
           <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
             <FaUsers className="w-5 h-5 text-white" />
@@ -64,7 +71,7 @@ const StaffSidebar: React.FC = () => {
       </div>
 
       {/* Menu */}
-      <nav className="mt-6">
+        <nav className="mt-6 flex-1">
         {menuItems.map((section, sectionIndex) => (
           <div key={sectionIndex} className="mb-6">
             <h3 className="px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -93,8 +100,9 @@ const StaffSidebar: React.FC = () => {
           </div>
         ))}
       </nav>
+        
       {/* Logout button at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
+        <div className="mt-auto px-6 pt-6 border-t border-gray-200">
         <button
           onClick={logout}
           className="flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
@@ -102,6 +110,7 @@ const StaffSidebar: React.FC = () => {
           <FaSignOutAlt className="w-5 h-5 mr-3" />
           Đăng xuất
         </button>
+        </div>
       </div>
     </div>
   );

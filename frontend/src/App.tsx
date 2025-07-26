@@ -105,7 +105,6 @@ const AppContent: React.FC = () => {
     <>      
       <Toaster position="top-right" />
       <AutoConfirmNotification />
-      <Layout>
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="flex flex-col items-center space-y-4">
@@ -114,6 +113,81 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         }>
+        <Routes>
+          {/* Dashboard Routes - No Layout wrapper to avoid Footer overlap */}
+          <Route path="/consultant/*" element={<ConsultantLayout />}>
+            <Route index element={<Navigate to="schedule" replace />} />
+            <Route path="schedule" element={<AppointmentManagement />} />
+            <Route path="clients" element={<div className="p-4">Khách hàng</div>} />
+            <Route path="online" element={<div className="p-4">Tư vấn trực tuyến</div>} />
+            <Route path="records" element={<div className="p-4">Hồ sơ tư vấn</div>} />
+            <Route path="qa" element={<div className="p-4">Q&A / Câu hỏi</div>} />
+            <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
+            <Route path="special-schedule" element={<div className="p-4">Điều chỉnh lịch đặc biệt</div>} />
+            <Route path="unavailable" element={<div className="p-4">Ngày nghỉ</div>} />
+            <Route path="blogs" element={<ConsultantBlogList />} />
+            <Route path="sti-results" element={<StiResultsManagement />} />
+            <Route path="documents" element={<div className="p-4">Tài liệu chuyên môn</div>} />
+            <Route path="training" element={<div className="p-4">Đào tạo & Cập nhật</div>} />
+            <Route path="consultation-stats" element={<ConsultationStats />} />
+            <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
+            <Route path="revenue" element={<div className="p-4">Báo cáo doanh thu</div>} />
+            <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
+          </Route>
+
+          {/* Customer Dashboard Routes */}
+          <Route 
+            path="/dashboard/customer/*" 
+            element={
+              <RoleGuard allowedRoles={['customer']}>
+                <CustomerLayout />
+              </RoleGuard>
+            }
+          >
+            <Route index element={<Navigate to="my-appointments" replace />} />
+            <Route path="profile" element={<UserProfilePage />} />
+            <Route path="my-appointments" element={<MyAppointments />} />
+            <Route path="my-sti-results" element={<MySTIResults />} />
+            <Route path="consultants" element={<ConsultantList />} />
+            <Route path="menstrual-cycle" element={<MenstrualCyclePage />} />
+            <Route path="feedback" element={<CustomerFeedbackPage />} />
+            <Route path="sti-assessment-history" element={<STIAssessmentHistory />} />
+            <Route path="settings" element={<div className="p-4">Trang Cài đặt</div>} /> 
+          </Route>
+
+          {/* Admin Dashboard routes */}
+          <Route path="/admin/*" element={<AdminLayout />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="test-packages" element={<div className="p-4">Quản lý gói xét nghiệm</div>} />
+            <Route path="blogs" element={<AdminBlogManagement />} />
+            <Route path="revenue" element={<div className="p-4">Thống kê doanh thu</div>} />
+            <Route path="appointments" element={<AdminAppointmentManagement />} />
+            <Route path="sti-management" element={<AdminSTIManagement />} />
+            <Route path="audit-log" element={<AdminAuditLog />} />
+            <Route path="settings" element={<div className="p-4">Cài đặt hệ thống</div>} />
+          </Route>
+
+          {/* Staff Dashboard routes */}
+          <Route path="/staff/*" element={<StaffDashboard />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<div className="p-4">Trang tổng quan nhân viên</div>} />
+            <Route path="appointments" element={<StaffAppointmentManagement />} />
+            <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
+            <Route path="sti-management" element={<STIManagement />} />
+            <Route path="sti-orders" element={<StiOrdersManagement />} />
+            <Route path="sti-results" element={<StiResultsManagement />} />
+            <Route path="test-schedules" element={<TestScheduleManagement />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="consultants" element={<div className="p-4">Quản lý chuyên gia</div>} />
+            <Route path="blogs" element={<StaffBlogManagement />} />
+            <Route path="settings" element={<div className="p-4">Cài đặt</div>} />
+          </Route>
+
+          {/* Public Routes with Layout wrapper */}
+          <Route path="/*" element={
+            <Layout>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
@@ -128,78 +202,41 @@ const AppContent: React.FC = () => {
             <Route path="/about" element={<AboutUs />} />
             <Route path="/login" element={<LoginRedirect />} />
             
-            {/* Hợp nhất các route profile về một đường dẫn duy nhất */}
             <Route path="/user-profile" element={
               <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']}>
                 <UserProfilePage />
               </RoleGuard>
             } />
-            {/* Các route cũ sẽ được redirect về /user-profile */}
             <Route path="/profile" element={<Navigate to="/user-profile" replace />} />
             <Route path="/user/profile" element={<Navigate to="/user-profile" replace />} />
             
             <Route path="/oauth-success" element={<OAuthSuccess />} />
             
-            {/* Generic dashboard route - redirect to role-specific dashboard */}
             <Route path="/dashboard" element={
               <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']}>
                 <DashboardRedirect />
               </RoleGuard>
             } />
-            
 
             <Route path="/blogs" element={<BlogListPage />} />
             <Route path="/blogs/create" element={<BlogFormPage />} />
             <Route path="/blogs/:blogId" element={<BlogDetailPage />} />
             <Route path="/blogs/:blogId/edit" element={<BlogFormPage />} />
 
-
-            <Route path="/consultant/*" element={<ConsultantLayout />}>
-              <Route path="schedule" element={<AppointmentManagement />} />
-              <Route path="clients" element={<div>Khách hàng</div>} />
-              <Route path="online" element={<div>Tư vấn trực tuyến</div>} />
-              <Route path="records" element={<div>Hồ sơ tư vấn</div>} />
-              <Route path="qa" element={<div>Q&A / Câu hỏi</div>} />
-
-              <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
-              <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
-              <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
-              <Route path="blogs" element={<ConsultantBlogList />} />
-              <Route path="sti-results" element={<StiResultsManagement />} />
-              <Route path="documents" element={<div>Tài liệu chuyên môn</div>} />
-              <Route path="training" element={<div>Đào tạo & Cập nhật</div>} />
-              <Route path="consultation-stats" element={<ConsultationStats />} />
-              <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
-              <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
-              <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
-            </Route>
-
-            {/* Customer Dashboard Routes */}
-            <Route 
-              path="/dashboard/customer" 
-              element={
-                <RoleGuard allowedRoles={['customer']}>
-                  <CustomerLayout />
-                </RoleGuard>
-              }
-            >
-              <Route index element={<Navigate to="my-appointments" replace />} />
-              <Route path="profile" element={<UserProfilePage />} /> {/* Thêm route profile vào đây */}
-              <Route path="my-appointments" element={<MyAppointments />} />
-              <Route path="my-sti-results" element={<MySTIResults />} />
-              <Route path="consultants" element={<ConsultantList />} />
-              <Route path="menstrual-cycle" element={<MenstrualCyclePage />} />
-              <Route path="feedback" element={<CustomerFeedbackPage />} />
-              <Route path="sti-assessment-history" element={<STIAssessmentHistory />} />
-              <Route path="settings" element={<div>Trang Cài đặt</div>} /> 
-            </Route>
-
-            {/* Redirects */}
-            <Route path="/user-profile" element={<Navigate to="/dashboard/customer/profile" replace />} /> {/* Redirect từ đường dẫn cũ */}
+                {/* Legacy Redirects - Common old URLs */}
             <Route path="/my-appointments" element={<Navigate to="/dashboard/customer/my-appointments" replace />} />
             <Route path="/consultants" element={<Navigate to="/dashboard/customer/consultants" replace />} />
             <Route path="/my-sti-results" element={<Navigate to="/dashboard/customer/my-sti-results" replace />} />
+                
+                {/* Customer Legacy Routes - Old /customer/* URLs */}
             <Route path="/customer" element={<Navigate to="/dashboard/customer" replace />} />
+                <Route path="/customer/appointments" element={<Navigate to="/dashboard/customer/my-appointments" replace />} />
+                <Route path="/customer/my-appointments" element={<Navigate to="/dashboard/customer/my-appointments" replace />} />
+                <Route path="/customer/consultants" element={<Navigate to="/dashboard/customer/consultants" replace />} />
+                <Route path="/customer/sti-results" element={<Navigate to="/dashboard/customer/my-sti-results" replace />} />
+                <Route path="/customer/my-sti-results" element={<Navigate to="/dashboard/customer/my-sti-results" replace />} />
+                <Route path="/customer/profile" element={<Navigate to="/dashboard/customer/profile" replace />} />
+                <Route path="/customer/dashboard" element={<Navigate to="/dashboard/customer" replace />} />
             <Route path="/customer/*" element={<Navigate to="/dashboard/customer" replace />} />
             
             {/* STI Booking routes */}
@@ -213,12 +250,8 @@ const AppContent: React.FC = () => {
                 <OrdersPage />
               </RoleGuard>
             } />
-            <Route path="/sti-booking/multiple" element={
-              <Navigate to="/sti-booking/book" replace />
-            } />
-            <Route path="/sti-booking/consultation" element={
-              <Navigate to="/sti-booking/book" replace />
-            } />
+                <Route path="/sti-booking/multiple" element={<Navigate to="/sti-booking/book" replace />} />
+                <Route path="/sti-booking/consultation" element={<Navigate to="/sti-booking/book" replace />} />
             
             {/* STI Assessment routes */}
             <Route path="/sti-assessment" element={
@@ -231,59 +264,25 @@ const AppContent: React.FC = () => {
                 <STIAssessmentHistory />
               </RoleGuard>
             } />
-            {/* Appointment routes - Bảo vệ bằng RoleGuard */}
+                
             <Route path="/appointment" element={
               <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']}>
                 <Navigate to="/my-appointments" replace />
               </RoleGuard>
             } />
             
-            {/* Consultation routes - Bảo vệ bằng RoleGuard */}
             <Route path="/consultation/book" element={<Navigate to="/consultation/book-appointment" replace />} />
             <Route path="/consultation/book-appointment" element={
               <RoleGuard allowedRoles={['customer']}>
                 <BookAppointment />
               </RoleGuard>
             } />
-            
-            {/* Admin Dashboard routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route path="overview" element={<AdminDashboard />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="test-packages" element={<div>Quản lý gói xét nghiệm</div>} />
-              <Route path="blogs" element={<AdminBlogManagement />} />
-              <Route path="revenue" element={<div>Thống kê doanh thu</div>} />
-              <Route path="appointments" element={<AdminAppointmentManagement />} />
-              <Route path="sti-management" element={<AdminSTIManagement />} />
-              <Route path="audit-log" element={<AdminAuditLog />} />
-              <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
-            </Route>
-
-            {/* Staff Dashboard routes */}
-            <Route path="/staff/*" element={<StaffDashboard />}>
-              <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
-              <Route path="appointments" element={<StaffAppointmentManagement />} />
-              <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
-              <Route path="sti-management" element={<STIManagement />} />
-              <Route path="sti-orders" element={<StiOrdersManagement />} />
-              <Route path="sti-results" element={<StiResultsManagement />} />
-              <Route path="test-schedules" element={<TestScheduleManagement />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
-              <Route path="blogs" element={<StaffBlogManagement />} />
-              <Route path="settings" element={<div>Cài đặt</div>} />
-            </Route>
-
-            {/* Catch deprecated customer dashboard routes and redirect */}
-            <Route path="/dashboard/customer" element={<Navigate to="/my-appointments" replace />} />
-            <Route path="/dashboard/customer/*" element={<Navigate to="/my-appointments" replace />} />
-            <Route path="/dashboard/customer/my-appointments" element={<MyAppointments />} />
-            <Route path="/dashboard/customer/my-sti-results" element={<MySTIResults />} />
-            <Route path="/dashboard/customer/consultants" element={<ConsultantList />} />
           </Routes>
-        </Suspense>
         <LoginModal isOpen={isModalOpen} onClose={closeModal} initialMode={modalMode} />
       </Layout>
+          } />
+        </Routes>
+      </Suspense>
     </>
   );
 };

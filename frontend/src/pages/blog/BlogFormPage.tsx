@@ -48,7 +48,6 @@ const BlogFormPage: React.FC = () => {
     },
     content: {
       allowHtml: true,
-      maxLength: 50000,
       trimWhitespace: true,
       allowedTags: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code']
     }
@@ -130,7 +129,6 @@ const BlogFormPage: React.FC = () => {
         // For content, allow HTML but sanitize dangerous elements
         sanitizedValue = sanitizeText(value, {
           allowHtml: true,
-          maxLength: 50000,
           trimWhitespace: false,
           allowedTags: sanitizeConfigs.content.allowedTags
         });
@@ -292,7 +290,7 @@ const BlogFormPage: React.FC = () => {
                 <p className="mt-1 text-sm text-red-600">{formErrors.content}</p>
               )}
               <p className="mt-1 text-sm text-gray-500">
-                {formData.content.length}/50,000 ký tự
+                {formData.content.length} ký tự
               </p>
             </div>
 

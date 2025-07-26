@@ -330,6 +330,7 @@ const MenstrualCyclePage: React.FC = () => {
             <CycleCalendar 
               cycles={cycles} 
               onRefresh={refreshCycle}
+              pillSchedules={schedules}
             />
           </TabsContent>
 

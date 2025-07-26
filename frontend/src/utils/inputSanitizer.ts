@@ -61,7 +61,7 @@ export const sanitizeText = (input: string, options: SanitizeOptions = {}): stri
   
   const {
     allowHtml = false,
-    maxLength = 10000,
+    maxLength,
     trimWhitespace = true,
     allowedTags = [],
     removeEmptyLines = false
@@ -86,8 +86,8 @@ export const sanitizeText = (input: string, options: SanitizeOptions = {}): stri
     sanitized = escapeHtml(sanitized);
   }
   
-  // Truncate if too long
-  if (sanitized.length > maxLength) {
+  // Truncate if too long and maxLength is specified
+  if (maxLength && sanitized.length > maxLength) {
     sanitized = sanitized.substring(0, maxLength);
   }
   

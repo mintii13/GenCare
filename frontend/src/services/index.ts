@@ -15,7 +15,7 @@ export * from './menstrualCycleService';
 export { STIAssessmentService } from './stiAssessmentService';
 export { default as homeService } from './homeService';
 export { STIOrderService } from './stiOrderService';
-export { STITestService, STIPackageService } from './stiService';
+export { stiService } from './stiService';
 
 // Re-export commonly used types
 export type {

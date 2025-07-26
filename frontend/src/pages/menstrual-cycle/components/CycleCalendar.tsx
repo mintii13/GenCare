@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/Input';
 import { CycleData, menstrualCycleService } from '../../../services/menstrualCycleService';
+import { PillSchedule } from '../../../services/pillTrackingService';
 import { toast } from 'react-hot-toast';
 import MoodModal from './MoodModal';
 import { 
@@ -21,12 +22,14 @@ import {
   FaFrown,
   FaMeh,
   FaRegCircle,
-  FaTint
+  FaTint,
+  FaCheck
 } from 'react-icons/fa';
 
 interface CycleCalendarProps {
   cycles: CycleData[];
   onRefresh: () => void;
+  pillSchedules?: PillSchedule[]; // Thêm prop để hiển thị dấu tích khi đã gửi mail nhắc nhở
 }
 
 interface MoodData {
@@ -52,7 +55,7 @@ function customMenstrualToast(message: string, type: 'success' | 'error' = 'succ
   ));
 }
 
-const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
+const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSchedules = [] }) => {
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<Date[]>([]);
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -210,26 +213,44 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
         return;
       }
 
-      // Nếu không còn ngày nào
+      // Nếu không còn ngày nào - backend validation yêu cầu ít nhất 1 ngày
+      // Gọi reset API để xóa toàn bộ cycle data thay vì gửi array rỗng
       if (updatedPeriodDays.length === 0) {
-        await menstrualCycleService.updateCycle({ period_days: [] });
-        customMenstrualToast(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} - chu kì đã trống`, 'success');
+        console.log('🔍 [DEBUG] All period days removed, calling reset API');
+        try {
+          await menstrualCycleService.resetAllData();
+          customMenstrualToast(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} - đã reset toàn bộ chu kì`, 'success');
+        } catch (resetError: any) {
+          console.error('🔍 [DEBUG] Reset API failed:', resetError);
+          handleDetailedError(resetError, 'Lỗi khi reset chu kì');
+        }
         await onRefresh();
         return;
       }
 
       // Cập nhật với danh sách mới
       const periodDaysStrings = updatedPeriodDays.map(day => getLocalDateString(day));
+      
+      // Debug logging
+      console.log('🔍 [DEBUG] Remaining period days:', updatedPeriodDays.length);
+      console.log('🔍 [DEBUG] Period day strings:', periodDaysStrings);
+      
+      // Validation check before sending
+      if (periodDaysStrings.length === 0) {
+        console.error('🔍 [DEBUG] Attempting to send empty period_days array');
+        customMenstrualToast('Lỗi: Không thể gửi danh sách ngày trống', 'error');
+        return;
+      }
+      
       await menstrualCycleService.updateCycle({
-        period_days: periodDaysStrings,
-        notes: undefined
+        period_days: periodDaysStrings
       });
 
       customMenstrualToast(`Đã xóa ngày ${dateToRemove.toLocaleDateString('vi-VN')} khỏi chu kì`, 'success');
       await onRefresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Lỗi khi xóa ngày:', error);
-      customMenstrualToast('Lỗi khi xóa ngày khỏi chu kì', 'error');
+      handleDetailedError(error, 'Lỗi khi xóa ngày khỏi chu kì');
     }
   };
 
@@ -256,6 +277,63 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
     setShowMoodModal(false);
     setSelectedDateForMood(null);
     setMoodModalSavedSuccessfully(false);
+  };
+
+  // Helper function to parse and display detailed errors
+  const handleDetailedError = (error: any, defaultMessage: string) => {
+    let errorMessage = defaultMessage;
+    
+    if (error.response?.data) {
+      const backendError = error.response.data;
+      
+      if (backendError.message) {
+        errorMessage = backendError.message;
+      }
+      
+      // If there are specific validation errors, show them
+      if (backendError.errors && Array.isArray(backendError.errors)) {
+        const detailedErrors = backendError.errors.join(', ');
+        errorMessage = `${backendError.message || 'Validation Error'}: ${detailedErrors}`;
+      }
+      
+      // Log detailed error info
+      console.error('🔍 [DEBUG] Backend error details:', {
+        success: backendError.success,
+        message: backendError.message,
+        errors: backendError.errors,
+        fullResponse: backendError
+      });
+    }
+    
+    // Show detailed error to user
+    customMenstrualToast(errorMessage, 'error');
+    
+    // For multiple validation errors, show detailed modal
+    if (error.response?.data?.errors?.length > 1) {
+      const errorList = error.response.data.errors.map((err: string, idx: number) => 
+        `${idx + 1}. ${err}`
+      ).join('\n');
+      
+      // Show comprehensive error modal
+      const modalContent = `
+🚨 CHI TIẾT LỖI VALIDATION:
+
+${errorList}
+
+💡 CÁCH KHẮC PHỤC:
+• Kiểm tra lại dữ liệu nhập vào
+• Đảm bảo khoảng cách ít nhất 21 ngày giữa các chu kì
+• Không chọn ngày trong tương lai
+• Chọn ít nhất 1 ngày kinh nguyệt
+
+Vui lòng thử lại sau khi điều chỉnh!
+      `.trim();
+      
+      alert(modalContent);
+    } else if (error.response?.data?.errors?.length === 1) {
+      // Single error - show inline with toast message
+      console.log('🔍 [DEBUG] Single validation error:', error.response.data.errors[0]);
+    }
   };
 
   const saveCycle = async () => {
@@ -310,6 +388,14 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
         notes: finalNotes || undefined
       };
 
+      // Debug logging
+      console.log('🔍 [DEBUG] saveCycle sending data:', {
+        period_days_count: allExistingPeriodDays.length,
+        period_days: allExistingPeriodDays,
+        notes_length: finalNotes ? finalNotes.length : 0,
+        has_mood_data: Object.keys(dayMoodData).length > 0
+      });
+
       const response = await menstrualCycleService.processCycle(requestData);
 
       if (response && response.success) {
@@ -323,7 +409,8 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
         customMenstrualToast(`Lỗi khi lưu chu kì: ${response.message || 'Unknown error'}`, 'error');
       }
     } catch (error: any) {
-      customMenstrualToast('Lỗi khi lưu chu kì', 'error');
+      console.error('Lỗi khi lưu chu kì:', error);
+      handleDetailedError(error, 'Lỗi khi lưu chu kì');
     } finally {
       setIsSaving(false);
     }
@@ -434,6 +521,24 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
     return null;
   };
 
+  // Hàm kiểm tra xem ngày này có mail nhắc nhở thuốc tránh thai đã được gửi hay chưa
+  const hasReminderEmailSent = (date: Date): boolean => {
+    if (!pillSchedules.length) return false;
+    
+    const dateString = getLocalDateString(date);
+    
+    // Tìm pill schedule cho ngày này
+    const pillForDay = pillSchedules.find(pill => {
+      const pillDate = getLocalDateString(new Date(pill.pill_start_date));
+      return pillDate === dateString;
+    });
+    
+    if (!pillForDay || !pillForDay.reminder_sent_timestamps) return false;
+    
+    // Kiểm tra xem có ít nhất 1 email đã được gửi cho ngày này hay chưa
+    return pillForDay.reminder_sent_timestamps.length > 0;
+  };
+
   const getTileContent = ({ date, view }: { date: Date; view: string }) => {
     if (view !== 'month') return null;
 
@@ -507,6 +612,17 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
              onMouseEnter={(e) => handleMoodHover(e, moodData)}
              onMouseLeave={handleMoodLeave}>
           <MoodIcon />
+        </div>
+      );
+    }
+
+    // Thêm dấu tích cho ngày đã gửi mail nhắc nhở thuốc tránh thai
+    if (hasReminderEmailSent(date)) {
+      content.push(
+        <div key="pill-reminder" 
+             className="absolute top-0 left-0 text-xs"
+             title="Đã gửi mail nhắc nhở uống thuốc tránh thai">
+          <FaCheck className="text-green-600 bg-white rounded-full border border-green-600 p-0.5" style={{ fontSize: '10px' }} />
         </div>
       );
     }
@@ -605,6 +721,10 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh }) => {
               <div className="flex items-center gap-2">
                 <FaRegCircle className="text-pink-300 text-sm" />
                 <span className="font-medium">Dự đoán</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaCheck className="text-green-600 bg-white rounded-full border border-green-600 p-0.5 text-xs" />
+                <span className="font-medium">Đã gửi mail nhắc thuốc</span>
               </div>
             </div>
 

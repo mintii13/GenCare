@@ -27,7 +27,8 @@ import {
   ClearOutlined,
   SettingOutlined
 } from '@ant-design/icons';
-import { STIPackageService, STIPackage, CreateSTIPackageRequest, UpdateSTIPackageRequest, STITest, STITestService } from '../../../../services/stiService';
+import { STIPackageService, STIPackage, CreateSTIPackageRequest, UpdateSTIPackageRequest } from '../../../../services/stiPackageService';
+import { STITest, STITestService } from '../../../../services/stiTestService';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 const { TextArea } = Input;

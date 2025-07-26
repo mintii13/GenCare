@@ -40,7 +40,7 @@ export class MenstrualCycleService {
             }
         }
 
-        console.log(' Processing period days:', period_days.map(d => d.toISOString().split('T')[0]));
+        console.log(' Processing period days:', period_days.map(d => new Date(d).toISOString().split('T')[0]));
 
         // Normalize dates to avoid timezone issues
         const normalizedDates = period_days.map(date => {

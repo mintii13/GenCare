@@ -101,24 +101,11 @@ const BookAppointment: React.FC = () => {
         window.location.replace('/consultants');
       }
 
-      const screeningResults = localStorage.getItem('sti_screening_results');
-      if (screeningResults) {
-        try {
-          const data = JSON.parse(screeningResults);
-          let answersText = '';
-          if (data.answers && typeof data.answers === 'object') {
-            answersText = Object.entries(data.answers)
-              .map(([key, value]) => `- ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-              .join('\n');
-          }
-          const screeningNote = `Kết quả sàng lọc STI:\n- Mức độ nguy cơ: ${data.result?.risk_level}\n- Gói đề xuất: ${data.result?.recommended_package}\n- Lý do: ${(data.result?.reasoning || []).join(', ')}\n- Thời gian sàng lọc: ${data.timestamp ? new Date(data.timestamp).toLocaleString('vi-VN') : ''}\n${answersText ? '\nChi tiết câu trả lời:\n' + answersText : ''}`;
-          setNotes(screeningNote);
-          toast.success('Đã tự động thêm kết quả sàng lọc STI vào ghi chú');
-          localStorage.removeItem('sti_screening_results');
-        } catch (error) {
-          console.error('Error parsing STI screening results:', error);
-          localStorage.removeItem('sti_screening_results');
-        }
+      const screeningNotes = localStorage.getItem('sti_screening_consultation_notes');
+      if (screeningNotes) {
+        setNotes(screeningNotes);
+        toast.success('Đã tự động thêm kết quả sàng lọc STI vào ghi chú');
+        localStorage.removeItem('sti_screening_consultation_notes');
       }
     } else {
       setShowLoginModal(true);
@@ -475,7 +462,7 @@ const BookAppointment: React.FC = () => {
         {/* Login Required */}
         {!isAuthenticated && (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <div className="text-4xl mb-3">🔒</div>
+
             <h2 className="text-lg font-semibold text-gray-800 mb-2">Yêu cầu đăng nhập</h2>
             <p className="text-sm text-gray-600 mb-4">Vui lòng đăng nhập để đặt lịch tư vấn</p>
             <button
@@ -610,7 +597,6 @@ const BookAppointment: React.FC = () => {
         <LoginModal
           isOpen={showLoginModal}
           onClose={() => setShowLoginModal(false)}
-          onSuccess={handleLoginSuccess}
         />
       </div>
     </div>

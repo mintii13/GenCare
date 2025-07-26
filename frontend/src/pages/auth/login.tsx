@@ -36,12 +36,18 @@ const Login: React.FC = () => {
       
       if ((response.data as any)?.success) {
         // Lưu thông tin đăng nhập
-        login((response.data as any).user, (response.data as any).accessToken);
+        const user = (response.data as any).user;
+        login(user, (response.data as any).accessToken);
         
         // Redirect dựa trên role
-        navigateAfterLogin((response.data as any).user, navigate);
+        navigateAfterLogin(user, navigate);
         
-        toast.success('Đăng nhập thành công!');
+        // Thông báo thành công dựa trên role
+        if (user.role === 'customer') {
+          toast.success(`Chào mừng ${user.full_name || user.email}! `);
+        } else {
+          toast.success('Đăng nhập thành công! Đang chuyển hướng...');
+        }
       } else {
         toast.error((response.data as any)?.message || 'Đăng nhập thất bại');
       }

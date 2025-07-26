@@ -300,7 +300,10 @@ const MyAppointments: React.FC = () => {
   };
 
   const handleSortChange = (value: string) => {
-    const [sort_by, sort_order] = value.split('_');
+    // Split từ cuối để xử lý đúng với "appointment_date_asc"
+    const lastUnderscoreIndex = value.lastIndexOf('_');
+    const sort_by = value.substring(0, lastUnderscoreIndex);
+    const sort_order = value.substring(lastUnderscoreIndex + 1);
     setQuery(prev => ({ 
       ...prev, 
       page: 1, 
@@ -588,7 +591,53 @@ const MyAppointments: React.FC = () => {
                 </button>
               </div>
               <div className="space-y-4">
-                {/* Details here */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Chuyên gia</p>
+                    <p className="font-medium">{consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 'Chưa có thông tin'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Chuyên khoa</p>
+                    <p className="font-medium">{consultantDetails[selectedAppointment.consultant_id._id]?.specialization || 'Chưa có thông tin'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Ngày hẹn</p>
+                    <p className="font-medium">{format(new Date(selectedAppointment.appointment_date), 'EEEE, dd/MM/yyyy', { locale: vi })}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Thời gian</p>
+                    <p className="font-medium">{selectedAppointment.start_time} - {selectedAppointment.end_time}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Trạng thái</p>
+                    <Badge variant={statusColors[selectedAppointment.status] as any}>
+                      {statusLabels[selectedAppointment.status]}
+                    </Badge>
+                  </div>
+                  {(selectedAppointment as any).notes && (
+                    <div>
+                      <p className="text-sm text-gray-600">Ghi chú</p>
+                      <p className="font-medium whitespace-pre-wrap">{(selectedAppointment as any).notes}</p>
+                    </div>
+                  )}
+                  {(selectedAppointment as any).meet_link && (
+                    <div>
+                      <p className="text-sm text-gray-600">Link cuộc họp</p>
+                      <a 
+                        href={(selectedAppointment as any).meet_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Tham gia cuộc họp
+                      </a>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-600">Đặt lúc</p>
+                    <p className="font-medium">{format(new Date(selectedAppointment.created_date), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

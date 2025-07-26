@@ -13,36 +13,36 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Core vendor - Essential libraries
-          'vendor-core': ['react', 'react-dom', 'react-router-dom', 'axios'],
+        // manualChunks: {
+        //   // Core vendor - Essential libraries
+        //   'vendor-core': ['react', 'react-dom', 'react-router-dom', 'axios'],
           
-          // UI Libraries - Split for better caching
-          'vendor-antd': ['antd', '@ant-design/icons'],
-          'vendor-radix': [
-            '@radix-ui/react-avatar', '@radix-ui/react-dropdown-menu', 
-            '@radix-ui/react-select', '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-label', '@radix-ui/react-slot', 
-            '@radix-ui/react-switch', '@radix-ui/react-tabs'
-          ],
+        //   // UI Libraries - Split for better caching
+        //   'vendor-antd': ['antd', '@ant-design/icons'],
+        //   'vendor-radix': [
+        //     '@radix-ui/react-avatar', '@radix-ui/react-dropdown-menu', 
+        //     '@radix-ui/react-select', '@radix-ui/react-alert-dialog',
+        //     '@radix-ui/react-label', '@radix-ui/react-slot', 
+        //     '@radix-ui/react-switch', '@radix-ui/react-tabs'
+        //   ],
           
-          // Editor - Heavy components  
+        //   // Editor - Heavy components  
           
-          // Calendar & Date utilities
-          'vendor-calendar': ['react-calendar', 'react-day-picker', 'date-fns'],
+        //   // Calendar & Date utilities
+        //   'vendor-calendar': ['react-calendar', 'react-day-picker', 'date-fns'],
           
-          // Icons - Frequently used
-          'vendor-icons': ['lucide-react', 'react-icons', '@radix-ui/react-icons'],
+        //   // Icons - Frequently used
+        //   'vendor-icons': ['lucide-react', 'react-icons', '@radix-ui/react-icons'],
           
-          // Form & Data utilities
-          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod', 'react-data-table-component'],
+        //   // Form & Data utilities
+        //   'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod', 'react-data-table-component'],
           
-          // Animation & UI utilities
-          'vendor-animation': ['framer-motion', 'clsx', 'class-variance-authority', 'tailwind-merge', 'tailwindcss-animate'],
+        //   // Animation & UI utilities
+        //   'vendor-animation': ['framer-motion', 'clsx', 'class-variance-authority', 'tailwind-merge', 'tailwindcss-animate'],
           
-          // Notifications & Utils
-          'vendor-utils': ['react-hot-toast', 'react-toastify', 'react-markdown']
-        }
+        //   // Notifications & Utils
+        //   'vendor-utils': ['react-hot-toast', 'react-toastify', 'react-markdown']
+        // }
       }
     },
     chunkSizeWarningLimit: 500, // Reduced from 800

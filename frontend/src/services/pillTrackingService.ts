@@ -16,6 +16,12 @@ export interface PillSchedule {
   pill_status: 'hormone' | 'placebo';
   reminder_enabled: boolean;
   reminder_time: string; // "HH:mm"
+  reminder_sent_timestamps?: Date[]; // Thêm trường để lưu thời điểm đã gửi mail
+  max_reminder_times?: number;
+  reminder_interval?: number;
+  taken_time?: Date;
+  is_active?: boolean;
+  createdAt?: Date;
   // ... other fields from your IPillTracking model
 }
 
@@ -50,7 +56,7 @@ export const pillTrackingService = {
    * Retrieves the pill schedule for the current user.
    */
   getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE_BY_USER);
+    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE(userId));
   },
 
   /**

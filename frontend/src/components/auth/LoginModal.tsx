@@ -8,6 +8,7 @@ import { authService } from '../../services/auth';
 import { API } from '../../config/apiEndpoints';
 import apiClient from '../../services/apiClient';
 import toast from 'react-hot-toast';
+import { Button, Input } from '../design-system';
 
 // Validation schemas
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -170,7 +171,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
     try {
       const response = await authService.login(data.email, data.password);
       login(response.data.user, response.data.accessToken);
-        toast.success('Đăng nhập thành công!');
+      
+      // Thông báo thành công dựa trên role
+      if (response.data.user.role === 'customer') {
+        toast.success(`Chào mừng ${response.data.user.full_name || response.data.user.email}! `);
+      } else {
+        toast.success('Đăng nhập thành công! Đang chuyển hướng...');
+      }
+      
         onClose();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Đăng nhập thất bại');
@@ -181,7 +189,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
 
   // Handle Google login
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}${API.Auth.GOOGLE_VERIFY}`;
+    window.location.href = `${import.meta.env.VITE_API_URL}${API.Auth.GOOGLE_VERIFY}`;
   };
 
   // Check email exists (Step 1) - Improved from register page
@@ -261,8 +269,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
             password: registerPassword
           });
           if ((loginResponse.data as any)?.success) {
-            login((loginResponse.data as any).user, (loginResponse.data as any).accessToken);
-            toast.success('Xác thực thành công! Chào mừng bạn đến với GenCare!');
+            const user = (loginResponse.data as any).user;
+            login(user, (loginResponse.data as any).accessToken);
+            
+            // Thông báo thành công dựa trên role
+            if (user.role === 'customer') {
+              toast.success(`Chào mừng ${user.full_name || user.email} đến với GenCare! `);
+            } else {
+              toast.success('Xác thực thành công! Đang chuyển hướng...');
+            }
+            
             onClose();
           } else {
             toast.success('Xác thực thành công! Vui lòng đăng nhập.');
@@ -434,13 +450,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                 </div>
 
                 {/* Login button */}
-          <button
+          <Button
                   type="submit"
                   disabled={loading || modalState !== 'login'}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 px-4 rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all duration-200 font-medium disabled:opacity-50"
+                  className="w-full"
+                  loading={loading}
           >
-                  {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
+                  Đăng nhập
+          </Button>
           
                 {/* Divider */}
                 <div className="flex items-center my-6">
@@ -599,13 +616,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                     )}
                   </div>
 
-                  <button
+                  <Button
                     type="submit"
                     disabled={isCheckingEmail || modalState !== 'register'}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 px-4 rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all duration-200 font-medium disabled:opacity-50"
+                    className="w-full"
+                    loading={isCheckingEmail}
                   >
-                    {isCheckingEmail ? 'Đang kiểm tra...' : 'Tiếp tục'}
-                  </button>
+                    Tiếp tục
+                  </Button>
 
                   {/* Divider */}
                   <div className="flex items-center my-4">
@@ -712,21 +730,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                   </div>
 
                   <div className="flex space-x-4 pt-4">
-                    <button
+                    <Button
                       type="button"
                       onClick={goBackStep}
                       disabled={modalState !== 'register'}
-                      className="flex-1 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                      variant="secondary"
+                      className="flex-1"
                     >
                       Quay lại
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={loading || modalState !== 'register'}
-                      className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 px-4 rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all duration-200 font-medium disabled:opacity-50"
+                      className="flex-1"
+                      loading={loading}
                     >
-                      {loading ? 'Đang đăng ký...' : 'Đăng ký'}
-                    </button>
+                      Đăng ký
+                    </Button>
                   </div>
                 </form>
               )}
@@ -762,21 +782,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                   </div>
 
                   <div className="flex space-x-4">
-                    <button
+                    <Button
                       type="button"
                       onClick={goBackStep}
                       disabled={modalState !== 'register'}
-                      className="flex-1 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                      variant="secondary"
+                      className="flex-1"
                     >
                       Quay lại
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={loading || modalState !== 'register'}
-                      className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 px-4 rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all duration-200 font-medium disabled:opacity-50"
+                      className="flex-1"
+                      loading={loading}
                     >
-                      {loading ? 'Đang xác thực...' : 'Xác thực'}
-                    </button>
+                      Xác thực
+                    </Button>
                   </div>
 
                   {/* Resend OTP */}

@@ -25,7 +25,7 @@ import {
   SearchOutlined,
   ClearOutlined
 } from '@ant-design/icons';
-import { STITestService, STITest, CreateSTITestRequest, UpdateSTITestRequest } from '../../../../services/stiService';
+import { STITestService, STITest, CreateSTITestRequest, UpdateSTITestRequest } from '../../../../services/stiTestService';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 const { TextArea } = Input;

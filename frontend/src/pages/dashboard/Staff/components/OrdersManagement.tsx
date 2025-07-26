@@ -708,15 +708,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   };
 
   const columns = [
-    {
-      title: 'Mã đơn',
-      dataIndex: 'order_code',
-      key: 'order_code',
-      width: 120,
-      render: (code: string, record: StiOrder) => (
-        <span>{code || (record._id ? record._id.slice(-8) : 'N/A')}</span>
-      )
-    },
+        
     {
       title: 'Khách hàng',
       key: 'customer',

@@ -94,8 +94,17 @@ export const menstrualCycleService = {
   },
 
   async updateCycle(data: ProcessCycleRequest): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.post(API.MenstrualCycle.UPDATE, data);
-    return response.data as ApiResponse<CycleData[]>;
+    try {
+      console.log('🔍 [DEBUG] updateCycle sending data:', data);
+      // Use the existing processMenstrualCycle endpoint instead of non-existent update endpoint
+      const response = await apiClient.post('/menstrual-cycle/processMenstrualCycle', data);
+      console.log('🔍 [DEBUG] updateCycle response:', response.data);
+      return response.data as ApiResponse<CycleData[]>;
+    } catch (error: any) {
+      console.error('🔍 [DEBUG] updateCycle error:', error);
+      console.error('🔍 [DEBUG] Backend response:', error.response?.data);
+      throw error;
+    }
   },
 
   // Lấy tất cả chu kì của user
@@ -140,6 +149,12 @@ export const menstrualCycleService = {
   // Dọn dẹp dữ liệu trùng lặp
   async cleanupDuplicates(): Promise<ApiResponse<any>> {
     const response = await apiClient.get(API.MenstrualCycle.CLEANUP);
+    return response.data as ApiResponse<any>;
+  },
+
+  // Reset toàn bộ dữ liệu chu kì
+  async resetAllData(): Promise<ApiResponse<any>> {
+    const response = await apiClient.delete(API.MenstrualCycle.RESET);
     return response.data as ApiResponse<any>;
   }
 };

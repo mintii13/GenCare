@@ -63,7 +63,7 @@ export const API = {
     // From previous config
     MY_APPOINTMENTS: '/appointments',//39
     CONSULTANT_APPOINTMENTS: '/appointments',//40
-    ALL: '/appointments',//41
+    ALL: '/appointments'//41
   },
 
   // ---------------------- APPOINTMENT HISTORY ----------------
@@ -99,7 +99,7 @@ export const API = {
   WeeklySchedule: {
       BASE: '/weekly-schedule', // POST, PUT /:scheduleId//61
     GET_BY_ID: (id: string) => `/weekly-schedule/${id}`,//62
-    COPY_SCHEDULE: '/weekly-schedule/copy',//63
+    COPY_SCHEDULE: (scheduleId: string) => `/weekly-schedule/copy/${scheduleId}`,//63
     AVAILABILITY: (id: string) => `/weekly-schedule/consultant/${id}/availability`,//64
     SLOTS_FOR_WEEK: (id: string) => `/weekly-schedule/consultant/${id}/slots-for-week`,//65
     MY_SCHEDULES: '/weekly-schedule/my-schedules',//66
@@ -149,16 +149,16 @@ export const API = {
     BASE: '/menstrual-cycle',//92
     TRACK: '/menstrual-cycle/track',//93
     GET_HISTORY: '/menstrual-cycle/history',//94
-    PROCESS: `/menstrual-cycle/process`,//95
-    UPDATE: `/menstrual-cycle/update`,//96
-    GET_CYCLES: `/menstrual-cycle/getCycles`,//97
-    GET_CYCLES_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,//98
-    TODAY_STATUS: '/menstrual-cycle/getTodayStatus',//99
-    CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',//100
-    PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',//101
-    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',//102
-    CLEANUP: '/menstrual-cycle/cleanupDuplicates',//103
-    RESET: '/menstrual-cycle/resetAllData'//104
+    PROCESS: `/menstrual-cycle/processMenstrualCycle`,//95
+    // UPDATE: `/menstrual-cycle/update`, // REMOVED: This endpoint doesn't exist on backend
+    GET_CYCLES: `/menstrual-cycle/getCycles`,//96
+    GET_CYCLES_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,//97
+    TODAY_STATUS: '/menstrual-cycle/getTodayStatus',//98
+    CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',//99
+    PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',//100
+    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',//101
+    CLEANUP: '/menstrual-cycle/cleanupDuplicates',//102
+    RESET: '/menstrual-cycle/resetAllData'//103
   },
 
   // Home page endpoints
@@ -170,7 +170,7 @@ export const API = {
   // Pill tracking endpoints
   PillTracking: {
     SETUP: '/pill-tracking/setup',//107
-    GET_SCHEDULE: '/pill-tracking',//108
+    GET_SCHEDULE: (userId: string) => `/pill-tracking/${userId}`,//108
     UPDATE_SCHEDULE: '/pill-tracking',//109
     TAKE_PILL: (scheduleId: string) => `/pill-tracking/mark-as-taken/${scheduleId}`,//110
     WEEKLY: '/pill-tracking/weekly',//111

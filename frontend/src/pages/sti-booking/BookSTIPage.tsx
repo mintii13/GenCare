@@ -77,6 +77,19 @@ const BookSTIPage: React.FC = () => {
     }
   }, [user]);
 
+  // Auto-fill notes from STI screening results
+  useEffect(() => {
+    const screeningNotes = localStorage.getItem('sti_screening_notes');
+    if (screeningNotes) {
+      setNotes(screeningNotes);
+      form.setFieldsValue({ notes: screeningNotes });
+      // Auto advance to step 2 if notes are filled
+      if (orderDate) {
+        setCurrentStep(2);
+      }
+    }
+  }, [orderDate]);
+
   const disabledDate = (current: dayjs.Dayjs) => {
     const today = dayjs().startOf('day');
     const isWeekend = current.day() === 0;

@@ -232,7 +232,11 @@ const BlogListPage: React.FC = () => {
                   <select
                     value={`${query.sort_by || 'publish_date'}_${query.sort_order || 'desc'}`}
                     onChange={(e) => {
-                      const [sort_by, sort_order] = e.target.value.split('_');
+                      // Split từ cuối để xử lý đúng với "publish_date_asc"
+                      const value = e.target.value;
+                      const lastUnderscoreIndex = value.lastIndexOf('_');
+                      const sort_by = value.substring(0, lastUnderscoreIndex);
+                      const sort_order = value.substring(lastUnderscoreIndex + 1);
                       if (sort_by && sort_order) {
                         handleSortChange(sort_by, sort_order as 'asc' | 'desc');
                       }

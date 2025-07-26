@@ -139,6 +139,11 @@ class ApiClient {
       } catch (error) {
         lastError = error as AxiosError;
         
+        // Don't retry on canceled/aborted requests
+        if (lastError.name === 'CanceledError' || lastError.name === 'AbortError' || lastError.message === 'canceled') {
+          throw lastError;
+        }
+        
         // Don't retry on certain status codes
         const status = lastError.response?.status;
         if (status && [400, 401, 403, 404, 422].includes(status)) {

@@ -3,6 +3,7 @@ import { Comment } from '../../types/blog';
 import { useAuth } from '../../contexts/AuthContext';
 import { blogService } from '../../services/blogService';
 import { formatDateSafe } from '../../utils/dateUtils';
+import { Button, Input } from '../design-system';
 import {
   MessageCircle,
   Reply,
@@ -155,13 +156,16 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   const handleDeleteComment = async (commentId: string) => {
+    console.log('Attempting to delete comment:', commentId);
     setIsSubmitting(true);
     try {
       const response = await blogService.deleteComment(blogId, commentId);
+      console.log('Delete comment response:', response);
       if ((response as any).success) {
         toast.success('Xóa bình luận thành công!');
         await onCommentsUpdate();
       } else {
+        console.error('Delete failed:', response);
         toast.error((response as any).message || 'Xóa bình luận thất bại!');
       }
     } catch (error) {
@@ -280,18 +284,18 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     return (
       <div
         key={comment.comment_id}
-        className={`${isReply ? 'ml-6' : ''} mb-6`}
+        className={`${isReply ? 'ml-4' : ''} mb-4`}
         style={{ marginLeft: isReply ? `${marginLeft}px` : '0' }}
       >
         <div className="flex space-x-4">
           {/* Avatar */}
           <div className="flex-shrink-0">
             {comment.is_anonymous ? (
-              <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-r from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center ring-2 ring-gray-200 shadow-md">
+                <User className="w-5 h-5 text-white" />
               </div>
             ) : comment.user ? (
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+              <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-r from-blue-500 to-indigo-500 ring-2 ring-blue-100 shadow-md">
                 <img
                   src={comment.user.avatar || '/default-avatar.png'}
                   alt={comment.user.full_name}
@@ -305,13 +309,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                     }
                   }}
                 />
-                <div className="w-full h-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center" style={{ display: 'none' }}>
+                <div className="w-full h-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold flex items-center justify-center" style={{ display: 'none' }}>
                   {comment.user.full_name?.charAt(0).toUpperCase()}
                 </div>
               </div>
             ) : (
-              <div className="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-r from-red-400 to-red-500 rounded-2xl flex items-center justify-center ring-2 ring-red-100 shadow-md">
+                <AlertCircle className="w-5 h-5 text-white" />
               </div>
             )}
           </div>
@@ -319,23 +323,29 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           {/* Comment Content */}
           <div className="flex-1 min-w-0">
             {/* Comment Bubble */}
-            <div className="bg-gray-100 rounded-2xl px-3 py-2 inline-block max-w-full">
+            <div className="bg-white rounded-3xl px-4 py-3 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-200 max-w-full">
               {/* User Info */}
               <div className="mb-1">
                 {comment.is_anonymous ? (
-                  <div className="flex items-center space-x-1">
-                    <span className="text-sm font-semibold text-gray-700">Người dùng ẩn danh</span>
-                    <EyeOff className="w-3 h-3 text-gray-500" />
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-bold text-gray-700">Người dùng ẩn danh</span>
+                    <div className="bg-gray-100 px-2 py-1 rounded-2xl flex items-center space-x-1">
+                      <EyeOff className="w-3 h-3 text-gray-500" />
+                      <span className="text-xs text-gray-500 font-medium">Ẩn danh</span>
+                    </div>
                   </div>
                 ) : comment.user ? (
-                  <div className="flex items-center space-x-1">
-                    <span className="text-sm font-semibold text-gray-900">{comment.user.full_name}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-bold text-gray-900">{comment.user.full_name}</span>
                     {(comment.user.role === 'consultant' || comment.user.role === 'staff' || comment.user.role === 'admin') && (
-                      <UserCheck className="w-3 h-3 text-blue-500" />
+                      <div className="bg-blue-100 px-2 py-1 rounded-2xl flex items-center space-x-1">
+                        <UserCheck className="w-3 h-3 text-blue-600" />
+                        <span className="text-xs text-blue-700 font-medium capitalize">{comment.user.role}</span>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <span className="text-sm font-semibold text-gray-500">Người dùng đã xóa</span>
+                  <span className="text-sm font-bold text-gray-500">Người dùng đã xóa</span>
                 )}
               </div>
 
@@ -366,48 +376,63 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-900 leading-relaxed break-words">{comment.content}</p>
+                <p className="text-gray-800 leading-relaxed break-words">{comment.content}</p>
               )}
             </div>
 
             {/* Actions and Time */}
-            <div className="flex items-center space-x-6 mt-2 px-3">
-              <span className="text-xs text-gray-500">{formatDate(comment.comment_date)}</span>
+            <div className="flex items-center space-x-4 mt-3 px-2">
+              <span className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-2xl">{formatDate(comment.comment_date)}</span>
               
               {canComment && (
                 <button
                   onClick={() => setReplyingTo(comment.comment_id)}
-                  className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                  className="flex items-center space-x-1 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-2xl transition-all duration-200"
                 >
-                  Trả lời
+                  <Reply className="w-3 h-3" />
+                  <span>Trả lời</span>
                 </button>
               )}
 
               {user && (
-                user.id === comment.user_id ||
-                user.id === comment.user?.user_id
+                // Chủ sở hữu bình luận có thể chỉnh sửa
+                (user._id === comment.user_id || user._id === (comment.user as any)?._id)
               ) && (
                 <button
                   onClick={() => handleEditComment(comment)}
-                  className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                  className="flex items-center space-x-1 text-xs font-semibold text-gray-600 hover:text-gray-700 hover:bg-gray-50 px-2 py-1 rounded-2xl transition-all duration-200"
                 >
-                  Chỉnh sửa
+                  <span>Chỉnh sửa</span>
                 </button>
               )}
 
-              {user && (user.role === 'staff' || user.role === 'consultant') && (
+              {user && (
+                // Chủ sở hữu bình luận (cả ẩn danh và không ẩn danh) hoặc admin/staff/consultant có thể xóa
+                (user._id === comment.user_id || user._id === (comment.user as any)?._id) ||
+                (user.role === 'staff' || user.role === 'consultant' || user.role === 'admin')
+              ) && (
                 <button
-                  onClick={() => handleAskDelete(comment.comment_id)}
-                  className="text-xs font-semibold text-gray-500 hover:text-red-600 transition-colors"
+                  onClick={() => {
+                    console.log('Debug Delete Permission:', {
+                      user: user,
+                      comment: comment,
+                      user_id_check: user._id === comment.user_id,
+                      user_object_check: user._id === (comment.user as any)?._id,
+                      userMatch: user._id === comment.user_id || user._id === (comment.user as any)?._id,
+                      roleMatch: user.role === 'staff' || user.role === 'consultant' || user.role === 'admin'
+                    });
+                    handleAskDelete(comment.comment_id);
+                  }}
+                  className="flex items-center space-x-1 text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded-2xl transition-all duration-200"
                 >
-                  Xóa
+                  <span>Xóa</span>
                 </button>
               )}
             </div>
 
             {/* Reply Form */}
             {replyingTo === comment.comment_id && canComment && (
-              <div className="mt-4 flex space-x-3">
+              <div className="mt-3 flex space-x-3">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                   <img
                     src={user?.avatar || '/default-avatar.png'}
@@ -483,7 +508,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
             {/* Replies Section for Root Comments */}
             {level === 0 && replies.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-3">
                 {/* Toggle Replies Button */}
                 <button
                   onClick={() => toggleRepliesVisibility(comment.comment_id)}
@@ -567,88 +592,103 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-white rounded-3xl p-4">
       {/* Header */}
-      <div className="border-b border-gray-200 pb-4 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Bình luận • {localComments.filter(c => (c.is_anonymous || c.user)).length}
-        </h3>
+      <div className="border-b border-gray-100 pb-4 mb-6">
+        <div className="flex items-center space-x-3">
+          <MessageCircle className="w-6 h-6 text-blue-600" />
+          <h3 className="text-xl font-bold text-gray-900">
+            Bình luận
+          </h3>
+          <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-2xl">
+            {localComments.filter(c => (c.is_anonymous || c.user)).length}
+          </span>
+        </div>
       </div>
 
       {/* Write Comment */}
       {canComment ? (
-        <div className="mb-8">
-          <div className="flex space-x-4">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
-                <img
-                  src={user?.avatar || '/default-avatar.png'}
-                  alt={user?.full_name || ''}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    const fallback = target.nextElementSibling as HTMLElement;
-                    if (fallback) {
-                      target.style.display = 'none';
-                      fallback.style.display = 'flex';
-                    }
-                  }}
-                />
-                <div className="w-full h-full bg-blue-500 text-white text-sm font-medium flex items-center justify-center" style={{ display: 'none' }}>
-                  {user?.full_name?.charAt(0).toUpperCase()}
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-4 border border-blue-100 shadow-sm">
+                          <div className="flex space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-r from-blue-500 to-indigo-500 ring-2 ring-blue-200 shadow-md">
+                  <img
+                    src={user?.avatar || '/default-avatar.png'}
+                    alt={user?.full_name || ''}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) {
+                        target.style.display = 'none';
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className="w-full h-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold flex items-center justify-center" style={{ display: 'none' }}>
+                    {user?.full_name?.charAt(0).toUpperCase()}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex-1">
-              <div className="bg-gray-100 rounded-2xl">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Viết bình luận..."
-                  className="w-full px-3 py-2 bg-transparent text-sm resize-none focus:outline-none placeholder-gray-500"
-                  rows={1}
-                  style={{ minHeight: '36px' }}
-                  onInput={(e) => {
-                    e.currentTarget.style.height = 'auto';
-                    e.currentTarget.style.height = Math.max(36, e.currentTarget.scrollHeight) + 'px';
-                  }}
-                />
-              </div>
-              {newComment.trim() && (
-                <div className="flex items-center justify-between mt-3">
-                  <label className="flex items-center text-xs text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={isAnonymous}
-                      onChange={(e) => setIsAnonymous(e.target.checked)}
-                      className="mr-1 w-3 h-3"
-                    />
-                    <EyeOff className="w-3 h-3 mr-1" />
-                    Bình luận ẩn danh
-                  </label>
-                  <button
-                    onClick={() => handleSubmitComment(newComment)}
-                    disabled={!newComment.trim() || isSubmitting}
-                    className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                  >
-                    {isSubmitting ? 'Đang đăng...' : 'Đăng'}
-                  </button>
+              <div className="flex-1">
+                                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm transition-all duration-200 hover:shadow-lg focus-within:shadow-lg focus-within:border-blue-300">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Chia sẻ ý kiến của bạn về bài viết này..."
+                    className="w-full px-4 py-3 bg-transparent text-gray-900 resize-none focus:outline-none placeholder-gray-500 rounded-2xl"
+                    rows={1}
+                    style={{ minHeight: '44px' }}
+                    onInput={(e) => {
+                      e.currentTarget.style.height = 'auto';
+                      e.currentTarget.style.height = Math.max(44, e.currentTarget.scrollHeight) + 'px';
+                    }}
+                  />
                 </div>
-              )}
+                {newComment.trim() && (
+                  <div className="flex items-center justify-between mt-4">
+                    <label className="flex items-center text-sm text-gray-600 hover:text-gray-800 cursor-pointer transition-colors bg-white px-4 py-2 rounded-2xl border border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={isAnonymous}
+                        onChange={(e) => setIsAnonymous(e.target.checked)}
+                        className="mr-3 w-4 h-4 text-blue-600 border-gray-300 rounded-lg focus:ring-blue-500"
+                      />
+                      <EyeOff className="w-4 h-4 mr-2" />
+                      Bình luận ẩn danh
+                    </label>
+                    <Button
+                      onClick={() => handleSubmitComment(newComment)}
+                      disabled={!newComment.trim() || isSubmitting}
+                      className="px-6 py-2 text-sm rounded-2xl"
+                      loading={isSubmitting}
+                      leftIcon={!isSubmitting ? <Send className="w-4 h-4" /> : undefined}
+                    >
+                      {isSubmitting ? 'Đang đăng...' : 'Đăng bình luận'}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-4 mb-6 shadow-sm">
           <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
-            <p className="text-sm text-blue-800">
-              {user ? (
-                'Chỉ khách hàng mới có thể bình luận trên bài viết.'
-              ) : (
-                'Vui lòng đăng nhập với tài khoản khách hàng để bình luận.'
-              )}
-            </p>
+            <div className="bg-amber-100 rounded-2xl p-3 mr-4">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h4 className="text-amber-800 font-bold mb-1 text-base">Yêu cầu đăng nhập</h4>
+              <p className="text-amber-700 text-sm">
+                {user ? (
+                  'Chỉ khách hàng mới có thể bình luận trên bài viết.'
+                ) : (
+                  'Vui lòng đăng nhập với tài khoản khách hàng để bình luận.'
+                )}
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -658,36 +698,46 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         {rootComments.length > 0 ? (
           paginatedComments.map(comment => renderComment(comment))
         ) : (
-          <div className="text-center py-12 text-gray-500">
-            <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm">Chưa có bình luận nào</p>
-            <p className="text-xs text-gray-400 mt-1">Hãy là người đầu tiên bình luận về bài viết này</p>
+          <div className="text-center py-20 bg-gradient-to-b from-gray-50 to-white rounded-3xl border border-gray-100">
+            <div className="bg-gray-100 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <MessageCircle className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-700 mb-3">Chưa có bình luận nào</h3>
+            <p className="text-gray-500 mb-6 text-lg">Hãy là người đầu tiên chia sẻ ý kiến về bài viết này</p>
+            {canComment && (
+              <button
+                onClick={() => document.querySelector('textarea')?.focus()}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                Viết bình luận đầu tiên
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Pagination */}
       {rootComments.length > pageSize && (
-        <div className="flex items-center justify-center mt-10 pt-8 border-t border-gray-200">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-center mt-16 pt-10 border-t border-gray-100">
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-lg p-4 flex items-center space-x-2">
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 transition-all duration-200"
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
+              <ChevronLeft className="w-4 h-4 mr-2" />
               Trước
             </button>
             
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2 px-4">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <button
                   key={page}
                   onClick={() => goToPage(page)}
-                  className={`w-8 h-8 text-sm font-medium rounded-md transition-colors ${
+                  className={`w-12 h-12 text-sm font-bold rounded-2xl transition-all duration-200 ${
                     currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-110'
+                      : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:scale-105'
                   }`}
                 >
                   {page}
@@ -698,10 +748,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 transition-all duration-200"
             >
               Sau
-              <ChevronRight className="w-4 h-4 ml-1" />
+              <ChevronRight className="w-4 h-4 ml-2" />
             </button>
           </div>
         </div>
@@ -709,34 +759,41 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
       {/* Pagination Info */}
       {rootComments.length > 0 && (
-        <div className="text-center mt-6">
-          <p className="text-xs text-gray-500">
-            {startIndex + 1}-{Math.min(endIndex, rootComments.length)} trong {rootComments.length} bình luận
-          </p>
+        <div className="text-center mt-10">
+          <div className="inline-flex items-center bg-gray-50 px-6 py-3 rounded-3xl shadow-sm">
+            <span className="text-sm text-gray-600 font-semibold">
+              Hiển thị {startIndex + 1}-{Math.min(endIndex, rootComments.length)} trong tổng số {rootComments.length} bình luận
+            </span>
+          </div>
         </div>
       )}
 
       {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Xóa bình luận?</h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Bạn có chắc chắn muốn xóa bình luận này không? Hành động này không thể hoàn tác.
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full transform transition-all duration-200 scale-100">
+            <div className="p-10">
+              <div className="flex items-center mb-8">
+                <div className="bg-red-100 rounded-3xl p-4 mr-6">
+                  <AlertCircle className="w-7 h-7 text-red-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Xác nhận xóa</h3>
+              </div>
+              <p className="text-gray-600 mb-10 leading-relaxed text-lg">
+                Bạn có chắc chắn muốn xóa bình luận này không? Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn bình luận cùng tất cả các phản hồi.
               </p>
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-5">
                 <button 
                   onClick={() => setShowDeleteModal(false)} 
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  className="px-8 py-4 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 hover:scale-105"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button 
                   onClick={handleConfirmDelete} 
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                  className="px-8 py-4 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-2xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
                 >
-                  Xóa
+                  Xóa bình luận
                 </button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import ChatBotIcon from '../../assets/icons/chatboticon.png'
+import ChatBotIcon from '../../assets/icons/chatboticon.png';
+import { Button } from '../design-system';
 
 interface Message {
   id: string;
@@ -27,7 +28,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const webhookUrl = import.meta.env.VITE_CHATBOT_API;
+  const webhookUrl = import.meta.env.VITE_CHATBOX_API;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import GenCareLogo from '../pages/home/components/GenCareLogo';
+import { Button } from './design-system';
 
 interface NavigationProps {
   onToggleSidebar?: () => void;
@@ -55,11 +56,11 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
   }, []);
 
   return (
-    <nav className="bg-white shadow-sm border-b border-blue-100 sticky top-0 z-50 h-14">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-        <div className="flex items-center h-full">
+    <nav className="bg-white shadow-sm border-b border-blue-100 sticky top-0 z-20 h-14">
+      <div className="container mx-auto h-full">
+        <div className="grid grid-cols-3 items-center h-full px-6">
           {/* Logo bên trái */}
-          <div className="flex items-center min-w-0 h-full">
+          <div className="flex items-center justify-start h-full">
           <Link to="/" className="flex items-center space-x-2 h-full">
             <GenCareLogo className="h-8 w-auto" />
             <span className="text-lg font-bold text-blue-600 leading-none">GenCare</span>
@@ -75,7 +76,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
           )}
           </div>
           {/* Menu ở giữa */}
-          <div className="hidden md:flex flex-1 justify-center items-center space-x-6 h-full">
+          <div className="hidden md:flex justify-center items-center space-x-6 h-full">
             <Link to="/" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Trang chủ
             </Link>
@@ -138,7 +139,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
             )}
           </div>
           {/* Auth Buttons bên phải */}
-          <div className="flex items-center space-x-3 h-full">
+          <div className="flex items-center justify-end space-x-3 h-full">
             {isAuthenticated ? (
               user?.role === 'customer' ? (
                 <Link
@@ -338,12 +339,13 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                       </Link>
                     </>
                   )}
-                  <button
-                    className="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition mb-2"
+                  <Button
+                    variant="danger"
+                    className="block px-4 py-2 mb-2"
                     onClick={() => { setIsMenuOpen(false); logout(); }}
                   >
                     Đăng xuất
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
@@ -356,15 +358,15 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                   >
                     Đăng nhập
                   </button>
-                  <button
+                  <Button
                     onClick={() => {
                       setIsMenuOpen(false);
                       openModal('register');
                     }}
-                    className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center w-full"
+                    className="block px-4 py-2 text-center w-full"
                   >
                     Đăng ký
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
