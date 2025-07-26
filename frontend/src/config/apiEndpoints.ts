@@ -240,7 +240,8 @@ export const API = {
     STATISTICS: '/users/statistics/overview' // GET - Admin/Staff
   },
   Payment:{
-    CREATE_PAYMENT: (id: string) =>  `/payment/create/${id}`
+    CREATE_PAYMENT: (id: string) =>  `/payment/create/${id}`,
+    MOMO_IPN_PROXY: '/payment/momo/ipn'
   }
 
 } as const;

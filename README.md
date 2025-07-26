@@ -102,14 +102,13 @@ cd GenCare
 ```
 cd backend
 npm install
+npm run dev
 ```
 **Frontend (Vite/React)**
 ```
 cd frontend
 npm install
-```
-#### 3. Run the Application
-```
 npm run dev
 ```
+
 

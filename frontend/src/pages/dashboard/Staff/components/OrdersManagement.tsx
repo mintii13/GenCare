@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {SpecializationType} from '../../../../../../backend/src/models/Consultant'
+import { redirect, useNavigate } from 'react-router-dom';
+import {SpecializationType} from '../../../../../../backend/src/models/Consultant';
+
 import { 
   Table, 
   Button, 
@@ -174,7 +175,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [amountRange, setAmountRange] = useState<[number?, number?]>([undefined, undefined]);
-  
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
   // Fetch data on mount and refresh
   useEffect(() => {
     fetchOrders();
@@ -304,6 +306,13 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   // Order management handlers
   const handleEditOrder = (order: StiOrder) => {
+    console.log('Opening edit modal for order:', {
+      id: order._id,
+      status: order.order_status,
+      isPaid: order.is_paid,
+      code: order.order_code
+    });
+    
     if (order.order_status === 'Completed' || order.order_status === 'Canceled') {
       setCannotEditModalVisible(true);
       return;
@@ -312,8 +321,10 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       setCannotEditAtTestingStatus(true);
       return;
     }
+    
     setEditingOrder(order);
     if (order.order_status === 'Booked') fetchConsultants();
+    
     orderForm.setFieldsValue({
       order_date: order.order_date ? dayjs(order.order_date) : null,
       notes: order.notes,
@@ -324,6 +335,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       is_paid: order.is_paid,
       consultant_id: order.consultant_id || null,
     });
+    
     setOrderModalVisible(true);
   };
 
@@ -357,28 +369,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     }
   };
 
-  const calculateTotalAmount = () => {
-    const values = orderForm.getFieldsValue();
-    let total = 0;
-    
-    if (values.sti_package_id) {
-      const selectedPackage = availablePackages.find(p => p._id === values.sti_package_id);
-      if (selectedPackage) {
-        total += selectedPackage.price;
-      }
-    }
-    
-    if (values.sti_test_items && values.sti_test_items.length > 0) {
-      values.sti_test_items.forEach((testId: string) => {
-        const selectedTest = availableTests.find(t => t._id === testId);
-        if (selectedTest) {
-          total += selectedTest.price;
-        }
-      });
-    }
-    
-    orderForm.setFieldsValue({ total_amount: total });
-  };
 
   // Result management handlers - Updated to navigate
   const handleCreateOrEditResult = (order: StiOrder) => {
@@ -428,25 +418,44 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     }
   };
 
-  const handlePaymentSubmit = async (paymentMethod: 'Momo' | 'Cash') => {
+  const handlePaymentSubmit = async (paymentMethod: 'MoMo' | 'Cash') => {
     if (!editingOrder) return;
-  
+
     try {
       const res = await apiClient.post(API.Payment.CREATE_PAYMENT(editingOrder._id), {
-        paymentType: 'STI_Test',
         paymentMethod: paymentMethod
       });
-  
-      // Nếu là Momo và có redirect URL
-      if (paymentMethod === 'Momo' && res.data?.paymentUrl) {
-        window.location.href = res.data.paymentUrl;
+
+      const paymentData = (res.data as any).data;
+
+      if (paymentMethod === 'MoMo' && paymentData?.paymentUrl) {
+        window.location.href = paymentData.paymentUrl;
       } else {
         message.success('Tạo thanh toán thành công');
+
+        // Cập nhật lại editingOrder với trạng thái thanh toán
+        setEditingOrder(prev => prev ? {
+          ...prev,
+          is_paid: paymentData.is_paid,
+          paymentMethod: paymentData.paymentMethod,
+        } : prev);
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Lỗi khi tạo thanh toán';
       message.error(errorMessage);
     }
+  };
+
+
+  const renderModalFooter = () => {
+    if (!editingOrder) return null;
+    if (['Booked', 'Processing', 'SpecimenCollected'].includes(editingOrder.order_status)) {
+      return [
+        <Button key="back" onClick={() => setOrderModalVisible(false)}>Hủy</Button>,
+        <Button key="submit" type="primary" loading={loading} onClick={handleOrderSubmit}>Lưu</Button>,
+      ];
+    }
+    return [<Button key="back" onClick={() => setOrderModalVisible(false)}>Đóng</Button>];
   };
 
   // Utility functions
@@ -911,36 +920,57 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 </Form.Item>
               )}
               {editingOrder.order_status === 'Accepted' && (
-                <>
-                  <Form.Item
+              <>
+                <Form.Item
                   label="Loại thanh toán"
                   name="paymentMethod"
                   rules={[{ required: true, message: 'Chọn loại thanh toán' }]}
+                >
+                  <Select 
+                    placeholder="Chọn loại thanh toán"
+                    disabled={paymentLoading}
                   >
-                    <Select placeholder="Chọn loại thanh toán">
-                    <Option >Chọn loại thanh toán</Option>
-                      <Option value={'Cash'}>Thanh toán bằng tiền mặt </Option>
-                      <Option value={'Momo'}>Thanh toán bằng Momo </Option>
-                    </Select>
-                  </Form.Item>
+                    <Option value="Cash">Thanh toán bằng tiền mặt</Option>
+                    <Option value="MoMo">Thanh toán bằng MoMo</Option>
+                  </Select>
+                </Form.Item>
 
-                  {paymentMethod === 'Momo' && (
+                {/* Debug info - có thể xóa sau khi fix xong */}
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  marginBottom: '12px',
+                  padding: '8px',
+                  background: '#f9f9f9',
+                  borderRadius: '4px'
+                }}>
+                  Debug: Order ID = {editingOrder._id} | Status = {editingOrder.order_status} | Paid = {editingOrder.is_paid ? 'Yes' : 'No'}
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {paymentMethod === 'MoMo' && (
                     <Button
                       type="primary"
-                      onClick={() => API.Payment.CREATE_PAYMENT(editingOrder._id)}
+                      loading={paymentLoading}
+                      onClick={() => handlePaymentSubmit('MoMo')}
+                      disabled={paymentLoading}
                     >
-                      Thanh toán qua Momo
+                      {paymentLoading ? 'Đang xử lý...' : 'Thanh toán qua MoMo'}
                     </Button>
                   )}
+                  
                   {paymentMethod === 'Cash' && (
-                  <Button
-                  type="primary"
-                  onClick={() => API.Payment.CREATE_PAYMENT(editingOrder._id)}
-                >
-                  Thanh toán qua tiền mặt
-                </Button>
+                    <Button
+                      type="primary"
+                      loading={paymentLoading}
+                      onClick={() => handlePaymentSubmit('Cash')}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? 'Đang xử lý...' : 'Thanh toán tiền mặt'}
+                    </Button>
                   )}
-                </>
+                </div>
+              </>
               )}
               {['Processing', 'SpecimenCollected'].includes(editingOrder.order_status) && (
                 <Form.Item

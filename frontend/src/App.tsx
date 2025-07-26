@@ -71,6 +71,7 @@ const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResul
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
 const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
 
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
@@ -203,6 +204,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
                 <MySTIResults />
               </RoleGuard>
             } />
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
               {/* STI Booking routes */}
               <Route path="/sti-booking/book" element={
               <RoleGuard allowedRoles={['customer']} showError={true}>
