@@ -4,6 +4,7 @@ import { apiClient } from '../services/apiClient';
 import { API } from '../config/apiEndpoints';
 import { getToken, getUser, isAuthenticated } from '../utils/authUtils';
 import { env } from '../config/environment';
+import LoginModal from '../components/auth/LoginModal';
   
 const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
 
@@ -245,6 +246,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         closeModal
       }}>
       {children}
+      <LoginModal 
+        isOpen={isModalOpen} 
+        onClose={closeModal} 
+        initialMode={modalMode}
+      />
     </AuthContext.Provider>
   );
 };

@@ -85,7 +85,9 @@ const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ isOpen }) => {
               {user?.avatar ? (
                 <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
               ) : (
-                <FaUser className="text-white" size={16} />
+                <span className="text-white font-semibold text-lg">
+                  {user?.full_name?.charAt(0) || 'U'}
+                </span>
               )}
             </div>
             <div className="ml-3 flex-1">

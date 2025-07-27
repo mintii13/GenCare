@@ -138,26 +138,7 @@ const AppContent: React.FC = () => {
             <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
           </Route>
 
-          {/* Customer Dashboard Routes */}
-          <Route 
-            path="/dashboard/customer/*" 
-            element={
-              <RoleGuard allowedRoles={['customer']}>
-                <CustomerLayout />
-              </RoleGuard>
-            }
-          >
-            <Route index element={<Navigate to="my-appointments" replace />} />
-            <Route path="profile" element={<UserProfilePage />} />
-            <Route path="my-appointments" element={<MyAppointments />} />
-            <Route path="my-sti-results" element={<MySTIResults />} />
-            <Route path="consultants" element={<ConsultantList />} />
-            <Route path="menstrual-cycle" element={<MenstrualCyclePage />} />
-            <Route path="monthly-diary" element={<MonthlyDiaryPage />} />
-            <Route path="feedback" element={<CustomerFeedbackPage />} />
-            <Route path="sti-assessment-history" element={<STIAssessmentHistory />} />
-            <Route path="settings" element={<div className="p-4">Trang Cài đặt</div>} /> 
-          </Route>
+
 
           {/* Admin Dashboard routes */}
           <Route path="/admin/*" element={<AdminLayout />}>
@@ -232,28 +213,7 @@ const AppContent: React.FC = () => {
             <Route path="/blogs/:blogId" element={<BlogDetailPage />} />
             <Route path="/blogs/:blogId/edit" element={<BlogFormPage />} />
 
-
-            <Route path="/consultant/*" element={<ConsultantLayout />}>
-              <Route path="schedule" element={<AppointmentManagement />} />
-              <Route path="clients" element={<div>Khách hàng</div>} />
-              <Route path="online" element={<div>Tư vấn trực tuyến</div>} />
-              <Route path="records" element={<div>Hồ sơ tư vấn</div>} />
-              <Route path="qa" element={<div>Q&A / Câu hỏi</div>} />
-
-              <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
-              <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
-              <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
-              <Route path="blogs" element={<ConsultantBlogList />} />
-              <Route path="sti-results" element={<StiResultsManagement />} />
-              <Route path="documents" element={<div>Tài liệu chuyên môn</div>} />
-              <Route path="training" element={<div>Đào tạo & Cập nhật</div>} />
-              <Route path="consultation-stats" element={<ConsultationStats />} />
-              <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
-              <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
-              <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
-            </Route>
-
-                        {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}
+            {/* Customer routes - Direct access */}
             <Route path="/my-appointments" element={
               <RoleGuard allowedRoles={['customer']}>
                 <MyAppointments />
@@ -279,7 +239,8 @@ const AppContent: React.FC = () => {
                 <MySTIResults />
               </RoleGuard>
             } />
-              {/* STI Booking routes */}
+
+            {/* STI Booking routes */}
               <Route path="/sti-booking/book" element={
               <RoleGuard allowedRoles={['customer']}>
                 <BookSTIPage />
@@ -346,12 +307,7 @@ const AppContent: React.FC = () => {
               <Route path="settings" element={<div>Cài đặt</div>} />
             </Route>
 
-            {/* Catch deprecated customer dashboard routes and redirect */}
-            <Route path="/dashboard/customer" element={<Navigate to="/my-appointments" replace />} />
-            <Route path="/dashboard/customer/*" element={<Navigate to="/my-appointments" replace />} />
-            <Route path="/dashboard/customer/my-appointments" element={<MyAppointments />} />
-            <Route path="/dashboard/customer/my-sti-results" element={<MySTIResults />} />
-            <Route path="/dashboard/customer/consultants" element={<ConsultantList />} />
+
           </Routes>
 
       </Layout>
