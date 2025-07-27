@@ -2,7 +2,6 @@ export type StiResultItem = {
   sti_test_id: string;
   result: {
     sample_type: 'blood' | 'urine' | 'swab';
-    sample_quality: boolean;
     urine?: {
       color?: string;
       clarity?: string;
@@ -61,3 +60,25 @@ export interface StiResult {
   createdAt?: string;
   updatedAt?: string;
 } 
+
+export interface Order {
+    id: string;
+    customerName: string;
+    customerEmail: string;
+    orderDate: string;
+    orderStatus: string;
+}
+
+export interface Test {
+    id: string;
+    testName: string;
+    testType: 'blood' | 'urine' | 'swab';
+}
+
+export interface Result {
+    testId: string;
+    sampleType: 'blood' | 'urine' | 'swab';
+    sampleQuality: boolean;
+    timeCompleted: string;
+    results: Record<string, any>;
+}

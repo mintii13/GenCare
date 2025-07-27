@@ -97,7 +97,7 @@ const FirstTimeGuideModal: React.FC<FirstTimeGuideModalProps> = ({ isOpen, onClo
                     <div>
                       <h4 className="font-semibold text-gray-900">Ghi nhận chu kỳ</h4>
                       <p className="text-sm text-gray-600">
-                        Nhấn nút "Ghi nhận" để đánh dấu ngày bắt đầu và kết thúc kinh nguyệt
+                        Nhấn nút &quot;Ghi nhận&quot; để đánh dấu ngày bắt đầu và kết thúc kinh nguyệt
                       </p>
                     </div>
                   </div>

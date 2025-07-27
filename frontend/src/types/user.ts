@@ -1,6 +1,7 @@
 import { BaseEntity, UserRole } from './common';
 
 export interface User extends BaseEntity {
+  id?: string; // For backward compatibility with localStorage
   email: string;
   full_name: string;
   role: UserRole;
@@ -35,4 +36,6 @@ export interface Admin extends User {
 export interface Customer extends User {
   customer_id: string;
   role: 'customer';
+}
+}
 }

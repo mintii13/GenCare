@@ -44,6 +44,7 @@ const ConsultationStats = lazy(() => import('./pages/dashboard/Consultant/Consul
 
 // Feature-specific lazy loads
 const MenstrualCyclePage = lazy(() => import('./pages/menstrual-cycle/MenstrualCyclePage'));
+const MonthlyDiaryPage = lazy(() => import('./pages/menstrual-cycle/MonthlyDiaryPage'));
 const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
 const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
 
@@ -70,6 +71,9 @@ const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrders
 const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
+const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
+
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
 const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/ConsultantStiOrdersPage'));
@@ -150,6 +154,7 @@ const AppContent: React.FC = () => {
             <Route path="my-sti-results" element={<MySTIResults />} />
             <Route path="consultants" element={<ConsultantList />} />
             <Route path="menstrual-cycle" element={<MenstrualCyclePage />} />
+            <Route path="monthly-diary" element={<MonthlyDiaryPage />} />
             <Route path="feedback" element={<CustomerFeedbackPage />} />
             <Route path="sti-assessment-history" element={<STIAssessmentHistory />} />
             <Route path="settings" element={<div className="p-4">Trang Cài đặt</div>} /> 
@@ -194,6 +199,11 @@ const AppContent: React.FC = () => {
             <Route path="/menstrual-cycle" element={
               <RoleGuard allowedRoles={['customer']}>
                 <MenstrualCyclePage />
+              </RoleGuard>
+            } />
+            <Route path="/monthly-diary" element={
+              <RoleGuard allowedRoles={['customer']}>
+                <MonthlyDiaryPage />
               </RoleGuard>
             } />
             <Route path="/test-packages/*" element={<TestPackagesPage />} />
@@ -288,11 +298,7 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AppContent />;
 };
 
 export default App;

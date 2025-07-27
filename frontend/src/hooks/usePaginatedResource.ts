@@ -93,7 +93,7 @@ const usePaginatedResource = <T>({
     } finally {
       setLoading(false);
     }
-  }, [apiService, filters, debouncedSearchTerm, searchParamName]);
+  }, [apiService, JSON.stringify(filters), debouncedSearchTerm, searchParamName]);
 
   // Re-fetch data whenever filters or the debounced search term change
   useEffect(() => {

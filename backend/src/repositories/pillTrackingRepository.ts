@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { PillTracking, IPillTracking } from '../models/PillTracking';
 import {DateTime} from 'luxon';
+import { TimeUtils } from '../utils/timeUtils';
 export class PillTrackingRepository {
     public static async checkNextActivePillSchedule(userId: string): Promise<boolean> {
         try {
@@ -145,15 +146,13 @@ export class PillTrackingRepository {
     }
 
     public static async findReminderPill(): Promise<IPillTracking[]> {
-        const now = DateTime.now().setZone('Asia/Ho_Chi_Minh');
+        const now = TimeUtils.getCurrentDateTimeInZone();
         const todayEnd = now.endOf('day').toJSDate();
         // const currentTime = now.toFormat('HH:mm');
         const result = await PillTracking.find({
             is_taken: false,
-            is_active: true,
             reminder_enabled: true,
             pill_start_date: { $lte: todayEnd },
-            // reminder_time: currentTime
         }).sort({ pill_start_date: -1 }).exec();
         const latestByUser = new Map<string, IPillTracking>();
         for (const schedule of result) {
@@ -344,7 +343,6 @@ export class PillTrackingRepository {
             const result = await PillTracking.find({
                 user_id: userId,
                 pill_start_date: { $gte: start, $lte: end },
-                is_active: true,
             }).select('_id is_taken pill_start_date').sort({ pill_start_date: 1 });
             return result.map(item => ({
                 _id: item._id,
@@ -357,12 +355,12 @@ export class PillTrackingRepository {
         }
     }
 
-    public static async updateTakenStatus(pill_tracking_id: string, taken_time: string){
+    public static async updateTakenStatus(pill_tracking_id: string){
         try {
             const pillTrackingId = new mongoose.Types.ObjectId(pill_tracking_id)
             return await PillTracking.findByIdAndUpdate(
                 pillTrackingId,
-                { is_taken: true, taken_time: new Date(taken_time) },
+                { is_taken: true },
                 { new: true }
             );
         } catch (error) {

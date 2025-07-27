@@ -169,7 +169,7 @@ export const useWeeklySchedule = ({
     } finally {
       setLoading(false);
     }
-  }, [mode, fetchWeeklySlots, fetchScheduleForWeek]);
+  }, [mode, currentWeek, consultantId]);
 
   // Save schedule
   const saveSchedule = useCallback(async (data: WeeklyScheduleData): Promise<boolean> => {

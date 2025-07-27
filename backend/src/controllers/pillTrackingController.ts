@@ -3,7 +3,6 @@ import { GetScheduleRequest, SetupPillTrackingRequest, UpdateScheduleRequest } f
 import { PillTrackingService } from '../services/pillTrackingService';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { DateTime } from 'luxon';
-import mongoose from 'mongoose';
 const router = Router();
 
 router.post('/setup', authenticateToken, async (req: Request, res: Response): Promise<void> => {
@@ -16,8 +15,6 @@ router.post('/setup', authenticateToken, async (req: Request, res: Response): Pr
             pill_start_date,
             reminder_time: req.body.reminder_time,
             reminder_enabled: req.body.reminder_enabled,
-            max_reminder_times: req.body.max_reminder_times,
-            reminder_interval: req.body.reminder_interval,
         };
 
         const result = await PillTrackingService.setupPillTracking(requestData);
@@ -73,17 +70,8 @@ router.get('/monthly', authenticateToken, async (req: Request, res: Response): P
 router.patch('/mark-as-taken/:id', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
     try {
         const pill_tracking_id = req.params.id;
-        const taken_time = req.body.taken_time;
 
-        if (!taken_time) {
-            res.status(400).json({
-                success: false, 
-                message: 'is_taken is required' 
-            });
-            return;
-        }
-
-        const result = await PillTrackingService.markPillAsTaken(pill_tracking_id, taken_time);
+        const result = await PillTrackingService.markPillAsTaken(pill_tracking_id);
 
         if (result.success) {
             res.status(200).json(result);
@@ -147,9 +135,9 @@ router.get('/', authenticateToken, authorizeRoles('customer'), async (req: Reque
 router.patch('/', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
         try {
             const user_id = (req.user as any).userId;
-            const {is_taken, reminder_enabled, reminder_time, is_active, pill_type, max_reminder_times, reminder_interval} = req.body;
+            const {is_taken, reminder_enabled, reminder_time, is_active, pill_type} = req.body;
             if (is_taken === undefined && is_active === undefined && reminder_enabled === undefined && !reminder_time && 
-                !pill_type && max_reminder_times === undefined && reminder_interval === undefined) {
+                !pill_type) {
                 res.status(400).json({
                     success: false,
                     message: 'No updatable fields provided'
@@ -161,19 +149,12 @@ router.patch('/', authenticateToken, authorizeRoles('customer'), async (req: Req
             if (is_taken != null){
                 updateRequest.is_taken = is_taken;
             }
-            if (is_active != null){
-                updateRequest.is_active = is_active;
-            }
             if (reminder_enabled !== undefined) 
                 updateRequest.reminder_enabled = reminder_enabled;
             if (reminder_time) 
                 updateRequest.reminder_time = reminder_time;
             if (pill_type) 
                 updateRequest.pill_type = pill_type;
-            if (max_reminder_times !== undefined) 
-                updateRequest.max_reminder_times = max_reminder_times;
-            if (reminder_interval !== undefined) 
-                updateRequest.reminder_interval = reminder_interval;
             const result = await PillTrackingService.updatePillSchedule(updateRequest);
 
             if (result.success) {
