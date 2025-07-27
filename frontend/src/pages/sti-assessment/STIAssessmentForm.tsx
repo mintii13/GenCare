@@ -73,9 +73,6 @@ const STIAssessmentForm = () => {
     risk_factors: [] as string[],
     living_area: 'normal',
 
-    // Mục đích xét nghiệm
-    test_purpose: '',
-    urgency: 'normal'
   });
 
   // State for bisexual male MSM question
@@ -177,6 +174,7 @@ const STIAssessmentForm = () => {
 
       const submissionData = {
         ...formData,
+        has_symptoms: formData.symptoms.length > 0,
         number_of_partners: formData.sexually_active === 'not_active' ? 'none' :
           formData.sexually_active === 'active_single' ? 'one' : 'multiple',
         // Use actual_orientation for backend if it exists, otherwise use sexual_orientation
@@ -214,14 +212,6 @@ const STIAssessmentForm = () => {
         return;
       }
 
-      if (!cleanedData.test_purpose) {
-        toast.error('Vui lòng chọn mục đích xét nghiệm', {
-          duration: 3000,
-          position: 'top-center',
-        });
-        setLoading(false);
-        return;
-      }
 
       const result = await STIAssessmentService.createAssessment(cleanedData as unknown as STIAssessmentData);
 
@@ -296,7 +286,7 @@ const STIAssessmentForm = () => {
             name: targetPackage.name,
             price: targetPackage.price
           });
-          
+
           console.log('About to navigate to:', `/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
           navigate(`/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
           console.log('Navigation completed');
@@ -348,7 +338,7 @@ const STIAssessmentForm = () => {
     } else {
       localStorage.removeItem('sti_screening_results');
     }
-    
+
     setShowConsultantModal(false);
     navigate('/consultants');
   };
@@ -756,47 +746,6 @@ const STIAssessmentForm = () => {
     </div>
   );
 
-  const renderTestPurpose = () => (
-    <div className="bg-green-50 p-6 rounded-xl border border-green-200 mb-6">
-      <div className="flex items-center space-x-2 mb-4">
-        <Shield className="w-5 h-5 text-green-600" />
-        <h3 className="text-lg font-semibold text-green-800">Mục đích xét nghiệm</h3>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Mục đích xét nghiệm *</label>
-          <select
-            value={formData.test_purpose}
-            onChange={(e) => updateFormData('test_purpose', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Chọn mục đích</option>
-            <option value="routine">Sàng lọc định kỳ</option>
-            <option value="symptoms">Có triệu chứng</option>
-            <option value="partner_positive">Bạn tình có STI</option>
-            <option value="pregnancy">Chuẩn bị mang thai</option>
-            <option value="new_relationship">Bắt đầu mối quan hệ mới</option>
-            <option value="occupational">Yêu cầu nghề nghiệp</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Mức độ khẩn cấp</label>
-          <select
-            value={formData.urgency}
-            onChange={(e) => updateFormData('urgency', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          >
-            <option value="normal">Bình thường</option>
-            <option value="urgent">Khẩn cấp (có triệu chứng)</option>
-            <option value="emergency">Cấp cứu</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderRecommendation = () => {
     if (!recommendation) return null;
 
@@ -837,18 +786,17 @@ const STIAssessmentForm = () => {
             <Shield className="w-6 h-6 mr-2 text-blue-600" />
             Kết quả đánh giá nguy cơ STI
           </h3>
-          
+
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold text-lg mb-3">Mức độ nguy cơ:</h4>
-              <div className={`inline-flex items-center px-4 py-2 rounded-full text-white font-medium ${
-                recommendation.risk_level === 'Cao' ? 'bg-red-500' :
+              <div className={`inline-flex items-center px-4 py-2 rounded-full text-white font-medium ${recommendation.risk_level === 'Cao' ? 'bg-red-500' :
                 recommendation.risk_level === 'Trung bình' ? 'bg-yellow-500' : 'bg-green-500'
-              }`}>
+                }`}>
                 <AlertTriangle className="w-4 h-4 mr-2" />
                 {recommendation.risk_level}
               </div>
-              
+
               <div className="mt-4">
                 <h5 className="font-medium mb-2">Lý do đánh giá:</h5>
                 <ul className="space-y-1">
@@ -925,7 +873,7 @@ const STIAssessmentForm = () => {
                 new_partner_recently: false, partner_has_sti: false, condom_use: 'sometimes',
                 previous_sti_history: [], hiv_status: '', last_sti_test: 'never',
                 has_symptoms: false, symptoms: [], risk_factors: [],
-                living_area: 'normal', test_purpose: '', urgency: 'normal'
+                living_area: 'normal'
               });
             }}
             className="w-full bg-gray-500 text-white py-3 px-6 rounded-lg hover:bg-gray-600 transition-colors"
@@ -968,17 +916,16 @@ const STIAssessmentForm = () => {
             <p className="text-gray-700">
               Bạn có đồng ý gửi thêm kết quả sàng lọc STI này cho chuyên gia không?
             </p>
-            
+
             {recommendation && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <h4 className="font-semibold text-blue-800 mb-2">Kết quả sàng lọc:</h4>
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="font-medium">Mức độ nguy cơ:</span>
-                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      recommendation.risk_level === 'Cao' ? 'bg-red-100 text-red-800' :
+                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${recommendation.risk_level === 'Cao' ? 'bg-red-100 text-red-800' :
                       recommendation.risk_level === 'Trung bình' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                    }`}>
+                      }`}>
                       {recommendation.risk_level}
                     </span>
                   </div>
@@ -989,11 +936,11 @@ const STIAssessmentForm = () => {
                 </div>
               </div>
             )}
-            
+
             <p className="text-sm text-gray-600">
               Việc gửi kết quả sàng lọc sẽ giúp chuyên gia hiểu rõ hơn về tình trạng của bạn và đưa ra lời khuyên phù hợp hơn.
             </p>
-            
+
             <div className="flex space-x-3 pt-4">
               <button
                 onClick={() => handleConfirmConsultantBooking(false)}
@@ -1017,7 +964,7 @@ const STIAssessmentForm = () => {
   const isStepValid = () => {
     const age = parseInt(formData.age);
     return formData.age && formData.gender && age >= 13 && age <= 100 &&
-      formData.sexually_active && formData.hiv_status && formData.test_purpose;
+      formData.sexually_active && formData.hiv_status;
   };
 
   return (
@@ -1043,7 +990,6 @@ const STIAssessmentForm = () => {
           {renderMedicalHistory()}
           {renderSymptoms()}
           {renderRiskFactors()}
-          {renderTestPurpose()}
 
           {/* Submit Button */}
           <div className="text-center">

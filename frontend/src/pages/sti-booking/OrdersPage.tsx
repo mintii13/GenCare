@@ -62,15 +62,16 @@ const OrdersPage: React.FC = () => {
   
   // Staff-only filter state
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState('order_date');
+  const [sortBy, setSortBy] = useState<string>('order_date');
   
-  // ✅ FIXED: Use actual database field names - MongoDB uses camelCase for timestamps
+  // Valid sort fields for backend validation
   const validSortFields = ['order_date', 'total_amount', 'order_status', 'createdAt', 'updatedAt'];
   
   // Debounce search term
   useEffect(() => {
     // This useEffect is no longer needed as searchTerm is removed
   }, []);
+
 
   useEffect(() => {
     if (!user) {
