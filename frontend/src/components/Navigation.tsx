@@ -61,31 +61,31 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
         <div className="grid grid-cols-3 items-center h-full px-6">
           {/* Logo bên trái */}
           <div className="flex items-center justify-start h-full">
-          <Link to="/" className="flex items-center space-x-2 h-full">
-            <GenCareLogo className="h-8 w-auto" />
-            <span className="text-lg font-bold text-blue-600 leading-none">GenCare</span>
-          </Link>
-          {/* Nút ẩn/hiện sidebar chỉ khi ở dashboard consultant */}
-          {location.pathname.startsWith('/consultant') && onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className="ml-4 px-3 py-1 rounded bg-primary-100 text-primary-700 border border-primary-200 hover:bg-primary-200 transition hidden md:inline"
-            >
-              {isSidebarOpen ? 'Ẩn menu' : 'Hiện menu'}
-            </button>
-          )}
+            <Link to="/" className="flex items-center space-x-2 h-full">
+              <GenCareLogo className="h-8 w-auto" />
+              <span className="text-lg font-bold text-blue-600 leading-none">GenCare</span>
+            </Link>
+            {/* Nút ẩn/hiện sidebar chỉ khi ở dashboard consultant */}
+            {location.pathname.startsWith('/consultant') && onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                className="ml-4 px-3 py-1 rounded bg-primary-100 text-primary-700 border border-primary-200 hover:bg-primary-200 transition hidden md:inline"
+              >
+                {isSidebarOpen ? 'Ẩn menu' : 'Hiện menu'}
+              </button>
+            )}
           </div>
           {/* Menu ở giữa */}
           <div className="hidden md:flex justify-center items-center space-x-6 h-full">
             <Link to="/" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Trang chủ
             </Link>
-            <div 
+            <div
               className="relative group h-full flex items-center"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >
-              <button 
+              <button
                 className="text-gray-600 hover:text-blue-600 flex items-center text-sm font-medium h-full"
               >
                 Dịch vụ
@@ -94,7 +94,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                 </svg>
               </button>
               {isServicesOpen && (
-                <div 
+                <div
                   className="absolute left-0 top-full w-56 bg-white rounded-md shadow-lg py-1 z-50"
                 >
                   <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
@@ -104,7 +104,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                     Đặt lịch tư vấn
                   </Link>
                   <Link to="/test-packages/sti" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                    Dịch vụ xét nghiệm 
+                    Dịch vụ xét nghiệm
                   </Link>
                   {isAuthenticated && user?.role === 'customer' && (
                     <>
@@ -115,9 +115,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                       <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch sử đặt lịch STI
                       </Link>
-                      <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử đặt lịch STI
-                      </Link>
+
                     </>
                   )}
                 </div>
@@ -180,7 +178,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           🧪 Kết quả xét nghiệm STI
                         </Link>
-                        
+
                         <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
                           <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Đánh giá & Phản hồi</span>
                         </div>
@@ -190,7 +188,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/sti-assessment-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           📋 Lịch sử đánh giá STI
                         </Link>
-                        
+
                         <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
                           <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Tài khoản</span>
                         </div>
@@ -207,7 +205,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           👤 Trang cá nhân
                         </Link>
-                        
+
                         <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
                           <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Dịch vụ</span>
                         </div>
@@ -251,29 +249,29 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
             )}
           </div>
           {/* Mobile Menu Button */}
-          <button 
+          <button
             className="md:hidden ml-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <svg 
-              className="w-6 h-6" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               {isMenuOpen ? (
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M6 18L18 6M6 6l12 12" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
                 />
               ) : (
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 6h16M4 12h16M4 18h16" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
                 />
               )}
             </svg>
@@ -284,15 +282,15 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
         {isMenuOpen && (
           <div className="md:hidden py-4">
             <div className="flex flex-col space-y-4">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className="text-gray-600 hover:text-primary-700"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Trang chủ
               </Link>
               <div className="space-y-2">
-                <button 
+                <button
                   className="text-gray-600 hover:text-primary-700 flex items-center"
                   onClick={() => setIsServicesOpen(!isServicesOpen)}
                 >
@@ -303,30 +301,30 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                 </button>
                 {isServicesOpen && (
                   <div className="pl-4 space-y-2">
-                    <Link 
-                      to="/menstrual-cycle" 
+                    <Link
+                      to="/menstrual-cycle"
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Theo dõi kinh nguyệt
                     </Link>
-                    <Link 
-                      to="/consultation/book-appointment" 
+                    <Link
+                      to="/consultation/book-appointment"
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Đặt lịch tư vấn
                     </Link>
-                    <Link 
-                      to="/test-packages/sti" 
+                    <Link
+                      to="/test-packages/sti"
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Dịch vụ xét nghiệm
                     </Link>
                     {isAuthenticated && user?.role === 'customer' && (
-                      <Link 
-                        to="/sti-assessment" 
+                      <Link
+                        to="/sti-assessment"
                         className="block text-gray-600 hover:text-primary-700"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -336,28 +334,28 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                   </div>
                 )}
               </div>
-              <Link 
-                to="/blogs" 
+              <Link
+                to="/blogs"
                 className="text-gray-600 hover:text-primary-700"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Blog
               </Link>
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className="text-gray-600 hover:text-primary-700"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Về chúng tôi
               </Link>
-              <Link 
-                to="/contact" 
+              <Link
+                to="/contact"
                 className="text-gray-600 hover:text-primary-700"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Liên hệ
               </Link>
-              
+
               {isAuthenticated ? (
                 <>
                   <span className="block text-gray-700 font-semibold mb-2">{user?.full_name || user?.email}</span>
@@ -368,25 +366,25 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <span className="text-xs text-gray-500 uppercase tracking-wide">Chăm sóc sức khỏe</span>
                       </div>
                       <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Lịch hẹn của tôi
+                        Lịch hẹn của tôi
                       </Link>
                       <Link to="/menstrual-cycle" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Chu kỳ kinh nguyệt
+                        Chu kỳ kinh nguyệt
                       </Link>
                       <Link to="/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Kết quả xét nghiệm STI
+                        Kết quả xét nghiệm STI
                       </Link>
-                      
+
                       <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
                         <span className="text-xs text-gray-500 uppercase tracking-wide">Đánh giá & Phản hồi</span>
                       </div>
                       <Link to="/my-feedback" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Đánh giá của tôi
+                        Đánh giá của tôi
                       </Link>
                       <Link to="/sti-assessment-history" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Lịch sử đánh giá STI
+                        Lịch sử đánh giá STI
                       </Link>
-                      
+
                       <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
                         <span className="text-xs text-gray-500 uppercase tracking-wide">Tài khoản</span>
                       </div>
@@ -401,20 +399,20 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <span className="text-xs text-gray-500 uppercase tracking-wide">Tài khoản</span>
                       </div>
                       <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Trang cá nhân
+                        Trang cá nhân
                       </Link>
-                      
+
                       <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
                         <span className="text-xs text-gray-500 uppercase tracking-wide">Dịch vụ</span>
                       </div>
                       <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Lịch sử xét nghiệm
+                        Lịch sử xét nghiệm
                       </Link>
                       <Link to="/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Kết quả xét nghiệm STI
+                        Kết quả xét nghiệm STI
                       </Link>
                       <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
-                         Lịch sử tư vấn
+                        Lịch sử tư vấn
                       </Link>
                     </>
                   )}
@@ -428,7 +426,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                 </>
               ) : (
                 <>
-                  <button 
+                  <button
                     className="block text-gray-600 hover:text-primary-700 mb-4"
                     onClick={() => {
                       setIsMenuOpen(false);
