@@ -14,8 +14,8 @@ export interface IAppointmentHistory {
     role: string;
   };
   performed_by_role: 'customer' | 'consultant' | 'staff' | 'admin';
-  old_data?: any;
-  new_data?: any;
+  old_data?: unknown;
+  new_data?: unknown;
   details?: string;
 }
 
@@ -47,14 +47,14 @@ const appointmentHistoryService = {
   getAppointmentHistoryList: async (params: URLSearchParams): Promise<GetAppointmentHistoryListResponse> => {
     const url = `${API.AppointmentHistory.LIST}?${params.toString()}`;
     console.log(`Fetching paginated appointment history from: ${url}`);
-    const response = await apiClient.get<any>(url); // Use 'any' to handle actual backend structure
+    const response = await apiClient.get<GetAppointmentHistoryListResponse>(url); // Use 'any' to handle actual backend structure
     
     // Extract the appointment histories array from the nested structure
     return {
       success: response.data.success,
       message: response.data.message,
       data: {
-        items: response.data.data.appointment_histories, // Extract the array
+        items: response.data.data.items, // Extract the array
         pagination: response.data.data.pagination
       }
     };

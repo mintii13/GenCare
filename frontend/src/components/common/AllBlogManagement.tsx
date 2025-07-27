@@ -272,7 +272,16 @@ const AllBlogManagement: React.FC = () => {
                           </div>
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(blog.publish_date).toLocaleDateString('vi-VN')}
+                            {
+                              blog.publish_date ? 
+                                (() => {
+                                  try {
+                                    return new Date(blog.publish_date).toLocaleDateString('vi-VN');
+                                  } catch {
+                                    return 'Không xác định';
+                                  }
+                                })() : 'Không xác định'
+                            }
                           </div>
                           <div className="flex items-center">
                             <MessageCircle className="w-4 h-4 mr-1" />

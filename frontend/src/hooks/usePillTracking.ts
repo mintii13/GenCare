@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiResponse } from '../services/apiClient';
 import {
@@ -10,7 +10,7 @@ import {
 
 interface UsePillTrackingReturn {
   schedules: PillSchedule[];
-  isLoading: boolean;
+  loading: boolean;
   error: string | null;
   refresh: () => void;
   setupPillSchedule: (data: SetupPillTrackingRequest) => Promise<ApiResponse<any>>;
@@ -21,39 +21,70 @@ interface UsePillTrackingReturn {
 export const usePillTracking = (): UsePillTrackingReturn => {
   const { user } = useAuth();
   const [schedules, setSchedules] = useState<PillSchedule[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
 
-  const refresh = useCallback(async () => {
-    if (!user?.id) {
-      setError("User not authenticated.");
+  // Debug log with user object details
+  console.log('[usePillTracking] Hook called:', {
+    user_id: user?.id,
+    user_email: user?.email,
+    loading,
+    hasLoaded: hasLoadedRef.current,
+    lastUserId: lastUserIdRef.current,
+    userChanged: lastUserIdRef.current !== user?.id
+  });
+
+  // Track user changes
+  if (lastUserIdRef.current !== user?.id) {
+    console.log('[usePillTracking] User changed from', lastUserIdRef.current, 'to', user?.id);
+    lastUserIdRef.current = user?.id;
+    hasLoadedRef.current = false; // Reset loaded flag when user changes
+  }
+
+  const loadData = useCallback(async () => {
+    console.log('[usePillTracking] loadData called, user.id:', user?.id, 'hasLoaded:', hasLoadedRef.current);
+    
+    if (!user?.id || hasLoadedRef.current) {
+      console.log('[usePillTracking] Skipping loadData - no user or already loaded');
       return;
     }
-    setIsLoading(true);
+    
+    hasLoadedRef.current = true;
+    setLoading(true);
     setError(null);
+    
     try {
-      const response = await pillTrackingService.getSchedule(user.id);
+      console.log('[usePillTracking] Making API call to getSchedule');
+      const response = await pillTrackingService.getSchedule();
+      console.log('[usePillTracking] API response:', response);
+      
       if (response.success && response.data) {
         setSchedules(response.data.schedules || []);
       } else {
-        // Không set error cho user chưa có pill schedule - đây là trạng thái bình thường
         setSchedules([]);
       }
-      setIsLoading(false);
     } catch (err: any) {
-      // Chỉ set error cho network errors hoặc server errors thật sự
+      console.error('[usePillTracking] API error:', err);
       if (err.response?.status >= 500 || !err.response) {
         setError("Không thể kết nối đến máy chủ. Vui lòng thử lại.");
       } else if (err.response?.status === 404) {
-        // 404 có nghĩa là user chưa có pill schedule - không phải error
-        // User chưa setup pill tracking
         setSchedules([]);
       } else {
         setError("Lỗi khi tải lịch uống thuốc.");
       }
-      setIsLoading(false);
+    } finally {
+      setLoading(false);
+      console.log('[usePillTracking] loadData completed');
     }
-  }, [user]);
+  }, [user?.id]);
+
+  const refresh = useCallback(async () => {
+    console.log('[usePillTracking] refresh called');
+    hasLoadedRef.current = false; // Reset loaded flag
+    await loadData();
+  }, [loadData]);
 
   const setupPillSchedule = useCallback(async (data: SetupPillTrackingRequest) => {
     if (!user?.id) throw new Error("User not found");
@@ -68,19 +99,19 @@ export const usePillTracking = (): UsePillTrackingReturn => {
       console.error("Failed to setup pill schedule:", error);
       throw error;
     }
-  }, [user, refresh]);
+  }, [user?.id, refresh]);
 
   const updatePillSchedule = useCallback(async (data: UpdatePillTrackingRequest) => {
     if (!user?.id) throw new Error("User not found");
     try {
-      const updatedSchedule = await pillTrackingService.updateSchedule(user.id, data);
+      const updatedSchedule = await pillTrackingService.updateSchedule(data);
       await refresh();
       return updatedSchedule;
     } catch (error) {
       console.error("Failed to update pill schedule:", error);
       throw error;
     }
-  }, [user, refresh]);
+  }, [user?.id, refresh]);
 
   const markPillAsTaken = useCallback(async (scheduleId: string) => {
     try {
@@ -92,12 +123,20 @@ export const usePillTracking = (): UsePillTrackingReturn => {
   }, [refresh]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    console.log('[usePillTracking] useEffect triggered, user.id:', user?.id);
+    if (user?.id && !hasLoadedRef.current) {
+      loadData();
+    } else if (!user?.id) {
+      setLoading(false);
+      setError(null);
+      setSchedules([]);
+      hasLoadedRef.current = false;
+    }
+  }, [user?.id]);
 
   return { 
     schedules, 
-    isLoading, 
+    loading, 
     error, 
     refresh, 
     setupPillSchedule, 

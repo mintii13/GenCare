@@ -44,7 +44,9 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
   };
 
   const handleLoginSuccess = (user: any) => {
-    const defaultSuccessMessage = `Chào mừng ${user.full_name || user.email}!`;
+    const defaultSuccessMessage = user.role === 'customer' 
+      ? `Chào mừng ${user.full_name || user.email}! `
+      : `Chào mừng ${user.full_name || user.email}! Đang chuyển hướng...`;
     toast.success(successMessage || defaultSuccessMessage);
     setShowLoginModal(false);
     
@@ -53,7 +55,7 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
       if (onClick) {
         onClick();
       } else if (redirectToDashboard) {
-        // Redirect đến dashboard theo role
+        // Redirect đến dashboard theo role (customer sẽ không redirect do logic mới)
         navigateAfterLogin(user, navigate);
       } else {
         navigate(redirectTo);

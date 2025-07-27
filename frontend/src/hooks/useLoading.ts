@@ -119,40 +119,40 @@ export function useLoading(keys: string[] = []): LoadingManager {
  * Ví dụ: const [loading, setLoading] = useSimpleLoading()
  */
 export function useSimpleLoading(initialLoading = false) {
-  const [isLoading, setIsLoading] = useState(initialLoading);
+  const [loading, setLoading] = useState(initialLoading);
   const [error, setError] = useState<string | null>(null);
 
-  const setLoading = useCallback((loading: boolean) => {
-    setIsLoading(loading);
-    if (loading) {
+  const setLoadingState = useCallback((loadingState: boolean) => {
+    setLoading(loadingState);
+    if (loadingState) {
       setError(null);
     }
   }, []);
 
   const setErrorMessage = useCallback((errorMessage: string | null) => {
     setError(errorMessage);
-    setIsLoading(false);
+    setLoading(false);
   }, []);
 
   const executeWithLoading = useCallback(async <T>(
     asyncFn: () => Promise<T>
   ): Promise<T> => {
     try {
-      setLoading(true);
+      setLoadingState(true);
       const result = await asyncFn();
-      setLoading(false);
+      setLoadingState(false);
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra';
       setErrorMessage(errorMessage);
       throw error;
     }
-  }, [setLoading, setErrorMessage]);
+  }, [setLoadingState, setErrorMessage]);
 
   return {
-    isLoading,
+    loading,
     error,
-    setLoading,
+    setLoading: setLoadingState,
     setError: setErrorMessage,
     clearError: () => setError(null),
     executeWithLoading

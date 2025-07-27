@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Spin, Row, Col, Alert } from 'antd';
 import { CalendarOutlined, FileTextOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { STIOrderService, CreateSTIOrderRequest } from '../../services/stiOrderService';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
@@ -76,6 +77,19 @@ const BookSTIPage: React.FC = () => {
     }
   }, [user]);
 
+  // Auto-fill notes from STI screening results
+  useEffect(() => {
+    const screeningNotes = localStorage.getItem('sti_screening_notes');
+    if (screeningNotes) {
+      setNotes(screeningNotes);
+      form.setFieldsValue({ notes: screeningNotes });
+      // Auto advance to step 2 if notes are filled
+      if (orderDate) {
+        setCurrentStep(2);
+      }
+    }
+  }, [orderDate]);
+
   const disabledDate = (current: dayjs.Dayjs) => {
     const today = dayjs().startOf('day');
     const isWeekend = current.day() === 0;
@@ -116,28 +130,34 @@ const BookSTIPage: React.FC = () => {
         return;
       }
      
-      // Nếu có selectedPackage từ STI Assessment, tạo order với package đó
-      const orderData = {
-        // sti_package_id: selectedPackage?._id || null,
-        // sti_test_items: selectedTest ? [selectedTest._id] : [],
+      // Tạo order data với validation
+      const orderData: CreateSTIOrderRequest = {
         order_date: orderDate.format('YYYY-MM-DD'),
         notes: notes.trim() || undefined
       };
      
+      // Nếu có selectedPackage, thêm thông tin package
+      if (selectedPackage) {
+        orderData.sti_package_id = selectedPackage._id;
+      }
+     
       console.log('Creating STI order with data:', orderData);
-      const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
-      if (response.data.success) {
+      
+      // Sử dụng STIOrderService thay vì gọi API trực tiếp
+      const response = await STIOrderService.createOrder(orderData);
+      
+      if (response.success) {
         const successMessage = selectedPackage 
           ? `Đặt lịch xét nghiệm ${selectedPackage.sti_package_name} thành công!`
           : 'Đặt lịch tư vấn thành công!';
         message.success(successMessage);
         navigate('/sti-booking/orders');
       } else {
-        message.error(response.data.message || 'Có lỗi xảy ra khi đặt lịch');
+        message.error(response.message || 'Có lỗi xảy ra khi đặt lịch');
       }
     } catch (error: any) {
       console.error('Error booking STI order:', error);
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch';
+      const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi đặt lịch';
       message.error(errorMessage);
     } finally {
       setLoading(false);

@@ -43,15 +43,17 @@ const ResourceList = <T extends object>({
   emptyText = 'No data found',
 }: ResourceListProps<T>) => {
   return (
-    <div style={{ padding: '24px' }}>
-      {/* Header Section */}
+    <div>
+      {/* Header Section - Only show if resourceTitle is provided */}
+      {resourceTitle && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <Title level={2}>{resourceTitle}</Title>
         <Space>{headerActions}</Space>
       </div>
+      )}
 
       {/* Filter Section */}
-      <Card style={{ marginBottom: '16px' }}>
+      <Card style={{ marginBottom: '12px' }}>
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={8}>
             <Input

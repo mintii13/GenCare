@@ -129,12 +129,13 @@ export class UserService {
                 query.search = PaginationUtils.sanitizeSearch(query.search);
             }
 
-            // Get data từ repository
+            // Get data từ repository - with user-specific default
+            const final_sort_by = sort_by === '_id' ? 'registration_date' : sort_by;
             const result = await UserRepository.findWithPagination(
                 filters,
                 page,
                 limit,
-                sort_by,
+                final_sort_by,
                 sort_order
             );
 

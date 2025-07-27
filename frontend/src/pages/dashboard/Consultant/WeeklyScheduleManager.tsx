@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { formatDateLocal } from '../../../utils/dateUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 import { weeklyScheduleService } from '../../../services/weeklyScheduleService';
 import { appointmentService } from '../../../services/appointmentService';
@@ -9,6 +10,7 @@ import GoogleAuthStatus from '../../../components/common/GoogleAuthStatus';
 import { FaChevronLeft, FaChevronRight, FaLink } from 'react-icons/fa';
 import apiClient from '../../../services/apiClient';
 import { API } from '../../../config/apiEndpoints';
+import AppointmentDetailModal from '../../../components/appointments/AppointmentDetailModal';
 
 
 interface WorkingDay {
@@ -89,7 +91,9 @@ interface Appointment {
 }
 
 const WeeklyScheduleManager: React.FC = () => {
+  console.log('🚀 [DEBUG] WeeklyScheduleManager component mounted/re-rendered');
   const { user } = useAuth();
+  console.log('🚀 [DEBUG] Current user from useAuth:', user);
   const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [scheduleData, setScheduleData] = useState<WeeklyScheduleData>({
     working_days: {},
@@ -102,8 +106,7 @@ const WeeklyScheduleManager: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [hoveredAppointment, setHoveredAppointment] = useState<Appointment | null>(null);
-  const [modalPosition, setModalPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+
   
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const dayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
@@ -129,12 +132,7 @@ const WeeklyScheduleManager: React.FC = () => {
           hover: 'hover:bg-green-600',
           cellBg: 'bg-green-50'
         };
-      case 'cancelled':
-        return {
-          bg: 'bg-red-500',
-          hover: 'hover:bg-red-600',
-          cellBg: 'bg-red-50'
-        };
+
       case 'in_progress':
         return {
           bg: 'bg-purple-500',
@@ -155,8 +153,7 @@ const WeeklyScheduleManager: React.FC = () => {
       case 'pending': return 'Chờ xác nhận';
       case 'confirmed': return 'Đã xác nhận';
       case 'completed': return 'Hoàn thành';
-      case 'cancelled': return 'Đã hủy';
-      case 'in_progress': return 'Đang tư vấn';
+      case 'in_progress': return 'Cuộc họp đang diễn ra';
       default: return status;
     }
   };
@@ -164,31 +161,31 @@ const WeeklyScheduleManager: React.FC = () => {
   // Check if current user is consultant (read-only) or staff (can edit)
   const isConsultant = user?.role === 'consultant';
   const canEdit = user?.role === 'staff' || user?.role === 'admin';
+  console.log('🚀 [DEBUG] User role check - isConsultant:', isConsultant, 'canEdit:', canEdit, 'user.role:', user?.role);
 
   useEffect(() => {
+    console.log('🚀 [DEBUG] useEffect triggered, currentWeek:', currentWeek);
     fetchWeekData();
   }, [currentWeek]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-      }
-    };
-  }, [hideTimeout]);
+
 
   const fetchWeekData = async () => {
+    console.log('🚀 [DEBUG] fetchWeekData STARTED');
     setLoading(true);
     try {
+      console.log('🚀 [DEBUG] About to call fetchScheduleForWeek and fetchAppointmentsForWeek');
       await Promise.all([
         fetchScheduleForWeek(),
         fetchAppointmentsForWeek()
       ]);
+      console.log('🚀 [DEBUG] Both fetch functions completed');
     } catch (error) {
+      console.log('🚀 [DEBUG] ❌ fetchWeekData error:', error);
       // Error handled by individual fetch functions
     } finally {
       setLoading(false);
+      console.log('🚀 [DEBUG] fetchWeekData FINISHED');
     }
   };
 
@@ -253,20 +250,17 @@ const WeeklyScheduleManager: React.FC = () => {
   };
 
     const fetchAppointmentsForWeek = async () => {
+    console.log('🚀 [DEBUG] fetchAppointmentsForWeek STARTED');
     try {
       const weekStart = format(currentWeek, 'yyyy-MM-dd');
       const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
 
-      for (let i = 0; i < 7; i++) {
-        const date = addDays(currentWeek, i);
-
-      }
-
-      
-
+      console.log('📅 [DEBUG] Fetching appointments for week:', weekStart, 'to', weekEnd);
+      console.log('📅 [DEBUG] Current user:', user);
       
       // Get current user's consultant ID (for consultant role, user.id is the consultant ID)
-      const consultantId = user?.id;
+      const consultantId = (user as any)?.id;
+      console.log('📅 [DEBUG] Consultant ID:', consultantId);
       
       
       // Try multiple approaches to get appointments
@@ -293,41 +287,63 @@ const WeeklyScheduleManager: React.FC = () => {
       
       
       try {
-        const paginatedData = await appointmentService.getAllAppointmentsPaginated({
+        console.log('📅 [DEBUG] Trying getConsultantAppointmentsPaginated (same API as AppointmentManagement)...');
+        const paginatedData = await appointmentService.getConsultantAppointmentsPaginated({
+          page: 1,
+          limit: 1000,  // Large limit to get all appointments
           date_from: weekStart,
-          date_to: weekEnd,
-          consultant_id: consultantId
+          date_to: weekEnd
         });
         
+        console.log('📅 [DEBUG] getConsultantAppointmentsPaginated response:', paginatedData);
 
         
         if (paginatedData && paginatedData.success && paginatedData.data && paginatedData.data.appointments) {
-          setAppointments(paginatedData.data.appointments);
+          // Filter out appointments with null customer_id (same as AppointmentManagement)
+          const validAppointments = paginatedData.data.appointments.filter((appointment: any) => {
+            return appointment && appointment.customer_id && appointment.customer_id.full_name;
+          });
+          
+          console.log('📅 [DEBUG] ✅ Found appointments via getConsultantAppointmentsPaginated:', validAppointments);
+          setAppointments(validAppointments);
           return;
+        } else {
+          console.log('📅 [DEBUG] ❌ getConsultantAppointmentsPaginated failed or no data');
         }
       } catch (paginatedError) {
-        
+        console.log('📅 [DEBUG] ❌ getConsultantAppointmentsPaginated error:', paginatedError);
 
       }
       
       // Fallback 1: Try consultant appointments endpoint
       try {
+        console.log('📅 [DEBUG] Trying getConsultantAppointments...');
         const consultantData = await appointmentService.getConsultantAppointments();
-if (consultantData && consultantData.success && consultantData.data && consultantData.data.appointments) {
+        console.log('📅 [DEBUG] getConsultantAppointments response:', consultantData);
+        
+        if (consultantData && consultantData.success && consultantData.data && consultantData.data.appointments) {
+          console.log('📅 [DEBUG] All consultant appointments:', consultantData.data.appointments);
           // Filter by date range manually
           const weekAppointments = consultantData.data.appointments.filter((appointment: Appointment) => {
             const appointmentDate = appointment.appointment_date;
-            return appointmentDate >= weekStart && appointmentDate <= weekEnd;
+            const inRange = appointmentDate >= weekStart && appointmentDate <= weekEnd;
+            console.log(`📅 [DEBUG] Appointment ${appointment._id} date ${appointmentDate} in range [${weekStart}-${weekEnd}]:`, inRange);
+            return inRange;
           });
           
-setAppointments(weekAppointments);
+          console.log('📅 [DEBUG] ✅ Found filtered appointments:', weekAppointments);
+          setAppointments(weekAppointments);
           return;
+        } else {
+          console.log('📅 [DEBUG] ❌ getConsultantAppointments failed or no data');
         }
       } catch (consultantError) {
+        console.log('📅 [DEBUG] ❌ getConsultantAppointments error:', consultantError);
       }
       
       // Fallback 2: Try direct apiClient call with proper parameters
       try {
+        console.log('📅 [DEBUG] Trying direct apiClient call...');
         const directResponse = await apiClient.get(API.Appointment.ALL, {
           params: {
             date_from: weekStart,
@@ -336,22 +352,30 @@ setAppointments(weekAppointments);
           }
         });
         
+        console.log('📅 [DEBUG] Direct apiClient response:', directResponse.data);
         const directData = directResponse.data;
         
         if (directData && (directData as any).success && (directData as any).data && (directData as any).data.appointments) {
+          console.log('📅 [DEBUG] ✅ Found appointments via direct call (structure 1):', (directData as any).data.appointments);
           setAppointments((directData as any).data.appointments);
           return;
         } else if (directData && (directData as any).appointments) {
           // Fallback for different response structure
+          console.log('📅 [DEBUG] ✅ Found appointments via direct call (structure 2):', (directData as any).appointments);
           setAppointments((directData as any).appointments);
           return;
+        } else {
+          console.log('📅 [DEBUG] ❌ Direct apiClient call failed or no data');
         }
       } catch (directError) {
+        console.log('📅 [DEBUG] ❌ Direct apiClient call error:', directError);
       }
       
+      console.log('📅 [DEBUG] ❌ All API calls failed, setting appointments to empty array');
       setAppointments([]);
       
     } catch (error) {
+      console.log('📅 [DEBUG] ❌ fetchAppointmentsForWeek main catch error:', error);
       setAppointments([]);
     }
   };
@@ -546,46 +570,11 @@ setAppointments(weekAppointments);
     }
   };
 
-  const handleMouseEnter = (appointment: Appointment, event: React.MouseEvent) => {
-    // Clear any existing timeout
-    if (hideTimeout) {
-      clearTimeout(hideTimeout);
-      setHideTimeout(null);
-    }
-    
-    const rect = event.currentTarget.getBoundingClientRect();
-    setModalPosition({
-      x: rect.right + 10,
-      y: rect.top
-    });
+  const handleAppointmentClick = (appointment: Appointment) => {
     setHoveredAppointment(appointment);
   };
 
-  const handleMouseLeave = () => {
-    // Set a delay before hiding the modal
-    const timeout = setTimeout(() => {
-      setHoveredAppointment(null);
-    }, 300); // 300ms delay
-    
-    setHideTimeout(timeout);
-  };
 
-  const handleModalMouseEnter = () => {
-    // Clear the hide timeout when hovering over the modal
-    if (hideTimeout) {
-      clearTimeout(hideTimeout);
-      setHideTimeout(null);
-    }
-  };
-
-  const handleModalMouseLeave = () => {
-    // Hide the modal immediately when leaving the modal area
-    setHoveredAppointment(null);
-    if (hideTimeout) {
-      clearTimeout(hideTimeout);
-      setHideTimeout(null);
-    }
-  };
 
   // Kiểm tra xem có thể hoàn thành lịch hẹn hay không (giống logic ở AppointmentManagement)
   const canCompleteAppointment = (appointment: Appointment) => {
@@ -684,19 +673,7 @@ setAppointments(weekAppointments);
         )}
 
         {/* Google Auth Status for Consultant */}
-        {isConsultant && (
-          <div className="bg-white rounded-lg shadow-sm p-4 mb-4 border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Trạng thái Google:</span>
-                <GoogleAuthStatus showButton={true} />
-              </div>
-              <div className="text-xs text-gray-500">
-                Cần kết nối Google để tạo link Google Meet khi xác nhận lịch hẹn
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Calendar View for Consultant or Schedule Form for Staff */}
         {isConsultant ? (
@@ -746,21 +723,7 @@ setAppointments(weekAppointments);
             
             {existingSchedule ? (
               <div>
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <h3 className="font-medium text-blue-900 mb-2">Thông tin chung</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-blue-700">Thời gian mỗi slot:</span> 
-                      <span className="font-medium ml-2">{scheduleData.default_slot_duration} phút</span>
-                    </div>
-                    {scheduleData.notes && (
-                      <div>
-                        <span className="text-blue-700">Ghi chú:</span> 
-                        <span className="font-medium ml-2">{scheduleData.notes}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Weekly Calendar View */}
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -807,11 +770,19 @@ setAppointments(weekAppointments);
                                 }
                                 
                                 // Get appointments for this specific day and hour
+                                // Debug removed to reduce console spam
+                                
                                 const dayAppointments = appointments.filter(appointment => {
                                   if (appointment.status === 'cancelled') return false; // Bỏ qua lịch đã hủy
                                   const appointmentDate = parseISO(appointment.appointment_date);
                                   const appointmentHour = parseInt(appointment.start_time.split(':')[0]);
-                                  return isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
+                                  const matches = isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
+                                  
+                                  if (matches) {
+                                    console.log(`✅ [DEBUG] Found matching appointment:`, appointment);
+                                  }
+                                  
+                                  return matches;
                                 });
                                 
                              
@@ -835,8 +806,7 @@ setAppointments(weekAppointments);
                                   cellContent = (
                                     <div 
                                       className={`absolute inset-1 ${statusColors.bg} rounded-md flex flex-col justify-center items-center text-white p-1 cursor-pointer ${statusColors.hover} transition-colors shadow-sm overflow-hidden`}
-                                      onMouseEnter={(e) => handleMouseEnter(appointment, e)}
-                                      onMouseLeave={handleMouseLeave}
+                                      onClick={() => handleAppointmentClick(appointment)}
                                     >
                                       <span className="text-xs font-semibold leading-tight text-center w-full truncate px-1">
                                         {appointment.customer_id?.full_name || 'Khách hàng'}
@@ -946,10 +916,28 @@ setAppointments(weekAppointments);
                       <span className="font-medium">Được tạo bởi:</span> {existingSchedule.created_by.name}
                     </div>
                     <div>
-                      <span className="font-medium">Ngày tạo:</span> {format(new Date(existingSchedule.created_date), 'dd/MM/yyyy HH:mm')}
+                      <span className="font-medium">Ngày tạo:</span> {
+                        existingSchedule.created_date ? 
+                          (() => {
+                            try {
+                              return format(new Date(existingSchedule.created_date), 'dd/MM/yyyy HH:mm');
+                            } catch {
+                              return 'Không xác định';
+                            }
+                          })() : 'Không xác định'
+                        }
                     </div>
                     <div>
-                      <span className="font-medium">Cập nhật:</span> {format(new Date(existingSchedule.updated_date), 'dd/MM/yyyy HH:mm')}
+                      <span className="font-medium">Cập nhật:</span> {
+                        existingSchedule.updated_date ? 
+                          (() => {
+                            try {
+                              return format(new Date(existingSchedule.updated_date), 'dd/MM/yyyy HH:mm');
+                            } catch {
+                              return 'Không xác định';
+                            }
+                          })() : 'Không xác định'
+                        }                         
                     </div>
                   </div>
                 </div>
@@ -964,153 +952,143 @@ setAppointments(weekAppointments);
               </div>
             )}
 
-            {/* Appointment Info Modal */}
+                        {/* Appointment Info Modal */}
             {hoveredAppointment && (
-              <div
-                className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm"
-                style={{
-                  left: modalPosition.x,
-                  top: modalPosition.y,
-                  transform: modalPosition.x > window.innerWidth - 300 ? 'translateX(-100%)' : 'none'
-                }}
-                onMouseEnter={handleModalMouseEnter}
-                onMouseLeave={handleModalMouseLeave}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-3 pb-2 border-b">
-                  <h3 className="font-semibold text-gray-800">Thông tin cuộc hẹn</h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    hoveredAppointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                    hoveredAppointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    hoveredAppointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    hoveredAppointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {getAppointmentStatusLabel(hoveredAppointment.status)}
-                  </span>
-                </div>
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg shadow-xl relative max-h-[90vh] overflow-hidden w-[480px] max-w-[90vw]">
+                  {/* Header */}
+                  <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800">Thông tin cuộc hẹn</h3>
+                    <button
+                      onClick={() => setHoveredAppointment(null)}
+                      className="text-gray-400 hover:text-gray-600 w-6 h-6 flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
+                  </div>
 
-                {/* Customer Info */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-500 font-medium">Khách hàng:</span>
-                    <span className="font-medium text-gray-700">
-                      {hoveredAppointment.customer_id?.full_name || 'Không có tên'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-500 font-medium text-sm">Email:</span>
-                    <span className="text-sm text-gray-600">
-                      {hoveredAppointment.customer_id?.email || 'Không có email'}
-                    </span>
-                  </div>
-                  
-                  {hoveredAppointment.customer_id?.phone && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-gray-500 font-medium text-sm">Điện thoại:</span>
-                      <span className="text-sm text-gray-600">
-                        {hoveredAppointment.customer_id.phone}
+                  {/* Content */}
+                  <div className="flex flex-col" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+                    <div className="p-4 overflow-y-auto flex-1">
+                    {/* Status */}
+                    <div className="mb-3">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        hoveredAppointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                        hoveredAppointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        hoveredAppointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        hoveredAppointment.status === 'in_progress' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {getAppointmentStatusLabel(hoveredAppointment.status)}
                       </span>
                     </div>
-                  )}
-                </div>
 
-                {/* Appointment Details */}
-                <div className="space-y-2 mb-4 pt-2 border-t">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-500 font-medium text-sm">Ngày:</span>
-                    <span className="text-sm text-gray-800">
-                      {format(parseISO(hoveredAppointment.appointment_date), 'dd/MM/yyyy')}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-500 font-medium text-sm">Thời gian:</span>
-                    <span className="text-sm text-gray-800">
-                      {hoveredAppointment.start_time} - {hoveredAppointment.end_time}
-                    </span>
-                  </div>
-
-                  {/* Google Meet Link */}
-                  {hoveredAppointment.status === 'in_progress' && hoveredAppointment.meeting_info?.meet_url && (
-                    <div className="flex items-center space-x-2 mt-2">
-                      <FaLink className="text-green-600" />
-                      <a
-                        href={hoveredAppointment.meeting_info.meet_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-sm"
-                      >
-                        Tham gia buổi tư vấn (Meet)
-                      </a>
+                    {/* Info */}
+                    <div className="space-y-2 text-sm mb-4">
+                      <div>
+                        <span className="text-gray-500">Khách hàng:</span>
+                        <p className="font-medium">{hoveredAppointment.customer_id?.full_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Email:</span>
+                        <p className="font-medium truncate">{hoveredAppointment.customer_id?.email || 'N/A'}</p>
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Customer Notes */}
-                {hoveredAppointment.customer_notes && (
-                  <div className="mb-4 pt-2 border-t">
-                    <div className="space-y-1">
-                      <span className="text-sm font-medium text-gray-700">Ghi chú từ khách hàng:</span>
-                      <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">{hoveredAppointment.customer_notes}</p>
+                    {/* Notes - Only show if exists */}
+                    {hoveredAppointment.customer_notes && (
+                      <div className="mb-4 p-3 bg-yellow-50 rounded text-sm">
+                        <span className="text-gray-500 font-medium">Ghi chú khách hàng:</span>
+                        <p className="mt-1 whitespace-pre-wrap">{hoveredAppointment.customer_notes}</p>
+                      </div>
+                    )}
+
+                    {/* Consultant Notes if exists */}
+                    {hoveredAppointment.consultant_notes && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded text-sm">
+                        <span className="text-gray-500 font-medium">Ghi chú của chuyên gia:</span>
+                        <p className="mt-1 whitespace-pre-wrap">{hoveredAppointment.consultant_notes}</p>
+                      </div>
+                    )}
+
+                    {/* No notes message */}
+                    {!hoveredAppointment.customer_notes && !hoveredAppointment.consultant_notes && (
+                      <div className="mb-4 p-3 bg-gray-50 rounded text-sm text-center text-gray-500">
+                        Không có ghi chú
+                      </div>
+                    )}
+
+                    {/* Google Meet Link */}
+                    {hoveredAppointment.status === 'in_progress' && hoveredAppointment.meeting_info?.meet_url && (
+                      <div className="mb-4">
+                        <a 
+                          href={hoveredAppointment.meeting_info.meet_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-block w-full text-center px-4 py-3 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Tham gia cuộc họp
+                        </a>
+                      </div>
+                    )}
                     </div>
+
+                    {/* Action Buttons - Fixed at bottom */}
+                    {(hoveredAppointment.status === 'pending' || hoveredAppointment.status === 'confirmed' || hoveredAppointment.status === 'in_progress') && (
+                      <div className="p-4 border-t border-gray-200 bg-gray-50">
+                        <div className="flex space-x-3">
+                          {hoveredAppointment.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleAppointmentAction(hoveredAppointment._id, 'confirm')}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors"
+                              >
+                                Xác nhận
+                              </button>
+                              <button
+                                onClick={() => handleAppointmentAction(hoveredAppointment._id, 'cancel')}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors"
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          )}
+
+                          {hoveredAppointment.status === 'confirmed' && (
+                            <>
+                              <button
+                                onClick={() => handleAppointmentAction(hoveredAppointment._id, 'start')}
+                                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors"
+                              >
+                                Bắt đầu
+                              </button>
+                              <button
+                                onClick={() => handleAppointmentAction(hoveredAppointment._id, 'cancel')}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors"
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          )}
+
+                          {hoveredAppointment.status === 'in_progress' && (
+                            <button
+                              onClick={() => handleAppointmentAction(hoveredAppointment._id, 'complete')}
+                              disabled={!canCompleteAppointment(hoveredAppointment)}
+                              className={`flex-1 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors ${
+                                canCompleteAppointment(hoveredAppointment)
+                                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                                  : 'bg-gray-400 cursor-not-allowed'
+                              }`}
+                            >
+                              Hoàn thành
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {/* Action Buttons */}
-                {(hoveredAppointment.status === 'pending' || hoveredAppointment.status === 'confirmed' || hoveredAppointment.status === 'in_progress') && (
-                  <div className="flex space-x-2 pt-3 border-t">
-                    {hoveredAppointment.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleAppointmentAction(hoveredAppointment._id, 'confirm')}
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-                        >
-                          Xác nhận
-                        </button>
-                        <button
-                          onClick={() => handleAppointmentAction(hoveredAppointment._id, 'cancel')}
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-                        >
-                          Hủy
-                        </button>
-                      </>
-                    )}
-
-                    {hoveredAppointment.status === 'confirmed' && (
-                      <>
-                        <button
-                          onClick={() => handleAppointmentAction(hoveredAppointment._id, 'start')}
-                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-                        >
-                          Bắt đầu
-                        </button>
-                        <button
-                          onClick={() => handleAppointmentAction(hoveredAppointment._id, 'cancel')}
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-                        >
-                          Hủy
-                        </button>
-                      </>
-                    )}
-
-                    {hoveredAppointment.status === 'in_progress' && (
-                      <button
-                        onClick={() => handleAppointmentAction(hoveredAppointment._id, 'complete')}
-                        disabled={!canCompleteAppointment(hoveredAppointment)}
-                        className={`flex-1 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors ${
-                          canCompleteAppointment(hoveredAppointment)
-                            ? 'bg-emerald-600 hover:bg-emerald-700'
-                            : 'bg-gray-400 cursor-not-allowed'
-                        }`}
-                        title={canCompleteAppointment(hoveredAppointment) ? 'Hoàn thành buổi tư vấn' : getCompletionBlockedReason(hoveredAppointment)}
-                      >
-                        Hoàn thành
-                      </button>
-                    )}
-                  </div>
-                )}
+                </div>
               </div>
             )}
           </div>

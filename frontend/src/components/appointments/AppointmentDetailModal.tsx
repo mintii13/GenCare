@@ -165,14 +165,47 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Chi tiết Lịch hẹn</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">
-              ×
-            </button>
-          </div>
+      <div 
+        className="bg-white rounded-xl shadow-2xl relative max-h-[90vh] overflow-hidden"
+        style={{ 
+          width: '60vw', 
+          maxWidth: '800px'
+        }}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-800">Chi tiết Lịch hẹn</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex" style={{ height: '500px' }}>
+          {/* Left Half - Appointment Info */}
+          <div className="w-1/2 p-6 border-r border-gray-200 overflow-y-auto">
+            <div className="h-full">
+              {/* Status */}
+              <div className="mb-6">
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                  appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                  appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                  appointment.status === 'in_progress' ? 'bg-purple-100 text-purple-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {appointment.status === 'confirmed' ? 'Đã xác nhận' :
+                   appointment.status === 'pending' ? 'Chờ xác nhận' :
+                   appointment.status === 'completed' ? 'Hoàn thành' :
+                   appointment.status === 'cancelled' ? 'Đã hủy' :
+                   appointment.status === 'in_progress' ? 'Đang diễn ra' :
+                   appointment.status}
+                </span>
+              </div>
 
           <Tabs defaultActiveKey="1" className="mb-6">
             <Tabs.TabPane tab="Đồng ý/Từ chối & Ghi chú" key="1">
@@ -344,17 +377,76 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
                 <div className="text-gray-500 italic">Không có thông tin xét nghiệm STI trong ghi chú khách hàng.</div>
               )}
             </Tabs.TabPane>
-          </Tabs>
+              </Tabs>
+            </div>
+          </div>
 
-          {/* Appointment History */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Lịch sử Lịch hẹn</h3>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              {historyLoading ? (
-                <Loading />
-              ) : (
-                <AppointmentHistoryTimeline history={history} />
-              )}
+          {/* Right Half - Notes & History */}
+          <div className="w-1/2 p-6">
+            <div className="h-full flex flex-col">
+              <h5 className="text-lg font-bold text-gray-800 mb-4">Ghi chú & Lịch sử</h5>
+              <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4">
+                <div className="space-y-4">
+                  {/* Customer Notes */}
+                  {appointment.customer_notes && (
+                    <div>
+                      <h6 className="font-semibold text-gray-800 mb-2">Ghi chú từ khách hàng:</h6>
+                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap bg-white p-3 rounded border">
+                                                 {appointment.customer_notes}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Consultant Notes */}
+                  {appointment.consultant_notes && (
+                    <div className={appointment.customer_notes ? "border-t border-gray-200 pt-4" : ""}>
+                      <h6 className="font-semibold text-gray-800 mb-2">Ghi chú của chuyên gia:</h6>
+                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap bg-white p-3 rounded border">
+                        {appointment.consultant_notes}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Appointment Info Summary */}
+                  <div className={appointment.customer_notes || appointment.consultant_notes ? "border-t border-gray-200 pt-4" : ""}>
+                    <h6 className="font-semibold text-gray-800 mb-2">Tóm tắt buổi hẹn:</h6>
+                    <div className="text-gray-700 space-y-2 bg-white p-3 rounded border">
+                      <p>• Trạng thái: {appointment.status === 'confirmed' ? 'Đã xác nhận' :
+                       appointment.status === 'pending' ? 'Chờ xác nhận' :
+                       appointment.status === 'completed' ? 'Hoàn thành' :
+                       appointment.status === 'cancelled' ? 'Đã hủy' :
+                       appointment.status === 'in_progress' ? 'Đang diễn ra' :
+                       appointment.status}</p>
+                      <p>• Ngày hẹn: {formatDate(appointment.appointment_date)}</p>
+                      <p>• Thời gian: {appointment.start_time} - {appointment.end_time}</p>
+                      <p>• Khách hàng: {appointment.customer_id?.full_name || 'N/A'}</p>
+                      <p>• Ngày tạo: {formatDateTime(appointment.created_date)}</p>
+                      {appointment.meeting_info?.meet_url && (
+                        <p>• Đã tạo link Google Meet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Appointment History */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h6 className="font-semibold text-gray-800 mb-2">Lịch sử thay đổi:</h6>
+                    <div className="bg-white p-3 rounded border">
+                      {historyLoading ? (
+                        <Loading />
+                      ) : (
+                        <AppointmentHistoryTimeline history={history} />
+                      )}
+                    </div>
+                  </div>
+
+                  {!appointment.customer_notes && !appointment.consultant_notes && (
+                    <div className="text-center text-gray-500 mt-8">
+                      <p>Chưa có ghi chú nào cho cuộc hẹn này.</p>
+                      <p className="mt-2">Ghi chú và lịch sử sẽ được hiển thị tại đây.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

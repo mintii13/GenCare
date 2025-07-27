@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import dayjs from 'dayjs';
+
 /**
  * Middleware to validate and group menstrual cycle period days.
  * It checks if the period_days is an array, normalizes the dates,
@@ -61,8 +62,101 @@ export const groupPeriodDays = (req: Request, res: Response, next: NextFunction)
     next();
 };
 
+// Schema for daily mood data
+const dailyMoodDataSchema = Joi.object({
+    mood: Joi.string().valid('happy', 'sad', 'tired', 'excited', 'calm', 'stressed', 'neutral').default('neutral'),
+    energy: Joi.string().valid('high', 'medium', 'low').default('medium'),
+    symptoms: Joi.array().items(Joi.string()),
+    notes: Joi.string().allow('').optional()
+});
 
-export const menstrualCycleSchema = Joi.object({
+// Schema for period day with mood data
+const periodDaySchema = Joi.object({
+    date: Joi.date().required(),
+    mood_data: dailyMoodDataSchema.optional()
+});
+
+// Schema for mood data structure
+const moodDataSchema = Joi.object().pattern(
+    Joi.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD format
+    dailyMoodDataSchema
+);
+
+// Updated menstrual cycle schema
+const menstrualCycleSchema = Joi.object({
+    period_days: Joi.array().items(periodDaySchema).min(1).required(),
+    mood_data: moodDataSchema.optional() // Keep for backward compatibility
+});
+
+// Validation middleware for processing menstrual cycle
+export const validateProcessMenstrualCycle = (req: any, res: any, next: any) => {
+    const { error } = menstrualCycleSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            errors: error.details.map((detail: any) => detail.message)
+        });
+    }
+    next();
+};
+
+// Validation schemas for mood data operations
+const createMoodDataSchema = Joi.object({
+    date: Joi.string().regex(/^\d{4}-\d{2}-\d{2}$/).required(),
+    mood_data: dailyMoodDataSchema.required()
+});
+
+const updateMoodDataSchema = Joi.object({
+    date: Joi.string().regex(/^\d{4}-\d{2}-\d{2}$/).required(),
+    mood_data: dailyMoodDataSchema.required()
+});
+
+const getMoodDataSchema = Joi.object({
+    date: Joi.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    start_date: Joi.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    end_date: Joi.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+});
+
+// Validation middleware for mood data operations
+export const validateCreateMoodData = (req: any, res: any, next: any) => {
+    const { error } = createMoodDataSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            errors: error.details.map((detail: any) => detail.message)
+        });
+    }
+    next();
+};
+
+export const validateUpdateMoodData = (req: any, res: any, next: any) => {
+    const { error } = updateMoodDataSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            errors: error.details.map((detail: any) => detail.message)
+        });
+    }
+    next();
+};
+
+export const validateGetMoodData = (req: any, res: any, next: any) => {
+    const { error } = getMoodDataSchema.validate(req.query);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            message: 'Validation error',
+            errors: error.details.map((detail: any) => detail.message)
+        });
+    }
+    next();
+};
+
+// Legacy schema for backward compatibility
+export const legacyMenstrualCycleSchema = Joi.object({
     period_days: Joi.array()
     .items(
         Joi.string().required().custom((value, helpers) => {
@@ -87,7 +181,7 @@ export const menstrualCycleSchema = Joi.object({
 });
 
 export const validateMenstrualCycle = (req: Request, res: Response, next: NextFunction) => {
-    const { error } = menstrualCycleSchema.validate(req.body, { abortEarly: false });
+    const { error } = legacyMenstrualCycleSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
         success: false,
@@ -96,4 +190,4 @@ export const validateMenstrualCycle = (req: Request, res: Response, next: NextFu
       });
     }
     next();
-}
+};

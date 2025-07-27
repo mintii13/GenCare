@@ -314,7 +314,7 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
       key: 'order_code',
       width: 120,
       render: (code: string, record: StiOrder) => (
-        <span>{code || record._id.slice(-8)}</span>
+        <span>{code || (record._id ? record._id.slice(-8) : 'N/A')}</span>
       )
     },
     {
@@ -431,7 +431,7 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
       width: 120,
       render: (record: StiResult) => {
         const order = orders.find(o => o._id === record.order_id);
-        return <span>{order?.order_code || record.order_id.slice(-8)}</span>;
+        return <span>{order?.order_code || (record.order_id ? record.order_id.slice(-8) : 'N/A')}</span>;
       }
     },
     {

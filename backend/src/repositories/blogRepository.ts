@@ -1,99 +1,236 @@
 import { Blog, IBlog } from '../models/Blog';
 import { User } from '../models/User';
 import { Consultant } from '../models/Consultant';
+import mongoose from 'mongoose';
 
 export class BlogRepository {
     public static async findAllWithAuthor(): Promise<any[]> {
         try {
-            const blogs = await Blog.find({ status: true }) // Chỉ lấy blog đã publish
-                .sort({ publish_date: -1 })
-                .lean();
-
-            const blogsWithAuthor = await Promise.all(
-                blogs.map(async (blog) => {
-                    // Tìm user (author)
-                    const user = await User.findById(blog.author_id).lean();
-                    if (!user) return { ...blog, blog_id: blog._id, author: null };
-
-                    // Tìm consultant info nếu user là consultant
-                    let consultantInfo = null;
-                    if (user.role === 'consultant') {
-                        consultantInfo = await Consultant.findOne({
-                            user_id: blog.author_id
-                        }).lean();
+            // Use aggregation pipeline to solve N+1 query problem
+            const blogsWithAuthor = await Blog.aggregate([
+                {
+                    $match: { status: true } // Only published blogs
+                },
+                {
+                    $sort: { publish_date: -1 }
+                },
+                // Join with User collection for author info
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'author_id',
+                        foreignField: '_id',
+                        as: 'user_info'
                     }
-
-                    // Kết hợp thông tin author
-                    const author = {
-                        consultant_id: user._id,
-                        full_name: user.full_name,
-                        email: user.email,
-                        phone: user.phone,
-                        role: user.role,
-                        avatar: user.avatar,
-                        ...(consultantInfo && {
-                            specialization: consultantInfo.specialization,
-                            qualifications: consultantInfo.qualifications,
-                            experience_years: consultantInfo.experience_years,
-                            consultation_rating: consultantInfo.consultation_rating,
-                            total_consultations: consultantInfo.total_consultations
-                        })
-                    };
-
-                    return {
-                        ...blog,
-                        blog_id: blog._id,
-                        author
-                    };
-                })
-            );
+                },
+                {
+                    $unwind: {
+                        path: '$user_info',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // Join with Consultant collection for consultant-specific info
+                {
+                    $lookup: {
+                        from: 'consultants',
+                        localField: 'author_id',
+                        foreignField: 'user_id',
+                        as: 'consultant_info'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$consultant_info',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // Project final result
+                {
+                    $project: {
+                        _id: 1,
+                        blog_id: '$_id',
+                        title: 1,
+                        content: 1,
+                        author_id: 1,
+                        publish_date: 1,
+                        status: 1,
+                        read_count: 1,
+                        like_count: 1,
+                        comment_count: 1,
+                        created_at: 1,
+                        updated_at: 1,
+                        author: {
+                            $cond: {
+                                if: { $ne: ['$user_info', null] },
+                                then: {
+                                    consultant_id: '$user_info._id',
+                                    full_name: '$user_info.full_name',
+                                    email: '$user_info.email',
+                                    phone: '$user_info.phone',
+                                    role: '$user_info.role',
+                                    avatar: '$user_info.avatar',
+                                    specialization: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.specialization',
+                                            else: null
+                                        }
+                                    },
+                                    qualifications: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.qualifications',
+                                            else: null
+                                        }
+                                    },
+                                    experience_years: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.experience_years',
+                                            else: null
+                                        }
+                                    },
+                                    consultation_rating: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.consultation_rating',
+                                            else: null
+                                        }
+                                    },
+                                    total_consultations: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.total_consultations',
+                                            else: null
+                                        }
+                                    }
+                                },
+                                else: null
+                            }
+                        }
+                    }
+                }
+            ]);
 
             return blogsWithAuthor;
         } catch (error) {
-            console.error('Error finding blogs with author:', error);
+            console.error('Error finding all blogs with author:', error);
             throw error;
         }
     }
 
     public static async findByIdWithAuthor(blogId: string): Promise<any | null> {
         try {
-            const blog = await Blog.findOne({ _id: blogId, status: true }).lean(); // Chỉ lấy blog đã publish
-            if (!blog) return null;
+            // Convert string to ObjectId
+            const objectId = new mongoose.Types.ObjectId(blogId);
+            
+            // Use aggregation pipeline for single blog
+            const result = await Blog.aggregate([
+                {
+                    $match: { 
+                        _id: objectId,
+                        status: true 
+                    }
+                },
+                // Join with User collection for author info
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'author_id',
+                        foreignField: '_id',
+                        as: 'user_info'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$user_info',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // Join with Consultant collection for consultant-specific info
+                {
+                    $lookup: {
+                        from: 'consultants',
+                        localField: 'author_id',
+                        foreignField: 'user_id',
+                        as: 'consultant_info'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$consultant_info',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // Project final result
+                {
+                    $project: {
+                        _id: 1,
+                        blog_id: '$_id',
+                        title: 1,
+                        content: 1,
+                        author_id: 1,
+                        publish_date: 1,
+                        status: 1,
+                        read_count: 1,
+                        like_count: 1,
+                        comment_count: 1,
+                        created_at: 1,
+                        updated_at: 1,
+                        author: {
+                            $cond: {
+                                if: { $ne: ['$user_info', null] },
+                                then: {
+                                    consultant_id: '$user_info._id',
+                                    full_name: '$user_info.full_name',
+                                    email: '$user_info.email',
+                                    phone: '$user_info.phone',
+                                    role: '$user_info.role',
+                                    avatar: '$user_info.avatar',
+                                    specialization: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.specialization',
+                                            else: null
+                                        }
+                                    },
+                                    qualifications: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.qualifications',
+                                            else: null
+                                        }
+                                    },
+                                    experience_years: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.experience_years',
+                                            else: null
+                                        }
+                                    },
+                                    consultation_rating: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.consultation_rating',
+                                            else: null
+                                        }
+                                    },
+                                    total_consultations: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.total_consultations',
+                                            else: null
+                                        }
+                                    }
+                                },
+                                else: null
+                            }
+                        }
+                    }
+                }
+            ]);
 
-            // Tìm user (author)
-            const user = await User.findById(blog.author_id).lean();
-            if (!user) return { ...blog, blog_id: blog._id, author: null };
-
-            // Tìm consultant info nếu user là consultant
-            let consultantInfo = null;
-            if (user.role === 'consultant') {
-                consultantInfo = await Consultant.findOne({
-                    user_id: blog.author_id
-                }).lean();
-            }
-
-            // Kết hợp thông tin author
-            const author = {
-                consultant_id: user._id,
-                full_name: user.full_name,
-                email: user.email,
-                phone: user.phone,
-                role: user.role,
-                avatar: user.avatar,
-                ...(consultantInfo && {
-                    specialization: consultantInfo.specialization,
-                    qualifications: consultantInfo.qualifications,
-                    experience_years: consultantInfo.experience_years,
-                    consultation_rating: consultantInfo.consultation_rating,
-                    total_consultations: consultantInfo.total_consultations
-                })
-            };
-
-            return {
-                ...blog,
-                blog_id: blog._id,
-                author
-            };
+            return result.length > 0 ? result[0] : null;
         } catch (error) {
             console.error('Error finding blog by id with author:', error);
             throw error;
@@ -117,6 +254,7 @@ export class BlogRepository {
             throw error;
         }
     }
+    // Updated findWithPagination to use aggregation
     public static async findWithPagination(
         filters: any,
         page: number,
@@ -132,59 +270,168 @@ export class BlogRepository {
             const sortObj: any = {};
             sortObj[sortBy] = sortOrder;
 
-            // Get total count với cùng filter
-            const total = await Blog.countDocuments(filters);
-
-            // Get paginated blogs
-            const blogs = await Blog.find(filters)
-                .sort(sortObj)
-                .skip((page - 1) * limit)
-                .limit(limit)
-                .lean();
-
-            // Populate author info cho từng blog
-            const blogsWithAuthor = await Promise.all(
-                blogs.map(async (blog) => {
-                    // Tìm user (author)
-                    const user = await User.findById(blog.author_id).lean();
-                    if (!user) return { ...blog, blog_id: blog._id, author: null };
-
-                    // Tìm consultant info nếu user là consultant
-                    let consultantInfo = null;
-                    if (user.role === 'consultant') {
-                        consultantInfo = await Consultant.findOne({
-                            user_id: blog.author_id
-                        }).lean();
+            // Use aggregation pipeline for efficient querying
+            const pipeline = [
+                { $match: filters },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'author_id',
+                        foreignField: '_id',
+                        as: 'user_info'
                     }
+                },
+                {
+                    $unwind: {
+                        path: '$user_info',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'consultants',
+                        localField: 'author_id',
+                        foreignField: 'user_id',
+                        as: 'consultant_info'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$consultant_info',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        blog_id: '$_id',
+                        title: 1,
+                        content: 1,
+                        author_id: 1,
+                        publish_date: 1,
+                        status: 1,
+                        read_count: 1,
+                        like_count: 1,
+                        comment_count: 1,
+                        created_at: 1,
+                        updated_at: 1,
+                        author: {
+                            $cond: {
+                                if: { $ne: ['$user_info', null] },
+                                then: {
+                                    consultant_id: '$user_info._id',
+                                    full_name: '$user_info.full_name',
+                                    email: '$user_info.email',
+                                    phone: '$user_info.phone',
+                                    role: '$user_info.role',
+                                    avatar: '$user_info.avatar',
+                                    specialization: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.specialization',
+                                            else: null
+                                        }
+                                    },
+                                    qualifications: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.qualifications',
+                                            else: null
+                                        }
+                                    },
+                                    experience_years: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.experience_years',
+                                            else: null
+                                        }
+                                    },
+                                    consultation_rating: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.consultation_rating',
+                                            else: null
+                                        }
+                                    },
+                                    total_consultations: {
+                                        $cond: {
+                                            if: { $ne: ['$consultant_info', null] },
+                                            then: '$consultant_info.total_consultations',
+                                            else: null
+                                        }
+                                    }
+                                },
+                                else: null
+                            }
+                        }
+                    }
+                },
+                { $sort: sortObj }
+            ];
 
-                    // Kết hợp thông tin author
-                    const author = {
-                        consultant_id: user._id,
-                        full_name: user.full_name,
-                        email: user.email,
-                        phone: user.phone,
-                        role: user.role,
-                        avatar: user.avatar,
-                        ...(consultantInfo && {
-                            specialization: consultantInfo.specialization,
-                            qualifications: consultantInfo.qualifications,
-                            experience_years: consultantInfo.experience_years,
-                            consultation_rating: consultantInfo.consultation_rating,
-                            total_consultations: consultantInfo.total_consultations
-                        })
-                    };
+            // Execute count and data queries in parallel
+            const [blogs, totalCountResult] = await Promise.all([
+                Blog.aggregate([
+                    ...pipeline,
+                    { $skip: (page - 1) * limit },
+                    { $limit: limit }
+                ]),
+                Blog.aggregate([
+                    { $match: filters },
+                    { $count: 'total' }
+                ])
+            ]);
 
-                    return {
-                        ...blog,
-                        blog_id: blog._id,
-                        author
-                    };
-                })
-            );
+            const total = totalCountResult.length > 0 ? totalCountResult[0].total : 0;
 
-            return { blogs: blogsWithAuthor, total };
+            return { blogs, total };
         } catch (error) {
             console.error('Error finding blogs with pagination:', error);
+            throw error;
+        }
+    }
+
+    // Other methods remain the same
+    public static async create(blogData: Partial<IBlog>): Promise<IBlog> {
+        try {
+            const blog = new Blog(blogData);
+            return await blog.save();
+        } catch (error) {
+            console.error('Error creating blog:', error);
+            throw error;
+        }
+    }
+
+    public static async update(blogId: string, updateData: Partial<IBlog>): Promise<IBlog | null> {
+        try {
+            return await Blog.findByIdAndUpdate(
+                blogId,
+                { ...updateData, updated_at: new Date() },
+                { new: true }
+            ).lean();
+        } catch (error) {
+            console.error('Error updating blog:', error);
+            throw error;
+        }
+    }
+
+    public static async delete(blogId: string): Promise<IBlog | null> {
+        try {
+            return await Blog.findByIdAndDelete(blogId).lean();
+        } catch (error) {
+            console.error('Error deleting blog:', error);
+            throw error;
+        }
+    }
+
+    public static async incrementReadCount(blogId: string): Promise<void> {
+        try {
+            await Blog.findByIdAndUpdate(
+                blogId,
+                { $inc: { read_count: 1 } }
+            );
+        } catch (error) {
+            console.error('Error incrementing read count:', error);
             throw error;
         }
     }

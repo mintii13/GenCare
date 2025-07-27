@@ -10,12 +10,26 @@ interface BlogCardContentProps {
 }
 
 const BlogCardContent: React.FC<BlogCardContentProps> = ({ blog }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) {
+      return 'Không xác định';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Ngày không hợp lệ';
+      }
+      
+      return date.toLocaleDateString("vi-VN", {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
+    } catch (error) {
+      console.error('Error formatting date in BlogCardContent:', error);
+      return 'Lỗi định dạng ngày';
+    }
   };
 
   return (
