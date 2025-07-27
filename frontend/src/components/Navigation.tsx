@@ -148,57 +148,92 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
           {/* Auth Buttons bên phải */}
           <div className="flex items-center justify-end space-x-3 h-full">
             {isAuthenticated ? (
-              user?.role === 'customer' ? (
-                <Link
-                  to="/customer/appointments"
+              <div
+                className="relative group"
+                onMouseEnter={handleUserMenuEnter}
+                onMouseLeave={handleUserMenuLeave}
+              >
+                <button
                   className="text-gray-700 font-semibold hover:text-blue-600 flex items-center text-sm"
                 >
                   {user?.full_name || user?.email}
                   <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
-                </Link>
-              ) : (
-                <div
-                  className="relative group"
-                  onMouseEnter={handleUserMenuEnter}
-                  onMouseLeave={handleUserMenuLeave}
-                >
-                  <button
-                    className="text-gray-700 font-semibold hover:text-blue-600 flex items-center text-sm"
+                </button>
+                {isUserMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50"
                   >
-                    {user?.full_name || user?.email}
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {isUserMenuOpen && (
-                    <div
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50"
-                    >
-                      <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Xem thông tin user
-                      </Link>
-                      <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử xét nghiệm
-                      </Link>
-                      <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Kết quả xét nghiệm STI
-                      </Link>
-                      <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử tư vấn
-                      </Link>
+                    {user?.role === 'customer' ? (
+                      // Customer dropdown menu
+                      <>
+                        <div className="border-b border-gray-200 pb-2 mb-2">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Chăm sóc sức khỏe</span>
+                        </div>
+                        <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          📅 Lịch hẹn của tôi
+                        </Link>
+                        <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          ❤️ Chu kỳ kinh nguyệt
+                        </Link>
+                        <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          🧪 Kết quả xét nghiệm STI
+                        </Link>
+                        
+                        <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Đánh giá & Phản hồi</span>
+                        </div>
+                        <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          ⭐ Đánh giá của tôi
+                        </Link>
+                        <Link to="/sti-assessment-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          📋 Lịch sử đánh giá STI
+                        </Link>
+                        
+                        <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Tài khoản</span>
+                        </div>
+                        <Link to="/user-profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          👤 Hồ sơ cá nhân
+                        </Link>
+                      </>
+                    ) : (
+                      // Other roles dropdown menu
+                      <>
+                        <div className="border-b border-gray-200 pb-2 mb-2">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Tài khoản</span>
+                        </div>
+                        <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          👤 Trang cá nhân
+                        </Link>
+                        
+                        <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Dịch vụ</span>
+                        </div>
+                        <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          📋 Lịch sử xét nghiệm
+                        </Link>
+                        <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          🧪 Kết quả xét nghiệm STI
+                        </Link>
+                        <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          📅 Lịch sử tư vấn
+                        </Link>
+                      </>
+                    )}
+                    <div className="border-t border-gray-200 mt-2 pt-2">
                       <button
-                        onClick={() => { logout(); setIsUserMenuOpen(false); }}
-                        className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                        onClick={logout}
+                        className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
                       >
-                        Đăng xuất
+                        🚪 Đăng xuất
                       </button>
                     </div>
-                  )}
-                </div>
-              )
-            ) : ( 
+                  </div>
+                )}
+              </div>
+            ) : (
               <>
                 <button
                   onClick={() => openModal('login')}
@@ -327,22 +362,59 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                 <>
                   <span className="block text-gray-700 font-semibold mb-2">{user?.full_name || user?.email}</span>
                   {user?.role === 'customer' ? (
-                    // Customer: Link đến dashboard
-                    <Link to="/customer/appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                      Dashboard của tôi
-                    </Link>
+                    // Customer: Full dropdown menu
+                    <>
+                      <div className="border-b border-gray-200 pb-2 mb-2">
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">Chăm sóc sức khỏe</span>
+                      </div>
+                      <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Lịch hẹn của tôi
+                      </Link>
+                      <Link to="/menstrual-cycle" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Chu kỳ kinh nguyệt
+                      </Link>
+                      <Link to="/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Kết quả xét nghiệm STI
+                      </Link>
+                      
+                      <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">Đánh giá & Phản hồi</span>
+                      </div>
+                      <Link to="/my-feedback" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Đánh giá của tôi
+                      </Link>
+                      <Link to="/sti-assessment-history" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Lịch sử đánh giá STI
+                      </Link>
+                      
+                      <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">Tài khoản</span>
+                      </div>
+                      <Link to="/user-profile" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                        Hồ sơ cá nhân
+                      </Link>
+                    </>
                   ) : (
                     // Other roles: Individual links
                     <>
-                      <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
-                      <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                        Lịch sử xét nghiệm
+                      <div className="border-b border-gray-200 pb-2 mb-2">
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">Tài khoản</span>
+                      </div>
+                      <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Trang cá nhân
                       </Link>
-                      <Link to="/dashboard/customer/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                        Kết quả xét nghiệm STI
+                      
+                      <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">Dịch vụ</span>
+                      </div>
+                      <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Lịch sử xét nghiệm
                       </Link>
-                      <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                        Lịch sử tư vấn
+                      <Link to="/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Kết quả xét nghiệm STI
+                      </Link>
+                      <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                         Lịch sử tư vấn
                       </Link>
                     </>
                   )}

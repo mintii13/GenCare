@@ -53,7 +53,13 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
         <div className="px-6 pb-6 border-b border-gray-200">
           <div className="flex items-center">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <img src={user?.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <span className="text-white font-semibold text-lg">
+                  {user?.full_name?.charAt(0) || 'U'}
+                </span>
+              )}
             </div>
             <div className="ml-3">
               <h2 className="text-lg font-semibold text-gray-900">Chuyên gia</h2>

@@ -132,7 +132,7 @@ export class MenstrualCycleService {
             } else {
                 // Chỉ lưu chu kỳ có độ dài hợp lý (5-7 ngày)
                 if (current.length >= 5 && current.length <= 7) {
-                    groups.push(current);
+                groups.push(current);
                 } else {
                     console.log(`[MenstrualCycleService] Bỏ qua chu kỳ có ${current.length} ngày (không hợp lý)`);
                 }
@@ -368,8 +368,8 @@ export class MenstrualCycleService {
                 common_notes: commonNotes
             };
 
-            return {
-                success: true,
+            return { 
+                success: true, 
                 message: 'Cycle mood statistics retrieved successfully',
                 data: statistics
             };

@@ -72,11 +72,19 @@ const ConsultantHeader: React.FC<ConsultantHeaderProps> = ({ onMenuClick }) => {
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center space-x-3 focus:outline-none"
               >
-                {/* <img
-                  className="h-8 w-8 rounded-full"
-                  src={user?.avatar || "https://via.placeholder.com/32"}
-                  alt="User avatar"
-                /> */}
+                {user?.avatar ? (
+                  <img
+                    className="h-8 w-8 rounded-full"
+                    src={user.avatar}
+                    alt="User avatar"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                    <span className="text-white font-semibold text-sm">
+                      {user?.full_name?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                )}
                 <span className="text-sm font-medium text-gray-700">
                   BS. {user?.full_name}
                 </span>

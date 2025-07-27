@@ -215,7 +215,7 @@ const BookAppointment: React.FC = () => {
 
       if (response.success) {
         showSuccess('Đặt lịch thành công', 'Chuyên gia sẽ xác nhận lịch hẹn trong vòng 24 giờ');
-        navigate('/dashboard/customer/appointments');
+        navigate('/my-appointments');
       } else {
         showError('Đặt lịch thất bại', response.message || 'Có lỗi xảy ra khi đặt lịch');
       }
@@ -404,7 +404,7 @@ const BookAppointment: React.FC = () => {
               <p className="text-sm text-gray-600">Chọn chuyên gia và thời gian phù hợp</p>
             </div>
             <a
-              href="/dashboard/customer/appointments"
+              href="/my-appointments"
               className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
             >
               <FaCalendarAlt className="inline mr-1" />
