@@ -5,7 +5,14 @@ import {MenstrualCycleRepository} from '../repositories/menstrualCycleRepository
 import { CycleStatsResponse, PeriodStatsResponse, RegularityStatus, TrendStatus } from '../dto/responses/menstrualCycleResponse';
 
 export class MenstrualCycleService {
-    public static async processPeriodDays(user_id: string, grouped_period_days: Date[][], notes: string){
+    public static async processPeriodDays(user_id: string, period_days: Date[], notes: string){
+        // Defect D2: Empty period_days
+        if (!period_days || period_days.length === 0) {
+            return {
+                success: false,
+                message: 'Period days are required.'
+            };
+        }
         if (!user_id){
             return{
                 success: false,
@@ -13,18 +20,98 @@ export class MenstrualCycleService {
             }
         }
 
-        if (!grouped_period_days || grouped_period_days.length === 0 || !user_id) {
-            return { 
-                success: false, 
-                message: 'Not enough data' 
+        // Defect D3: Notes length
+        if (notes && notes.length > 500) {
+            return {
+                success: false,
+                message: 'Notes cannot exceed 500 characters'
             };
+        }
+
+        // Defect D1: Future date check
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Set to end of today
+        for (const day of period_days) {
+            if (new Date(day) > today) {
+                return {
+                    success: false,
+                    message: 'Cannot log period days in the future.'
+                };
+            }
+        }
+
+        console.log(' Processing period days:', period_days.map(d => new Date(d).toISOString().split('T')[0]));
+
+        // Normalize dates to avoid timezone issues
+        const normalizedDates = period_days.map(date => {
+            const normalized = new Date(date);
+            normalized.setUTCHours(0, 0, 0, 0);
+            return normalized;
+        });
+
+        console.log('Normalized dates:', normalizedDates.map(d => d.toISOString().split('T')[0]));  
+        // Remove duplicates based on date string
+
+        const sorted = [...normalizedDates].sort((a, b) => a.getTime() - b.getTime());
+        console.log('Sorted dates:', sorted.map(d => d.toISOString().split('T')[0]));
+     
+        // SIMPLE GROUPING: Consecutive days = same cycle
+        const groups: Date[][] = [];
+        let current: Date[] = [sorted[0]];
+
+        for (let i = 1; i < sorted.length; i++) {
+            const currentDate = sorted[i];
+            const prevDate = sorted[i - 1];
+            
+            // Tính diff bằng ngày
+            const diffMs = currentDate.getTime() - prevDate.getTime();
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            
+            console.log(`Date diff between ${prevDate.toISOString().split('T')[0]} and ${currentDate.toISOString().split('T')[0]}: ${diffDays} days`);
+            
+            // LOGIC ĐỠN GIẢN: Nếu liền nhau (1 ngày) thì cùng chu kì, không thì chu kì mới
+            if (diffDays === 1) {
+                current.push(currentDate);
+                console.log(`Consecutive day - adding to current cycle: ${currentDate.toISOString().split('T')[0]}`);
+            } else {
+                console.log(`Gap detected (${diffDays} days) - starting new cycle at: ${currentDate.toISOString().split('T')[0]}`);
+                groups.push(current);
+                current = [currentDate];
+            }
+        }
+        groups.push(current);
+
+        console.log('Final groups:', groups.map(group => 
+            group.map(d => d.toISOString().split('T')[0])
+        ));
+
+        // Validate groups - kiểm tra logic grouping
+        console.log('Validating groups...');
+        groups.forEach((group, index) => {
+            console.log(`Group ${index + 1}:`, {
+                dates: group.map(d => d.toISOString().split('T')[0]),
+                span: group.length > 1 ? `${Math.round((group[group.length - 1].getTime() - group[0].getTime()) / (1000 * 60 * 60 * 24))} days` : '1 day',
+                startMonth: group[0].getUTCMonth() + 1,
+                endMonth: group[group.length - 1].getUTCMonth() + 1
+            });
+        });
+
+        // Final validation: check for suspicious groupings
+        for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
+            if (group.length > 1) {
+                const span = Math.round((group[group.length - 1].getTime() - group[0].getTime()) / (1000 * 60 * 60 * 24));
+                if (span > 30) {
+                    console.warn(`Warning: Group ${i + 1} spans ${span} days, might be multiple cycles`);
+                }
+            }
         }
 
         const cycles: IMenstrualCycle[] = [];
         const cycle_lengths: number[] = [];
-
-        for (let i = 0; i < grouped_period_days.length; i++) {
-            const period = grouped_period_days[i];
+        
+        for (let i = 0; i < groups.length; i++) {
+            const period = groups[i];
             const start = period[0];
 
             const cycle: Partial<IMenstrualCycle> = {
@@ -36,9 +123,10 @@ export class MenstrualCycleService {
                 notes
             };
 
-            if (i + 1 < grouped_period_days.length) {
-                const nextStart = grouped_period_days[i + 1][0];
-                const len = Math.round((nextStart.getTime() - start.getTime()) / 86400000);
+            if (i + 1 < groups.length) {
+                const nextStart = groups[i + 1][0];
+                const timeDiff = nextStart.getTime() - start.getTime();
+                const len = Math.round(timeDiff / (1000 * 60 * 60 * 24));
                 cycle.cycle_length = len;
                 cycle_lengths.push(len);
             } else {
@@ -147,17 +235,13 @@ export class MenstrualCycleService {
             }
 
             // Defect D6: Whitelist allowed fields to prevent malicious updates
-            const allowedFields = ['notification_enabled', 'notification_types'];
+            const allowedFields = ['notification_enabled', 'notification_types', 'notification_time'];
             const validSettings: any = {};
-
             for (const key of allowedFields) {
                 if (settings.hasOwnProperty(key)) {
-                    // Thêm validation chi tiết hơn nếu cần
-                    // Ví dụ: kiểm tra notification_types là một mảng các giá trị hợp lệ
                     validSettings[key] = settings[key];
                 }
             }
-
             if (Object.keys(validSettings).length === 0) {
                 return {
                     success: false,

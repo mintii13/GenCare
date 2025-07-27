@@ -173,7 +173,7 @@ const BlogListPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-4 sm:pt-6 lg:pt-8 pb-6 lg:pb-10">
         {/* Header + Search + Filters - All in one */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
           {/* Header */}
@@ -232,7 +232,11 @@ const BlogListPage: React.FC = () => {
                   <select
                     value={`${query.sort_by || 'publish_date'}_${query.sort_order || 'desc'}`}
                     onChange={(e) => {
-                      const [sort_by, sort_order] = e.target.value.split('_');
+                      // Split từ cuối để xử lý đúng với "publish_date_asc"
+                      const value = e.target.value;
+                      const lastUnderscoreIndex = value.lastIndexOf('_');
+                      const sort_by = value.substring(0, lastUnderscoreIndex);
+                      const sort_order = value.substring(lastUnderscoreIndex + 1);
                       if (sort_by && sort_order) {
                         handleSortChange(sort_by, sort_order as 'asc' | 'desc');
                       }

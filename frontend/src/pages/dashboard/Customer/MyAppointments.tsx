@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { appointmentService } from '../../../services/appointmentService';
@@ -12,21 +12,174 @@ import { useConfirmModal } from '@/hooks/useConfirmModal';
 import {
   Appointment,
   AppointmentQuery,
-  PaginationInfo
+  PaginationInfo,
 } from '../../../types/appointment';
-import { 
-  FaCalendarAlt, 
-  FaSpinner, 
-  FaTimes, 
-  FaFilter
+import {
+  FaCalendarAlt,
+  FaSpinner,
+  FaTimes,
+  FaFilter,
+  FaSearch,
+  FaArrowLeft,
+  FaArrowRight,
+  FaUserMd,
 } from 'react-icons/fa';
-import { ResourceTable } from '../../../components/common/ResourceTable';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { stiService } from '@/services/stiService';
+import { FaVial } from 'react-icons/fa';
+import { StiOrder, StiOrderQuery } from '@/types/sti';
 
 interface FeedbackFormData {
   rating: number;
   comment: string;
 }
+
+const TestBookingHistory: React.FC = () => {
+  const [orders, setOrders] = useState<StiOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    items_per_page: 10,
+    has_next: false,
+    has_prev: false,
+  });
+  const [query, setQuery] = useState<StiOrderQuery>({ page: 1, limit: 10 });
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await stiService.getMyOrdersPaginated(query);
+      if (response.success) {
+        setOrders(response.data.items || []);
+        setPagination(response.data.pagination);
+      } else {
+        setError(response.message);
+      }
+    } catch (err) {
+      setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const handlePageChange = (newPage: number) => {
+    setQuery(prev => ({ ...prev, page: newPage }));
+  };
+
+  const statusLabels: { [key: string]: string } = {
+    pending: 'Chờ xử lý',
+    confirmed: 'Đã xác nhận',
+    processing: 'Đang xử lý',
+    completed: 'Đã hoàn thành',
+    cancelled: 'Đã hủy',
+  };
+
+  const renderOrderCard = (order: StiOrder) => {
+    return (
+      <Card key={order._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+          <div className="md:col-span-2">
+            <p className="font-semibold text-gray-800">{order.package_id?.name || 'Gói xét nghiệm'}</p>
+            <p className="text-sm text-gray-500">Mã đơn: {order.order_code}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Ngày đặt</p>
+            <p className="font-medium">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Trạng thái</p>
+            <Badge>{statusLabels[order.order_status] || order.order_status}</Badge>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">Tổng tiền</p>
+            <p className="font-semibold text-lg">
+              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_amount)}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <FaSpinner className="animate-spin text-4xl text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold">Lịch sử xét nghiệm</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {error && <div className="text-red-600 bg-red-50 p-4 rounded-md text-center">{error}</div>}
+        {!loading && !error && orders.length > 0 ? (
+          orders.map(renderOrderCard)
+        ) : (
+          !loading && (
+            <div className="text-center py-12">
+              <FaVial className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-800">Chưa có lịch sử xét nghiệm</h3>
+              <p className="text-gray-500 mt-1">Bạn chưa đặt lịch xét nghiệm nào.</p>
+            </div>
+          )
+        )}
+        {pagination.total_pages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-sm text-gray-600">
+              Hiển thị {orders.length} trên {pagination.total_items} kết quả
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page - 1)}
+                disabled={!pagination.has_prev}
+              >
+                <FaArrowLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium">
+                Trang {pagination.current_page}/{pagination.total_pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page + 1)}
+                disabled={!pagination.has_next}
+              >
+                <FaArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const MyAppointments: React.FC = () => {
   const { modalState, showConfirm, hideConfirm } = useConfirmModal();
@@ -36,186 +189,154 @@ const MyAppointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
-  const [selectedNewSlot, setSelectedNewSlot] = useState<{date: string, startTime: string, endTime: string} | null>(null);
-  const [consultantDetails, setConsultantDetails] = useState<{[key: string]: {full_name: string, specialization: string, avatar?: string}}>({});
-  // Feedback modal open condition handled per appointment (no global canFeedback)
+  const [selectedNewSlot, setSelectedNewSlot] = useState<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  } | null>(null);
+  const [consultantDetails, setConsultantDetails] = useState<{
+    [key: string]: { full_name: string; specialization: string; avatar?: string };
+  }>({});
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
-  // Pagination states
   const [pagination, setPagination] = useState<PaginationInfo>({
     current_page: 1,
     total_pages: 1,
     total_items: 0,
-    items_per_page: 10,
+    items_per_page: 5,
     has_next: false,
-    has_prev: false
+    has_prev: false,
   });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [query, setQuery] = useState<AppointmentQuery>({
     page: 1,
-    limit: 10,
+    limit: 5,
     sort_by: 'appointment_date',
     sort_order: 'desc',
-    status: undefined // Xóa filter status để hiển thị tất cả
+    status: undefined,
   });
-
-  const statusLabels = {
+  
+  const statusLabels: { [key: string]: string } = {
     pending: 'Chờ xác nhận',
     confirmed: 'Đã xác nhận',
     in_progress: 'Đang tư vấn',
     completed: 'Đã hoàn thành',
-    cancelled: 'Đã hủy'
+    cancelled: 'Đã hủy',
   };
 
-  const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    in_progress: 'bg-purple-100 text-purple-800',
-    completed: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800'
+  const statusColors: { [key: string]: 'default' | 'destructive' | 'outline' | 'secondary' } = {
+    pending: 'secondary', // 'warning' is not a valid variant
+    confirmed: 'default', // 'info' is not a valid variant
+    in_progress: 'secondary',
+    completed: 'outline', // 'success' is not a valid variant
+    cancelled: 'destructive',
   };
 
   const navigate = useNavigate();
 
-  // Debounce search term
+  const fetchAppointments = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await appointmentService.getMyAppointmentsPaginated(query);
+      if (response.success) {
+        setAppointments(response.data.appointments);
+        setPagination(response.data.pagination);
+
+        const consultantIds = response.data.appointments
+          .map((apt: Appointment) => apt.consultant_id?._id)
+          .filter((id: string | undefined): id is string => !!id);
+
+        fetchConsultantDetails(consultantIds);
+      } else {
+        setError(response.message);
+      }
+    } catch (err) {
+      setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
+  }, [query]);
+
+  const fetchConsultantDetails = useCallback(async (consultantIds: string[]) => {
+    const uniqueIds = [...new Set(consultantIds)].filter(id => !consultantDetails[id]);
+    if (uniqueIds.length === 0) return;
+
+    try {
+      const promises = uniqueIds.map(id => consultantService.getConsultantById(id));
+      const results = await Promise.all(promises);
+
+      const newDetails = results.reduce((acc, consultant, index) => {
+        if (consultant) {
+          acc[uniqueIds[index]] = consultant;
+        }
+        return acc;
+      }, {} as { [key: string]: any });
+      
+      setConsultantDetails(prev => ({ ...prev, ...newDetails }));
+    } catch (error) {
+      console.error('Error fetching consultant details:', error);
+    }
+  }, [consultantDetails]);
+  
   useEffect(() => {
     const timer = setTimeout(() => {
-      setQuery(prev => ({
-        ...prev,
-        page: 1,
-        search: searchTerm.trim() || undefined
-      }));
+      setQuery(prev => ({ ...prev, page: 1, search: searchTerm.trim() || undefined }));
     }, 500);
-
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
     fetchAppointments();
-  }, [query]);
+  }, [fetchAppointments]);
 
-  // Re-render khi consultant details được cập nhật
-  useEffect(() => {
-    if (Object.keys(consultantDetails).length > 0) {
-      // Force re-render để cập nhật tên chuyên gia
-      setAppointments(prev => [...prev]);
-    }
-  }, [consultantDetails]);
-
-  // Remove canFeedback fetch; will verify server-side when submitting.
-
-  const fetchAppointments = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      console.log('🔍 Fetching appointments with query:', query);
-      const response = await appointmentService.getMyAppointmentsPaginated(query);
-      
-      if (response.success) {
-        console.log('✅ Appointments loaded:', response.data.appointments.length);
-        setAppointments(response.data.appointments);
-        setPagination(response.data.pagination);
-        
-        // Fetch chi tiết chuyên gia cho tất cả appointments
-        response.data.appointments.forEach((appointment: Appointment) => {
-          const consultantId = appointment.consultant_id?._id;
-          if (consultantId && !consultantDetails[consultantId]) {
-            fetchConsultantDetails(consultantId);
-          }
-        });
-      } else {
-        setError(response.message);
-      }
-    } catch (err) {
-      console.error('Error fetching appointments:', err);
-      setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
-    } finally {
-      setLoading(false);
-    }
+  const handlePageChange = (newPage: number) => {
+    setQuery(prev => ({ ...prev, page: newPage }));
   };
-  
-
 
   const handleStatusFilter = (status: string) => {
-    setQuery(prev => ({
-      ...prev,
-      page: 1,
-      status: status === 'all' ? undefined : status
+    setQuery(prev => ({ ...prev, page: 1, status: status === 'all' ? undefined : status }));
+  };
+
+  const handleSortChange = (value: string) => {
+    // Split từ cuối để xử lý đúng với "appointment_date_asc"
+    const lastUnderscoreIndex = value.lastIndexOf('_');
+    const sort_by = value.substring(0, lastUnderscoreIndex);
+    const sort_order = value.substring(lastUnderscoreIndex + 1);
+    setQuery(prev => ({ 
+      ...prev, 
+      page: 1, 
+      sort_by: sort_by as AppointmentQuery['sort_by'], 
+      sort_order: sort_order as AppointmentQuery['sort_order'] 
     }));
   };
-
-  const handleSortChange = (sort_by: 'appointment_date' | 'created_date', sort_order: 'asc' | 'desc') => {
-
-    setQuery(prev => {
-      const newQuery = {
-        ...prev,
-        page: 1,
-        sort_by,
-        sort_order
-      };
-
-      return newQuery;
-    });
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setQuery({
-      page: 1,
-      limit: 10,
-      sort_by: 'appointment_date',
-      sort_order: 'asc',
-      status: undefined
-    });
-  };
-
-  const handleCancelAppointment = async (appointmentId: string) => {
+  
+  const handleCancelAppointment = (appointmentId: string) => {
     showConfirm(
       {
         title: "Xác nhận hủy lịch hẹn",
-        description: "Bạn có chắc chắn muốn hủy lịch hẹn này? Hành động này không thể hoàn tác.",
+        description: "Bạn có chắc chắn muốn hủy lịch hẹn này?",
         confirmText: "Hủy lịch hẹn",
         cancelText: "Không",
         confirmVariant: "destructive"
       },
       async () => {
         try {
-          console.log('Starting cancel appointment for ID:', appointmentId);
           const data = await appointmentService.cancelAppointment(appointmentId);
-          
-          console.log('Cancel appointment response:', data);
-          
           if (data.success) {
             toast.success('Hủy lịch hẹn thành công!');
             fetchAppointments();
           } else {
-            console.error('Cancel failed with message:', data.message);
-            toast.error(data.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
+            toast.error(data.message || 'Lỗi khi hủy lịch hẹn');
           }
-        } catch (error: unknown) {
-          console.error('Error cancelling appointment:', error);
-          const err = error as { response?: { status: number; data?: { message?: string; details?: string } }; message?: string };
-          
-          // Detailed error handling
-          if (err.response?.status === 400) {
-            const errorMsg = err.response?.data?.message || err.response?.data?.details || 'Yêu cầu không hợp lệ';
-            toast.error(`Lỗi: ${errorMsg}`);
-          } else if (err.response?.status === 401) {
-            toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-          } else if (err.response?.status === 403) {
-            toast.error('Bạn không có quyền hủy lịch hẹn này.');
-          } else if (err.response?.status === 404) {
-            toast.error('Không tìm thấy lịch hẹn này.');
-          } else {
-            toast.error(err.message || 'Có lỗi xảy ra khi hủy lịch hẹn');
-          }
+        } catch (error) {
+          toast.error('Có lỗi xảy ra khi hủy lịch hẹn');
         }
       }
     );
   };
-
+  
   const handleEditAppointment = (appointment: Appointment) => {
     setEditingAppointment(appointment);
     setSelectedNewSlot(null);
@@ -224,412 +345,310 @@ const MyAppointments: React.FC = () => {
   const handleSlotSelect = (date: string, startTime: string, endTime: string) => {
     setSelectedNewSlot({ date, startTime, endTime });
   };
-
+  
   const handleUpdateAppointment = async () => {
     if (!editingAppointment || !selectedNewSlot) return;
-
-    console.log('=== DEBUG RESCHEDULE ===');
-    console.log('editingAppointment._id:', editingAppointment._id);
-    console.log('selectedNewSlot:', selectedNewSlot);
-    console.log('localStorage token:', localStorage.getItem('gencare_auth_token'));
-    
     try {
       const data = await appointmentService.rescheduleAppointment(
         editingAppointment._id,
         {
           appointment_date: selectedNewSlot.date,
           start_time: selectedNewSlot.startTime,
-          end_time: selectedNewSlot.endTime
+          end_time: selectedNewSlot.endTime,
         }
       );
-      
       if (data.success) {
-        toast.success('Đổi lịch hẹn thành công! Chuyên gia sẽ xác nhận lại trong thời gian sớm nhất.');
+        toast.success('Đổi lịch thành công!');
         setEditingAppointment(null);
         setSelectedNewSlot(null);
         fetchAppointments();
       } else {
-        toast.error(data.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
-      }
-    } catch (error: unknown) {
-      console.error('Error updating appointment:', error);
-      const err = error as { message?: string };
-      toast.error(err.message || 'Có lỗi xảy ra khi đổi lịch hẹn');
-    }
-  };
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: vi });
-  };
-  const formatTime = (timeString: string) => {
-    return timeString;
-  };
-  const getConsultantSpecialization = (appointment: Appointment) => {
-    const consultantId = appointment.consultant_id?._id;
-    if (consultantDetails[consultantId]) {
-      return consultantDetails[consultantId].specialization || 'Tư vấn chung';
-    }
-    return appointment.consultant_id?.specialization || 'Tư vấn chung';
-  };
-  const fetchConsultantDetails = async (consultantId: string) => {
-    try {
-      if (consultantDetails[consultantId]) return;
-      
-      const response = await consultantService.getConsultantById(consultantId) as unknown as { data: { consultant: { full_name: string; specialization: string; avatar?: string } } };
-      if (response && response.data && response.data.consultant) {
-        setConsultantDetails(prev => ({
-          ...prev,
-          [consultantId]: response.data.consultant
-        }));
+        toast.error(data.message || 'Lỗi khi đổi lịch');
       }
     } catch (error) {
-      console.error('Error fetching consultant details:', error);
+      toast.error('Có lỗi xảy ra khi đổi lịch');
     }
   };
 
-  const getConsultantNameWithFetch = (appointment: Appointment) => {
-    const consultantId = appointment.consultant_id?._id;
-    if (consultantDetails[consultantId]) {
-      return consultantDetails[consultantId].full_name || 'Chuyên gia';
-    }
-    
-    // Fallback to appointment data
-    return appointment.consultant_id?.user_id?.full_name || 'Chuyên gia';
-  };
-
-  // Handle feedback submission
   const handleFeedbackSubmit = async (formData: FeedbackFormData) => {
     if (!selectedAppointment) return;
-    
     try {
       const response = await FeedbackService.submitFeedback(selectedAppointment._id, formData);
       if (response.success) {
-        // Hiển thị toast thành công
-        toast.success(selectedAppointment.feedback 
-          ? 'Đánh giá đã được cập nhật thành công!' 
-          : 'Đánh giá đã được gửi thành công! Cảm ơn bạn đã chia sẻ.'
+        toast.success(
+          selectedAppointment.feedback ? 'Cập nhật đánh giá thành công!' : 'Gửi đánh giá thành công!'
         );
-        
-        // Cập nhật state appointment để thay đổi nút
-        setAppointments(prevAppointments => 
-          prevAppointments.map(apt => 
-            apt._id === selectedAppointment._id 
-              ? { 
-                  ...apt, 
-                  feedback: { 
-                    rating: formData.rating as number, 
-                    comment: formData.comment,
-                    feedback_date: new Date().toISOString()
-                  } 
-                } as Appointment
-              : apt
-          )
-        );
-        
-        // Đóng modal và reset selected appointment
         setShowFeedbackModal(false);
         setSelectedAppointment(null);
+        fetchAppointments();
       } else {
-        toast.error(response.message || 'Có lỗi xảy ra khi gửi đánh giá');
+        toast.error(response.message || 'Lỗi khi gửi đánh giá');
       }
     } catch (error) {
-      console.error('Error submitting feedback:', error);
       toast.error('Có lỗi xảy ra khi gửi đánh giá');
     }
   };
 
-  // Generate page numbers for pagination
+  const renderAppointmentCard = (appointment: Appointment) => {
+    const consultantId = appointment.consultant_id?._id;
+    const consultant = consultantId ? consultantDetails[consultantId] : null;
+    const consultantName = consultant?.full_name || appointment.consultant_id?.user_id?.full_name || 'Chuyên gia';
+    const avatar = consultant?.avatar;
 
-
-  // 1. Định nghĩa columns cho bảng lịch hẹn (Appointment)
-  const columns = [
-    {
-      title: 'Chuyên gia',
-      dataIndex: 'consultant',
-      key: 'consultant',
-      render: (value: unknown, record: Appointment) => (
-        <div className="flex items-center gap-2">
-          <img
-            src={consultantDetails[record.consultant_id?._id]?.avatar || '/default-avatar.png'}
-            alt={getConsultantNameWithFetch(record)}
-            className="w-8 h-8 rounded-full object-cover border border-gray-200"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/default-avatar.png';
-            }}
-          />
-          <span>{getConsultantNameWithFetch(record)}</span>
-        </div>
-      ),
-    },
-    {
-      title: 'Chuyên khoa',
-      dataIndex: 'specialization',
-      key: 'specialization',
-      render: (value: unknown, record: Appointment) => getConsultantSpecialization(record),
-    },
-    {
-      title: 'Ngày',
-      dataIndex: 'appointment_date',
-      key: 'appointment_date',
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: 'Thời gian',
-      dataIndex: 'start_time',
-      key: 'start_time',
-      render: (value: unknown, record: Appointment) => `${formatTime(record.start_time)} - ${formatTime(record.end_time)}`,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status as keyof typeof statusColors]}`}>{statusLabels[status as keyof typeof statusLabels]}</span>
-      ),
-    },
-    {
-      title: 'Ghi chú',
-      dataIndex: 'customer_notes',
-      key: 'customer_notes',
-      width: 200,
-      ellipsis: true,
-      render: (notes: string) => (
-        <div className="relative group">
-          <span className="block truncate">{notes || '-'}</span>
-          {notes && notes.length > 0 && (
-            <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-xs whitespace-normal shadow-lg">
-              {notes}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Hành động',
-      key: 'actions',
-      width: 120,
-      render: (value: unknown, record: Appointment) => (
-        <div className="flex flex-col gap-1">
-          <button onClick={() => setSelectedAppointment(record)} className="text-blue-600 hover:underline">Chi tiết</button>
-          {record.status === 'pending' && (
-            <>
-              <button onClick={() => handleEditAppointment(record)} className="text-green-600 hover:underline">Đổi lịch</button>
-              <button onClick={() => handleCancelAppointment(record._id)} className="text-red-600 hover:underline">Hủy hẹn</button>
-            </>
-          )}
-          {record.status === 'completed' && !record.feedback && (
-            <button onClick={() => { setSelectedAppointment(record); setShowFeedbackModal(true); }} className="text-purple-600 hover:underline">
-              Đánh giá
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ];
-
-  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <FaSpinner className="animate-spin text-4xl text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Đang tải lịch hẹn...</p>
-        </div>
+      <Card key={appointment._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+          <div className="md:col-span-3 flex items-center gap-4">
+            <Avatar className="w-12 h-12">
+              <AvatarImage src={avatar} alt={consultantName} />
+              <AvatarFallback><FaUserMd /></AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-semibold text-gray-800">{consultantName}</p>
+              <p className="text-sm text-gray-500">{consultant?.specialization || 'Tư vấn'}</p>
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-sm text-gray-500">Ngày</p>
+            <p className="font-medium">{format(new Date(appointment.appointment_date), 'dd/MM/yyyy')}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-sm text-gray-500">Thời gian</p>
+            <p className="font-medium">{`${appointment.start_time} - ${appointment.end_time}`}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-sm text-gray-500">Trạng thái</p>
+            <Badge variant={statusColors[appointment.status] as any}>{statusLabels[appointment.status]}</Badge>
+          </div>
+          <div className="md:col-span-3 flex justify-end items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelectedAppointment(appointment)}>
+              Chi tiết
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {appointment.status === 'confirmed' && (
+                  <>
+                    <DropdownMenuItem onClick={() => handleEditAppointment(appointment)}>
+                      Đổi lịch
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleCancelAppointment(appointment._id)} className="text-red-600">
+                      Hủy hẹn
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {appointment.status === 'completed' && (
+                  <DropdownMenuItem onClick={() => { setSelectedAppointment(appointment); setShowFeedbackModal(true); }}>
+                    {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+  
+  if (loading && appointments.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <FaSpinner className="animate-spin text-4xl text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container mx-auto py-2 px-4 md:px-6">
+      <Tabs defaultValue="consultations" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="consultations">
+            <FaCalendarAlt className="mr-2 h-4 w-4" />
+            Lịch hẹn tư vấn
+          </TabsTrigger>
+          <TabsTrigger value="testing">
+            <FaVial className="mr-2 h-4 w-4" />
+            Lịch sử xét nghiệm
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="consultations" className="mt-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <CardTitle className="text-2xl font-bold">Lịch hẹn của tôi</CardTitle>
+                <Button onClick={() => navigate('/consultation/book')}>
+                  <FaCalendarAlt className="mr-2 h-4 w-4" /> Đặt lịch mới
+                </Button>
+              </div>
+              <div className="mt-4 flex flex-col md:flex-row gap-2">
+                <div className="relative flex-1">
+                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder="Tìm kiếm chuyên gia..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select onValueChange={handleStatusFilter} defaultValue="all">
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="pending">Chờ xác nhận</SelectItem>
+                    <SelectItem value="confirmed">Đã xác nhận</SelectItem>
+                    <SelectItem value="in_progress">Đang tư vấn</SelectItem>
+                    <SelectItem value="completed">Đã hoàn thành</SelectItem>
+                    <SelectItem value="cancelled">Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select onValueChange={handleSortChange} defaultValue="appointment_date_desc">
+                  <SelectTrigger className="w-full md:w-[200px]">
+                    <SelectValue placeholder="Sắp xếp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="appointment_date_desc">Ngày hẹn mới nhất</SelectItem>
+                    <SelectItem value="appointment_date_asc">Ngày hẹn cũ nhất</SelectItem>
+                    <SelectItem value="createdAt_desc">Tạo mới nhất</SelectItem>
+                    <SelectItem value="createdAt_asc">Tạo cũ nhất</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader> 
+            <CardContent>
+              {loading && (
+                <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">
+                  <FaSpinner className="animate-spin text-2xl text-blue-600" />
+                </div>
+              )}
+              {error && <div className="text-red-600 bg-red-50 p-4 rounded-md text-center">{error}</div>}
+              {!loading && !error && appointments.length > 0 ? (
+                appointments.map(renderAppointmentCard)
+              ) : (
+                !loading && (
+                  <div className="text-center py-12">
+                    <FaCalendarAlt className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-800">Chưa có lịch hẹn</h3>
+                    <p className="text-gray-500 mt-1">
+                      {query.search || query.status ? 'Không tìm thấy lịch hẹn phù hợp.' : 'Bạn chưa có lịch hẹn nào.'}
+                    </p>
+                  </div>
+                )
+              )}
 
+              {pagination.total_pages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <p className="text-sm text-gray-600">
+                    Hiển thị {appointments.length} trên {pagination.total_items} kết quả
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.current_page - 1)}
+                      disabled={!pagination.has_prev}
+                    >
+                      <FaArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium">
+                      Trang {pagination.current_page}/{pagination.total_pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.current_page + 1)}
+                      disabled={!pagination.has_next}
+                    >
+                      <FaArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="testing" className="mt-4">
+          <TestBookingHistory />
+        </TabsContent>
+      </Tabs>
 
-      {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Lịch hẹn của tôi</h1>
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow transition-colors"
-            onClick={() => navigate('/consultation/book')}
-          >
-            Đặt lịch mới
-          </button>
-        </div>
-        <ResourceTable
-          data={appointments}
-          columns={columns}
-          loading={loading}
-          pagination={{
-            current: pagination.current_page,
-            pageSize: pagination.items_per_page,
-            total: pagination.total_items,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total: number, range: [number, number]) => `${range[0]}-${range[1]} của ${total} lịch hẹn`,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            onChange: (page: number, pageSize: number) => {
-              setQuery(prev => ({ ...prev, page, limit: pageSize }));
-            },
-          }}
-          filters={
-            <div className="flex flex-row items-center gap-4 justify-center">
-              <select
-                value={query.status || 'all'}
-                onChange={(e) => handleStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="pending">Chờ xác nhận</option>
-                <option value="confirmed">Đã xác nhận</option>
-                <option value="in_progress">Đang tư vấn</option>
-                <option value="completed">Đã hoàn thành</option>
-                <option value="cancelled">Đã hủy</option>
-              </select>
-              <select
-                value={`${query.sort_by}_${query.sort_order}`}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  let sort_by: string;
-                  let sort_order: 'asc' | 'desc';
-                  if (value === 'appointment_date_desc') {
-                    sort_by = 'appointment_date';
-                    sort_order = 'desc';
-                  } else if (value === 'appointment_date_asc') {
-                    sort_by = 'appointment_date';
-                    sort_order = 'asc';
-                  } else if (value === 'created_date_desc') {
-                    sort_by = 'created_date';
-                    sort_order = 'desc';
-                  } else if (value === 'created_date_asc') {
-                    sort_by = 'created_date';
-                    sort_order = 'asc';
-                  } else {
-                    const lastUnderscoreIndex = value.lastIndexOf('_');
-                    sort_by = value.substring(0, lastUnderscoreIndex);
-                    sort_order = value.substring(lastUnderscoreIndex + 1) as 'asc' | 'desc';
-                  }
-                  handleSortChange(sort_by as 'appointment_date' | 'created_date', sort_order);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="appointment_date_desc">Ngày hẹn mới nhất</option>
-                <option value="appointment_date_asc">Ngày hẹn cũ nhất</option>
-                <option value="created_date_desc">Tạo mới nhất</option>
-                <option value="created_date_asc">Tạo cũ nhất</option>
-              </select>
-              <button
-                onClick={handleClearFilters}
-                className="w-full px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Xóa bộ lọc"
-              >
-                <FaFilter className="w-4 h-4 mx-auto" />
-              </button>
-            </div>
-          }
-        />
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
-            <FaTimes className="w-5 h-5 text-red-600 mr-2" />
-            <p className="text-red-800">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Appointments List */}
-      {appointments.length > 0 ? (
-        <>
-          {/* Pagination */}
-          
-        </>
-      ) : !loading && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaCalendarAlt className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Chưa có lịch hẹn nào
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {query.search || query.status 
-              ? 'Không tìm thấy lịch hẹn nào phù hợp với bộ lọc.'
-              : 'Bạn chưa có lịch hẹn nào. Hãy đặt lịch với chuyên gia ngay!'
-            }
-          </p>
-          {(query.search || query.status) && (
-            <button
-              onClick={handleClearFilters}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Xóa bộ lọc
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Detail Modal */}
       {selectedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">Chi tiết lịch hẹn</h3>
-              <button 
-                onClick={() => setSelectedAppointment(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FaTimes className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <span className="font-medium text-gray-700">Chuyên gia:</span>
-                <p className="text-gray-900">{getConsultantNameWithFetch(selectedAppointment)}</p>
+          <div className="bg-white rounded-lg max-w-lg w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">Chi tiết lịch hẹn</h3>
+                <button 
+                  onClick={() => setSelectedAppointment(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
               </div>
-              
-              <div>
-                <span className="font-medium text-gray-700">Chuyên khoa:</span>
-                <p className="text-gray-900">{getConsultantSpecialization(selectedAppointment)}</p>
-              </div>
-              
-              <div>
-                <span className="font-medium text-gray-700">Ngày giờ:</span>
-                <p className="text-gray-900">
-                  {formatDate(selectedAppointment.appointment_date)} • {formatTime(selectedAppointment.start_time)} - {formatTime(selectedAppointment.end_time)}
-                </p>
-              </div>
-              
-              <div>
-                <span className="font-medium text-gray-700">Trạng thái:</span>
-                <span className={`ml-2 px-2 py-1 rounded-full text-sm ${statusColors[selectedAppointment.status]}`}>
-                  {statusLabels[selectedAppointment.status]}
-                </span>
-              </div>
-              
-              {selectedAppointment.customer_notes && (
-                <div>
-                  <span className="font-medium text-gray-700">Ghi chú của bạn:</span>
-                  <p className="text-gray-900">{selectedAppointment.customer_notes}</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Chuyên gia</p>
+                    <p className="font-medium">{consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 'Chưa có thông tin'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Chuyên khoa</p>
+                    <p className="font-medium">{consultantDetails[selectedAppointment.consultant_id._id]?.specialization || 'Chưa có thông tin'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Ngày hẹn</p>
+                    <p className="font-medium">{format(new Date(selectedAppointment.appointment_date), 'EEEE, dd/MM/yyyy', { locale: vi })}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Thời gian</p>
+                    <p className="font-medium">{selectedAppointment.start_time} - {selectedAppointment.end_time}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Trạng thái</p>
+                    <Badge variant={statusColors[selectedAppointment.status] as any}>
+                      {statusLabels[selectedAppointment.status]}
+                    </Badge>
+                  </div>
+                  {(selectedAppointment as any).notes && (
+                    <div>
+                      <p className="text-sm text-gray-600">Ghi chú</p>
+                      <p className="font-medium whitespace-pre-wrap">{(selectedAppointment as any).notes}</p>
+                    </div>
+                  )}
+                  {(selectedAppointment as any).meet_link && (
+                    <div>
+                      <p className="text-sm text-gray-600">Link cuộc họp</p>
+                      <a 
+                        href={(selectedAppointment as any).meet_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Tham gia cuộc họp
+                      </a>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-600">Đặt lúc</p>
+                    <p className="font-medium">{format(new Date(selectedAppointment.created_date), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
+                  </div>
                 </div>
-              )}
-              
-              {selectedAppointment.consultant_notes && (
-                <div>
-                  <span className="font-medium text-gray-700">Ghi chú từ chuyên gia:</span>
-                  <p className="text-gray-900">{selectedAppointment.consultant_notes}</p>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Modal */}
       {editingAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium">Đổi lịch hẹn</h3>
                 <button 
                   onClick={() => setEditingAppointment(null)}
@@ -638,41 +657,21 @@ const MyAppointments: React.FC = () => {
                   <FaTimes className="w-5 h-5" />
                 </button>
               </div>
-              
-              <div className="mb-4">
-                <p className="text-gray-600">
-                  Chọn khung giờ mới để đổi lịch hẹn với {getConsultantNameWithFetch(editingAppointment)}
-                </p>
-              </div>
-
               <WeeklySlotPicker
                 consultantId={editingAppointment.consultant_id._id}
                 onSlotSelect={handleSlotSelect}
                 selectedSlot={selectedNewSlot}
               />
-
               <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setEditingAppointment(null)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleUpdateAppointment}
-                  disabled={!selectedNewSlot}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Xác nhận đổi lịch
-                </button>
+                <Button variant="outline" onClick={() => setEditingAppointment(null)}>Hủy</Button>
+                <Button onClick={handleUpdateAppointment} disabled={!selectedNewSlot}>Xác nhận đổi lịch</Button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-             {/* Feedback Modal */}
-       {showFeedbackModal && selectedAppointment && (
+      {showFeedbackModal && selectedAppointment && (
          <FeedbackModal
            isOpen={showFeedbackModal}
            onClose={() => {
@@ -680,15 +679,12 @@ const MyAppointments: React.FC = () => {
              setSelectedAppointment(null);
            }}
            appointmentInfo={{
-             consultant_name: getConsultantNameWithFetch(selectedAppointment),
-             appointment_date: formatDate(selectedAppointment.appointment_date),
-             start_time: formatTime(selectedAppointment.start_time),
-             end_time: formatTime(selectedAppointment.end_time)
+             consultant_name: consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 'Chuyên gia',
+             appointment_date: format(new Date(selectedAppointment.appointment_date), 'dd/MM/yyyy'),
+             start_time: selectedAppointment.start_time,
+             end_time: selectedAppointment.end_time,
            }}
-           existingFeedback={selectedAppointment.feedback ? {
-             rating: selectedAppointment.feedback.rating,
-             comment: selectedAppointment.feedback.comment
-           } : undefined}
+           existingFeedback={selectedAppointment.feedback}
            onSubmit={handleFeedbackSubmit}
          />
        )}

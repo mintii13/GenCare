@@ -160,8 +160,7 @@ export const weeklyScheduleService = {
 
   // Copy schedule to another week
   async copySchedule(scheduleId: string, targetWeekStartDate: string) {
-    const response = await apiClient.post(API.WeeklySchedule.COPY_SCHEDULE, {
-      source_schedule_id: scheduleId,
+    const response = await apiClient.post(`${API.WeeklySchedule.BASE}/copy/${scheduleId}`, {
       target_week_start_date: targetWeekStartDate
     });
     return response.data;

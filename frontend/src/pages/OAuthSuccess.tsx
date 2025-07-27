@@ -6,13 +6,14 @@ import { API } from "../config/apiEndpoints";
 import { Loading } from "../components/ui";
 import { navigateAfterLogin } from "../utils/navigationUtils";
 import { setGoogleAccessToken } from "../utils/authUtils";
-import { User } from "@/services/userService";
+import { User } from "../types";
+import { User as BackendUser } from "../services/userService";
 
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
 interface GetUserProfileResponse {
   success: boolean;
-  user: User;
+  user: BackendUser;
 }
 
 function OAuthSuccess() {
@@ -53,11 +54,23 @@ function OAuthSuccess() {
 
 
         if (response.data.success) {
-          // Bước 3: Đăng nhập qua AuthContext (sẽ lưu token một lần nữa, nhưng không sao)
-          login(response.data.user, token);
+
+          const user = {
+            ...response.data.user,
+            _id: response.data.user.id
+          } as User;
+          login(user, token);
           
-          // Bước 4: Redirect
+          // Bước 4: Redirect hoặc thông báo
+          if (response.data.user.role === 'customer') {
+            // Customer không redirect, chỉ về homepage với thông báo thành công
+            setTimeout(() => {
+              navigate("/");
+            }, 1500);
+          } else {
+            // Các role khác redirect vào dashboard
           navigateAfterLogin(response.data.user, navigate);
+          }
         } else {
           throw new Error("API trả về success=false");
         }

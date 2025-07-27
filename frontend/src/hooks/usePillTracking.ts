@@ -32,7 +32,7 @@ export const usePillTracking = (): UsePillTrackingReturn => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await pillTrackingService.getSchedule(user.id);
+      const response = await pillTrackingService.getSchedule();
       if (response.success && response.data) {
         setSchedules(response.data.schedules || []);
       } else {
@@ -73,7 +73,7 @@ export const usePillTracking = (): UsePillTrackingReturn => {
   const updatePillSchedule = useCallback(async (data: UpdatePillTrackingRequest) => {
     if (!user?.id) throw new Error("User not found");
     try {
-      const updatedSchedule = await pillTrackingService.updateSchedule(user.id, data);
+      const updatedSchedule = await pillTrackingService.updateSchedule(data);
       await refresh();
       return updatedSchedule;
     } catch (error) {

@@ -2,18 +2,18 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import GenCareLogo from '../pages/home/components/GenCareLogo';
+import { Button } from './design-system';
 
 interface NavigationProps {
-  onLoginClick?: () => void;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, isSidebarOpen }) => {
+const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false); // New state for user dropdown
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, openModal } = useAuth();
   const timeoutRef = useRef<NodeJS.Timeout>();
   const userMenuTimeoutRef = useRef<NodeJS.Timeout>(); // New ref for user menu timeout
   const location = useLocation();
@@ -56,12 +56,14 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
   }, []);
 
   return (
-    <nav className="bg-white fixed top-0 left-0 right-0 w-full z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2 text-2xl font-bold text-primary-700">
-            <GenCareLogo />
-            <span>GenCare</span>
+    <nav className="bg-white shadow-sm border-b border-blue-100 sticky top-0 z-20 h-14">
+      <div className="container mx-auto h-full">
+        <div className="grid grid-cols-3 items-center h-full px-6">
+          {/* Logo bên trái */}
+          <div className="flex items-center justify-start h-full">
+          <Link to="/" className="flex items-center space-x-2 h-full">
+            <GenCareLogo className="h-8 w-auto" />
+            <span className="text-lg font-bold text-blue-600 leading-none">GenCare</span>
           </Link>
           {/* Nút ẩn/hiện sidebar chỉ khi ở dashboard consultant */}
           {location.pathname.startsWith('/consultant') && onToggleSidebar && (
@@ -72,19 +74,19 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
               {isSidebarOpen ? 'Ẩn menu' : 'Hiện menu'}
             </button>
           )}
-          
-          {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-8">
-            <Link to="/" className="text-gray-600 hover:text-primary-700">
+          </div>
+          {/* Menu ở giữa */}
+          <div className="hidden md:flex justify-center items-center space-x-6 h-full">
+            <Link to="/" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Trang chủ
             </Link>
             <div 
-              className="relative group"
+              className="relative group h-full flex items-center"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >
               <button 
-                className="text-gray-600 hover:text-primary-700 flex items-center"
+                className="text-gray-600 hover:text-blue-600 flex items-center text-sm font-medium h-full"
               >
                 Dịch vụ
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,7 +95,7 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
               </button>
               {isServicesOpen && (
                 <div 
-                  className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                  className="absolute left-0 top-full w-56 bg-white rounded-md shadow-lg py-1 z-50"
                 >
                   <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
@@ -113,112 +115,106 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                       <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch sử đặt lịch STI
                       </Link>
-                    
                     </>
                   )}
-
                 </div>
               )}
             </div>
-            <Link to="/blogs" className="text-gray-600 hover:text-primary-700">
+            <Link to="/blogs" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Blog
             </Link>
-            <Link to="/about" className="text-gray-600 hover:text-primary-700">
+            <Link to="/about" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Về chúng tôi
             </Link>
-
             {isAuthenticated && user?.role === 'consultant' && (
-              <Link to="/consultant" className="text-gray-600 hover:text-primary-700">
+              <Link to="/consultant" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
                 Dashboard
               </Link>
             )}
             {isAuthenticated && user?.role === 'staff' && (
-              <Link to="/staff/overview" className="text-gray-600 hover:text-primary-700">
+              <Link to="/staff/overview" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
                 Dashboard
               </Link>
             )}
             {isAuthenticated && user?.role === 'admin' && (
-              <Link to="/admin/overview" className="text-gray-600 hover:text-primary-700">
+              <Link to="/admin/overview" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
                 Quản trị viên
               </Link>
             )}
           </div>
-
-          {/* Desktop Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-              {isAuthenticated ? (
-              <div
-                className="relative group"
-                onMouseEnter={handleUserMenuEnter}
-                onMouseLeave={handleUserMenuLeave}
-              >
-                <button
-                  className="text-gray-700 font-semibold hover:text-primary-700 flex items-center"
+          {/* Auth Buttons bên phải */}
+          <div className="flex items-center justify-end space-x-3 h-full">
+            {isAuthenticated ? (
+              user?.role === 'customer' ? (
+                <Link
+                  to="/customer/appointments"
+                  className="text-gray-700 font-semibold hover:text-blue-600 flex items-center text-sm"
                 >
                   {user?.full_name || user?.email}
                   <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
-                {isUserMenuOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50"
+                </Link>
+              ) : (
+                <div
+                  className="relative group"
+                  onMouseEnter={handleUserMenuEnter}
+                  onMouseLeave={handleUserMenuLeave}
+                >
+                  <button
+                    className="text-gray-700 font-semibold hover:text-blue-600 flex items-center text-sm"
                   >
-                    <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Xem thông tin user
-                    </Link>
-                    <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Lịch sử xét nghiệm
-                    </Link>
-                    <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Kết quả xét nghiệm STI
-                    </Link>
-                    <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Lịch sử tư vấn
-                    </Link>
-                    {user?.role === 'customer' && (
-                      <>
-                        <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                          Chu kì kinh nguyệt
-                        </Link>
-                        <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                          Đánh giá của tôi
-                        </Link>
-                        <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử Sàng Lọc STi
-                      </Link>
-                      </>
-                    )}
-                    <button
-                      onClick={() => { logout(); setIsUserMenuOpen(false); }}
-                      className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                    {user?.full_name || user?.email}
+                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isUserMenuOpen && (
+                    <div
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50"
                     >
-                      Đăng xuất
-                    </button>
-                  </div>
-                )}
-              </div>
+                      <Link to="/user/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Xem thông tin user
+                      </Link>
+                      <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử xét nghiệm
+                      </Link>
+                      <Link to="/my-sti-results" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Kết quả xét nghiệm STI
+                      </Link>
+                      <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        Lịch sử tư vấn
+                      </Link>
+                      <button
+                        onClick={() => { logout(); setIsUserMenuOpen(false); }}
+                        className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                      >
+                        Đăng xuất
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
             ) : (
               <>
                 <button
-                  onClick={onLoginClick}
+                  onClick={() => openModal('login')}
                   className="text-gray-600 hover:text-primary-700"
                 >
                   Đăng nhập
                 </button>
-                <Link 
-                  to="/register" 
+                <button
+                  onClick={() => openModal('register')}
                   className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition"
                 >
                   Đăng ký
-                </Link>
+                </button>
               </>
             )}
           </div>
-
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden"
+            className="md:hidden ml-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             <svg 
@@ -270,11 +266,18 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                 {isServicesOpen && (
                   <div className="pl-4 space-y-2">
                     <Link 
-                      to="/period-tracking" 
+                      to="/menstrual-cycle" 
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Theo dõi kinh nguyệt
+                    </Link>
+                    <Link 
+                      to="/consultation/book-appointment" 
+                      className="block text-gray-600 hover:text-primary-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Đặt lịch tư vấn
                     </Link>
                     <Link 
                       to="/test-packages/sti" 
@@ -285,11 +288,11 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     </Link>
                     {isAuthenticated && user?.role === 'customer' && (
                       <Link 
-                        to="/my-appointments" 
+                        to="/sti-assessment" 
                         className="block text-gray-600 hover:text-primary-700"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        Lịch hẹn của tôi
+                        Đánh giá sàng lọc STI
                       </Link>
                     )}
                   </div>
@@ -320,27 +323,33 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
               {isAuthenticated ? (
                 <>
                   <span className="block text-gray-700 font-semibold mb-2">{user?.full_name || user?.email}</span>
-                  <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
-                  <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                    Lịch sử xét nghiệm
-                  </Link>
-                  <Link to="/dashboard/customer/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                    Kết quả xét nghiệm STI
-                  </Link>
-                  <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                    Lịch sử tư vấn
-                  </Link>
-                  {user?.role === 'customer' && (
-                    <Link to="/my-feedback" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
-                      Đánh giá của tôi
+                  {user?.role === 'customer' ? (
+                    // Customer: Link đến dashboard
+                    <Link to="/customer/appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                      Dashboard của tôi
                     </Link>
+                  ) : (
+                    // Other roles: Individual links
+                    <>
+                      <Link to="/user/profile" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>Trang cá nhân</Link>
+                      <Link to="/sti-booking/orders" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                        Lịch sử xét nghiệm
+                      </Link>
+                      <Link to="/dashboard/customer/my-sti-results" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                        Kết quả xét nghiệm STI
+                      </Link>
+                      <Link to="/my-appointments" className="block text-gray-600 hover:text-primary-700 mb-2" onClick={() => setIsMenuOpen(false)}>
+                        Lịch sử tư vấn
+                      </Link>
+                    </>
                   )}
-                  <button
-                    className="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition mb-2"
+                  <Button
+                    variant="danger"
+                    className="block px-4 py-2 mb-2"
                     onClick={() => { setIsMenuOpen(false); logout(); }}
                   >
                     Đăng xuất
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
@@ -348,18 +357,20 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick, onToggleSidebar, 
                     className="block text-gray-600 hover:text-primary-700 mb-4"
                     onClick={() => {
                       setIsMenuOpen(false);
-                      if (onLoginClick) onLoginClick();
+                      openModal('login');
                     }}
                   >
                     Đăng nhập
                   </button>
-                  <Link 
-                    to="/register" 
-                    className="block bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg transition text-center"
-                    onClick={() => setIsMenuOpen(false)}
+                  <Button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      openModal('register');
+                    }}
+                    className="block px-4 py-2 text-center w-full"
                   >
                     Đăng ký
-                  </Link>
+                  </Button>
                 </>
               )}
             </div>

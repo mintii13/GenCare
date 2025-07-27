@@ -417,79 +417,153 @@ const StaffAppointmentManagement: React.FC = () => {
         filterControls={filterControls}
       />
       
-      <Modal 
-        title="Chi tiết lịch hẹn"
-        open={!!selectedAppointment} 
-        onCancel={() => setSelectedAppointment(null)} 
-        footer={null}
-        width={600}
-      >
-        {selectedAppointment && (
-                <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                      <div>
-                 <label className="block text-sm font-medium text-gray-700">Khách hàng</label>
-                 <p className="mt-1 text-sm text-gray-900">
-                   {typeof selectedAppointment.customer_id === 'object' && selectedAppointment.customer_id?.full_name 
-                     ? selectedAppointment.customer_id.full_name 
-                     : (typeof selectedAppointment.customer_id === 'string' ? selectedAppointment.customer_id : 'N/A')}
-                 </p>
+      {/* Detail Modal */}
+      {selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                   <div 
+           className="bg-white rounded-xl shadow-2xl relative max-h-[90vh] overflow-hidden"
+           style={{ 
+             width: '60vw', 
+             maxWidth: '800px'
+           }}
+         >
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-800">Chi tiết lịch hẹn</h3>
+              <button
+                onClick={() => setSelectedAppointment(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+
+                       {/* Content */}
+           <div className="flex" style={{ height: '500px' }}>
+             {/* Left Half - Appointment Info */}
+             <div className="w-1/2 p-6 border-r border-gray-200">
+               <div className="h-full flex flex-col">
+                  {/* Status */}
+                  <div className="mb-6">
+                    <Tag color={getStatusColor(selectedAppointment.status)}>
+                      {getStatusLabel(selectedAppointment.status)}
+                    </Tag>
+                  </div>
+
+                  {/* Appointment Info */}
+                  <div className="space-y-4 flex-1">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Khách hàng:</span>
+                      <p className="font-medium text-gray-800">
+                        {typeof selectedAppointment.customer_id === 'object' && selectedAppointment.customer_id?.full_name 
+                          ? selectedAppointment.customer_id.full_name 
+                          : (typeof selectedAppointment.customer_id === 'string' ? selectedAppointment.customer_id : 'N/A')}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Chuyên gia:</span>
+                      <p className="font-medium text-gray-800">
+                        {typeof selectedAppointment.consultant_id === 'object' && selectedAppointment.consultant_id?.user_id?.full_name
+                          ? selectedAppointment.consultant_id.user_id.full_name
+                          : 'N/A'}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Ngày hẹn:</span>
+                      <p className="font-medium text-gray-800">{formatDateDisplay(selectedAppointment.appointment_date)}</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Thời gian:</span>
+                      <p className="font-medium text-gray-800">{formatTimeDisplay(selectedAppointment.start_time, selectedAppointment.end_time)}</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Mã lịch hẹn:</span>
+                      <p className="font-medium text-gray-800 text-xs">{selectedAppointment._id}</p>
+                    </div>
+
+                    {selectedAppointment.meeting_info && (
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <span className="text-gray-600 text-sm font-medium block mb-1">Link cuộc họp:</span>
+                        <a 
+                          href={selectedAppointment.meeting_info.meet_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline font-medium break-all"
+                        >
+                          {selectedAppointment.meeting_info.meet_url}
+                        </a>
                       </div>
-                      <div>
-                 <label className="block text-sm font-medium text-gray-700">Chuyên gia</label>
-                 <p className="mt-1 text-sm text-gray-900">
-                   {typeof selectedAppointment.consultant_id === 'object' && selectedAppointment.consultant_id?.user_id?.full_name
-                     ? selectedAppointment.consultant_id.user_id.full_name
-                     : 'N/A'}
-                 </p>
-                      </div>
-                      <div>
-                <label className="block text-sm font-medium text-gray-700">Ngày hẹn</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {formatDateDisplay(selectedAppointment.appointment_date)}
-                </p>
-                      </div>
-                      <div>
-                <label className="block text-sm font-medium text-gray-700">Thời gian</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {formatTimeDisplay(selectedAppointment.start_time, selectedAppointment.end_time)}
-                </p>
-                      </div>
-                      <div>
-                <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                <div className="mt-1">
-                  <Tag color={getStatusColor(selectedAppointment.status)}>
-                    {getStatusLabel(selectedAppointment.status)}
-                  </Tag>
-                        </div>
-                      </div>
-                      <div>
-                <label className="block text-sm font-medium text-gray-700">Mã lịch hẹn</label>
-                <p className="mt-1 text-sm text-gray-900">{selectedAppointment._id}</p>
+                    )}
                   </div>
                 </div>
+              </div>
 
-            {selectedAppointment.meeting_info && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Thông tin cuộc họp</label>
-                <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                                     <p className="text-sm">
-                     <strong>Link:</strong> 
-                     <a 
-                       href={selectedAppointment.meeting_info.meet_url} 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       className="text-blue-600 hover:text-blue-800 ml-2"
-                     >
-                       {selectedAppointment.meeting_info.meet_url}
-                     </a>
-                   </p>
+              {/* Right Half - Notes & Details */}
+              <div className="w-1/2 p-6">
+                <div className="h-full flex flex-col">
+                  <h5 className="text-lg font-bold text-gray-800 mb-4">Ghi chú & Chi tiết</h5>
+                  <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <h6 className="font-semibold text-gray-800 mb-2">Thông tin buổi hẹn:</h6>
+                        <div className="text-gray-700 space-y-2">
+                          <p>• Trạng thái: {getStatusLabel(selectedAppointment.status)}</p>
+                          <p>• Ngày hẹn: {formatDateDisplay(selectedAppointment.appointment_date)}</p>
+                          <p>• Thời gian: {formatTimeDisplay(selectedAppointment.start_time, selectedAppointment.end_time)}</p>
+                          <p>• Khách hàng: {typeof selectedAppointment.customer_id === 'object' && selectedAppointment.customer_id?.full_name 
+                            ? selectedAppointment.customer_id.full_name : 'N/A'}</p>
+                          <p>• Chuyên gia: {typeof selectedAppointment.consultant_id === 'object' && selectedAppointment.consultant_id?.user_id?.full_name
+                            ? selectedAppointment.consultant_id.user_id.full_name : 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4">
+                        <h6 className="font-semibold text-gray-800 mb-2">Quản lý lịch hẹn:</h6>
+                        <div className="text-gray-700 space-y-1">
+                          <p>• Mã lịch hẹn: {selectedAppointment._id}</p>
+                          <p>• Có thể theo dõi trạng thái và quản lý cuộc hẹn</p>
+                          {selectedAppointment.meeting_info?.meet_url && (
+                            <p>• Đã tạo link Google Meet cho cuộc hẹn</p>
+                          )}
+                          <p>• Thời gian tư vấn: 30-60 phút/buổi</p>
+                          <p>• Liên hệ hỗ trợ nếu cần thiết</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4">
+                        <h6 className="font-semibold text-gray-800 mb-2">Hướng dẫn quản lý:</h6>
+                        <div className="text-gray-700 space-y-1">
+                          {selectedAppointment.status === 'pending' && (
+                            <p>• Cuộc hẹn đang chờ xác nhận từ chuyên gia</p>
+                          )}
+                          {selectedAppointment.status === 'confirmed' && (
+                            <p>• Cuộc hẹn đã được xác nhận và sẵn sàng</p>
+                          )}
+                          {selectedAppointment.status === 'in_progress' && (
+                            <p>• Cuộc hẹn đang diễn ra</p>
+                          )}
+                          {selectedAppointment.status === 'completed' && (
+                            <p>• Cuộc hẹn đã hoàn thành thành công</p>
+                          )}
+                          {selectedAppointment.status === 'cancelled' && (
+                            <p>• Cuộc hẹn đã bị hủy</p>
+                          )}
+                          <p>• Có thể xuất báo cáo hoặc thống kê</p>
+                          <p>• Theo dõi hiệu quả tư vấn</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </>
   );
 };

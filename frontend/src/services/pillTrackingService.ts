@@ -16,6 +16,12 @@ export interface PillSchedule {
   pill_status: 'hormone' | 'placebo';
   reminder_enabled: boolean;
   reminder_time: string; // "HH:mm"
+  reminder_sent_timestamps?: Date[]; // Thêm trường để lưu thời điểm đã gửi mail
+  max_reminder_times?: number;
+  reminder_interval?: number;
+  taken_time?: Date;
+  is_active?: boolean;
+  createdAt?: Date;
   // ... other fields from your IPillTracking model
 }
 
@@ -48,18 +54,16 @@ export const pillTrackingService = {
 
   /**
    * Retrieves the pill schedule for the current user.
-   * Note: The backend endpoint seems to expect a userId in the path,
-   * so we get it from auth context or similar, not as a direct parameter here.
    */
   getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE_BY_USER);
+    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE(userId));
   },
 
   /**
    * Updates a user's pill tracking schedule or settings.
    */
-  updateSchedule: async (userId: string, data: UpdatePillTrackingRequest): Promise<ApiResponse<any>> => {
-    return apiClient.safePatch(API.PillTracking.UPDATE_SCHEDULE_BY_USER(userId), data);
+  updateSchedule: async (data: UpdatePillTrackingRequest): Promise<ApiResponse<any>> => {
+    return apiClient.safePatch(API.PillTracking.UPDATE_SCHEDULE, data);
   },
 
   /**

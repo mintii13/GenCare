@@ -152,8 +152,8 @@ const HomePage = () => {
   
 
       {/* Services Section - 3 dịch vụ cứng với links thật */}
-      <section id="services-section" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
+      <section id="services-section" className="py-8 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
           <h2 className="text-4xl font-bold text-center text-blue-700 mb-4">Dịch vụ của chúng tôi</h2>
           <p className="text-lg text-center text-blue-700/80 mb-12 max-w-2xl mx-auto">
             GenCare cung cấp các dịch vụ chăm sóc sức khỏe sinh sản toàn diện, từ tư vấn đến xét nghiệm.
@@ -178,8 +178,8 @@ const HomePage = () => {
 
       {/* Top Consultants Section - Sử dụng data thật từ API */}
       {topConsultants.length > 0 && (
-        <section className="py-20 bg-blue-50">
-          <div className="container mx-auto px-4">
+        <section className="py-8 bg-blue-50">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-blue-700 mb-4">
                 Chuyên gia hàng đầu
@@ -229,8 +229,8 @@ const HomePage = () => {
 
       {/* STI Test Packages / Single Tests Section */}
       {(
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4">
+        <section className="py-8 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
             <div className="text-center mb-8">
               <h2 className="text-4xl font-bold text-blue-700 mb-4">Dịch vụ xét nghiệm</h2>
               <p className="text-lg text-blue-700/80 max-w-2xl mx-auto mb-8">
@@ -316,8 +316,8 @@ const HomePage = () => {
       )}
 
       {/* Blog Section - Sử dụng data thật từ API */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
+      <section className="py-8 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-blue-700 mb-4">Blog Sức Khỏe Sinh Sản</h2>
             <p className="text-lg text-blue-700/80 mb-8 max-w-2xl mx-auto">

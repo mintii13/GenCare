@@ -1,369 +1,872 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect, useRef } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Eye, EyeOff, X, Mail, Lock, User, Phone, Calendar, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { navigateAfterLogin } from '../../utils/navigationUtils';
-import { FormField } from '../ui/FormField';
-import { LoginFormData, validationSchemas } from '../../hooks/useFormValidation';
-import apiClient from '../../services/apiClient';
+import { authService } from '../../services/auth';
 import { API } from '../../config/apiEndpoints';
-import { toast } from 'react-hot-toast';
+import apiClient from '../../services/apiClient';
+import toast from 'react-hot-toast';
+import { Button, Input } from '../design-system';
+
+// Validation schemas
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const loginSchema = z.object({
+  email: z.string().trim().regex(emailRegex, { message: 'Email không hợp lệ' }),
+  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+});
+
+// Schema cho Step 1: Email và Password
+const step1Schema = z.object({
+  email: z.string().trim().regex(emailRegex, { message: 'Email không hợp lệ' }),
+  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  confirmPassword: z.string().min(1, 'Xác nhận mật khẩu là bắt buộc'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Mật khẩu không khớp",
+  path: ["confirmPassword"],
+});
+
+// Schema cho Step 2: Thông tin cá nhân
+const step2Schema = z.object({
+  fullName: z.string().trim().min(2, 'Họ tên phải có ít nhất 2 ký tự'),
+  phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(['male', 'female', 'other', '']).optional()
+});
+
+const registerSchema = z.object({
+  email: z.string().trim().regex(emailRegex, { message: 'Email không hợp lệ' }),
+  fullName: z.string().trim().min(2, 'Họ tên phải có ít nhất 2 ký tự'),
+  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  confirmPassword: z.string().min(1, 'Xác nhận mật khẩu là bắt buộc'),
+  phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(['male', 'female', 'other', '']).optional()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Mật khẩu không khớp",
+  path: ["confirmPassword"],
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+type Step1FormData = z.infer<typeof step1Schema>;
+type Step2FormData = z.infer<typeof step2Schema>;
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (user: any) => void;
+  initialMode?: 'login' | 'register';
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
-  const [forgotStep, setForgotStep] = useState(1);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotOTP, setForgotOTP] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [forgotLoading, setForgotLoading] = useState(false);
+type ModalState = 'login' | 'register';
+type RegisterStep = 1 | 2 | 3; // Step 1: Email check, Step 2: Register info, Step 3: OTP
 
-  // React Hook Form setup
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(validationSchemas.loginSchema),
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 'login' }) => {
+  const [modalState, setModalState] = useState<ModalState>(initialMode);
+  const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Register-specific states (improved from register page)
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [otp, setOTP] = useState('');
+  const [otpError, setOTPError] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(60);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  
+  const { login } = useAuth();
+
+  // Form instances
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const step1Form = useForm<Step1FormData>({
+    resolver: zodResolver(step1Schema),
     defaultValues: {
       email: '',
-      password: ''
-    }
+      password: '',
+      confirmPassword: ''
+    },
+    mode: 'onChange',
+    reValidateMode: 'onChange'
   });
+
+  const registerForm = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: '',
+      fullName: '',
+      password: '',
+      confirmPassword: '',
+      phone: '',
+      dateOfBirth: '',
+      gender: ''
+    },
+    mode: 'onChange',
+    reValidateMode: 'onChange'
+  });
+
+  // Reset forms when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setModalState(initialMode);
+      setRegisterStep(1);
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setEmailError('');
+      setOTP('');
+      setOTPError('');
+      setResendCountdown(60);
+      loginForm.reset();
+      step1Form.reset();
+      registerForm.reset({
+        email: '',
+        fullName: '',
+        password: '',
+        confirmPassword: '',
+        phone: '',
+        dateOfBirth: '',
+        gender: ''
+      });
+    }
+  }, [isOpen, initialMode]);
+
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (registerStep === 3 && resendCountdown > 0) {
+      timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [registerStep, resendCountdown]);
+  
+  // Handle closing modal on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  // Handle login
+  const handleLogin = async (data: LoginFormData) => {
+    setLoading(true);
+    try {
+      const response = await authService.login(data.email, data.password);
+      login(response.data.user, response.data.accessToken);
+      
+      // Thông báo thành công dựa trên role
+      if (response.data.user.role === 'customer') {
+        toast.success(`Chào mừng ${response.data.user.full_name || response.data.user.email}! `);
+      } else {
+        toast.success('Đăng nhập thành công! Đang chuyển hướng...');
+      }
+      
+        onClose();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Đăng nhập thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Google login
+  const handleGoogleLogin = () => {
+    window.location.href = `${import.meta.env.VITE_API_URL}${API.Auth.GOOGLE_VERIFY}`;
+  };
+
+  // Check email exists (Step 1) - Improved from register page
+  const checkEmailExists = async (email: string) => {
+    try {
+      setIsCheckingEmail(true);
+      const response = await apiClient.post(API.Auth.CHECK_EMAIL, { email });
+      return (response.data as any)?.exists;
+    } catch (error) {
+      return false;
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  const handleEmailPasswordStep = async (data: Step1FormData) => {
+    // Check if email exists
+    const emailExists = await checkEmailExists(data.email);
+    if (emailExists) {
+      setEmailError('Email này đã được sử dụng');
+      toast.error('Email này đã được sử dụng');
+    } else {
+      setEmailError('');
+      setRegisterEmail(data.email);
+      setRegisterPassword(data.password);
+      // Copy data to registerForm for Step 2
+      registerForm.setValue('email', data.email);
+      registerForm.setValue('password', data.password);
+      registerForm.setValue('confirmPassword', data.confirmPassword);
+      setRegisterStep(2);
+    }
+  };
+
+  // Handle registration (Step 2) - Improved from register page
+  const handleRegister = async (data: RegisterFormData) => {
+    setLoading(true);
+    try {
+      const response = await apiClient.post(API.Auth.REGISTER, {
+        email: registerEmail,
+        password: data.password,
+        confirm_password: data.confirmPassword,
+        full_name: data.fullName,
+        phone: data.phone,
+        date_of_birth: data.dateOfBirth,
+        gender: data.gender
+      });
+      if ((response.data as any)?.success) {
+        setRegisterPassword(data.password);
+        setRegisterStep(3);
+        setResendCountdown(60);
+        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực.');
+      } else {
+        toast.error((response.data as any)?.message || 'Đăng ký thất bại');
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.details || error?.response?.data?.message || 'Đăng ký thất bại';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle OTP verification (Step 3) - Improved from register page
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOTPError('');
+    setLoading(true);
+    try {
+      const response = await apiClient.post(API.Auth.VERIFY_OTP, {
+        email: registerEmail,
+        otp
+      });
+      if ((response.data as any)?.success) {
+        try {
+          const loginResponse = await apiClient.post(API.Auth.LOGIN, {
+            email: registerEmail,
+            password: registerPassword
+          });
+          if ((loginResponse.data as any)?.success) {
+            const user = (loginResponse.data as any).user;
+            login(user, (loginResponse.data as any).accessToken);
+            
+            // Thông báo thành công dựa trên role
+            if (user.role === 'customer') {
+              toast.success(`Chào mừng ${user.full_name || user.email} đến với GenCare! `);
+            } else {
+              toast.success('Xác thực thành công! Đang chuyển hướng...');
+            }
+            
+            onClose();
+          } else {
+            toast.success('Xác thực thành công! Vui lòng đăng nhập.');
+            setModalState('login');
+            setRegisterStep(1);
+          }
+        } catch (_loginError) {
+          toast.success('Xác thực thành công! Vui lòng đăng nhập.');
+          setModalState('login');
+          setRegisterStep(1);
+        }
+      } else {
+        setOTPError((response.data as any)?.message || 'OTP không hợp lệ');
+        toast.error((response.data as any)?.message || 'OTP không hợp lệ');
+      }
+    } catch (error: any) {
+      let errorMessage = 'Xác thực thất bại';
+      if (error?.response?.data?.details) errorMessage = error.response.data.details;
+      else if (error?.response?.data?.message) errorMessage = error.response.data.message;
+      else if (error?.message) errorMessage = error.message;
+      setOTPError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resend OTP - Improved from register page
+  const handleResendOTP = async () => {
+    try {
+      setResendLoading(true);
+      const response = await apiClient.post(API.Auth.RESEND_OTP, { email: registerEmail });
+      if ((response.data as any)?.success) {
+        toast.success('OTP đã được gửi lại');
+        setResendCountdown(60);
+      } else {
+        toast.error((response.data as any)?.message || 'Gửi lại OTP thất bại');
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.details || error?.response?.data?.message || 'Gửi lại OTP thất bại';
+      toast.error(errorMessage);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  // Handle state transitions
+  const switchToRegister = () => {
+    setModalState('register');
+    setRegisterStep(1);
+  };
+
+  const switchToLogin = () => {
+    setModalState('login');
+    setRegisterStep(1);
+  };
+
+  const goBackStep = () => {
+    if (registerStep > 1) {
+      setRegisterStep((prev) => (prev - 1) as RegisterStep);
+      // Clear form errors when going back
+      step1Form.clearErrors();
+      registerForm.clearErrors();
+      setEmailError('');
+    }
+  };
 
   if (!isOpen) return null;
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const onSubmit = async (data: LoginFormData) => {
-    try {
-      const response = await apiClient.post(API.Auth.LOGIN, data);
-      const responseData = response.data as any;
-      
-      if (responseData.success) {
-        login(responseData.user, responseData.accessToken);
-        toast.success('Đăng nhập thành công!');
-        
-        if (onSuccess) {
-          onSuccess(responseData.user);
-        } else {
-          // Nếu không có callback success, tự động redirect đến dashboard
-          navigateAfterLogin(responseData.user, navigate);
-        }
-        
-        // Reset form and close modal
-        reset();
-        onClose();
-      } else {
-        toast.error(responseData.message || 'Đăng nhập thất bại');
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      const errorMessage = error?.response?.data?.details || 
-                          error?.response?.data?.message || 
-                          'Đăng nhập thất bại';
-      toast.error(errorMessage);
+  // Content based on state
+  const getContent = () => {
+    if (modalState === 'login') {
+      return {
+        title: 'Chào mừng trở lại!',
+        subtitle: 'Đăng nhập để tiếp tục sử dụng các dịch vụ chăm sóc sức khỏe của GenCare',
+        description: 'Theo dõi chu kỳ kinh nguyệt, đặt lịch tư vấn và nhiều tính năng hữu ích khác đang chờ bạn.'
+      };
+    } else {
+      return {
+        title: 'Tham gia GenCare',
+        subtitle: 'Đăng ký để sử dụng các dịch vụ của chúng tôi',
+        description: 'Tạo tài khoản để trải nghiệm đầy đủ các dịch vụ chăm sóc sức khỏe phụ nữ hiện đại và chuyên nghiệp.'
+      };
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}${API.Auth.GOOGLE_VERIFY}`;
-  };
-
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
-
-  // Forgot password handlers
-  const handleForgotEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotLoading(true);
-    try {
-      const res = await apiClient.post(API.Auth.FORGOT_PASSWORD_REQUEST, { email: forgotEmail });
-      const data = res.data as { success: boolean; message?: string };
-      if (data.success) {
-        toast.success('Đã gửi OTP về email!');
-        setForgotStep(2);
-      } else {
-        toast.error(data.message || 'Không gửi được OTP');
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Không gửi được OTP');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleForgotVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotLoading(true);
-    try {
-      const res = await apiClient.post(API.Auth.FORGOT_PASSWORD_VERIFY, { email: forgotEmail, otp: forgotOTP });
-      const data = res.data as { success: boolean; message?: string };
-      if (data.success) {
-        toast.success('Xác thực OTP thành công!');
-        setForgotStep(3);
-      } else {
-        toast.error(data.message || 'OTP không đúng');
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'OTP không đúng');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleForgotReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotLoading(true);
-    try {
-      const res = await apiClient.post(API.Auth.FORGOT_PASSWORD_RESET, { email: forgotEmail, new_password: forgotNewPassword });
-      const data = res.data as { success: boolean; message?: string };
-      if (data.success) {
-        toast.success('Đặt lại mật khẩu thành công!');
-        setShowForgot(false);
-        setForgotStep(1);
-        setForgotEmail('');
-        setForgotOTP('');
-        setForgotNewPassword('');
-      } else {
-        toast.error(data.message || 'Đặt lại mật khẩu thất bại');
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Đặt lại mật khẩu thất bại');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
+  const content = getContent();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop với blur effect */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
-        onClick={handleClose}
-      />
-      
-      {/* Modal Container - Centered */}
-      <div className="relative bg-white w-full max-w-md mx-auto rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95">
-        {/* Header */}
-        <div className="relative px-8 pt-8 pb-2">
-          <button
-            onClick={handleClose}
-            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          <div className="text-center">
-            <div className="mx-auto w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Chào mừng trở lại!</h2>
-            <p className="text-gray-600 text-sm">Đăng nhập vào tài khoản GenCare của bạn</p>
-          </div>
-        </div>
-        
-        {/* Body */}
-        <div className="px-8 pb-8">
-          {!showForgot ? (
-            <>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                      </svg>
-                    </div>
-                    <FormField
-                      name="email"
-                      control={control}
-                      type="email"
-                      placeholder="your@email.com"
-                      error={errors.email?.message}
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                    />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div ref={modalRef} className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex min-h-[600px] relative">
+          {/* Login Form - Fixed Left */}
+          <div className={`w-1/2 p-12 flex flex-col justify-center bg-white transition-opacity duration-800 ${
+            modalState === 'login' ? 'opacity-100 z-10' : 'opacity-30 z-0'
+          }`}>
+            <div className="max-w-sm mx-auto w-full">
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-blue-600 mb-2">Đăng nhập</h3>
+                <p className="text-gray-600">Nhập thông tin để truy cập tài khoản</p>
+              </div>
+
+              <form onSubmit={loginForm.handleSubmit((data) => handleLogin({
+                email: data.email.trim(),
+                password: data.password.trim(),
+              }))} className="space-y-6">
+                {/* Email field */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
                   </div>
+                  <input
+                    {...loginForm.register('email')}
+                    type="email"
+                    name="email"
+                    autoComplete="username"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    placeholder="Email"
+                    disabled={modalState !== 'login'}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                  />
+                  {loginForm.formState.errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{loginForm.formState.errors.email.message}</p>
+                  )}
                 </div>
 
-                {/* Password Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
+                {/* Password field */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    {...loginForm.register('password')}
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    placeholder="Mật khẩu"
+                    disabled={modalState !== 'login'}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={modalState !== 'login'}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center disabled:opacity-50"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                  {loginForm.formState.errors.password && (
+                    <p className="mt-1 text-sm text-red-600">{loginForm.formState.errors.password.message}</p>
+                  )}
+                </div>
+
+                {/* Login button */}
+          <Button
+                  type="submit"
+                  disabled={loading || modalState !== 'login'}
+                  className="w-full"
+                  loading={loading}
+          >
+                  Đăng nhập
+          </Button>
+          
+                {/* Divider */}
+                <div className="flex items-center my-6">
+                  <hr className="flex-1 border-gray-300" />
+                  <span className="px-4 text-gray-400 text-sm">HOẶC</span>
+                  <hr className="flex-1 border-gray-300" />
+                </div>
+
+                {/* Google Login Button */}
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={modalState !== 'login'}
+                  className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                >
+                  <img 
+                    src="https://www.svgrepo.com/show/475656/google-color.svg" 
+                    className="w-5 h-5" 
+                    alt="Google" 
+                  />
+                  Đăng nhập với Google
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Register Form - Fixed Right */}
+          <div className={`w-1/2 p-12 flex flex-col justify-center bg-white transition-opacity duration-800 ${
+            modalState === 'register' ? 'opacity-100 z-10' : 'opacity-30 z-0'
+          }`}>
+            <div className="max-w-sm mx-auto w-full">
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-blue-600 mb-2">Đăng ký tài khoản</h3>
+                <p className="text-gray-600">
+                  Bước {registerStep}/3: {
+                    registerStep === 1 ? 'Email và mật khẩu' :
+                    registerStep === 2 ? 'Thông tin cá nhân' :
+                    'Xác thực OTP'
+                  }
+                </p>
+              </div>
+
+              {/* Step progress */}
+              <div className="mb-8">
+                <div className="flex items-center space-x-4">
+                  {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        step <= registerStep 
+                          ? 'bg-cyan-500 text-white' 
+                          : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {step}
+                      </div>
+                      {step < 3 && (
+                        <div className={`w-12 h-1 ${
+                          step < registerStep ? 'bg-cyan-500' : 'bg-gray-200'
+                        }`} />
+                      )}
                     </div>
-                    <FormField
-                      name="password"
-                      control={control}
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      error={errors.password?.message}
-                      className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  ))}
+                </div>
+              </div>
+
+              {/* Form Container với fixed height */}
+              <div className="min-h-[400px] flex flex-col justify-start">
+        
+              {/* Step 1: Email và Password */}
+              {registerStep === 1 && (
+                <form key="register-step-1" onSubmit={step1Form.handleSubmit(handleEmailPasswordStep)} className="space-y-4" autoComplete="new-password">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...step1Form.register('email')}
+                      type="email"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      placeholder="Nhập email của bạn"
+                      disabled={modalState !== 'register'}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    />
+                    {(emailError || step1Form.formState.errors.email) && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {emailError || step1Form.formState.errors.email?.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Password */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...step1Form.register('password')}
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      placeholder="Mật khẩu"
+                      disabled={modalState !== 'register'}
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                     />
                     <button
                       type="button"
-                      onClick={togglePasswordVisibility}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={modalState !== 'register'}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center disabled:opacity-50"
                     >
                       {showPassword ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                        </svg>
+                        <EyeOff className="h-5 w-5 text-gray-400" />
                       ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
+                        <Eye className="h-5 w-5 text-gray-400" />
                       )}
                     </button>
+                    {step1Form.formState.errors.password && (
+                      <p className="mt-1 text-sm text-red-600">{step1Form.formState.errors.password.message}</p>
+                    )}
                   </div>
-                </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Đang đăng nhập...</span>
+                  {/* Confirm Password */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
                     </div>
-                  ) : (
-                    'Đăng nhập'
-                  )}
-                </button>
-              </form>
-              {/* Forgot password link */}
-              <div className="mt-4 text-center">
-                <button type="button" className="text-primary-600 hover:underline text-sm" onClick={() => setShowForgot(true)}>
-                  Quên mật khẩu?
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              {forgotStep === 1 && (
-                <form onSubmit={handleForgotEmail} className="space-y-4">
-                  <input
-                    type="email"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="Nhập email của bạn"
-                    value={forgotEmail}
-                    onChange={e => setForgotEmail(e.target.value)}
-                    required
-                  />
-                  <button type="submit" className="w-full bg-primary-600 text-white py-2 rounded" disabled={forgotLoading}>
-                    {forgotLoading ? 'Đang gửi...' : 'Gửi OTP'}
+                    <input
+                      {...step1Form.register('confirmPassword')}
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      placeholder="Xác nhận mật khẩu"
+                      disabled={modalState !== 'register'}
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      disabled={modalState !== 'register'}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center disabled:opacity-50"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                    {step1Form.formState.errors.confirmPassword && (
+                      <p className="mt-1 text-sm text-red-600">{step1Form.formState.errors.confirmPassword.message}</p>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isCheckingEmail || modalState !== 'register'}
+                    className="w-full"
+                    loading={isCheckingEmail}
+                  >
+                    Tiếp tục
+                  </Button>
+
+                  {/* Divider */}
+                  <div className="flex items-center my-4">
+                    <hr className="flex-1 border-gray-300" />
+                    <span className="px-4 text-gray-400 text-sm">HOẶC</span>
+                    <hr className="flex-1 border-gray-300" />
+                  </div>
+
+                  {/* Google Register Button */}
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={modalState !== 'register'}
+                    className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                  >
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      className="w-5 h-5"
+                      alt="Google"
+                    />
+                    Đăng ký với Google
                   </button>
                 </form>
               )}
-              {forgotStep === 2 && (
-                <form onSubmit={handleForgotVerify} className="space-y-4">
+
+              {/* Step 2: Registration Info */}
+              {registerStep === 2 && (
+                <form key="register-step-2" onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4" autoComplete="off">
+                  {/* Full Name */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...registerForm.register('fullName')}
+                      type="text"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="words"
+                      spellCheck="false"
+                      placeholder="Họ và tên"
+                      disabled={modalState !== 'register'}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    />
+                    {registerForm.formState.errors.fullName && (
+                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.fullName.message}</p>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...registerForm.register('phone')}
+                      type="text"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      placeholder="Số điện thoại (tùy chọn)"
+                      disabled={modalState !== 'register'}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    />
+                    {registerForm.formState.errors.phone && (
+                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.phone.message}</p>
+                    )}
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Calendar className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...registerForm.register('dateOfBirth')}
+                      type="date"
+                      autoComplete="off"
+                      disabled={modalState !== 'register'}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    />
+                    {registerForm.formState.errors.dateOfBirth && (
+                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.dateOfBirth.message}</p>
+                    )}
+                  </div>
+
+                  {/* Gender */}
+                  <div className="relative">
+                    <select
+                      {...registerForm.register('gender')}
+                      autoComplete="off"
+                      disabled={modalState !== 'register'}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors bg-white disabled:bg-gray-100"
+                    >
+                      <option value="">Giới tính (tùy chọn)</option>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                      <option value="other">Khác</option>
+                    </select>
+                    {registerForm.formState.errors.gender && (
+                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.gender.message}</p>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-4 pt-4">
+                    <Button
+                      type="button"
+                      onClick={goBackStep}
+                      disabled={modalState !== 'register'}
+                      variant="secondary"
+                      className="flex-1"
+                    >
+                      Quay lại
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={loading || modalState !== 'register'}
+                      className="flex-1"
+                      loading={loading}
+                    >
+                      Đăng ký
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 3: OTP Verification */}
+              {registerStep === 3 && (
+                <form key="register-step-3" onSubmit={handleVerifyOTP} className="space-y-6" autoComplete="off">
+                  <div className="text-center mb-6">
+                    <p className="text-gray-600">
+                      Mã OTP đã được gửi đến email: <strong>{registerEmail}</strong>
+                    </p>
+                  </div>
+
+                  <div className="relative">
                   <input
                     type="text"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="Nhập mã OTP"
-                    value={forgotOTP}
-                    onChange={e => setForgotOTP(e.target.value)}
+                      name="verificationCode"
+                      placeholder="Nhập mã OTP (6 số)"
+                      value={otp}
+                      onChange={e => setOTP(e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      maxLength={6}
+                      disabled={modalState !== 'register'}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors text-center text-lg tracking-widest disabled:bg-gray-100"
                     required
                   />
-                  <button type="submit" className="w-full bg-primary-600 text-white py-2 rounded" disabled={forgotLoading}>
-                    {forgotLoading ? 'Đang xác thực...' : 'Xác thực OTP'}
-                  </button>
-                </form>
-              )}
-              {forgotStep === 3 && (
-                <form onSubmit={handleForgotReset} className="space-y-4">
-                  <input
-                    type="password"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="Nhập mật khẩu mới"
-                    value={forgotNewPassword}
-                    onChange={e => setForgotNewPassword(e.target.value)}
-                    required
-                  />
-                  <button type="submit" className="w-full bg-primary-600 text-white py-2 rounded" disabled={forgotLoading}>
-                    {forgotLoading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
-                  </button>
-                </form>
-              )}
-              <div className="text-center mt-2">
-                <button type="button" className="text-gray-500 hover:underline text-xs" onClick={() => { setShowForgot(false); setForgotStep(1); }}>
-                  Quay lại đăng nhập
-                </button>
-              </div>
-            </div>
-          )}
+                    {otpError && (
+                      <p className="mt-1 text-sm text-red-600 text-center">{otpError}</p>
+                    )}
+                  </div>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-3 bg-white text-gray-500 font-medium">Hoặc</span>
+                  <div className="flex space-x-4">
+                    <Button
+                      type="button"
+                      onClick={goBackStep}
+                      disabled={modalState !== 'register'}
+                      variant="secondary"
+                      className="flex-1"
+                    >
+                      Quay lại
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={loading || modalState !== 'register'}
+                      className="flex-1"
+                      loading={loading}
+                    >
+                      Xác thực
+                    </Button>
+                  </div>
+
+                  {/* Resend OTP */}
+                  <div className="text-sm text-gray-600 text-center">
+                    {resendCountdown > 0 ? (
+                      `Bạn có thể gửi lại sau ${resendCountdown} giây`
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOTP}
+                        disabled={resendLoading || modalState !== 'register'}
+                        className="font-medium text-cyan-600 hover:text-cyan-500 underline disabled:text-gray-400"
+                      >
+                        {resendLoading ? 'Đang gửi...' : 'Gửi lại mã OTP'}
+                  </button>
+                    )}
+                  </div>
+                </form>
+              )}
+              </div> {/* Đóng Form Container */}
             </div>
           </div>
 
-          {/* Google Login Button */}
+          {/* Sliding Side Content - Absolute positioned */}
+          <div className={`absolute top-0 w-1/2 h-full bg-gradient-to-br from-cyan-500 to-blue-600 p-12 flex flex-col justify-center text-white transition-all duration-1000 ease-in-out z-20 ${
+            modalState === 'login' ? 'right-0' : 'left-0'
+          }`}>
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white bg-opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white bg-opacity-10 rounded-full translate-y-12 -translate-x-12"></div>
+            
+            {/* Logo */}
+            <div className="mb-8">
+              <img 
+                src="/src/assets/logo/logo.png" 
+                alt="GenCare Logo" 
+                className="w-16 h-16 mb-4"
+              />
+              <h1 className="text-3xl font-bold">GenCare</h1>
+            </div>
+
+            {/* Dynamic Content */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold">{content.title}</h2>
+              <p className="text-lg opacity-90">{content.subtitle}</p>
+              <p className="text-sm opacity-75 leading-relaxed">{content.description}</p>
+          </div>
+
+            {/* Switch button */}
+            <div className="mt-8">
+              {modalState === 'login' ? (
           <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isSubmitting}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all duration-200 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <svg width="20" height="20" viewBox="0 0 48 48" className="flex-shrink-0">
-              <g>
-                <path fill="#4285F4" d="M44.5 20H24v8.5h11.7C34.7 32.9 30.1 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.3-4z"/>
-                <path fill="#34A853" d="M6.3 14.7l7 5.1C15.5 16.1 19.4 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.5 6.5 29.6 4 24 4c-7.1 0-13.1 3.7-16.7 9.7z"/>
-                <path fill="#FBBC05" d="M24 44c5.1 0 9.8-1.7 13.4-4.7l-6.2-5.1C29.2 35.7 26.7 36.5 24 36.5c-6.1 0-10.7-3.1-12.7-7.6l-7 5.4C7 41.1 14.9 44 24 44z"/>
-                <path fill="#EA4335" d="M44.5 20H24v8.5h11.7c-1.1 3.1-4.2 5.5-7.7 5.5-4.6 0-8.4-3.8-8.4-8.5s3.8-8.5 8.4-8.5c2.3 0 4.3.8 5.8 2.1l6.4-6.4C34.5 6.5 29.6 4 24 4c-7.1 0-13.1 3.7-16.7 9.7z"/>
-              </g>
-            </svg>
-            <span>Tiếp tục với Google</span>
+                  onClick={switchToRegister}
+                  className="flex items-center space-x-2 text-white hover:text-cyan-200 transition-colors"
+                >
+                  <span>Chưa có tài khoản? Đăng ký ngay</span>
+                  <ArrowRight className="w-4 h-4" />
           </button>
-          
-          {/* Register Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Chưa có tài khoản?{' '}
+              ) : (
               <button
-                type="button"
-                onClick={() => {
-                  handleClose();
-                  navigate('/register');
-                }}
-                className="text-primary-600 hover:text-primary-700 font-semibold hover:underline transition-colors duration-200"
-                disabled={isSubmitting}
-              >
-                Đăng ký ngay
+                  onClick={switchToLogin}
+                  className="flex items-center space-x-2 text-white hover:text-cyan-200 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Đã có tài khoản? Đăng nhập</span>
               </button>
-            </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
