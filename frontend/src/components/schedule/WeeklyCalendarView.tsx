@@ -153,7 +153,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     }
 
     if (diffHours < 2) {
-      return { type: 'restricted', available: false, diffHours };
+      return { type: 'restricted', available: true, diffHours }; // Cho phép click slot quá gần
     }
 
     if (isSelected) {
@@ -176,7 +176,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       case 'unavailable':
         return baseClass + " bg-gray-100 border-gray-200 cursor-not-allowed opacity-70";
       case 'restricted':
-        return baseClass + " bg-yellow-100 border-yellow-300 text-yellow-700 cursor-not-allowed";
+        return baseClass + " bg-yellow-100 border-yellow-300 text-yellow-700 cursor-pointer hover:bg-yellow-200 hover:border-yellow-400";
       case 'selected':
         return baseClass + " bg-blue-500 border-blue-600 text-white shadow-md transform scale-105 z-10";
       case 'available':

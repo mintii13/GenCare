@@ -102,6 +102,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         status = 'unavailable';
       } else if (diffHours < 2) {
         status = 'restricted';
+        disabled = false; // Cho phép click slot quá gần
       } else if (isSelected) {
         status = 'selected';
         disabled = false;
@@ -305,10 +306,10 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                              type={slot.status === 'selected' ? 'primary' : 'default'}
                              size="small"
                              block
-                             disabled={slot.disabled}
+                             disabled={slot.status === 'booked' || slot.status === 'past' || slot.status === 'unavailable'}
                              onClick={(e) => {
                                e.stopPropagation();
-                               if (!slot.disabled) {
+                               if (slot.status !== 'booked' && slot.status !== 'past' && slot.status !== 'unavailable') {
                                  handleSlotSelect(
                                    dayDate.format('YYYY-MM-DD'),
                                    slot.startTime,
