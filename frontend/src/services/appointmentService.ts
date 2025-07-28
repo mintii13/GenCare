@@ -11,7 +11,6 @@ import {
   AppointmentSlot,
   BookAppointmentRequest,
   AppointmentStats,
-  RescheduleAppointmentRequest,
 } from '../types/appointment';
 import { GetAppointmentHistoryListResponse } from './appointmentHistoryService';
 
@@ -81,7 +80,7 @@ export const appointmentService = {
       const response = await apiClient.post(API.Appointment.BOOK, data);
       return {
         success: true,
-        data: response.data,
+        data: response.data as GetAppointmentHistoryListResponse,
         message: 'Đặt lịch thành công'
       };
     } catch (error: any) {
@@ -114,7 +113,7 @@ export const appointmentService = {
     return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/cancel`);
   },
 
-  async rescheduleAppointment(appointmentId: string, newSlot: RescheduleAppointmentRequest): Promise<ApiResponse<any>> {
+  async rescheduleAppointment(appointmentId: string, newSlot: any): Promise<ApiResponse<any>> {
     try {
       const response = await apiClient.put(`${API.Appointment.BASE}/${appointmentId}/reschedule`, newSlot);
       

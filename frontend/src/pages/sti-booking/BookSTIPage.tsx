@@ -71,7 +71,6 @@ const BookSTIPage: React.FC = () => {
 
   useEffect(() => {
     if (!user || user.role !== 'customer') {
-      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
       setShowLoginModal(true);
       return;
     }

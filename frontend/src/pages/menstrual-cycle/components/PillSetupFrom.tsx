@@ -25,7 +25,6 @@ const PillSetupForm: React.FC<PillSetupFormProps> = ({ onSubmit, isLoading, late
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error("Bạn cần đăng nhập để thực hiện chức năng này.");
       return;
     }
 

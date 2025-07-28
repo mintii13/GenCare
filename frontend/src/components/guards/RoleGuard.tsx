@@ -14,7 +14,6 @@ const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      toast.error('Bạn cần đăng nhập để sử dụng tính năng này.');
       openModal('login');
       // Redirect to home page after showing the modal
       navigate('/', { replace: true });

@@ -12,9 +12,6 @@ const LoginRedirect: React.FC<LoginRedirectProps> = ({ onShowLogin }) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      // Hiển thị toast lỗi
-      toast.error('Vui lòng đăng nhập để tiếp tục!');
-      
       // Trigger login modal nếu có callback
       if (onShowLogin) {
         setTimeout(() => {

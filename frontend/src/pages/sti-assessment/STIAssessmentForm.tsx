@@ -223,10 +223,6 @@ const STIAssessmentForm = () => {
       const token = getToken();
 
       if (!token) {
-        toast.error('Vui lòng đăng nhập để sử dụng tính năng này', {
-          duration: 4000,
-          position: 'top-center',
-        });
         setLoading(false);
         return;
       }
