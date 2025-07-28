@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { IMenstrualCycle, MenstrualCycle, IMoodData, IPeriodDay, IDailyMoodData } from '../models/MenstrualCycle';
+import { toVietnamDate, getVietnamDateRange, toVietnamEndOfDay } from '../utils/dateUtils';
 
 // Define interfaces for backward compatibility
 interface CycleStatsData {
@@ -23,6 +24,48 @@ export class MenstrualCycleRepository {
             return await MenstrualCycle.deleteMany({ user_id });
         } catch (error) {
             console.error('Error deleting menstrual cycles:', error);
+            throw error;
+        }
+    }
+
+    public static async cleanupDuplicateCycles(user_id: string) {
+        try {
+            console.log('[Repository] Cleaning up duplicate cycles for user:', user_id);
+            
+            // Find all cycles for this user
+            const allCycles = await MenstrualCycle.find({ user_id }).sort({ createdAt: -1 });
+            console.log('[Repository] Found cycles:', allCycles.length);
+            
+            if (allCycles.length <= 1) {
+                console.log('[Repository] No duplicates to clean up');
+                return;
+            }
+            
+            // Group cycles by cycle_start_date
+            const cyclesByDate = new Map();
+            allCycles.forEach(cycle => {
+                const dateKey = cycle.cycle_start_date.toISOString().split('T')[0];
+                if (!cyclesByDate.has(dateKey)) {
+                    cyclesByDate.set(dateKey, []);
+                }
+                cyclesByDate.get(dateKey).push(cycle);
+            });
+            
+            // Delete duplicates, keep the most recent one
+            for (const [dateKey, cycles] of cyclesByDate) {
+                if (cycles.length > 1) {
+                    console.log('[Repository] Found duplicates for date:', dateKey, 'count:', cycles.length);
+                    // Keep the first one (most recent due to sort), delete the rest
+                    const toDelete = cycles.slice(1);
+                    const deleteIds = toDelete.map(c => c._id);
+                    console.log('[Repository] Deleting cycles:', deleteIds);
+                    
+                    const deleteResult = await MenstrualCycle.deleteMany({ _id: { $in: deleteIds } });
+                    console.log('[Repository] Deleted cycles:', deleteResult.deletedCount);
+                }
+            }
+        } catch (error) {
+            console.error('Error cleaning up duplicate cycles:', error);
             throw error;
         }
     }
@@ -61,8 +104,35 @@ export class MenstrualCycleRepository {
 
     public static async findByUser(user_id: string) {
         try {
-            return await MenstrualCycle.find({ user_id })
+            console.log('[Repository] findByUser called with user_id:', user_id);
+            console.log('[Repository] user_id type:', typeof user_id);
+            
+            // Try both string and ObjectId formats
+            let cycles = await MenstrualCycle.find({ user_id })
                 .sort({ cycle_start_date: -1 });
+                
+            if (!cycles || cycles.length === 0) {
+                console.log('[Repository] No cycles found with string user_id, trying ObjectId...');
+                try {
+                    const objectId = new mongoose.Types.ObjectId(user_id);
+                    cycles = await MenstrualCycle.find({ user_id: objectId })
+                        .sort({ cycle_start_date: -1 });
+                    console.log('[Repository] ObjectId search result:', cycles?.length || 0);
+                } catch (objectIdError) {
+                    console.log('[Repository] ObjectId conversion failed:', objectIdError.message);
+                }
+            }
+            
+            console.log('[Repository] findByUser final result:', {
+                cyclesFound: cycles?.length || 0,
+                cycles: cycles?.map(c => ({
+                    _id: c._id,
+                    user_id: c.user_id,
+                    cycle_start_date: c.cycle_start_date,
+                    period_days_count: c.period_days?.length || 0
+                }))
+            });
+            return cycles;
         } catch (error) {
             console.error('Error finding cycles by user:', error);
             throw error;
@@ -273,27 +343,128 @@ export class MenstrualCycleRepository {
         }
     }
 
+    public static async createPeriodDayWithMood(user_id: string, date: string, mood_data: IDailyMoodData) {
+        try {
+            const { start: targetDate, end: endDate } = getVietnamDateRange(date);
+
+            console.log('[Repository] createPeriodDayWithMood called:', {
+                user_id,
+                date,
+                targetDate,
+                endDate
+            });
+
+            // Check if this date is already a period day
+            const existingCycle = await MenstrualCycle.findOne({
+                user_id,
+                'period_days.date': {
+                    $gte: targetDate,
+                    $lt: endDate
+                }
+            });
+
+            if (existingCycle) {
+                console.log('[Repository] Date already exists in cycle:', existingCycle._id);
+                return false;
+            }
+
+            // Create a new cycle or add to existing cycle
+            const existingCycles = await MenstrualCycle.find({ user_id }).sort({ cycle_start_date: -1 });
+            console.log('[Repository] Existing cycles found:', existingCycles.length);
+            
+            if (existingCycles.length === 0) {
+                // Create new cycle
+                const newCycle = {
+                    user_id: new mongoose.Types.ObjectId(user_id),
+                    cycle_start_date: targetDate,
+                    period_days: [{
+                        date: targetDate,
+                        mood_data: mood_data
+                    }],
+                    cycle_length: 28, // Default cycle length
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                };
+                
+                console.log('[Repository] Creating new cycle:', newCycle);
+                const result = await MenstrualCycle.create(newCycle);
+                console.log('[Repository] New cycle created:', result._id);
+                return !!result;
+            } else {
+                // Add to most recent cycle
+                const latestCycle = existingCycles[0];
+                console.log('[Repository] Adding to existing cycle:', latestCycle._id);
+                const result = await MenstrualCycle.updateOne(
+                    { _id: latestCycle._id },
+                    {
+                        $push: {
+                            period_days: {
+                                date: targetDate,
+                                mood_data: mood_data
+                            }
+                        }
+                    }
+                );
+                console.log('[Repository] Update result:', result.modifiedCount > 0);
+                return result.modifiedCount > 0;
+            }
+        } catch (error) {
+            console.error('Error creating period day with mood:', error);
+            throw error;
+        }
+    }
+
     public static async updatePeriodDayMood(user_id: string, date: string, mood_data: IDailyMoodData) {
         try {
-            const targetDate = new Date(date);
-            targetDate.setUTCHours(0, 0, 0, 0);
+            const { start: targetDate, end: endDate } = getVietnamDateRange(date);
 
-            const result = await MenstrualCycle.updateOne(
-                {
-                    user_id,
-                    'period_days.date': {
-                        $gte: targetDate,
-                        $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
-                    }
-                },
-                {
-                    $set: {
-                        'period_days.$.mood_data': mood_data
-                    }
+            // First, try to find if this date is already a period day
+            const existingCycle = await MenstrualCycle.findOne({
+                user_id,
+                'period_days.date': {
+                    $gte: targetDate,
+                    $lt: endDate
                 }
-            );
+            });
 
-            return result.modifiedCount > 0;
+            if (existingCycle) {
+                // Update existing period day mood data
+                const result = await MenstrualCycle.updateOne(
+                    {
+                        user_id,
+                        'period_days.date': {
+                            $gte: targetDate,
+                            $lt: endDate
+                        }
+                    },
+                    {
+                        $set: {
+                            'period_days.$.mood_data': mood_data
+                        }
+                    }
+                );
+                return result.modifiedCount > 0;
+            } else {
+                // If not a period day, add it as a new period day with mood data
+                const result = await MenstrualCycle.updateOne(
+                    {
+                        user_id,
+                        $or: [
+                            { cycle_start_date: { $lte: targetDate } },
+                            { cycle_start_date: { $exists: false } }
+                        ]
+                    },
+                    {
+                        $push: {
+                            period_days: {
+                                date: targetDate,
+                                mood_data: mood_data
+                            }
+                        }
+                    }
+                );
+                return result.modifiedCount > 0;
+            }
         } catch (error) {
             console.error('Error updating period day mood:', error);
             throw error;
@@ -302,14 +473,14 @@ export class MenstrualCycleRepository {
 
     public static async getPeriodDayMood(user_id: string, date: string): Promise<IDailyMoodData | null> {
         try {
-            const targetDate = new Date(date);
-            targetDate.setUTCHours(0, 0, 0, 0);
+            const { start: targetDate, end: endDate } = getVietnamDateRange(date);
 
+            // Find any cycle that has this date as a period day
             const cycle = await MenstrualCycle.findOne({
                 user_id,
                 'period_days.date': {
                     $gte: targetDate,
-                    $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+                    $lt: endDate
                 }
             });
 
@@ -318,14 +489,74 @@ export class MenstrualCycleRepository {
             }
 
             const periodDay = cycle.period_days.find(day => {
-                const dayDate = new Date(day.date);
-                dayDate.setUTCHours(0, 0, 0, 0);
+                const dayDate = toVietnamDate(day.date);
                 return dayDate.getTime() === targetDate.getTime();
             });
 
             return periodDay?.mood_data || null;
         } catch (error) {
             console.error('Error getting period day mood:', error);
+            throw error;
+        }
+    }
+
+    public static async getMoodDataByDateRange(user_id: string, start_date: string, end_date: string): Promise<Array<{date: string, mood_data: IDailyMoodData}>> {
+        try {
+            const startDate = toVietnamDate(start_date);
+            const endDate = toVietnamEndOfDay(end_date);
+
+            const cycles = await MenstrualCycle.find({
+                user_id,
+                'period_days.date': {
+                    $gte: startDate,
+                    $lte: endDate
+                }
+            });
+
+            const moodData: Array<{date: string, mood_data: IDailyMoodData}> = [];
+            
+            cycles.forEach(cycle => {
+                cycle.period_days.forEach(periodDay => {
+                    const dayDate = new Date(periodDay.date);
+                    if (dayDate >= startDate && dayDate <= endDate && periodDay.mood_data) {
+                        moodData.push({
+                            date: periodDay.date.toISOString().split('T')[0],
+                            mood_data: periodDay.mood_data
+                        });
+                    }
+                });
+            });
+
+            return moodData;
+        } catch (error) {
+            console.error('Error getting mood data by date range:', error);
+            throw error;
+        }
+    }
+
+    public static async getAllMoodData(user_id: string): Promise<Array<{date: string, mood_data: IDailyMoodData}>> {
+        try {
+            const cycles = await MenstrualCycle.find({
+                user_id,
+                'period_days.mood_data': { $exists: true, $ne: null }
+            });
+
+            const moodData: Array<{date: string, mood_data: IDailyMoodData}> = [];
+            
+            cycles.forEach(cycle => {
+                cycle.period_days.forEach(periodDay => {
+                    if (periodDay.mood_data) {
+                        moodData.push({
+                            date: periodDay.date.toISOString().split('T')[0],
+                            mood_data: periodDay.mood_data
+                        });
+                    }
+                });
+            });
+
+            return moodData;
+        } catch (error) {
+            console.error('Error getting all mood data:', error);
             throw error;
         }
     }

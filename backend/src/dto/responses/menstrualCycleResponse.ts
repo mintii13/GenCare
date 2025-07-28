@@ -20,7 +20,7 @@ export interface TodayStatus {
     is_period_day: boolean;
     is_fertile_day: boolean;
     is_ovulation_day: boolean;
-    pregnancy_chance: 'low' | 'medium' | 'high' | 'very_high';
+    pregnancy_chance: 'low' | 'medium' | 'high';
     recommendations: string[];
     period_mood_data?: IDailyMoodData; // Add mood data for period days
     day_in_cycle?: number;

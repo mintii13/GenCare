@@ -25,12 +25,12 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
   console.log('[useMenstrualCycle] Hook called, userId:', userId, 'loading:', loading, 'hasLoaded:', hasLoadedRef.current);
 
   const loadData = useCallback(async () => {
-    if (!userId || hasLoadedRef.current) {
-      console.log('[useMenstrualCycle] Skipping loadData - no userId or already loaded');
+    if (!userId) {
+      console.log('[useMenstrualCycle] Skipping loadData - no userId');
       return;
     }
 
-    hasLoadedRef.current = true;
+    console.log('[useMenstrualCycle] Starting loadData with userId:', userId);
     setLoading(true);
     setError(null);
     
@@ -40,17 +40,41 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
         menstrualCycleService.getCycles()
       ]);
 
-      console.log('[useMenstrualCycle] API responses:', { todayResponse, cyclesResponse });
+      console.log('[useMenstrualCycle] API responses:', { 
+        todayResponse: {
+          success: todayResponse.success,
+          data: todayResponse.data,
+          message: todayResponse.message
+        }, 
+        cyclesResponse: {
+          success: cyclesResponse.success,
+          data: cyclesResponse.data,
+          dataType: typeof cyclesResponse.data,
+          isArray: Array.isArray(cyclesResponse.data),
+          length: cyclesResponse.data?.length,
+          message: cyclesResponse.message
+        }
+      });
 
       if (todayResponse.success) {
-        setTodayStatus(todayResponse.data?.data || null);
+        setTodayStatus(todayResponse.data || null);
       } else {
         console.warn('Today status không có dữ liệu:', todayResponse.message);
         setTodayStatus(null);
       }
 
       if (cyclesResponse.success) {
-        setCycles(cyclesResponse.data?.data || []);
+        console.log('[useMenstrualCycle] Cycles response data:', {
+          data: cyclesResponse.data,
+          dataType: typeof cyclesResponse.data,
+          isArray: Array.isArray(cyclesResponse.data),
+          length: cyclesResponse.data?.length
+        });
+        
+        // Ensure cycles is always an array
+        const cyclesData = Array.isArray(cyclesResponse.data) ? cyclesResponse.data : [];
+        console.log('[useMenstrualCycle] Setting cycles to:', cyclesData);
+        setCycles(cyclesData);
       } else {
         console.warn('Cycles không có dữ liệu:', cyclesResponse.message);
         setCycles([]);
@@ -67,6 +91,7 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
       }
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
       console.log('[useMenstrualCycle] loadData completed');
     }
   }, [userId]);
@@ -86,14 +111,24 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
       console.log('[useMenstrualCycle] Refresh API responses:', { todayResponse, cyclesResponse });
 
       if (todayResponse.success) {
-        setTodayStatus(todayResponse.data?.data || null);
+        setTodayStatus(todayResponse.data || null);
       } else {
         console.warn('Today status không có dữ liệu:', todayResponse.message);
         setTodayStatus(null);
       }
 
       if (cyclesResponse.success) {
-        setCycles(cyclesResponse.data?.data || []);
+        console.log('[useMenstrualCycle] Refresh cycles response data:', {
+          data: cyclesResponse.data,
+          dataType: typeof cyclesResponse.data,
+          isArray: Array.isArray(cyclesResponse.data),
+          length: cyclesResponse.data?.length
+        });
+        
+        // Ensure cycles is always an array
+        const cyclesData = Array.isArray(cyclesResponse.data) ? cyclesResponse.data : [];
+        console.log('[useMenstrualCycle] Refresh setting cycles to:', cyclesData);
+        setCycles(cyclesData);
       } else {
         console.warn('Cycles không có dữ liệu:', cyclesResponse.message);
         setCycles([]);
@@ -117,16 +152,16 @@ const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
 
   useEffect(() => {
     console.log('[useMenstrualCycle] useEffect triggered, userId:', userId);
-    if (userId && !hasLoadedRef.current) {
+    if (userId) {
       loadData();
-    } else if (!userId) {
+    } else {
       setLoading(false);
       setError(null);
       setTodayStatus(null);
       setCycles([]);
       hasLoadedRef.current = false;
     }
-  }, [userId]);
+  }, [userId, loadData]);
 
   return {
     todayStatus,

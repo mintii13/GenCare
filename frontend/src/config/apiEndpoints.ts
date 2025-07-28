@@ -153,12 +153,24 @@ export const API = {
     // UPDATE: `/menstrual-cycle/update`, // REMOVED: This endpoint doesn't exist on backend
     GET_CYCLES: `/menstrual-cycle/getCycles`,//96
     GET_CYCLES_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,//97
-    TODAY_STATUS: '/menstrual-cycle/getTodayStatus',//98
-    CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',//99
-    PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',//100
-    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',//101
-    CLEANUP: '/menstrual-cycle/cleanupDuplicates',//102
-    RESET: '/menstrual-cycle/resetAllData'//103
+    GET_CYCLES_BY_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,//98
+    TODAY_STATUS: '/menstrual-cycle/today-status',//99
+    CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',//100
+    GET_CYCLE_STATISTICS: '/menstrual-cycle/getCycleStatistics',//101
+    PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',//102
+    GET_PERIOD_STATISTICS: '/menstrual-cycle/getPeriodStatistics',//103
+  GET_MOOD_STATISTICS: '/menstrual-cycle/getMoodStatistics',//104
+    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',//104
+    CLEANUP: '/menstrual-cycle/cleanupDuplicates',//105
+    RESET: '/menstrual-cycle/resetAllData',//106
+    MOOD_DATA: '/menstrual-cycle/mood-data',//107
+    PERIOD_DAY_MOOD: (date: string) => `/menstrual-cycle/period-day/${date}/mood`,//108
+    CREATE_PERIOD_DAY_MOOD: (date: string) => `/menstrual-cycle/period-day/${date}/mood`,//109
+    MOOD_DATA_DELETE: (date: string) => `/menstrual-cycle/mood-data/${date}`,//109
+    MOOD_DATA_MONTHLY_SUMMARY: (year: number, month: number) => `/menstrual-cycle/mood-data/monthly-summary/${year}/${month}`,//110
+    STATISTICS: '/menstrual-cycle/statistics',//111
+    COMPARISON: '/menstrual-cycle/comparison',//112
+    PROCESS_MENSTRUAL_CYCLE: '/menstrual-cycle/processMenstrualCycle'//113
   },
 
   // Home page endpoints

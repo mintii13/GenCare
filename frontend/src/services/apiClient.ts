@@ -179,6 +179,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.get<T>(url, config),
       retryConfig
@@ -191,6 +194,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.post<T>(url, data, config),
       retryConfig
@@ -203,6 +209,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.put<T>(url, data, config),
       retryConfig
@@ -215,6 +224,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.patch<T>(url, data, config),
       retryConfig
@@ -226,6 +238,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.delete<T>(url, config),
       retryConfig
@@ -238,8 +253,32 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.get<T>(url, config, retryConfig);
+      
+      console.log('[ApiClient] safeGet response:', {
+        url,
+        responseData: response.data,
+        responseDataType: typeof response.data,
+        hasSuccess: response.data && typeof response.data === 'object' && 'success' in response.data
+      });
+      
+      // Check if response.data is already an ApiResponse structure
+      if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+        // Backend already returns ApiResponse structure
+        console.log('[ApiClient] Returning backend ApiResponse structure');
+        return response.data as ApiResponse<T>;
+      }
+      
+      // Legacy response structure
+      console.log('[ApiClient] Returning legacy response structure');
       return {
         success: true,
         data: response.data,
@@ -256,6 +295,13 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.post<T>(url, data, config, retryConfig);
       return {
@@ -274,6 +320,13 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.put<T>(url, data, config, retryConfig);
       return {
@@ -292,6 +345,13 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.patch<T>(url, data, config, retryConfig);
       return {
@@ -309,6 +369,13 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.delete<T>(url, config, retryConfig);
       return {

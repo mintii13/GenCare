@@ -9,13 +9,14 @@ import { usePillTracking } from '../../hooks/usePillTracking';
 import CycleDashboard from './components/CycleDashboard';
 import CycleCalendar from './components/CycleCalendar';
 import CombinedCycleView from './components/CombinedCycleView';
-import CycleStatistics from './components/CycleStatistics';
+import CycleCharts from './components/CycleCharts';
 import PeriodLogger from './components/PeriodLogger';
-import PillSetupForm from './components/PillSetupForm';
-import PillCalendar from './components/PillCalendar';
-import PillSettingsModal from './components/PillSettingsModal';
+import PillSetupForm from './components/PillSetupFrom';
+import PillCalendar from './components/PillCalender';
+import PillSettingsModal from './components/PillSettingModal';
 import useMenstrualCycle from '../../hooks/useMenstrualCycle';
 import FirstTimeGuideModal from '../../components/menstrual-cycle/FirstTimeGuideModal';
+import ErrorBoundary from '../../components/common/ErrorBoundary';
 
 import { toast } from 'react-hot-toast';
 import { 
@@ -26,8 +27,7 @@ import {
   FaChartLine, 
   FaPills,
   FaCog,
-  FaLightbulb,
-  FaBook 
+  FaLightbulb
 } from 'react-icons/fa';
 
 const MenstrualCyclePage: React.FC = () => {
@@ -97,7 +97,19 @@ const MenstrualCyclePage: React.FC = () => {
     isLoading,
     cyclesLength: cycles?.length || 0,
     schedulesLength: schedules?.length || 0,
-          user: user?.id
+    user: user?.id,
+    userId: user?.id,
+    userEmail: user?.email,
+    userFullName: user?.full_name,
+    userRole: user?.role
+  });
+
+  console.log('[MenstrualCyclePage] Current user details:', {
+    id: user?.id,
+    email: user?.email,
+    fullName: user?.full_name,
+    role: user?.role,
+    isAuthenticated: !!user
   });
 
   // Error state - chỉ hiển thị khi có lỗi thật sự (network/server error)
@@ -290,11 +302,6 @@ const MenstrualCyclePage: React.FC = () => {
                 <span className="hidden sm:inline">Uống Thuốc</span>
                 <span className="sm:hidden">Uống</span>
               </TabsTrigger>
-              <TabsTrigger value="diary" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white">
-                <FaBook className="text-sm" />
-                <span className="hidden sm:inline">Nhật Ký</span>
-                <span className="sm:hidden">NK</span>
-              </TabsTrigger>
             </TabsList>
             
             <div className="flex gap-2 sm:hidden">
@@ -329,14 +336,16 @@ const MenstrualCyclePage: React.FC = () => {
                 <p className="text-sm text-gray-600">Tổng quan, lịch và ghi chú</p>
               </div>
             </div>
-            <CombinedCycleView 
-              todayStatus={todayStatus} 
-              cycles={cycles} 
-              onRefresh={refreshCycle}
-              isFirstTimeUser={isFirstTimeUser}
-              onShowGuide={() => setShowFirstTimeGuide(true)}
-              pillSchedules={schedules}
-            />
+            <ErrorBoundary>
+              <CombinedCycleView 
+                todayStatus={todayStatus} 
+                cycles={cycles} 
+                onRefresh={refreshCycle}
+                isFirstTimeUser={isFirstTimeUser}
+                onShowGuide={() => setShowFirstTimeGuide(true)}
+                pillSchedules={schedules}
+              />
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="statistics" className="space-y-6">
@@ -349,7 +358,7 @@ const MenstrualCyclePage: React.FC = () => {
                 <p className="text-sm text-gray-600">Xu hướng và độ đều đặn</p>
               </div>
             </div>
-            <CycleStatistics onRefresh={refreshCycle} />
+            <CycleCharts onRefresh={refreshCycle} />
           </TabsContent>
 
           {/* Pill Tracking Tab */}
@@ -391,54 +400,7 @@ const MenstrualCyclePage: React.FC = () => {
             )}
           </TabsContent>
 
-          {/* Monthly Diary Tab */}
-          <TabsContent value="diary" className="space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <FaBook className="text-sm text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Nhật Ký Cảm Xúc</h2>
-                <p className="text-sm text-gray-600">Ghi lại cảm xúc và triệu chứng hàng ngày</p>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-6 rounded-xl border border-pink-200">
-              <div className="text-center">
-                <FaBook className="w-16 h-16 text-pink-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Tính năng Nhật Ký Cảm Xúc
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Ghi lại cảm xúc, năng lượng và triệu chứng hàng ngày để theo dõi sức khỏe tốt hơn
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-white p-4 rounded-lg">
-                    <FaHeart className="w-8 h-8 text-pink-500 mx-auto mb-2" />
-                    <h4 className="font-medium text-gray-800 mb-1">Tâm trạng</h4>
-                    <p className="text-sm text-gray-600">Ghi lại cảm xúc hàng ngày</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg">
-                    <FaChartBar className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                    <h4 className="font-medium text-gray-800 mb-1">Thống kê</h4>
-                    <p className="text-sm text-gray-600">Phân tích xu hướng cảm xúc</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg">
-                    <FaCalendarAlt className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                    <h4 className="font-medium text-gray-800 mb-1">Lịch</h4>
-                    <p className="text-sm text-gray-600">Xem lịch sử cảm xúc</p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => window.location.href = '/monthly-diary'}
-                  className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-                >
-                  <FaBook className="mr-2" />
-                  Mở Nhật Ký Cảm Xúc
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
+
         </Tabs>
 
         <PillSettingsModal 

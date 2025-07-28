@@ -125,7 +125,7 @@ export interface TodayStatus {
   is_period_day: boolean;
   is_fertile_day: boolean;
   is_ovulation_day: boolean;
-  pregnancy_chance: 'low' | 'medium' | 'high' | 'very_high';
+  pregnancy_chance: 'low' | 'medium' | 'high';
   recommendations: string[];
   period_mood_data?: DailyMoodData; // Add mood data for period days
   day_in_cycle?: number;
@@ -177,12 +177,17 @@ export const menstrualCycleService = {
 
   // Process cycle with period day mood data
   async processCycleWithMood(data: ProcessCycleWithMoodRequest): Promise<ApiResponse<CycleData[]>> {
-    return apiClient.safePost(API.MenstrualCycle.PROCESS, data);
+    return apiClient.safePost(API.MenstrualCycle.PROCESS_MENSTRUAL_CYCLE, data);
+  },
+
+  // Create period day with mood
+  async createPeriodDayWithMood(date: string, mood_data: DailyMoodData): Promise<MoodDataResponse> {
+    return apiClient.safePost(API.MenstrualCycle.CREATE_PERIOD_DAY_MOOD(date), { date, mood_data });
   },
 
   // Update period day mood
   async updatePeriodDayMood(date: string, mood_data: DailyMoodData): Promise<MoodDataResponse> {
-    return apiClient.safePut(API.MenstrualCycle.PERIOD_DAY_MOOD(date), { mood_data });
+    return apiClient.safePut(API.MenstrualCycle.PERIOD_DAY_MOOD(date), { date, mood_data });
   },
 
   // Get period day mood
@@ -214,10 +219,15 @@ export const menstrualCycleService = {
   },
 
   async createMoodData(request: CreateMoodDataRequest): Promise<MoodDataResponse> {
-    return apiClient.safePost(API.MenstrualCycle.MOOD_DATA, request);
+    console.log('[createMoodData] URL:', API.MenstrualCycle.MOOD_DATA);
+    console.log('[createMoodData] Request:', request);
+    const response = await apiClient.safePost<{date: string; mood_data: DailyMoodData}>(API.MenstrualCycle.MOOD_DATA, request);
+    return response as MoodDataResponse;
   },
 
   async updateMoodData(request: UpdateMoodDataRequest): Promise<MoodDataResponse> {
+    console.log('[updateMoodData] URL:', API.MenstrualCycle.MOOD_DATA);
+    console.log('[updateMoodData] Request:', request);
     return apiClient.safePut(API.MenstrualCycle.MOOD_DATA, request);
   },
 
@@ -230,6 +240,9 @@ export const menstrualCycleService = {
     const url = params.toString() 
       ? `${API.MenstrualCycle.MOOD_DATA}?${params.toString()}`
       : API.MenstrualCycle.MOOD_DATA;
+    
+    console.log('[getMoodData] URL:', url);
+    console.log('[getMoodData] Request:', request);
     
     return apiClient.safeGet(url);
   },
@@ -247,23 +260,52 @@ export const menstrualCycleService = {
   },
 
   async getCycles(): Promise<ApiResponse<CycleData[]>> {
-    return apiClient.safeGet(API.MenstrualCycle.GET_CYCLES);
+    console.log('[getCycles] URL:', API.MenstrualCycle.GET_CYCLES);
+    const response = await apiClient.safeGet<CycleData[]>(API.MenstrualCycle.GET_CYCLES);
+    console.log('[getCycles] Response:', {
+      success: response.success,
+      message: response.message,
+      dataType: typeof response.data,
+      dataIsArray: Array.isArray(response.data),
+      dataLength: response.data?.length || 0,
+      data: response.data
+    });
+    return response;
   },
 
   async getCyclesByMonth(year: number, month: number): Promise<ApiResponse<CycleData[]>> {
-    return apiClient.safeGet(API.MenstrualCycle.GET_CYCLES_BY_MONTH(year, month));
+    console.log('[getCyclesByMonth] URL:', API.MenstrualCycle.GET_CYCLES_BY_MONTH(year, month));
+    const response = await apiClient.safeGet<CycleData[]>(API.MenstrualCycle.GET_CYCLES_BY_MONTH(year, month));
+    console.log('[getCyclesByMonth] Response:', response);
+    return response;
   },
 
   async getTodayStatus(): Promise<ApiResponse<TodayStatus>> {
-    return apiClient.safeGet(API.MenstrualCycle.TODAY_STATUS);
+    console.log('[getTodayStatus] URL:', API.MenstrualCycle.TODAY_STATUS);
+    const response = await apiClient.safeGet<TodayStatus>(API.MenstrualCycle.TODAY_STATUS);
+    console.log('[getTodayStatus] Response:', response);
+    return response;
   },
 
   async getCycleStatistics(): Promise<ApiResponse<CycleStatistics>> {
-    return apiClient.safeGet(API.MenstrualCycle.GET_CYCLE_STATISTICS);
+    console.log('[getCycleStatistics] URL:', API.MenstrualCycle.GET_CYCLE_STATISTICS);
+    const response = await apiClient.safeGet<CycleStatistics>(API.MenstrualCycle.GET_CYCLE_STATISTICS);
+    console.log('[getCycleStatistics] Response:', response);
+    return response;
   },
 
   async getPeriodStatistics(): Promise<ApiResponse<PeriodStatistics>> {
-    return apiClient.safeGet(API.MenstrualCycle.GET_PERIOD_STATISTICS);
+    console.log('[getPeriodStatistics] URL:', API.MenstrualCycle.GET_PERIOD_STATISTICS);
+    const response = await apiClient.safeGet<PeriodStatistics>(API.MenstrualCycle.GET_PERIOD_STATISTICS);
+    console.log('[getPeriodStatistics] Response:', response);
+    return response;
+  },
+
+  async getMoodStatistics(): Promise<ApiResponse<any>> {
+    console.log('[getMoodStatistics] URL:', API.MenstrualCycle.GET_MOOD_STATISTICS);
+    const response = await apiClient.safeGet<any>(API.MenstrualCycle.GET_MOOD_STATISTICS);
+    console.log('[getMoodStatistics] Response:', response);
+    return response;
   },
 
   // ===== LEGACY FUNCTIONS (FOR BACKWARD COMPATIBILITY) =====

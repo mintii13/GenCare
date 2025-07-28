@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Edit, Save, Trash2, Calendar, Heart, Zap, AlertTriangle, FileText } from 'lucide-react';
-import { DailyMoodData } from '../../services/menstrualCycleService';
-import { useMoodDataForm, useMoodDataValidation, useMoodDataCRUD } from '../../hooks/useMoodDataOperations';
+import { DailyMoodData, menstrualCycleService } from '../../services/menstrualCycleService';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -11,6 +10,7 @@ interface MoodDataModalProps {
   date: string;
   existingMoodData?: DailyMoodData;
   onSave?: () => void;
+  forceEditMode?: boolean;
 }
 
 const MoodDataModal: React.FC<MoodDataModalProps> = ({
@@ -18,56 +18,117 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
   onClose,
   date,
   existingMoodData,
-  onSave
+  onSave,
+  forceEditMode = false
 }) => {
   const { user } = useAuth();
-  const { formData, updateFormData, resetForm, setFormDataFromExisting } = useMoodDataForm();
-  const { validationErrors, validateMoodData, clearValidationErrors } = useMoodDataValidation();
-  const { handleCreateMoodData, handleUpdateMoodData, handleDeleteMoodData, loading } = useMoodDataCRUD(user?.id);
-
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState<DailyMoodData>({
+    mood: 'neutral',
+    energy: 'medium',
+    symptoms: [],
+    notes: ''
+  });
 
   // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen) {
-      if (existingMoodData) {
-        setFormDataFromExisting(existingMoodData);
-        setIsEditing(false);
-      } else {
-        resetForm();
+      if (forceEditMode || !existingMoodData || existingMoodData.mood === 'neutral') {
+        // Force edit mode or no existing data, show in edit mode
+        setFormData({
+          mood: 'neutral',
+          energy: 'medium',
+          symptoms: [],
+          notes: ''
+        });
         setIsEditing(true);
+      } else {
+        // If there's existing mood data with actual values, show in view mode
+        setFormData(existingMoodData);
+        setIsEditing(false);
       }
-      clearValidationErrors();
     }
-  }, [isOpen, existingMoodData, setFormDataFromExisting, resetForm, clearValidationErrors]);
+  }, [isOpen, existingMoodData, forceEditMode]);
+
+  const updateFormData = (field: keyof DailyMoodData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const handleSave = async () => {
-    if (!validateMoodData(formData)) {
-      toast.error('Vui lòng kiểm tra lại thông tin');
+    if (!date || !user?.id) {
+      toast.error('Dữ liệu không hợp lệ');
       return;
     }
 
-    const success = existingMoodData
-      ? await handleUpdateMoodData(date, formData)
-      : await handleCreateMoodData(date, formData);
-
-    if (success) {
-      setIsEditing(false);
-      onSave?.();
-      if (!existingMoodData) {
-        onClose();
+    setLoading(true);
+    try {
+      let response;
+      
+      // If no existing mood data, create new period day
+      if (!existingMoodData || existingMoodData.mood === 'neutral') {
+        response = await menstrualCycleService.createPeriodDayWithMood(date, formData);
+      } else {
+        // Update existing period day
+        response = await menstrualCycleService.updatePeriodDayMood(date, formData);
       }
+      
+      if (response.success) {
+        toast.success('Lưu cảm xúc thành công!');
+        setIsEditing(false);
+        onSave?.();
+        if (!existingMoodData) {
+          onClose();
+        }
+      } else {
+        toast.error(response.message || 'Lỗi khi lưu cảm xúc');
+      }
+    } catch (error: any) {
+      console.error('Lỗi khi lưu cảm xúc:', error);
+      toast.error('Lỗi khi lưu cảm xúc: ' + (error.message || 'Không xác định'));
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    const success = await handleDeleteMoodData(date);
-    if (success) {
-      onSave?.();
-      onClose();
+    if (!date || !user?.id) {
+      toast.error('Dữ liệu không hợp lệ');
+      return;
     }
-    setShowDeleteConfirm(false);
+
+    setLoading(true);
+    try {
+      // Reset mood data to default
+      const defaultMoodData: DailyMoodData = {
+        mood: 'neutral',
+        energy: 'medium',
+        symptoms: [],
+        notes: ''
+      };
+      
+      const response = await menstrualCycleService.updatePeriodDayMood(date, defaultMoodData);
+      
+      if (response.success) {
+        toast.success('Đã xóa dữ liệu cảm xúc');
+        onSave?.();
+        onClose();
+      } else {
+        toast.error(response.message || 'Lỗi khi xóa dữ liệu');
+      }
+    } catch (error: any) {
+      console.error('Lỗi khi xóa dữ liệu:', error);
+      toast.error('Lỗi khi xóa dữ liệu: ' + (error.message || 'Không xác định'));
+    } finally {
+      setLoading(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -87,8 +148,7 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
     { value: 'tired', label: 'Mệt mỏi', emoji: '😴' },
     { value: 'stressed', label: 'Căng thẳng', emoji: '😰' },
     { value: 'sad', label: 'Buồn', emoji: '😢' },
-    { value: 'angry', label: 'Tức giận', emoji: '😠' },
-    { value: 'anxious', label: 'Lo lắng', emoji: '😨' }
+    { value: 'neutral', label: 'Bình thường', emoji: '😐' }
   ];
 
   const energyOptions = [
@@ -168,9 +228,6 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
                 )}
               </div>
             )}
-            {validationErrors.mood && (
-              <p className="text-red-500 text-xs mt-1">{validationErrors.mood}</p>
-            )}
           </div>
 
           {/* Energy Level */}
@@ -191,23 +248,18 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
                         : 'border-gray-200 hover:border-yellow-300'
                     }`}
                   >
-                    <div className={`font-medium ${option.color}`}>{option.label}</div>
+                    <div className={`text-lg font-medium ${option.color}`}>
+                      {option.label}
+                    </div>
                   </button>
                 ))}
               </div>
             ) : (
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                {formData.energy ? (
-                  <span className="font-medium">
-                    {energyOptions.find(opt => opt.value === formData.energy)?.label}
-                  </span>
-                ) : (
-                  <span className="text-gray-500">Chưa có dữ liệu</span>
-                )}
+                <span className="font-medium">
+                  {energyOptions.find(opt => opt.value === formData.energy)?.label || 'Trung bình'}
+                </span>
               </div>
-            )}
-            {validationErrors.energy && (
-              <p className="text-red-500 text-xs mt-1">{validationErrors.energy}</p>
             )}
           </div>
 
@@ -218,35 +270,33 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
               <span>Triệu chứng</span>
             </label>
             {isEditing ? (
-              <div className="grid grid-cols-2 gap-2">
-                {symptomOptions.map(symptom => (
-                  <label key={symptom} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={formData.symptoms?.includes(symptom) || false}
-                      onChange={(e) => {
-                        const currentSymptoms = formData.symptoms || [];
-                        if (e.target.checked) {
-                          updateFormData('symptoms', [...currentSymptoms, symptom]);
-                        } else {
-                          updateFormData('symptoms', currentSymptoms.filter(s => s !== symptom));
-                        }
-                      }}
-                      className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-                    />
-                    <span className="text-sm">{symptom}</span>
-                  </label>
-                ))}
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {symptomOptions.map(symptom => (
+                    <label key={symptom} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.symptoms.includes(symptom)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            updateFormData('symptoms', [...formData.symptoms, symptom]);
+                          } else {
+                            updateFormData('symptoms', formData.symptoms.filter(s => s !== symptom));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-pink-500 focus:ring-pink-500"
+                      />
+                      <span className="text-sm">{symptom}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="p-3 bg-gray-50 rounded-lg">
-                {formData.symptoms && formData.symptoms.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
+                {formData.symptoms.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
                     {formData.symptoms.map(symptom => (
-                      <span
-                        key={symptom}
-                        className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full"
-                      >
+                      <span key={symptom} className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">
                         {symptom}
                       </span>
                     ))}
@@ -255,9 +305,6 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
                   <span className="text-gray-500">Không có triệu chứng</span>
                 )}
               </div>
-            )}
-            {validationErrors.symptoms && (
-              <p className="text-red-500 text-xs mt-1">{validationErrors.symptoms}</p>
             )}
           </div>
 
@@ -271,27 +318,18 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
               <textarea
                 value={formData.notes || ''}
                 onChange={(e) => updateFormData('notes', e.target.value)}
-                placeholder="Ghi chú về cảm xúc, triệu chứng hoặc bất kỳ điều gì khác..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                rows={4}
-                maxLength={500}
+                placeholder="Ghi chú về cảm xúc hoặc triệu chứng..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows={3}
               />
             ) : (
               <div className="p-3 bg-gray-50 rounded-lg">
                 {formData.notes ? (
-                  <p className="text-sm whitespace-pre-wrap">{formData.notes}</p>
+                  <p className="text-sm">{formData.notes}</p>
                 ) : (
                   <span className="text-gray-500">Không có ghi chú</span>
                 )}
               </div>
-            )}
-            {validationErrors.notes && (
-              <p className="text-red-500 text-xs mt-1">{validationErrors.notes}</p>
-            )}
-            {isEditing && (
-              <p className="text-xs text-gray-500 mt-1">
-                {formData.notes?.length || 0}/500 ký tự
-              </p>
             )}
           </div>
         </div>
@@ -313,7 +351,7 @@ const MoodDataModal: React.FC<MoodDataModalProps> = ({
                   <button
                     onClick={() => {
                       setIsEditing(false);
-                      setFormDataFromExisting(existingMoodData);
+                      setFormData(existingMoodData);
                     }}
                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                   >

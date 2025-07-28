@@ -1,5 +1,6 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
+import { toVietnamDate } from '../utils/dateUtils';
 import dayjs from 'dayjs';
 
 /**
@@ -22,8 +23,8 @@ export const groupPeriodDays = (req: Request, res: Response, next: NextFunction)
         if (isNaN(date.getTime())) {
             throw new Error(`Invalid date format: ${dateStr}`);
         }
-        date.setUTCHours(0, 0, 0, 0);
-        return date;
+        // Convert to Vietnam timezone (UTC+7) midnight for consistent comparison
+        return toVietnamDate(date);
     }).sort((a, b) => a.getTime() - b.getTime());
 
     // Grouping logic
@@ -120,14 +121,20 @@ const getMoodDataSchema = Joi.object({
 
 // Validation middleware for mood data operations
 export const validateCreateMoodData = (req: any, res: any, next: any) => {
+    console.log('[validateCreateMoodData] Request body:', req.body);
+    console.log('[validateCreateMoodData] Request body type:', typeof req.body);
+    console.log('[validateCreateMoodData] Request body keys:', Object.keys(req.body || {}));
+    
     const { error } = createMoodDataSchema.validate(req.body);
     if (error) {
+        console.log('[validateCreateMoodData] Validation error:', error.details);
         return res.status(400).json({
             success: false,
             message: 'Validation error',
             errors: error.details.map((detail: any) => detail.message)
         });
     }
+    console.log('[validateCreateMoodData] Validation passed');
     next();
 };
 
