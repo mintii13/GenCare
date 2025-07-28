@@ -256,7 +256,7 @@ const ConsultantList: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4">
       <div className="bg-white rounded-lg shadow-sm">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
@@ -317,82 +317,152 @@ const ConsultantList: React.FC = () => {
       {/* Consultant Detail Modal */}
       {selectedConsultant && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Thông tin chuyên gia</h3>
+          <div 
+            className="bg-white rounded-xl shadow-2xl relative max-h-[90vh] overflow-hidden"
+            style={{ 
+              width: '60vw', 
+              maxWidth: '800px'
+            }}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-800">Thông tin chuyên gia</h3>
               <button
                 onClick={() => setSelectedConsultant(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
               >
                 ✕
               </button>
             </div>
-            
-            <div className="text-center mb-4">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                {selectedConsultant.avatar ? (
-                  <img 
-                    src={selectedConsultant.avatar} 
-                    alt={selectedConsultant.full_name} 
-                    className="w-20 h-20 rounded-full object-cover" 
-                  />
-                ) : (
-                  <span className="text-blue-600 font-semibold text-2xl">
-                    {selectedConsultant.full_name.charAt(0)}
-                  </span>
-                )}
-              </div>
-              <h4 className="text-xl font-semibold text-gray-800">{selectedConsultant.full_name}</h4>
-              <p className="text-gray-600">{selectedConsultant.specialization}</p>
-            </div>
 
-            <div className="space-y-3 mb-6">
-              <div>
-                <span className="text-gray-600 text-sm">Trình độ:</span>
-                <p className="font-medium">{selectedConsultant.qualifications}</p>
-              </div>
-              <div>
-                <span className="text-gray-600 text-sm">Kinh nghiệm:</span>
-                <p className="font-medium">{selectedConsultant.experience_years} năm</p>
-              </div>
-              <div>
-                <span className="text-gray-600 text-sm">Đánh giá:</span>
-                <div className="flex items-center">
-                  <div className="flex mr-2">
-                    {renderStars(selectedConsultant.rating || 0)}
+            {/* Content */}
+            <div className="flex" style={{ height: '500px' }}>
+              {/* Left Half - Consultant Info */}
+              <div className="w-1/2 p-6 border-r border-gray-200">
+                <div className="h-full flex flex-col">
+                  {/* Avatar and Basic Info */}
+                  <div className="text-center mb-6">
+                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      {selectedConsultant.avatar ? (
+                        <img 
+                          src={selectedConsultant.avatar} 
+                          alt={selectedConsultant.full_name} 
+                          className="w-24 h-24 rounded-full object-cover" 
+                        />
+                      ) : (
+                        <span className="text-blue-600 font-bold text-3xl">
+                          {selectedConsultant.full_name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-2xl font-bold text-gray-800 mb-1">{selectedConsultant.full_name}</h4>
+                    <p className="text-blue-600 font-medium text-lg">{selectedConsultant.specialization}</p>
                   </div>
-                  <span className="text-sm text-gray-600">
-                    ({selectedConsultant.rating?.toFixed(1) || '0.0'})
-                  </span>
-                </div>
-              </div>
-              <div>
-                <span className="text-gray-600 text-sm">Số buổi tư vấn:</span>
-                <p className="font-medium">{selectedConsultant.total_consultations || 0} buổi</p>
-              </div>
-              {selectedConsultant.bio && (
-                <div>
-                  <span className="text-gray-600 text-sm">Giới thiệu:</span>
-                  <p className="text-sm">{selectedConsultant.bio}</p>
-                </div>
-              )}
-            </div>
 
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setSelectedConsultant(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Đóng
-              </button>
-              {selectedConsultant.is_available && (
-                <Link
-                  to={`/consultation/book-appointment?consultant=${selectedConsultant.consultant_id}`}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center"
-                >
-                  Đặt lịch tư vấn
-                </Link>
-              )}
+                  {/* Detailed Info */}
+                  <div className="space-y-4 flex-1">
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <span className="text-gray-600 text-sm font-medium block mb-1">Email liên hệ:</span>
+                        <p className="font-medium text-gray-800">{selectedConsultant.email}</p>
+                      </div>
+                      
+                      {selectedConsultant.phone && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <span className="text-gray-600 text-sm font-medium block mb-1">Số điện thoại:</span>
+                          <p className="font-medium text-gray-800">{selectedConsultant.phone}</p>
+                        </div>
+                      )}
+
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <span className="text-gray-600 text-sm font-medium block mb-1">Trình độ chuyên môn:</span>
+                        <p className="font-medium text-gray-800">{selectedConsultant.qualifications}</p>
+                      </div>
+
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <span className="text-gray-600 text-sm font-medium block mb-1">Kinh nghiệm:</span>
+                        <p className="font-medium text-gray-800">{selectedConsultant.experience_years} năm</p>
+                      </div>
+
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <span className="text-gray-600 text-sm font-medium block mb-1">Đánh giá:</span>
+                        <div className="flex items-center">
+                          <div className="flex mr-2">
+                            {renderStars(selectedConsultant.rating || 0)}
+                          </div>
+                          <span className="text-gray-600 font-medium">
+                            ({selectedConsultant.rating?.toFixed(1) || '0.0'}) - {selectedConsultant.total_consultations || 0} buổi tư vấn
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setSelectedConsultant(null)}
+                      className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                    >
+                      Đóng
+                    </button>
+                    {selectedConsultant.is_available && (
+                      <Link
+                        to={`/consultation/book-appointment?consultant=${selectedConsultant.consultant_id}`}
+                        className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center font-medium"
+                      >
+                        Đặt lịch tư vấn
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Half - Notes & Bio */}
+              <div className="w-1/2 p-6">
+                <div className="h-full flex flex-col">
+                  <h5 className="text-lg font-bold text-gray-800 mb-4">Giới thiệu & Ghi chú</h5>
+                  <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4">
+                    {selectedConsultant.bio ? (
+                      <div className="space-y-4">
+                        <div>
+                          <h6 className="font-semibold text-gray-800 mb-2">Giới thiệu bản thân:</h6>
+                          <p className="text-gray-700 leading-relaxed">{selectedConsultant.bio}</p>
+                        </div>
+                        
+                        <div className="border-t border-gray-200 pt-4">
+                          <h6 className="font-semibold text-gray-800 mb-2">Lĩnh vực chuyên môn:</h6>
+                          <p className="text-gray-700">{selectedConsultant.specialization}</p>
+                        </div>
+
+                        <div className="border-t border-gray-200 pt-4">
+                          <h6 className="font-semibold text-gray-800 mb-2">Thông tin thêm:</h6>
+                          <div className="text-gray-700 space-y-2">
+                            <p>• Kinh nghiệm {selectedConsultant.experience_years} năm trong lĩnh vực {selectedConsultant.specialization}</p>
+                            <p>• Đã tư vấn cho {selectedConsultant.total_consultations || 0} khách hàng</p>
+                            <p>• Đánh giá trung bình: {selectedConsultant.rating?.toFixed(1) || '0.0'}/5.0 sao</p>
+                            <p>• Trình độ: {selectedConsultant.qualifications}</p>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-gray-200 pt-4">
+                          <h6 className="font-semibold text-gray-800 mb-2">Phương thức tư vấn:</h6>
+                          <div className="text-gray-700 space-y-1">
+                            <p>• Tư vấn trực tuyến qua video call</p>
+                            <p>• Thời gian tư vấn: 30-60 phút/buổi</p>
+                            <p>• Lịch làm việc: Thứ 2 - Thứ 6 (8:00 - 17:00)</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500 mt-8">
+                        <p>Chuyên gia chưa cập nhật thông tin giới thiệu.</p>
+                        <p className="mt-2">Vui lòng liên hệ trực tiếp để biết thêm chi tiết.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

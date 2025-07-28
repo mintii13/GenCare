@@ -1,5 +1,78 @@
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isBefore, isAfter, isSameDay, parseISO } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
+
+/**
+ * Safely format date string to relative time
+ * Handles invalid dates gracefully
+ */
+export const formatDateSafe = (dateString: string | null | undefined): string => {
+  // Handle invalid/missing dates
+  if (!dateString) {
+    return 'Không xác định';
+  }
+
+  try {
+    const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return 'Ngày không hợp lệ';
+    }
+    
+    return formatDistanceToNow(date, { 
+      addSuffix: true, 
+      locale: vi 
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error, 'Date string:', dateString);
+    return 'Lỗi định dạng ngày';
+  }
+};
+
+/**
+ * Format date string to localized date
+ */
+export const formatDateLocal = (dateString: string | null | undefined): string => {
+  if (!dateString) {
+    return 'Không xác định';
+  }
+
+  try {
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return 'Ngày không hợp lệ';
+    }
+    
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    console.error('Error formatting local date:', error, 'Date string:', dateString);
+    return 'Lỗi định dạng ngày';
+  }
+};
+
+/**
+ * Check if date string is valid
+ */
+export const isValidDate = (dateString: string | null | undefined): boolean => {
+  if (!dateString) return false;
+  
+  try {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Format date for display
@@ -145,9 +218,9 @@ export const getSlotStatus = (date: string, startTime: string, endTime: string):
     return {
       status: 'restricted',
       isClickable: true,
-      displayText: 'Hạn chế',
+      displayText: 'Quá gần',
       tooltipText: `Slot ${startTime} - ${endTime} chỉ còn ${diffHours.toFixed(1)} giờ nữa (tối thiểu 2 giờ)`,
-      cssClass: 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 cursor-pointer transform hover:scale-102 border-dashed'
+      cssClass: 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 cursor-pointer transform hover:scale-102 border-dashed'
     };
   }
   

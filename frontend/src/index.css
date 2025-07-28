@@ -1,6 +1,17 @@
+/* Import Design System */
+@import './styles/design-system.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import form stable layout styles */
+@import './styles/form-stable.css';
+
+/* Hide scrollbar for Webkit browsers */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 /* Custom animations for modals */
 @keyframes fade-in {
@@ -271,3 +282,5 @@ body {
     transition: all 0.2s ease-in-out;
   }
 } 
+
+/* Legacy utilities - now handled by design system */ 

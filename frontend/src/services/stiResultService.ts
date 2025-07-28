@@ -64,6 +64,7 @@ export interface StiResult {
   diagnosis: string;
   is_confirmed: boolean;
   is_critical: boolean;
+  is_notified?: boolean;
   medical_notes?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -143,11 +144,11 @@ class StiResultService {
     try {
       const response = await apiClient.post(`${API.STI.CREATE_STI_RESULT(orderId)}`, data);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating STI result:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Lỗi khi tạo kết quả STI'
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi tạo kết quả STI'
       };
     }
   }
@@ -157,11 +158,11 @@ class StiResultService {
       const url = orderId ? `${API.STI.GET_STI_RESULT(orderId)}` : 'API.STI.GET_ALL_STI_RESULTS';
       const response = await apiClient.get(url);
       return response.data as StiResultListResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching STI results:', error);
       return {
-        success: false,
-        message: error.response?.data?.message || 'Lỗi khi lấy danh sách kết quả STI'
+        success: false, 
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi lấy danh sách kết quả STI'
       };
     }
   }
@@ -170,11 +171,11 @@ class StiResultService {
     try {
       const response = await apiClient.patch(`${API.STI.UPDATE_STI_RESULT(orderId)}`, data);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating STI result by staff:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Lỗi khi cập nhật kết quả bởi staff'
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi cập nhật kết quả bởi staff'
       };
     }
   }
@@ -183,11 +184,11 @@ class StiResultService {
     try {
       const response = await apiClient.patch(`${API.STI.UPDATE_STI_RESULT_BY_CONSULTANT(orderId)}`, data);
       return response.data as StiResultResponse;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating STI result by consultant:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Lỗi khi cập nhật kết quả bởi consultant'
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi cập nhật kết quả bởi consultant'
       };
     }
   }

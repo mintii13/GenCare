@@ -10,11 +10,12 @@ import {
   AppointmentResponse,
   AppointmentSlot,
   BookAppointmentRequest,
-  AppointmentStats
+  AppointmentStats,
 } from '../types/appointment';
+import { GetAppointmentHistoryListResponse } from './appointmentHistoryService';
 
 // Helper function to remove undefined/null properties from an object
-const cleanQuery = (obj: any) => {
+const cleanQuery = (obj: unknown) => {
   if (!obj) return {};
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v != null && v !== ''));
 };
@@ -25,13 +26,12 @@ export const appointmentService = {
   // Lấy appointments với pagination cho customer
   getMyAppointmentsPaginated: async (query?: AppointmentQuery): Promise<AppointmentsPaginatedResponse> => {
     try {
-      console.log('📝 Calling API with cleaned query:', cleanQuery(query));
       const response = await apiClient.get<AppointmentsPaginatedResponse>(API.Appointment.MY_APPOINTMENTS, {
         params: cleanQuery(query)
       }, { attempts: 1 }); // Disable retry temporarily
       return response.data;
     } catch (error) {
-      console.error('❌ API call failed:', error);
+      console.error('API call failed:', error);
       throw error;
     }
   },
@@ -75,63 +75,56 @@ export const appointmentService = {
   // EXISTING APIs (giữ lại để backward compatibility)
   
   // Customer APIs
-  async bookAppointment(data: BookAppointmentRequest): Promise<ApiResponse<any>> {
-    return apiClient.safePost(API.Appointment.BOOK, data);
-  },
-
-  async getMyAppointments(params?: {
-    status?: string;
-    date_from?: string;
-    date_to?: string;
-    start_date?: string;
-    end_date?: string;
-  }): Promise<ApiResponse<{ appointments: Appointment[] }>> {
+  async bookAppointment(data: BookAppointmentRequest): Promise<ApiResponse<GetAppointmentHistoryListResponse>> {
     try {
-      // Use the new simple endpoint
-      const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY, { 
-        params: params || {} 
-      });
-      return { success: true, message: 'Success', data: response.data };
+      const response = await apiClient.post(API.Appointment.BOOK, data);
+      return {
+        success: true,
+        data: response.data as GetAppointmentHistoryListResponse,
+        message: 'Đặt lịch thành công'
+      };
     } catch (error: any) {
-      // Fallback to old logic
-      const legacyParams: { status?: string } = {};
-      if (params?.status) {
-        legacyParams.status = params.status;
+      // Xử lý response error từ backend
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.message || 'Đặt lịch thất bại',
+          errorType: error.response.data.errorType,
+          details: error.response.data.details
+        };
       }
-
-      try {
-        // First attempt: customer endpoint
-        const response = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.MY_APPOINTMENTS, { params: legacyParams });
-        return { success: true, message: 'Success', data: response.data };
-      } catch (error: any) {
-        if (error?.response?.status === 403) {
-          // If forbidden, try the consultant endpoint as a fallback
-          const altResponse = await apiClient.get<{ appointments: Appointment[] }>(API.Appointment.CONSULTANT_APPOINTMENTS, { params: legacyParams });
-          return { success: true, message: 'Success', data: altResponse.data };
-        }
-        throw error;
-      }
+      throw error;
     }
   },
 
-  async cancelAppointment(appointmentId: string): Promise<ApiResponse<any>> {
+  async getMyAppointments(query: AppointmentQuery): Promise<ApiResponse<AppointmentsPaginatedResponse>> {
+    const cleanQuery = (obj: any) => {
+      return Object.fromEntries(
+        Object.entries(obj).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      );
+    };
+
+    return apiClient.safeGet<AppointmentsPaginatedResponse>(API.Appointment.MY_APPOINTMENTS, {
+      params: cleanQuery(query)
+    }, { attempts: 1 }); // Disable retry temporarily
+  },
+
+  async cancelAppointment(appointmentId: string): Promise<ApiResponse<GetAppointmentHistoryListResponse>> {
     return apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}/cancel`);
   },
 
-  async rescheduleAppointment(appointmentId: string, data: { appointment_date: string; start_time: string; end_time: string }) {
-    console.log('🔄 [DEBUG] rescheduleAppointment called with:', {
-      appointmentId,
-      data,
-      endpoint: `${API.Appointment.BASE}/${appointmentId}`
-    });
-    
+  async rescheduleAppointment(appointmentId: string, newSlot: any): Promise<ApiResponse<any>> {
     try {
-      const response = await apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}`, data);
-      console.log('🔄 [DEBUG] rescheduleAppointment response:', response);
-      return response;
+      const response = await apiClient.put(`${API.Appointment.BASE}/${appointmentId}/reschedule`, newSlot);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: 'Đổi lịch hẹn thành công'
+      };
     } catch (error: any) {
-      console.error('🔄 [ERROR] rescheduleAppointment failed:', error);
-      console.error('🔄 [ERROR] Error response:', error?.response?.data);
+      console.error(' [ERROR] rescheduleAppointment failed:', error);
+      console.error('[ERROR] Error response:', (error as { response?: { data?: unknown } }).response?.data);
       throw error;
     }
   },

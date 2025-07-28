@@ -10,26 +10,40 @@ interface BlogCardContentProps {
 }
 
 const BlogCardContent: React.FC<BlogCardContentProps> = ({ blog }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) {
+      return 'Không xác định';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Ngày không hợp lệ';
+      }
+      
+      return date.toLocaleDateString("vi-VN", {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
+    } catch (error) {
+      console.error('Error formatting date in BlogCardContent:', error);
+      return 'Lỗi định dạng ngày';
+    }
   };
 
   return (
     <div className="p-6 flex flex-col flex-1">
-      {/* Title section - Fixed height */}
-      <div className="h-[3.5rem] mb-3">
-        <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-2 leading-tight h-full">
+      {/* Title section */}
+      <div className="mb-3">
+        <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-2 leading-tight">
           {blog.title}
         </h3>
       </div>
 
-      {/* Excerpt section - Fixed height */}
-      <div className="h-[6rem] mb-6">
-        <p className="text-slate-600 line-clamp-4 leading-relaxed h-full">
+      {/* Excerpt section */}
+      <div className="mb-6">
+        <p className="text-slate-600 line-clamp-4 leading-relaxed">
           {createExcerpt(blog.content, 180)}
         </p>
       </div>
@@ -37,10 +51,10 @@ const BlogCardContent: React.FC<BlogCardContentProps> = ({ blog }) => {
       {/* Spacer to push footer down */}
       <div className="flex-1"></div>
 
-      {/* Bottom section - Fixed height */}
-      <div className="h-[6.5rem] flex flex-col justify-end space-y-3">
-        {/* Meta information - Fixed height */}
-        <div className="h-[1.25rem] flex items-center gap-4 text-xs text-slate-500 pt-3 border-t border-slate-100">
+      {/* Bottom section */}
+      <div className="flex flex-col space-y-3">
+        {/* Meta information */}
+        <div className="flex items-center gap-4 text-xs text-slate-500 pt-3 border-t border-slate-100">
           <div className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
             <span className="truncate">{formatDate(blog.publish_date)}</span>
@@ -55,8 +69,8 @@ const BlogCardContent: React.FC<BlogCardContentProps> = ({ blog }) => {
           </div>
         </div>
 
-        {/* Author section - Fixed height */}
-        <div className="h-[4rem] flex items-center justify-between">
+        {/* Author section */}
+        <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
               {blog.author?.avatar ? (

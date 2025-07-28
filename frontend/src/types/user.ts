@@ -1,14 +1,19 @@
-export interface User {
-  _id: string;
-  id: string;
+import { BaseEntity, UserRole } from './common';
+
+export interface User extends BaseEntity {
+  id?: string; // For backward compatibility with localStorage
   email: string;
   full_name: string;
-  role: 'customer' | 'staff' | 'admin' |  'consultant';
+  role: UserRole;
   status: boolean;
   avatar?: string;
   phone?: string;
   address?: string;
   date_of_birth?: string;
+  email_verified?: boolean;
+  registration_date?: string;
+  last_login?: string;
+  googleId?: string;
 }
 
 export interface Consultant extends User {
@@ -31,4 +36,6 @@ export interface Admin extends User {
 export interface Customer extends User {
   customer_id: string;
   role: 'customer';
+}
+}
 }

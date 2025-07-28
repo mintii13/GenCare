@@ -63,10 +63,18 @@ const OrdersPage: React.FC = () => {
   // Staff-only filter state
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('order_date');
+  
+  // Valid sort fields for backend validation
+  const validSortFields = ['order_date', 'total_amount', 'order_status', 'createdAt', 'updatedAt'];
+  
+  // Debounce search term
+  useEffect(() => {
+    // This useEffect is no longer needed as searchTerm is removed
+  }, []);
+
 
   useEffect(() => {
     if (!user) {
-      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
       setShowLoginModal(true);
       return;
     }
@@ -142,26 +150,32 @@ const OrdersPage: React.FC = () => {
         params.append('date_to', dateTo);
       }
       
-      // Staff-only filters
+      // Staff-only filters with validation
       if (isStaffView) {
         if (paymentStatusFilter !== 'all') {
           params.append('is_paid', paymentStatusFilter === 'true' ? 'true' : paymentStatusFilter === 'false' ? 'false' : '');
         }
         
-        if (sortBy !== 'order_date') {
+        // ✅ FIXED: Validate sortBy field before sending to backend
+        if (sortBy !== 'order_date' && validSortFields.includes(sortBy)) {
           params.append('sort_by', sortBy);
         }
       }
       
       const fullUrl = `${endpoint}?${params.toString()}`;
       console.log('📡 Full URL being called:', fullUrl);
+      console.log('🔧 Sort field being used:', sortBy, 'Valid fields:', validSortFields);
       
       const response = await apiClient.get<any>(fullUrl);
       
       console.log('📥 API Response:', {
         status: response.status,
         url: response.config?.url,
-        data: response.data
+        data: response.data,
+        sortingInfo: {
+          requestedSortBy: sortBy,
+          isValidSortField: validSortFields.includes(sortBy)
+        }
       });
       
       if (response.data.success) {
@@ -484,7 +498,7 @@ const OrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Title level={2} className="text-3xl font-bold">
@@ -515,10 +529,33 @@ const OrdersPage: React.FC = () => {
           <Select.Option value="Completed">Hoàn thành</Select.Option>
           <Select.Option value="Canceled">Đã hủy</Select.Option>
         </Select>
+
+        {/* ✅ ADDED: Sort controls for testing */}
+        {isStaffView && (
+          <Select
+            placeholder="Sắp xếp theo"
+            style={{ minWidth: 180 }}
+            value={sortBy}
+            onChange={(value) => {
+              console.log('🔧 Sort changed to:', value);
+              setSortBy(value);
+              setCurrentPage(1);
+            }}
+          >
+            <Select.Option value="order_date">Ngày đặt</Select.Option>
+            <Select.Option value="total_amount">Tổng tiền</Select.Option>
+            <Select.Option value="order_status">Trạng thái</Select.Option>
+            <Select.Option value="createdAt">Ngày tạo</Select.Option>
+            <Select.Option value="updatedAt">Ngày cập nhật</Select.Option>
+          </Select>
+        )}
+
         <Button
           onClick={() => {
             setStatusFilter('all');
+            setSortBy('order_date');
             setCurrentPage(1);
+            console.log('🔄 Filters reset');
           }}
         >
           Đặt lại
@@ -601,7 +638,23 @@ const OrdersPage: React.FC = () => {
                 {selectedOrder.notes && (
                   <div>
                     <Text strong>Ghi chú: </Text>
-                    <Text>{selectedOrder.notes}</Text>
+                    <div 
+                      style={{ 
+                        marginTop: 8,
+                        padding: 12,
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: 6,
+                        border: '1px solid #e9ecef',
+                        maxHeight: 200,
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        lineHeight: 1.5,
+                        fontSize: 14
+                      }}
+                    >
+                      {selectedOrder.notes}
+                    </div>
                   </div>
                 )}
                 <div>

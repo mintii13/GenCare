@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Calendar, Heart, AlertTriangle, Shield, CheckCircle, Package, ArrowLeft, ArrowRight } from 'lucide-react';
 import { authService } from '../../services/auth';
+import { getToken } from '../../utils/authUtils';
 import { STIAssessmentData, STIAssessmentService, STIRecommendation, STIPackageInfo } from '../../services/stiAssessmentService';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
@@ -16,6 +17,7 @@ const STIAssessmentForm = () => {
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [recommendation, setRecommendation] = useState<STIRecommendation | null>(null);
   const [showConsultantModal, setShowConsultantModal] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Fetch packages info from API
   useEffect(() => {
@@ -23,16 +25,20 @@ const STIAssessmentForm = () => {
       try {
         setPackagesLoading(true);
         const response = await STIAssessmentService.getPackageInfo();
+
         if (response.success && response.data) {
-          // Không destructure, chỉ setPackages đúng kiểu
-          const packages = (response.data as any).packages || response.data;
-          setPackages(packages);
+          // Backend trả về { data: { packages: [...], tests: [...] } }
+          const responseData = response.data as any;
+          const packagesData = responseData.packages || [];
+          setPackages(Array.isArray(packagesData) ? packagesData : []);
         } else {
           console.error('Failed to fetch packages:', response.message);
+          setPackages([]); // Đảm bảo packages luôn là array
           toast.error('Không thể tải thông tin gói xét nghiệm');
         }
       } catch (error) {
         console.error('Error fetching packages:', error);
+        setPackages([]); // Đảm bảo packages luôn là array khi có lỗi
         toast.error('Lỗi khi tải thông tin gói xét nghiệm');
       } finally {
         setPackagesLoading(false);
@@ -124,13 +130,72 @@ const STIAssessmentForm = () => {
 
   useEffect(() => {
     if (formData.sexually_active === 'not_active') {
-      // Clear sexual orientation when not active
       updateFormData('sexual_orientation', 'heterosexual');
       updateFormData('new_partner_recently', false);
       updateFormData('partner_has_sti', false);
-      updateFormData('condom_use', 'never'); // Set condom_use to 'never' when not sexually active
+      updateFormData('condom_use', ''); //  Set to empty, not 'never'
+    } else if (formData.sexually_active && formData.sexually_active !== 'not_active') {
+      //  Only set default condom_use when actually sexually active
+      if (!formData.condom_use || formData.condom_use === '') {
+        updateFormData('condom_use', 'sometimes'); // Better default than 'never'
+      }
     }
   }, [formData.sexually_active]);
+
+  // Pregnancy logic - auto-set sexually active  
+  useEffect(() => {
+    if (formData.is_pregnant === true) {
+      // Pregnant women must be sexually active - just clear 'not_active' if selected
+      if (formData.sexually_active === 'not_active') {
+        updateFormData('sexually_active', ''); // Clear to let user choose active_single or active_multiple
+        toast.success('Phụ nữ mang thai cần chọn mức độ hoạt động tình dục để đánh giá chính xác', {
+          duration: 3000,
+          position: 'top-center',
+        });
+      }
+    }
+  }, [formData.is_pregnant]);
+
+  // Gender-based validation
+  useEffect(() => {
+    // Clear pregnancy when not female
+    if (formData.gender !== 'female' && formData.is_pregnant) {
+      updateFormData('is_pregnant', false);
+      updateFormData('pregnancy_trimester', '');
+    }
+
+    // Clear MSM orientation when not male
+    if (formData.gender !== 'male' && formData.sexual_orientation === 'msm') {
+      updateFormData('sexual_orientation', 'heterosexual');
+    }
+
+    // Clear cervix option when not transgender
+    if (formData.gender !== 'transgender' && formData.risk_factors.includes('has_cervix')) {
+      const newRiskFactors = formData.risk_factors.filter(factor => factor !== 'has_cervix');
+      updateFormData('risk_factors', newRiskFactors);
+    }
+  }, [formData.gender]);
+
+  // HIV status validation
+  useEffect(() => {
+    if (formData.hiv_status === 'positive') {
+      // HIV+ patients shouldn't use PrEP
+      if (formData.risk_factors.includes('prep_user')) {
+        const newRiskFactors = formData.risk_factors.filter(factor => factor !== 'prep_user');
+        updateFormData('risk_factors', newRiskFactors);
+      }
+    }
+  }, [formData.hiv_status]);
+
+  useEffect(() => {
+    const age = parseInt(formData.age);
+
+    // Clear pregnancy when woman is over 60
+    if (formData.gender === 'female' && age > 60 && formData.is_pregnant) {
+      updateFormData('is_pregnant', false);
+      updateFormData('pregnancy_trimester', '');
+    }
+  }, [formData.age, formData.gender]);
 
   const validateAge = (value: string) => {
     if (value) {
@@ -156,13 +221,9 @@ const STIAssessmentForm = () => {
   const submitAssessment = async () => {
     setLoading(true);
     try {
-      const token = authService.getToken();
+      const token = getToken();
 
       if (!token) {
-        toast.error('Vui lòng đăng nhập để sử dụng tính năng này', {
-          duration: 4000,
-          position: 'top-center',
-        });
         setLoading(false);
         return;
       }
@@ -172,12 +233,12 @@ const STIAssessmentForm = () => {
         has_symptoms: formData.symptoms.length > 0,
         number_of_partners: formData.sexually_active === 'not_active' ? 'none' :
           formData.sexually_active === 'active_single' ? 'one' : 'multiple',
-        // Use actual_orientation for backend if it exists, otherwise use sexual_orientation
         sexual_orientation: formData.actual_orientation || formData.sexual_orientation,
         previous_sti_history: formData.previous_sti_history || [],
         symptoms: formData.symptoms || [],
         risk_factors: formData.risk_factors || [],
-        age: parseInt(formData.age) || 0
+        age: parseInt(formData.age) || 0,
+        condom_use: formData.sexually_active === 'not_active' ? 'never' : formData.condom_use
       };
 
       // Remove the actual_orientation field before sending to backend
@@ -239,133 +300,58 @@ const STIAssessmentForm = () => {
     }
   };
 
+  // Hàm tạo ghi chú từ kết quả sàng lọc (dùng chung cho cả consultation và STI booking)
+  const createScreeningNotes = () => {
+    if (!recommendation) return '';
+    
+    return `Kết quả sàng lọc STI:
+Mức độ nguy cơ: ${recommendation.risk_level}
+
+Lý do đề xuất:
+${recommendation.reasoning.map(reason => `- ${reason}`).join('\n')}
+
+Chi tiết câu trả lời:
+- Tuổi: ${formData.age}
+- Giới tính: ${formData.gender === 'female' ? 'Nữ' : formData.gender === 'male' ? 'Nam' : 'Chuyển giới'}
+- Hoạt động tình dục: ${formData.sexually_active === 'not_active' ? 'Không hoạt động' : formData.sexually_active === 'active_single' ? 'Có bạn tình' : 'Nhiều bạn tình'}
+- Có bạn tình mới gần đây: ${formData.new_partner_recently ? 'Có' : 'Không'}
+- Bạn tình có STI: ${formData.partner_has_sti ? 'Có' : 'Không'}
+- Sử dụng bao cao su: ${formData.condom_use === 'always' ? 'Luôn luôn' : formData.condom_use === 'sometimes' ? 'Thỉnh thoảng' : formData.condom_use === 'rarely' ? 'Hiếm khi' : 'Không bao giờ'}
+- Tiền sử STI: ${formData.previous_sti_history?.length > 0 ? formData.previous_sti_history.join(', ') : 'Không có'}
+- Tình trạng HIV: ${formData.hiv_status === 'unknown' ? 'Không biết' : formData.hiv_status === 'negative' ? 'Âm tính' : 'Dương tính'}
+- Lần xét nghiệm STI cuối: ${formData.last_sti_test === 'never' ? 'Chưa bao giờ' : formData.last_sti_test === 'within_3months' ? 'Trong 3 tháng qua' : formData.last_sti_test === '3_to_6_months' ? '3-6 tháng trước' : formData.last_sti_test === '6_to_12_months' ? '6-12 tháng trước' : 'Hơn 1 năm trước'}
+- Có triệu chứng: ${formData.has_symptoms ? 'Có' : 'Không'}
+${formData.has_symptoms && formData.symptoms?.length > 0 ? `- Triệu chứng: ${formData.symptoms.join(', ')}` : ''}
+- Yếu tố nguy cơ: ${formData.risk_factors?.length > 0 ? formData.risk_factors.join(', ') : 'Không có'}`;
+  };
+
   const handleBookingSTI = async () => {
-    if (!recommendation) return;
+    setShowBookingModal(true);
+  };
 
+  const handleConfirmBookingSTI = (sendScreeningResults: boolean) => {
+    setShowBookingModal(false);
     setBookingLoading(true);
-    try {
-      const response = await apiClient.get(API.STI.GET_ALL_PACKAGES);
-      const data = response.data as any;
-
-      console.log('API GET_ALL_PACKAGES result:', data);
-      console.log('All data keys:', Object.keys(data));
-      console.log('data properties:', data);
-      console.log('JSON.stringify(data):', JSON.stringify(data));
-
-      if (data.success) {
-        console.log('Raw data.stippackage:', data.stippackage);
-        console.log('Raw data.stippackages:', data.stippackages);
-        console.log('data.stippackage type:', typeof data.stippackage);
-        console.log('data.stippackage isArray:', Array.isArray(data.stippackage));
-
-        // Thử destructuring để tránh vấn đề với getter/setter
-        const { stippackage, stippackages } = data;
-        console.log('Destructured stippackage:', stippackage);
-        console.log('Destructured stippackages:', stippackages);
-
-        let packages = stippackage || stippackages || [];
-
-        // Nếu vẫn rỗng, thử dùng bracket notation
-        if (!packages.length) {
-          packages = data['stippackage'] || data['stippackages'] || [];
-        }
-
-        // Nếu vẫn rỗng, thử Object.values để lấy tất cả arrays có trong object
-        if (!packages.length) {
-          console.log('Trying Object.values approach');
-          const allValues = Object.values(data);
-          console.log('All object values:', allValues);
-          packages = allValues.find(val => Array.isArray(val) && val.length > 0) as any[] || [];
-        }
-
-        // FALLBACK: Nếu vẫn không có, tạm thời hard-code để test flow
-        if (!packages.length) {
-          console.log('Using fallback hardcoded packages for testing');
-          packages = [
-            {
-              _id: '675e1a2b3c4d5e6f7a8b9101',
-              sti_package_name: 'Gói xét nghiệm STIs CƠ BẢN 1',
-              sti_package_code: 'STI-BASIC-01',
-              price: 700000
-            },
-            {
-              _id: '675e1a2b3c4d5e6f7a8b9102',
-              sti_package_name: 'Gói xét nghiệm STIs CƠ BẢN 2',
-              sti_package_code: 'STI-BASIC-02',
-              price: 900000
-            },
-            {
-              _id: '675e1a2b3c4d5e6f7a8b9103',
-              sti_package_name: 'Gói xét nghiệm STIs NÂNG CAO',
-              sti_package_code: 'STI-ADVANCE',
-              price: 1700000
-            }
-          ];
-        }
-
-        console.log('Final assigned packages:', packages);
-        console.log('Final packages type:', typeof packages);
-        console.log('Final packages isArray:', Array.isArray(packages));
-        console.log('Final packages length:', packages.length);
-
-        if (!Array.isArray(packages)) {
-          console.log('Packages is not array, type:', typeof packages);
-          toast.error('Dữ liệu gói xét nghiệm không hợp lệ', {
-            duration: 3000,
-            position: 'top-center',
-          });
-          return;
-        }
-
-        const targetPackage = packages.find((pkg: any) =>
-          pkg.sti_package_code === recommendation.recommended_package
-        );
-
-        console.log('API GET_ALL_PACKAGES packages:', packages);
-        console.log('Looking for package with code:', recommendation.recommended_package);
-        console.log('Found package:', targetPackage);
-
-        if (targetPackage) {
-          const packageId = typeof targetPackage._id === 'object'
-            ? targetPackage._id.toString()
-            : targetPackage._id;
-
-          console.log('Package found! Details:', {
-            id: packageId,
-            code: targetPackage.sti_package_code,
-            name: targetPackage.sti_package_name,
-            price: targetPackage.price
-          });
-
-          console.log('About to navigate to:', `/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
-          navigate(`/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
-          console.log('Navigation completed');
-        } else {
-          console.log('Package not found! Available packages:', packages.map(pkg => ({
-            id: pkg._id,
-            code: pkg.sti_package_code,
-            name: pkg.sti_package_name
-          })));
-          toast.error(`Không tìm thấy gói xét nghiệm với mã: ${recommendation.recommended_package}`, {
-            duration: 4000,
-            position: 'top-center',
-          });
-        }
-      } else {
-        toast.error('Không thể tải thông tin gói xét nghiệm: ' + (data.message || 'Unknown error'), {
-          duration: 4000,
-          position: 'top-center',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching packages:', error);
-      toast.error('Có lỗi xảy ra khi tải thông tin gói xét nghiệm', {
-        duration: 4000,
-        position: 'top-center',
-      });
-    } finally {
-      setBookingLoading(false);
+    if (sendScreeningResults && recommendation) {
+      const consultationNotes = createScreeningNotes();
+      localStorage.setItem('sti_screening_consultation_notes', consultationNotes);
+      const screeningData = {
+        answers: formData,
+        result: {
+          risk_level: recommendation.risk_level,
+          reasoning: recommendation.reasoning,
+        },
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('sti_screening_results', JSON.stringify(screeningData));
+    } else {
+      localStorage.removeItem('sti_screening_results');
+      localStorage.removeItem('sti_screening_consultation_notes');
     }
+    setTimeout(() => {
+      setBookingLoading(false);
+      navigate('/sti-booking/book');
+    }, 300); // Cho UX mượt hơn
   };
 
   const handleConsultantBooking = () => {
@@ -374,12 +360,15 @@ const STIAssessmentForm = () => {
 
   const handleConfirmConsultantBooking = (sendScreeningResults: boolean) => {
     if (sendScreeningResults && recommendation) {
-      // Lưu cả câu trả lời và kết quả tổng hợp vào localStorage
+      // Sử dụng hàm chung để tạo ghi chú
+      const consultationNotes = createScreeningNotes();
+      localStorage.setItem('sti_screening_consultation_notes', consultationNotes);
+      
+      // Lưu câu trả lời và kết quả tổng hợp vào localStorage
       const screeningData = {
         answers: formData,
         result: {
           risk_level: recommendation.risk_level,
-          recommended_package: recommendation.recommended_package,
           reasoning: recommendation.reasoning,
         },
         timestamp: new Date().toISOString()
@@ -388,6 +377,7 @@ const STIAssessmentForm = () => {
       toast.success('Kết quả và câu trả lời đã được gửi cho chuyên gia');
     } else {
       localStorage.removeItem('sti_screening_results');
+      localStorage.removeItem('sti_screening_consultation_notes');
     }
 
     setShowConsultantModal(false);
@@ -395,7 +385,37 @@ const STIAssessmentForm = () => {
   };
 
   const getPackageInfo = (packageCode: string) => {
-    return packages.find(pkg => pkg.sti_package_code === packageCode);
+    // Đảm bảo packages là array trước khi gọi find
+    if (!Array.isArray(packages)) {
+      console.error('packages is not an array:', packages);
+      return null;
+    }
+
+    console.log('[DEBUG] getPackageInfo called with packageCode:', packageCode);
+    console.log('[DEBUG] Available packages:', packages.map(pkg => ({
+      code: pkg.code,
+      sti_package_code: pkg.sti_package_code,
+      name: pkg.name,
+      sti_package_name: pkg.sti_package_name
+    })));
+
+    // Thử tìm bằng cả 2 field để đảm bảo
+    let found = packages.find(pkg => pkg.code === packageCode);
+    if (!found) {
+      found = packages.find(pkg => pkg.sti_package_code === packageCode);
+      console.log('[DEBUG] Found using sti_package_code:', found);
+    } else {
+      console.log('[DEBUG] Found using code:', found);
+    }
+
+    return found;
+  };
+
+  const shouldShowPregnancyOptions = () => {
+    if (formData.gender !== 'female') return false;
+    const age = parseInt(formData.age);
+    if (age > 60) return false;
+    return true;
   };
 
   const renderPersonalInfo = () => (
@@ -435,7 +455,7 @@ const STIAssessmentForm = () => {
         </div>
       </div>
 
-      {formData.gender === 'female' && (
+      {shouldShowPregnancyOptions() && (
         <div className="bg-pink-50 p-4 rounded-lg border border-pink-200 mt-4">
           <div className="flex items-center space-x-2 mb-3">
             <input
@@ -495,10 +515,13 @@ const STIAssessmentForm = () => {
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
           >
             <option value="">Chọn tình trạng</option>
-            <option value="not_active">Không hoạt động tình dục</option>
+            {!formData.is_pregnant && (
+              <option value="not_active">Không hoạt động tình dục</option>
+            )}
             <option value="active_single">Có hoạt động - 1 bạn tình cố định</option>
             <option value="active_multiple">Có hoạt động - nhiều bạn tình (≥2 người)</option>
           </select>
+
           <p className="text-xs text-gray-500 mt-1">
           </p>
         </div>
@@ -522,7 +545,7 @@ const STIAssessmentForm = () => {
                 <option value="bisexual">Lưỡng tính</option>
               </select>
 
-              {/* ✅ Enhanced MSM information */}
+              {/*  Enhanced MSM information */}
               {formData.sexual_orientation === 'msm' && (
                 <div className="bg-blue-50 p-3 rounded border border-blue-200 mt-2">
                   <p className="text-xs text-blue-700">
@@ -582,7 +605,9 @@ const STIAssessmentForm = () => {
                 value={formData.condom_use}
                 onChange={(e) => updateFormData('condom_use', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                required
               >
+                <option value="">Chọn tần suất sử dụng</option>
                 <option value="always">Luôn luôn sử dụng</option>
                 <option value="sometimes">Thỉnh thoảng sử dụng</option>
                 <option value="rarely">Hiếm khi sử dụng</option>
@@ -609,7 +634,7 @@ const STIAssessmentForm = () => {
         <div>
           <label className="block text-sm font-medium mb-3">Tiền sử mắc STI (có thể chọn nhiều)</label>
           <div className="grid grid-cols-2 gap-3">
-            {/* ✅ ENHANCED: Updated STI codes to match backend mapping */}
+            {/*  ENHANCED: Updated STI codes to match backend mapping */}
             {[
               { code: 'chlamydia', label: 'Chlamydia' },
               { code: 'gonorrhea', label: 'Lậu (Gonorrhea)' },
@@ -733,7 +758,7 @@ const STIAssessmentForm = () => {
               { key: 'blood_transfusion', label: 'Truyền máu/ghép tạng' },
               { key: 'prep_user', label: 'Đang dùng PrEP (thuốc dự phòng HIV)' },
               { key: 'immunocompromised', label: 'Suy giảm miễn dịch' },
-              // ✅ NEW: Added geographic risk factor
+              //  NEW: Added geographic risk factor
               { key: 'geographic_risk', label: 'Sống ở vùng có nguy cơ STI cao theo địa lý' }
             ].map(risk => (
               <div key={risk.key} className="flex items-center space-x-2">
@@ -757,7 +782,7 @@ const STIAssessmentForm = () => {
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
           >
             <option value="normal">Khu vực bình thường</option>
-            {/* ✅ ENHANCED: All high-prevalence settings from backend */}
+            {/*  ENHANCED: All high-prevalence settings from backend */}
             <option value="sti_clinic">Phòng khám STI/Sức khỏe tình dục</option>
             <option value="correctional_facility">Cơ sở giam giữ/Nhà tù</option>
             <option value="adolescent_clinic">Phòng khám thanh thiếu niên</option>
@@ -777,7 +802,11 @@ const STIAssessmentForm = () => {
   const renderRecommendation = () => {
     if (!recommendation) return null;
 
+    console.log('[DEBUG] renderRecommendation - recommendation:', recommendation);
+    console.log('[DEBUG] renderRecommendation - recommended_package:', recommendation.recommended_package);
+
     const packageInfo = getPackageInfo(recommendation.recommended_package);
+    console.log('[DEBUG] renderRecommendation - packageInfo result:', packageInfo);
 
     if (packagesLoading) {
       return (
@@ -836,7 +865,7 @@ const STIAssessmentForm = () => {
 
             <div className="bg-white p-6 rounded-lg border border-green-200 shadow-lg">
               <div className="flex items-center justify-between mb-4">
-                <h5 className="font-bold text-xl text-blue-600">{packageInfo.sti_package_name}</h5>
+                <h5 className="font-bold text-xl text-blue-600">{packageInfo.name}</h5>
                 <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-200">
                   <p className="text-xs text-gray-600 mb-1">Giá gói</p>
                   <p className="font-bold text-2xl text-green-600" style={{ whiteSpace: 'nowrap' }}>
@@ -844,18 +873,44 @@ const STIAssessmentForm = () => {
                   </p>
                 </div>
               </div>
-              <p className="text-gray-600 mb-4 leading-relaxed">{packageInfo.sti_package_description}</p>
+              <p className="text-gray-600 mb-4 leading-relaxed">{packageInfo.description}</p>
 
               <div>
                 <p className="text-sm font-medium mb-3 text-gray-700">Bao gồm các xét nghiệm:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {packageInfo.sti_package_tests?.map((test: string, index: number) => (
-                    <div key={index} className="flex items-start bg-gray-50 p-3 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 leading-relaxed">{test}</span>
+                {(() => {
+                  console.log('[DEBUG] packageInfo.tests:', packageInfo.tests);
+                  console.log('[DEBUG] packageInfo.tests type:', typeof packageInfo.tests);
+                  console.log('[DEBUG] packageInfo.tests isArray:', Array.isArray(packageInfo.tests));
+                  console.log('[DEBUG] packageInfo.tests length:', packageInfo.tests?.length);
+                  return null;
+                })()}
+
+                {packageInfo.tests && packageInfo.tests.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {packageInfo.tests.map((test: string, index: number) => (
+                      <div key={index} className="flex items-center bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-4">
+                          <CheckCircle className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-grow">
+                          <span className="text-sm font-medium text-gray-800 leading-relaxed">{test}</span>
+                        </div>
+                        <div className="flex-shrink-0 text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded-full">
+                          ✓ Bao gồm
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
+                      <span className="text-sm text-yellow-700">
+                        Danh sách xét nghiệm đang được cập nhật. Vui lòng liên hệ để biết chi tiết.
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -897,7 +952,7 @@ const STIAssessmentForm = () => {
                 Đang xử lý...
               </>
             ) : (
-              'Đặt lịch xét nghiệm STI ngay'
+              'Đặt lịch xét nghiệm nay '
             )}
           </button>
         </div>
@@ -955,18 +1010,75 @@ const STIAssessmentForm = () => {
             </div>
           </div>
         </Modal>
+        {/* Modal xác nhận gửi kết quả sàng lọc cho booking STI */}
+        <Modal
+          title="Gửi kết quả sàng lọc vào ghi chú khi đặt lịch xét nghiệm?"
+          open={showBookingModal}
+          onCancel={() => setShowBookingModal(false)}
+          footer={null}
+          width={500}
+        >
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Bạn có muốn tự động điền kết quả sàng lọc STI này vào phần ghi chú khi đặt lịch xét nghiệm không?
+            </p>
+            {recommendation && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2">Kết quả sàng lọc:</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Mức độ nguy cơ:</span>
+                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${recommendation.risk_level === 'Cao' ? 'bg-red-100 text-red-800' :
+                      recommendation.risk_level === 'Trung bình' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                      {recommendation.risk_level}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Gói đề xuất:</span>
+                    <span className="ml-2 text-blue-700">{recommendation.recommended_package}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-gray-600">
+              Nếu đồng ý, kết quả sàng lọc sẽ được tự động điền vào phần ghi chú khi bạn đặt lịch xét nghiệm STI.
+            </p>
+            <div className="flex space-x-3 pt-4">
+              <button
+                onClick={() => handleConfirmBookingSTI(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Không gửi
+              </button>
+              <button
+                onClick={() => handleConfirmBookingSTI(true)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Đồng ý gửi
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   };
 
   const isStepValid = () => {
     const age = parseInt(formData.age);
-    return formData.age && formData.gender && age >= 13 && age <= 100 &&
+    const basicValid = formData.age && formData.gender && age >= 13 && age <= 100 &&
       formData.sexually_active && formData.hiv_status;
+
+    // Additional validation for sexually active users
+    if (formData.sexually_active !== 'not_active' && formData.sexually_active) {
+      return basicValid && formData.condom_use; // Must select condom use when sexually active
+    }
+
+    return basicValid;
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10 bg-white min-h-screen">
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
           Đánh giá Sàng lọc STI Cá nhân

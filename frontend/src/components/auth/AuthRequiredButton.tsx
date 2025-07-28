@@ -37,29 +37,17 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
         navigate(redirectTo);
       }
     } else {
-      // Hiển thị thông báo và modal đăng nhập
-      toast.error(message);
+      // Hiển thị toast trước, sau đó mở modal đăng nhập
+      console.log('Showing toast with message:', message);
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-right',
+      });
       setShowLoginModal(true);
     }
   };
 
-  const handleLoginSuccess = (user: any) => {
-    const defaultSuccessMessage = `Chào mừng ${user.full_name || user.email}!`;
-    toast.success(successMessage || defaultSuccessMessage);
-    setShowLoginModal(false);
-    
-    // Chuyển hướng sau khi đăng nhập thành công
-    setTimeout(() => {
-      if (onClick) {
-        onClick();
-      } else if (redirectToDashboard) {
-        // Redirect đến dashboard theo role
-        navigateAfterLogin(user, navigate);
-      } else {
-        navigate(redirectTo);
-      }
-    }, 500);
-  };
+
 
   return (
     <>
@@ -71,7 +59,6 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={handleLoginSuccess}
       />
     </>
   );

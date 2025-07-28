@@ -44,16 +44,22 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
 
   return (
     <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white shadow-xl border-r border-gray-200 transition-all duration-300 z-40 ${
+      className={`fixed left-0 top-16 h-[calc(100vh-10rem)] bg-white shadow-lg border-r border-gray-200 transition-all duration-300 z-40 ${
         isOpen ? 'w-64' : 'w-0'
-      }`}
+      } overflow-hidden`}
     >
-      <div className="h-full overflow-y-auto py-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="h-full overflow-y-auto pt-6 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="px-6 pb-6 border-b border-gray-200">
           <div className="flex items-center">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <img src={user?.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <span className="text-white font-semibold text-lg">
+                  {user?.full_name?.charAt(0) || 'U'}
+                </span>
+              )}
             </div>
             <div className="ml-3">
               <h2 className="text-lg font-semibold text-gray-900">Chuyên gia</h2>

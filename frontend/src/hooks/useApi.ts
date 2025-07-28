@@ -133,7 +133,7 @@ export function usePaginatedApi<T>(
 
   useEffect(() => {
     refresh();
-  }, [...deps]);
+  }, deps);
 
   return {
     data: allData,

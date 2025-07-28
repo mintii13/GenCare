@@ -1,46 +1,115 @@
 import { apiClient } from './apiClient';
 import { API } from '../config/apiEndpoints';
 
-// This is a placeholder. We will define the actual types and API calls later.
-export interface MenstrualCycleData {
-  id: string;
-  userId: string;
-  startDate: string;
-  endDate: string;
+// ===== NEW PERIOD DAY TYPES =====
+
+export interface PeriodDay {
+  date: string;
+  mood_data?: DailyMoodData;
+}
+
+export interface ProcessCycleWithMoodRequest {
+  period_days: PeriodDay[];
+}
+
+// ===== MOOD DATA TYPES =====
+
+export interface DailyMoodData {
+  mood: 'happy' | 'sad' | 'tired' | 'excited' | 'calm' | 'stressed' | 'neutral';
+  energy: 'high' | 'medium' | 'low';
+  symptoms: string[];
   notes?: string;
 }
 
-export const getMenstrualCycleData = async (userId: string): Promise<MenstrualCycleData[]> => {
-  const response = await apiClient.get(`/users/${userId}/menstrual-cycle`);
-  return response.data as MenstrualCycleData[];
-};
-
-export const addMenstrualCycleData = async (data: Omit<MenstrualCycleData, 'id'>): Promise<MenstrualCycleData> => {
-  const response = await apiClient.post(API.MenstrualCycle.BASE, data);
-  return response.data as MenstrualCycleData;
-};
-
-export const updateMenstrualCycleData = async (id: string, data: Partial<MenstrualCycleData>): Promise<MenstrualCycleData> => {
-    const response = await apiClient.put(`${API.MenstrualCycle.BASE}/${id}`, data);
-    return response.data as MenstrualCycleData;
-};
-
-export const deleteMenstrualCycleData = async (id: string): Promise<void> => {
-    await apiClient.delete(`${API.MenstrualCycle.BASE}/${id}`);
-};
-
-export interface ProcessCycleRequest {
-  period_days: string[];
-  notes?: string;
+export interface MoodData {
+  [date: string]: DailyMoodData;
 }
+
+export interface CreateMoodDataRequest {
+  date: string;
+  mood_data: DailyMoodData;
+}
+
+export interface UpdateMoodDataRequest {
+  date: string;
+  mood_data: Partial<DailyMoodData>;
+}
+
+export interface GetMoodDataRequest {
+  date?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export type MoodDataResponse = ApiResponse<{
+  date: string;
+  mood_data: DailyMoodData;
+}>;
+
+export type MoodDataListResponse = ApiResponse<{
+  mood_data: MoodData;
+  total_entries: number;
+}>;
+
+// ===== NEW STATISTICS TYPES =====
+
+export interface PeriodMoodStatistics {
+  total_period_days: number;
+  days_with_mood_data: number;
+  average_mood: string;
+  most_common_mood: string;
+  most_common_symptoms: string[];
+  mood_trend: 'improving' | 'declining' | 'stable';
+  energy_distribution: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+  common_notes: string[];
+}
+
+export interface CycleMoodStatistics {
+  cycle_id: string;
+  cycle_start_date: string;
+  period_mood_stats: PeriodMoodStatistics;
+}
+
+export interface CycleComparison {
+  current_cycle: CycleMoodStatistics;
+  previous_cycles: CycleMoodStatistics[];
+  trends: {
+    overall_trend: 'improving' | 'declining' | 'stable';
+    symptom_changes: Array<{
+      symptom: string;
+      change: 'increased' | 'decreased' | 'stable';
+    }>;
+    energy_trend: 'improving' | 'declining' | 'stable';
+  };
+}
+
+export type MonthlyMoodSummaryResponse = ApiResponse<{
+  month: string;
+  total_days_with_mood: number;
+  average_mood: string;
+  most_common_symptoms: string[];
+  mood_trend: 'improving' | 'declining' | 'stable';
+  cycle_insights: {
+    pre_menstrual_mood: string;
+    during_period_mood: string;
+    post_period_mood: string;
+  };
+  period_mood_stats: PeriodMoodStatistics;
+}>;
+
+// ===== CYCLE DATA TYPES =====
 
 export interface CycleData {
   _id: string;
   user_id: string;
   cycle_start_date: string;
-  period_days: string[];
+  period_days: PeriodDay[]; // Changed from string[] to PeriodDay[]
   cycle_length?: number;
-  notes?: string;
+  mood_data?: MoodData; // Keep for backward compatibility
   predicted_cycle_end?: string;
   predicted_ovulation_date?: string;
   predicted_fertile_start?: string;
@@ -58,6 +127,22 @@ export interface TodayStatus {
   is_ovulation_day: boolean;
   pregnancy_chance: 'low' | 'medium' | 'high';
   recommendations: string[];
+  period_mood_data?: DailyMoodData; // Add mood data for period days
+  day_in_cycle?: number;
+  cycle_phase?: string;
+  // Current cycle predictions
+  predicted_cycle_end?: string;
+  predicted_ovulation_date?: string;
+  predicted_fertile_start?: string;
+  predicted_fertile_end?: string;
+  // Next cycle predictions
+  next_cycle_start?: string;
+  next_ovulation_date?: string;
+  next_fertile_start?: string;
+  next_fertile_end?: string;
+  // Cycle information
+  cycle_length?: number;
+  period_length?: number;
 }
 
 export interface CycleStatistics {
@@ -80,62 +165,181 @@ export interface PeriodStatistics {
   total_periods_tracked: number;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data?: T;
+// Use the ApiResponse from apiClient instead of defining our own
+import { ApiResponse } from './apiClient';
+
+// ===== LEGACY TYPES (FOR BACKWARD COMPATIBILITY) =====
+
+export interface ProcessCycleRequest {
+  period_days: string[]; // Keep old format for backward compatibility
+  mood_data?: MoodData;
 }
 
+export interface MenstrualCycleData {
+  id: string;
+  userId: string;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+}
+
+// ===== API SERVICE =====
+
 export const menstrualCycleService = {
-  // Xử lý và lưu dữ liệu chu kì
+  // ===== NEW ENDPOINTS =====
+
+  // Process cycle with period day mood data
+  async processCycleWithMood(data: ProcessCycleWithMoodRequest): Promise<ApiResponse<CycleData[]>> {
+    return apiClient.safePost(API.MenstrualCycle.PROCESS_MENSTRUAL_CYCLE, data);
+  },
+
+  // Create period day with mood
+  async createPeriodDayWithMood(date: string, mood_data: DailyMoodData): Promise<MoodDataResponse> {
+    return apiClient.safePost(API.MenstrualCycle.CREATE_PERIOD_DAY_MOOD(date), { date, mood_data });
+  },
+
+  // Update period day mood
+  async updatePeriodDayMood(date: string, mood_data: DailyMoodData): Promise<MoodDataResponse> {
+    return apiClient.safePut(API.MenstrualCycle.PERIOD_DAY_MOOD(date), { date, mood_data });
+  },
+
+  // Get period day mood
+  async getPeriodDayMood(date: string): Promise<MoodDataResponse> {
+    return apiClient.safeGet(API.MenstrualCycle.PERIOD_DAY_MOOD(date));
+  },
+
+  // Get cycle mood statistics
+  async getCycleMoodStatistics(cycle_id?: string): Promise<ApiResponse<PeriodMoodStatistics>> {
+    const url = cycle_id 
+      ? `${API.MenstrualCycle.STATISTICS}?cycle_id=${cycle_id}`
+      : API.MenstrualCycle.STATISTICS;
+    return apiClient.safeGet(url);
+  },
+
+  // Get cycle comparison
+  async getCycleComparison(): Promise<ApiResponse<CycleComparison>> {
+    return apiClient.safeGet(API.MenstrualCycle.COMPARISON);
+  },
+
+  // ===== LEGACY ENDPOINTS (BACKWARD COMPATIBILITY) =====
+
   async processCycle(data: ProcessCycleRequest): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.post(API.MenstrualCycle.PROCESS, data);
-    return response.data as ApiResponse<CycleData[]>;
+    return apiClient.safePost(API.MenstrualCycle.PROCESS_MENSTRUAL_CYCLE, data);
   },
 
-  // Lấy tất cả chu kì của user
+  async updateCycle(data: ProcessCycleRequest): Promise<ApiResponse<CycleData[]>> {
+    return apiClient.safePost(API.MenstrualCycle.PROCESS_MENSTRUAL_CYCLE, data);
+  },
+
+  async createMoodData(request: CreateMoodDataRequest): Promise<MoodDataResponse> {
+    console.log('[createMoodData] URL:', API.MenstrualCycle.MOOD_DATA);
+    console.log('[createMoodData] Request:', request);
+    const response = await apiClient.safePost<{date: string; mood_data: DailyMoodData}>(API.MenstrualCycle.MOOD_DATA, request);
+    return response as MoodDataResponse;
+  },
+
+  async updateMoodData(request: UpdateMoodDataRequest): Promise<MoodDataResponse> {
+    console.log('[updateMoodData] URL:', API.MenstrualCycle.MOOD_DATA);
+    console.log('[updateMoodData] Request:', request);
+    return apiClient.safePut(API.MenstrualCycle.MOOD_DATA, request);
+  },
+
+  async getMoodData(request?: GetMoodDataRequest): Promise<MoodDataListResponse> {
+    const params = new URLSearchParams();
+    if (request?.date) params.append('date', request.date);
+    if (request?.start_date) params.append('start_date', request.start_date);
+    if (request?.end_date) params.append('end_date', request.end_date);
+    
+    const url = params.toString() 
+      ? `${API.MenstrualCycle.MOOD_DATA}?${params.toString()}`
+      : API.MenstrualCycle.MOOD_DATA;
+    
+    console.log('[getMoodData] URL:', url);
+    console.log('[getMoodData] Request:', request);
+    
+    return apiClient.safeGet(url);
+  },
+
+  async getMoodDataByDate(date: string): Promise<MoodDataResponse> {
+    return apiClient.safeGet(`${API.MenstrualCycle.MOOD_DATA}?date=${date}`);
+  },
+
+  async deleteMoodData(date: string): Promise<MoodDataResponse> {
+    return apiClient.safeDelete(API.MenstrualCycle.MOOD_DATA_DELETE(date));
+  },
+
+  async getMonthlyMoodSummary(year: number, month: number): Promise<MonthlyMoodSummaryResponse> {
+    return   apiClient.safeGet(API.MenstrualCycle.MOOD_DATA_MONTHLY_SUMMARY(year, month));
+  },
+
   async getCycles(): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.get(API.MenstrualCycle.GET_CYCLES);
-    return response.data as ApiResponse<CycleData[]>;
+    console.log('[getCycles] URL:', API.MenstrualCycle.GET_CYCLES);
+    const response = await apiClient.safeGet<CycleData[]>(API.MenstrualCycle.GET_CYCLES);
+    console.log('[getCycles] Response:', {
+      success: response.success,
+      message: response.message,
+      dataType: typeof response.data,
+      dataIsArray: Array.isArray(response.data),
+      dataLength: response.data?.length || 0,
+      data: response.data
+    });
+    return response;
   },
 
-  // Lấy chu kì theo tháng
   async getCyclesByMonth(year: number, month: number): Promise<ApiResponse<CycleData[]>> {
-    const response = await apiClient.get(API.MenstrualCycle.GET_CYCLES_MONTH(year, month));
-    return response.data as ApiResponse<CycleData[]>;
+    console.log('[getCyclesByMonth] URL:', API.MenstrualCycle.GET_CYCLES_BY_MONTH(year, month));
+    const response = await apiClient.safeGet<CycleData[]>(API.MenstrualCycle.GET_CYCLES_BY_MONTH(year, month));
+    console.log('[getCyclesByMonth] Response:', response);
+    return response;
   },
 
-  // Lấy trạng thái hôm nay
   async getTodayStatus(): Promise<ApiResponse<TodayStatus>> {
-    const response = await apiClient.get(API.MenstrualCycle.TODAY_STATUS);
-    return response.data as ApiResponse<TodayStatus>;
+    console.log('[getTodayStatus] URL:', API.MenstrualCycle.TODAY_STATUS);
+    const response = await apiClient.safeGet<TodayStatus>(API.MenstrualCycle.TODAY_STATUS);
+    console.log('[getTodayStatus] Response:', response);
+    return response;
   },
 
-  // Lấy thống kê chu kì
   async getCycleStatistics(): Promise<ApiResponse<CycleStatistics>> {
-    const response = await apiClient.get(API.MenstrualCycle.CYCLE_STATS);
-    return response.data as ApiResponse<CycleStatistics>;
+    console.log('[getCycleStatistics] URL:', API.MenstrualCycle.GET_CYCLE_STATISTICS);
+    const response = await apiClient.safeGet<CycleStatistics>(API.MenstrualCycle.GET_CYCLE_STATISTICS);
+    console.log('[getCycleStatistics] Response:', response);
+    return response;
   },
 
-  // Lấy thống kê kinh nguyệt
   async getPeriodStatistics(): Promise<ApiResponse<PeriodStatistics>> {
-    const response = await apiClient.get(API.MenstrualCycle.PERIOD_STATS);
-    return response.data as ApiResponse<PeriodStatistics>;
+    console.log('[getPeriodStatistics] URL:', API.MenstrualCycle.GET_PERIOD_STATISTICS);
+    const response = await apiClient.safeGet<PeriodStatistics>(API.MenstrualCycle.GET_PERIOD_STATISTICS);
+    console.log('[getPeriodStatistics] Response:', response);
+    return response;
   },
 
-  // Cập nhật cài đặt thông báo
-  async updateNotificationSettings(settings: {
-    notification_enabled: boolean;
-    notification_types: string[];
-  }): Promise<ApiResponse<any>> {
-    const response = await apiClient.patch(API.MenstrualCycle.UPDATE_NOTIFICATION, settings);
-    return response.data as ApiResponse<any>;
+  async getMoodStatistics(): Promise<ApiResponse<any>> {
+    console.log('[getMoodStatistics] URL:', API.MenstrualCycle.GET_MOOD_STATISTICS);
+    const response = await apiClient.safeGet<any>(API.MenstrualCycle.GET_MOOD_STATISTICS);
+    console.log('[getMoodStatistics] Response:', response);
+    return response;
   },
 
-  // Dọn dẹp dữ liệu trùng lặp
-  async cleanupDuplicates(): Promise<ApiResponse<any>> {
-    const response = await apiClient.get(API.MenstrualCycle.CLEANUP);
-    return response.data as ApiResponse<any>;
+  // ===== LEGACY FUNCTIONS (FOR BACKWARD COMPATIBILITY) =====
+
+  async getMenstrualCycleData(userId: string): Promise<MenstrualCycleData[]> {
+    const response = await apiClient.safeGet(`/users/${userId}/menstrual-cycle`);
+    return response.data as MenstrualCycleData[];
+  },
+
+  async addMenstrualCycleData(data: Omit<MenstrualCycleData, 'id'>): Promise<MenstrualCycleData> {
+    const response = await apiClient.safePost(API.MenstrualCycle.BASE, data);
+    return response.data as MenstrualCycleData;
+  },
+
+  async updateMenstrualCycleData(id: string, data: Partial<MenstrualCycleData>): Promise<MenstrualCycleData> {
+    const response = await apiClient.safePut(`${API.MenstrualCycle.BASE}/${id}`, data);
+    return response.data as MenstrualCycleData;
+  },
+
+  async deleteMenstrualCycleData(id: string): Promise<void> {
+    await apiClient.safeDelete(`${API.MenstrualCycle.BASE}/${id}`);
   }
 };
 

@@ -1,0 +1,140 @@
+[
+  {
+    "_id": "cycle_001",
+    "user_id": "user_001",
+    "cycle_start_date": "2025-07-15",
+    "period_days": [
+      {
+        "date": "2025-07-15",
+        "mood_data": {
+          "mood": "tired",
+          "energy": "low",
+          "symptoms": ["cramps", "fatigue"],
+          "notes": "First day, feeling tired"
+        }
+      },
+      {
+        "date": "2025-07-16",
+        "mood_data": {
+          "mood": "sad",
+          "energy": "low",
+          "symptoms": ["cramps", "bloating"],
+          "notes": "Still feeling down"
+        }
+      },
+      {
+        "date": "2025-07-17",
+        "mood_data": {
+          "mood": "neutral",
+          "energy": "medium",
+          "symptoms": ["mild cramps"],
+          "notes": "Getting better"
+        }
+      },
+      {
+        "date": "2025-07-18",
+        "mood_data": {
+          "mood": "happy",
+          "energy": "high",
+          "symptoms": [],
+          "notes": "Feeling much better!"
+        }
+      }
+    ],
+    "cycle_length": 28,
+    "predicted_cycle_end": "2025-08-12",
+    "predicted_ovulation_date": "2025-07-29",
+    "predicted_fertile_start": "2025-07-24",
+    "predicted_fertile_end": "2025-07-30",
+    "notification_enabled": true,
+    "notification_types": ["period_start", "ovulation", "fertile_window"],
+    "createdAt": "2025-07-15T00:00:00.000Z",
+    "updatedAt": "2025-07-27T00:00:00.000Z"
+  },
+  {
+    "_id": "cycle_002",
+    "user_id": "user_001",
+    "cycle_start_date": "2025-06-17",
+    "period_days": [
+      {
+        "date": "2025-06-17",
+        "mood_data": {
+          "mood": "stressed",
+          "energy": "low",
+          "symptoms": ["cramps", "headache"],
+          "notes": "Stressful day"
+        }
+      },
+      {
+        "date": "2025-06-18",
+        "mood_data": {
+          "mood": "calm",
+          "energy": "medium",
+          "symptoms": ["mild cramps"],
+          "notes": "Feeling calmer"
+        }
+      },
+      {
+        "date": "2025-06-19",
+        "mood_data": {
+          "mood": "happy",
+          "energy": "high",
+          "symptoms": [],
+          "notes": "Great day!"
+        }
+      }
+    ],
+    "cycle_length": 28,
+    "predicted_cycle_end": "2025-07-15",
+    "predicted_ovulation_date": "2025-07-01",
+    "predicted_fertile_start": "2025-06-26",
+    "predicted_fertile_end": "2025-07-02",
+    "notification_enabled": true,
+    "notification_types": ["period_start", "ovulation", "fertile_window"],
+    "createdAt": "2025-06-17T00:00:00.000Z",
+    "updatedAt": "2025-07-15T00:00:00.000Z"
+  },
+  {
+    "_id": "cycle_003",
+    "user_id": "user_001",
+    "cycle_start_date": "2025-05-20",
+    "period_days": [
+      {
+        "date": "2025-05-20",
+        "mood_data": {
+          "mood": "excited",
+          "energy": "high",
+          "symptoms": ["mild cramps"],
+          "notes": "Feeling excited today"
+        }
+      },
+      {
+        "date": "2025-05-21",
+        "mood_data": {
+          "mood": "happy",
+          "energy": "high",
+          "symptoms": [],
+          "notes": "Wonderful day"
+        }
+      },
+      {
+        "date": "2025-05-22",
+        "mood_data": {
+          "mood": "calm",
+          "energy": "medium",
+          "symptoms": [],
+          "notes": "Peaceful day"
+        }
+      }
+    ],
+    "cycle_length": 28,
+    "predicted_cycle_end": "2025-06-17",
+    "predicted_ovulation_date": "2025-06-03",
+    "predicted_fertile_start": "2025-05-29",
+    "predicted_fertile_end": "2025-06-04",
+    "notification_enabled": true,
+    "notification_types": ["period_start", "ovulation", "fertile_window"],
+    "createdAt": "2025-05-20T00:00:00.000Z",
+    "updatedAt": "2025-06-17T00:00:00.000Z"
+  }
+] 

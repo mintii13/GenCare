@@ -12,7 +12,7 @@ const BlogCardHeader: React.FC<BlogCardHeaderProps> = ({ blog }) => {
 
   return (
     <div className="relative overflow-hidden flex-shrink-0">
-      <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
+      <div className="w-full h-40 bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
         {blogThumbnail ? (
           <img
             src={blogThumbnail}

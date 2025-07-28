@@ -1,0 +1,21 @@
+{
+  "name": "GenCare - Hệ thống Sức khỏe Sinh sản Toàn diện",
+  "short_name": "GenCare",
+  "description": "Hệ thống Sức khỏe Sinh sản Toàn diện",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4DABFF",
+  "icons": [
+    {
+      "src": "/src/assets/logo/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/src/assets/logo/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 

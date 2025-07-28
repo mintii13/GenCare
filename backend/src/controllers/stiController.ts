@@ -364,6 +364,8 @@ router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('customer', '
 });
 
 
+
+
 //update sti-package API
 router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiPackage', 'Update StiPackage'), async (req: Request, res: Response): Promise<void> => {
     try {
@@ -972,7 +974,6 @@ router.get('/my-result/:orderId', authenticateToken, authorizeRoles('customer'),
 router.get('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'customer','consultant'), async (req: Request, res: Response) => {
     try {
         const orderId = req.params.orderId;
-        const userId = req.jwtUser.userId;
         if (!orderId || orderId.trim() === '' || orderId === 'undefined') {
             return res.status(400).json({
                 success: false,
@@ -989,6 +990,7 @@ router.get('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'a
         if (!order.consultant_id) {
             return res.status(403).json({ success: false, message: 'Consultant id is not found' });
         }
+
 
         const result = await StiService.getStiResultByOrderId(orderId);
         if (!result.success){

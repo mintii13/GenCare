@@ -6,3 +6,5 @@ export * from './usePerformance';
 export * from './useRole';
 export * from './useWeeklySchedule';
 export * from './usePillTracking';
+export { default as useMoodData } from './useMoodData';
+export * from './useMoodDataOperations';

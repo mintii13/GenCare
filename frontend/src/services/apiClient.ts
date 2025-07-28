@@ -1,16 +1,18 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, AxiosRequestHeaders } from 'axios';
 import { log } from '../utils/logger';
 import { env } from '../config/environment';
-  const AUTH_TOKEN_KEY = "gencare_auth_token";
 
-export interface ApiResponse<T = any> {
+// Sử dụng environment config thống nhất
+const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
+
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
   errorType?: string;
   details?: string;
-  errors?: any[];
+  errors?: unknown[];
   timestamp?: string;
 }
 
@@ -28,7 +30,7 @@ class ApiClient {
     backoff: true
   };
 
-  constructor(baseURL: string = env.API_BASE_URL || 'http://localhost:3000/api') {
+  constructor(baseURL: string = env.API_BASE_URL) {
     this.instance = axios.create({
       baseURL,
       timeout: 30000, // 30 seconds - increased for heavy data operations
@@ -44,8 +46,8 @@ class ApiClient {
         
         if (token) {
           // ensure header object exists and add Authorization
-          (config.headers = (config.headers || {}) as any);
-          (config.headers as any)['Authorization'] = `Bearer ${token}`;
+          (config.headers = (config.headers || {}) as AxiosRequestHeaders);
+          (config.headers as AxiosRequestHeaders)['Authorization'] = `Bearer ${token}`;
         }
 
         log.api(config.method?.toUpperCase() || 'REQUEST', config.url || '', {
@@ -88,18 +90,20 @@ class ApiClient {
           
           // Don't auto-logout for getUserProfile requests (let AuthContext handle it)
           if (requestUrl.includes('/getUserProfile')) {
-            console.log("getUserProfile failed - AuthContext will handle token validation");
             return Promise.reject(error);
           }
           
           // Don't auto-logout for login requests (let login form handle the error)
           if (requestUrl.includes('/auth/login')) {
-            console.log("Login failed - form will handle the error");
+            return Promise.reject(error);
+          }
+
+          // Don't auto-logout for profile requests (let AuthContext handle it)
+          if (requestUrl.includes('/profile/')) {
             return Promise.reject(error);
           }
           
           // Token expired or invalid for other requests - clear immediately
-          console.error("Token expired or invalid, logging out.");
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');
           
@@ -134,6 +138,11 @@ class ApiClient {
         return await operation();
       } catch (error) {
         lastError = error as AxiosError;
+        
+        // Don't retry on canceled/aborted requests
+        if (lastError.name === 'CanceledError' || lastError.name === 'AbortError' || lastError.message === 'canceled') {
+          throw lastError;
+        }
         
         // Don't retry on certain status codes
         const status = lastError.response?.status;
@@ -170,6 +179,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.get<T>(url, config),
       retryConfig
@@ -178,10 +190,13 @@ class ApiClient {
 
   async post<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.post<T>(url, data, config),
       retryConfig
@@ -190,10 +205,13 @@ class ApiClient {
 
   async put<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.put<T>(url, data, config),
       retryConfig
@@ -202,10 +220,13 @@ class ApiClient {
 
   async patch<T>(
     url: string, 
-    data?: any, 
+      data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.patch<T>(url, data, config),
       retryConfig
@@ -217,6 +238,9 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<AxiosResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      throw new Error(`Invalid URL provided: ${url}`);
+    }
     return this.executeWithRetry(
       () => this.instance.delete<T>(url, config),
       retryConfig
@@ -229,8 +253,32 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.get<T>(url, config, retryConfig);
+      
+      console.log('[ApiClient] safeGet response:', {
+        url,
+        responseData: response.data,
+        responseDataType: typeof response.data,
+        hasSuccess: response.data && typeof response.data === 'object' && 'success' in response.data
+      });
+      
+      // Check if response.data is already an ApiResponse structure
+      if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+        // Backend already returns ApiResponse structure
+        console.log('[ApiClient] Returning backend ApiResponse structure');
+        return response.data as ApiResponse<T>;
+      }
+      
+      // Legacy response structure
+      console.log('[ApiClient] Returning legacy response structure');
       return {
         success: true,
         data: response.data,
@@ -243,10 +291,17 @@ class ApiClient {
 
   async safePost<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.post<T>(url, data, config, retryConfig);
       return {
@@ -261,10 +316,17 @@ class ApiClient {
 
   async safePut<T>(
     url: string, 
-    data?: any, 
+    data?: unknown, 
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.put<T>(url, data, config, retryConfig);
       return {
@@ -279,10 +341,17 @@ class ApiClient {
 
   async safePatch<T>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.patch<T>(url, data, config, retryConfig);
       return {
@@ -300,6 +369,13 @@ class ApiClient {
     config?: AxiosRequestConfig,
     retryConfig?: Partial<RetryConfig>
   ): Promise<ApiResponse<T>> {
+    if (!url || typeof url !== 'string') {
+      return {
+        success: false,
+        error: `Invalid URL provided: ${url}`,
+        message: 'URL không hợp lệ'
+      };
+    }
     try {
       const response = await this.delete<T>(url, config, retryConfig);
       return {
@@ -314,13 +390,13 @@ class ApiClient {
 
   private handleError<T>(error: AxiosError): ApiResponse<T> {
     const status = error.response?.status || 0;
-    const responseData = error.response?.data as any;
+    const responseData = error.response?.data as { type?: string; message?: string; details?: string; errors?: unknown[]; timestamp?: string };
     
     // Extract detailed error information from backend
     const errorType = responseData?.type || 'UNKNOWN_ERROR';
     const message = responseData?.message || error.message || 'Có lỗi xảy ra';
-    const details = responseData?.details || null;
-    const errors = responseData?.errors || null;
+    const details = responseData?.details || undefined;
+    const errors = responseData?.errors || undefined;
     
     // Create comprehensive error response
     const errorResponse: ApiResponse<T> = {

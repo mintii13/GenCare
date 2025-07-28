@@ -1,7 +1,3 @@
-// Load environment variables FIRST
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -10,7 +6,7 @@ import authController from './controllers/authController';
 import { errorHandler } from './middlewares/errorHandler';
 import session from 'express-session';
 import passport from './configs/passport';
-import redisClient from './configs/redis';
+import redisClient, { connectRedis } from './configs/redis';
 import blogController from './controllers/blogController';
 import weeklyScheduleController from './controllers/weeklyScheduleController';
 import appointmentController from './controllers/appointmentController';
@@ -103,7 +99,7 @@ const startServer = async () => {
 
     // 1. Connect to RedisClient
     console.log(' Connecting to Redis...');
-    await redisClient.connect();
+    await connectRedis();
     console.log(' Connected to Redis!');
 
     // 2. Connect Database

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, Form, DatePicker, Input, Button, Typography, Space, Tag, message, Steps, Spin, Row, Col, Alert } from 'antd';
 import { CalendarOutlined, FileTextOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { STIOrderService, CreateSTIOrderRequest } from '../../services/stiOrderService';
 import apiClient from '../../services/apiClient';
 import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
@@ -38,22 +39,45 @@ const BookSTIPage: React.FC = () => {
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
   const [packageLoading, setPackageLoading] = useState(false);
+  const [hasCompletedScreening, setHasCompletedScreening] = useState(false);
 
   // Get query parameters
   const packageId = searchParams.get('packageId');
   const recommendedPackage = searchParams.get('recommendedPackage');
 
-  // Fetch package info if packageId is provided
+  // Fetch package info if packageId is provided (only ObjectId supported)
   useEffect(() => {
     const fetchPackageInfo = async () => {
-      if (packageId) {
+      const packageToFetch = packageId || recommendedPackage;
+      
+      console.log('🔍 Debug package fetching:');
+      console.log('  - packageId from URL:', packageId);
+      console.log('  - recommendedPackage from URL:', recommendedPackage);
+      console.log('  - packageToFetch:', packageToFetch);
+      
+      if (packageToFetch) {
+        // Only support ObjectId format
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(packageToFetch);
+        
+        if (!isObjectId) {
+          console.log('  - packageToFetch is not a valid ObjectId, skipping fetch');
+          return;
+        }
+        
         setPackageLoading(true);
         try {
-          const response = await apiClient.get(`${API.STI.GET_PACKAGE(packageId)}`);
+          const apiUrl = API.STI.GET_PACKAGE(packageToFetch);
+          console.log('  - calling API:', apiUrl);
+          
+          const response = await apiClient.get(apiUrl);
           const data = response.data as any;
+          console.log('  - API response:', data);
+          
           if (data.success) {
             setSelectedPackage(data.stipackage);
+            console.log('✅ Package loaded:', data.stipackage);
           } else {
+            console.error('❌ Failed to load package:', data.message);
             toast.error('Không thể tải thông tin gói xét nghiệm');
           }
         } catch (error) {
@@ -62,19 +86,46 @@ const BookSTIPage: React.FC = () => {
         } finally {
           setPackageLoading(false);
         }
+      } else {
+        console.log('  - No package to fetch');
       }
     };
 
     fetchPackageInfo();
-  }, [packageId]);
+  }, [packageId, recommendedPackage]);
 
   useEffect(() => {
     if (!user || user.role !== 'customer') {
-      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
       setShowLoginModal(true);
       return;
     }
-  }, [user]);
+    
+    // Check if consultant is pre-selected from URL (like in BookAppointment)
+    const consultantId = searchParams.get('consultant');
+    if (consultantId) {
+      console.log('📋 Pre-selected consultant from URL:', consultantId);
+      // You can add logic here to handle consultant selection if needed
+    }
+  }, [user, searchParams]);
+
+  useEffect(() => {
+    setHasCompletedScreening(localStorage.getItem('sti_screening_completed') === 'true');
+  }, []);
+
+  // Auto-fill notes from STI screening results
+  useEffect(() => {
+    const screeningNotes = localStorage.getItem('sti_screening_consultation_notes');
+    if (screeningNotes) {
+      setNotes(screeningNotes);
+      form.setFieldsValue({ notes: screeningNotes });
+      toast.success('Đã tự động thêm kết quả sàng lọc STI vào ghi chú');
+      localStorage.removeItem('sti_screening_consultation_notes');
+      // Auto advance to step 2 if notes are filled
+      if (orderDate) {
+        setCurrentStep(2);
+      }
+    }
+  }, [orderDate, form]);
 
   const disabledDate = (current: dayjs.Dayjs) => {
     const tomorrow = dayjs().add(1, 'day').startOf('day');
@@ -94,12 +145,12 @@ const BookSTIPage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!orderDate) {
-      message.error('Vui lòng chọn ngày tư vấn');
+      toast.error('Vui lòng chọn ngày tư vấn');
       return;
     }
     
-    // Nếu đã có selectedPackage (từ STI Assessment), bỏ qua assessment modal và license modal
-    if (selectedPackage && packageId) {
+    // Nếu đã có selectedPackage (từ STI Assessment hoặc URL params), bỏ qua assessment modal và license modal
+    if (selectedPackage) {
       setShowLicenseModal(false);
       setLoading(true);
       await createOrder();
@@ -110,35 +161,57 @@ const BookSTIPage: React.FC = () => {
   };
 
   const createOrder = async () => {
+    if (notes.length > 2000) {
+      toast.error('Ghi chú không được vượt quá 2000 ký tự');
+      return;
+    }
     try {
       if (!orderDate) {
-        message.error('Vui lòng chọn ngày tư vấn');
+        toast.error('Vui lòng chọn ngày tư vấn');
         return;
       }
      
-      // Nếu có selectedPackage từ STI Assessment, tạo order với package đó
-      const orderData = {
-        // sti_package_id: selectedPackage?._id || null,
-        // sti_test_items: selectedTest ? [selectedTest._id] : [],
+      // Tạo order data với validation
+      const orderData: CreateSTIOrderRequest = {
         order_date: orderDate.format('YYYY-MM-DD'),
         notes: notes.trim() || undefined
       };
      
+      // Nếu có selectedPackage, thêm thông tin package
+      if (selectedPackage) {
+        orderData.sti_package_id = selectedPackage._id;
+      }
+     
       console.log('Creating STI order with data:', orderData);
-      const response = await apiClient.post<any>(API.STI.CREATE_ORDER, orderData);
-      if (response.data.success) {
+      
+      // Sử dụng STIOrderService thay vì gọi API trực tiếp
+      const response = await STIOrderService.createOrder(orderData);
+      
+      if (response.success) {
         const successMessage = selectedPackage 
           ? `Đặt lịch xét nghiệm ${selectedPackage.sti_package_name} thành công!`
           : 'Đặt lịch tư vấn thành công!';
-        message.success(successMessage);
+        toast.success(successMessage);
         navigate('/sti-booking/orders');
       } else {
-        message.error(response.data.message || 'Có lỗi xảy ra khi đặt lịch');
+        // Kiểm tra nếu có pending order trong message
+        if (response.message && response.message.includes('pending')) {
+          toast('Không thể đặt lịch', { 
+            icon: '⚠️',
+            style: {
+              background: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #f59e0b'
+            }
+          });
+        } else {
+          toast.error(response.message || 'Có lỗi xảy ra khi đặt lịch');
+        }
       }
     } catch (error: any) {
       console.error('Error booking STI order:', error);
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đặt lịch';
-      message.error(errorMessage);
+      const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi đặt lịch';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -388,7 +461,7 @@ const BookSTIPage: React.FC = () => {
                   ? "Nhập thông tin về tình trạng sức khỏe, yêu cầu đặc biệt..."
                   : "Nhập thông tin về tình trạng sức khỏe, mong muốn tư vấn..."
                 }
-                maxLength={500}
+                maxLength={2000}
                 value={notes}
                 onChange={handleNotesChange}
                 showCount

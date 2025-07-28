@@ -9,7 +9,8 @@
 
 **Software Requirement Specification for GenCare: Smart Gender Healthcare System:** [SRS](./SRS/SRS_for_GenCare_System.pdf)
 
-## System Architecture
+## System Architecture <br/> 
+<img src="./img/Gencare_SystemArchitecture.jpg" width="600" height="1000"></img>
 ## Docker Running Instructions
 ```
 cd backend

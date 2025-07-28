@@ -49,20 +49,39 @@ const AdminDashboard: React.FC = () => {
   const fetchStats = async () => {
     setIsLoading(true);
     try {
+      // Fetch revenue data
       const revenueRes = await analyticsService.getTotalRevenue();
-      // Mock other stats for now
+      
+      // Mock other stats for now (có thể thay thế bằng API thực tế sau)
       setStats({
         totalUsers: 1234,
         todayAppointments: 15,
-        totalRevenue: revenueRes.data.total_revenue,
+        totalRevenue: revenueRes.data?.total_revenue || 0,
         newBlogs: 8,
         pendingOrders: 23,
         activeConsultants: 12,
         userGrowth: 8.5,
         revenueGrowth: 12.3
       });
-    } catch (_error) {
+      
+      if (revenueRes.data?.total_revenue) {
+        toast.success('Đã tải dữ liệu doanh thu thành công!');
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
       toast.error('Không thể tải dữ liệu thống kê.');
+      
+      // Set default values if API fails
+      setStats({
+        totalUsers: 0,
+        todayAppointments: 0,
+        totalRevenue: 0,
+        newBlogs: 0,
+        pendingOrders: 0,
+        activeConsultants: 0,
+        userGrowth: 0,
+        revenueGrowth: 0
+      });
     } finally {
       setIsLoading(false);
     }
@@ -167,8 +186,8 @@ const AdminDashboard: React.FC = () => {
       color: "green"
     },
     {
-      title: "Doanh thu tháng này",
-      value: `${stats.totalRevenue.toLocaleString()} VND`,
+      title: "Tổng doanh thu STI",
+      value: `${stats.totalRevenue.toLocaleString('vi-VN')} VNĐ`,
       growth: stats.revenueGrowth,
       icon: FaChartLine,
       color: "purple"
@@ -184,7 +203,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
           <div>
@@ -294,6 +313,36 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Revenue Statistics */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Thống kê Doanh thu STI</h3>
+            <Link to="/admin/revenue" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+              Xem báo cáo chi tiết
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {stats.totalRevenue.toLocaleString('vi-VN')} VNĐ
+              </div>
+              <div className="text-sm text-green-700 mt-1">Tổng doanh thu</div>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.pendingOrders}
+              </div>
+              <div className="text-sm text-blue-700 mt-1">Đơn hàng chờ xử lý</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {stats.revenueGrowth > 0 ? '+' : ''}{stats.revenueGrowth}%
+              </div>
+              <div className="text-sm text-purple-700 mt-1">Tăng trưởng</div>
+            </div>
+          </div>
         </div>
 
         {/* Recent Activities */}

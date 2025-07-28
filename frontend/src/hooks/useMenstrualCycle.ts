@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { menstrualCycleService, TodayStatus, CycleData } from '../services/menstrualCycleService';
+import { 
+  menstrualCycleService, 
+  TodayStatus, 
+  CycleData 
+} from '../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
 
 interface UseMenstrualCycleReturn {
@@ -14,83 +18,148 @@ interface UseMenstrualCycleReturn {
 const useMenstrualCycle = (userId?: string): UseMenstrualCycleReturn => {
   const [todayStatus, setTodayStatus] = useState<TodayStatus | null>(null);
   const [cycles, setCycles] = useState<CycleData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isLoadingRef = useRef(false);
-  const lastLoadTimeRef = useRef<number>(0);
-  
-  // Cache timeout (5 minutes)
-  const CACHE_TIMEOUT = 5 * 60 * 1000;
+  const hasLoadedRef = useRef(false);
+
+  console.log('[useMenstrualCycle] Hook called, userId:', userId, 'loading:', loading, 'hasLoaded:', hasLoadedRef.current);
 
   const loadData = useCallback(async () => {
-    if (!userId) return;
-    
-    // Tránh duplicate calls
-    if (isLoadingRef.current) {
-
-
+    if (!userId) {
+      console.log('[useMenstrualCycle] Skipping loadData - no userId');
       return;
     }
 
-    // Check cache timeout
-    const now = Date.now();
-    if (now - lastLoadTimeRef.current < CACHE_TIMEOUT && cycles.length > 0) {
-      return;
-    }
+    console.log('[useMenstrualCycle] Starting loadData with userId:', userId);
+    setLoading(true);
+    setError(null);
     
     try {
-      isLoadingRef.current = true;
-      setLoading(true);
-      setError(null);
-      
       const [todayResponse, cyclesResponse] = await Promise.all([
         menstrualCycleService.getTodayStatus(),
         menstrualCycleService.getCycles()
       ]);
 
-      // Xử lý response cho user mới (success=true nhưng có thể data=null/[])
+      console.log('[useMenstrualCycle] API responses:', { 
+        todayResponse: {
+          success: todayResponse.success,
+          data: todayResponse.data,
+          message: todayResponse.message
+        }, 
+        cyclesResponse: {
+          success: cyclesResponse.success,
+          data: cyclesResponse.data,
+          dataType: typeof cyclesResponse.data,
+          isArray: Array.isArray(cyclesResponse.data),
+          length: cyclesResponse.data?.length,
+          message: cyclesResponse.message
+        }
+      });
+
       if (todayResponse.success) {
         setTodayStatus(todayResponse.data || null);
       } else {
-        // Chỉ log warning, không set error cho user chưa có dữ liệu
         console.warn('Today status không có dữ liệu:', todayResponse.message);
         setTodayStatus(null);
       }
 
       if (cyclesResponse.success) {
-        setCycles(cyclesResponse.data || []);
+        console.log('[useMenstrualCycle] Cycles response data:', {
+          data: cyclesResponse.data,
+          dataType: typeof cyclesResponse.data,
+          isArray: Array.isArray(cyclesResponse.data),
+          length: cyclesResponse.data?.length
+        });
+        
+        // Ensure cycles is always an array
+        const cyclesData = Array.isArray(cyclesResponse.data) ? cyclesResponse.data : [];
+        console.log('[useMenstrualCycle] Setting cycles to:', cyclesData);
+        setCycles(cyclesData);
       } else {
-        // Chỉ log warning, không set error cho user chưa có dữ liệu
         console.warn('Cycles không có dữ liệu:', cyclesResponse.message);
         setCycles([]);
       }
       
-      lastLoadTimeRef.current = now;
     } catch (err: any) {
-      // Chỉ hiển thị error cho network errors hoặc server errors thật sự
-      console.error('Network error loading menstrual cycle data:', err);
+      console.error('[useMenstrualCycle] API error:', err);
       if (err.response?.status >= 500 || !err.response) {
         setError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
         toast.error('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
       } else {
-        // Cho các lỗi 4xx, không hiển thị error (có thể là user chưa có dữ liệu)
         console.warn('API response error (likely no data):', err.response?.data?.message);
         setError(null);
       }
     } finally {
       setLoading(false);
-      isLoadingRef.current = false;
+      hasLoadedRef.current = true;
+      console.log('[useMenstrualCycle] loadData completed');
     }
-  }, [userId, cycles.length]);
+  }, [userId]);
 
   const refresh = useCallback(async () => {
-    lastLoadTimeRef.current = 0; // Reset cache
-    await loadData();
-  }, [loadData]);
+    console.log('[useMenstrualCycle] refresh called');
+    hasLoadedRef.current = false; // Reset loaded flag
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const [todayResponse, cyclesResponse] = await Promise.all([
+        menstrualCycleService.getTodayStatus(),
+        menstrualCycleService.getCycles()
+      ]);
+
+      console.log('[useMenstrualCycle] Refresh API responses:', { todayResponse, cyclesResponse });
+
+      if (todayResponse.success) {
+        setTodayStatus(todayResponse.data || null);
+      } else {
+        console.warn('Today status không có dữ liệu:', todayResponse.message);
+        setTodayStatus(null);
+      }
+
+      if (cyclesResponse.success) {
+        console.log('[useMenstrualCycle] Refresh cycles response data:', {
+          data: cyclesResponse.data,
+          dataType: typeof cyclesResponse.data,
+          isArray: Array.isArray(cyclesResponse.data),
+          length: cyclesResponse.data?.length
+        });
+        
+        // Ensure cycles is always an array
+        const cyclesData = Array.isArray(cyclesResponse.data) ? cyclesResponse.data : [];
+        console.log('[useMenstrualCycle] Refresh setting cycles to:', cyclesData);
+        setCycles(cyclesData);
+      } else {
+        console.warn('Cycles không có dữ liệu:', cyclesResponse.message);
+        setCycles([]);
+      }
+      
+    } catch (err: any) {
+      console.error('[useMenstrualCycle] Refresh API error:', err);
+      if (err.response?.status >= 500 || !err.response) {
+        setError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+        toast.error('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      } else {
+        console.warn('API response error (likely no data):', err.response?.data?.message);
+        setError(null);
+      }
+    } finally {
+      setLoading(false);
+      hasLoadedRef.current = true;
+      console.log('[useMenstrualCycle] refresh completed');
+    }
+  }, []);
 
   useEffect(() => {
+    console.log('[useMenstrualCycle] useEffect triggered, userId:', userId);
     if (userId) {
       loadData();
+    } else {
+      setLoading(false);
+      setError(null);
+      setTodayStatus(null);
+      setCycles([]);
+      hasLoadedRef.current = false;
     }
   }, [userId, loadData]);
 

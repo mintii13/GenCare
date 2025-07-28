@@ -1,127 +1,270 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService } from '../services/auth'; 
-import { User } from '../services/userService';
-import apiClient from '../services/apiClient';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { User } from '../types/user';
+import { apiClient } from '../services/apiClient';
 import { API } from '../config/apiEndpoints';
+import { getToken, getUser, isAuthenticated } from '../utils/authUtils';
+import { env } from '../config/environment';
+import LoginModal from '../components/auth/LoginModal';
+import toast from 'react-hot-toast';
+  
+const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
 
+// Define missing interfaces
 interface GetUserProfileResponse {
   success: boolean;
   user: User;
+  message?: string;
 }
 
+export type ModalMode = 'login' | 'register';
+
 interface AuthContextType {
-  user: User | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
-  logout: () => void;
+  user: User | null;
+  token: string | null;
+  isModalOpen: boolean;
+  modalMode: ModalMode;
   isLoading: boolean;
-  updateUserInfo: (userData: User) => void;
+  login: (userData: User, token: string) => void;
+  logout: () => Promise<void>;
+  updateUserInfo: (userData: Partial<User>) => void;
+  openModal: (mode?: ModalMode) => void;
+  closeModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticatedState, setIsAuthenticated] = useState<boolean>(() => isAuthenticated());
+  const [user, setUser] = useState<User | null>(getUser());
+  const [token, setToken] = useState<string | null>(getToken());
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>('login');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Race condition protection
+  const isValidatingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const validateToken = async () => {
-      const token = authService.getToken();
+      // Prevent concurrent validations
+      if (isValidatingRef.current) {
+        return;
+      }
+      
+      // Cancel previous request if exists
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const cachedUser = localStorage.getItem('user');
       
-      console.log('🔍 AuthContext: validateToken called', { hasToken: !!token, hasCachedUser: !!cachedUser });
+      if (!token) {
+        if (isMounted) {
+          setUser(null);
+          setIsAuthenticated(false);
+          setToken(null);
+        }
+        return;
+      }
+
+      isValidatingRef.current = true;
+      setIsLoading(true);
       
-      if (token) {
-        // Sử dụng cached user trước khi validate
-        if (cachedUser) {
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+      
+      try {
+        // Use cached user first
+        if (cachedUser && isMounted) {
           try {
             const parsedUser = JSON.parse(cachedUser);
             setUser(parsedUser);
-            console.log('✅ AuthContext: Using cached user', parsedUser.role);
-          } catch (_e) {
-            console.error('❌ AuthContext: Failed to parse cached user');
+            setIsAuthenticated(true);
+            setToken(token);
+          } catch (e) {
+            console.error('Failed to parse cached user');
+            localStorage.removeItem('user');
           }
         }
         
-        try {
-          // Sử dụng endpoint đúng từ apiEndpoints
-          const response = await apiClient.get<GetUserProfileResponse>(API.Profile.GET);
-          if (response.data.success && response.data.user) {
+        // Validate with server (with timeout and abort signal)
+        const response = await Promise.race([
+          apiClient.get<GetUserProfileResponse>(API.Profile.GET, {
+            signal: abortControllerRef.current.signal
+          }),
+          new Promise<never>((_, reject) => {
+            timeoutRef.current = setTimeout(() => reject(new Error('Request timeout')), 10000);
+          })
+        ]);
+          
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        
+        if (isMounted && response.data.success && response.data.user) {
             setUser(response.data.user);
+          setIsAuthenticated(true);
+          setToken(token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
-            console.log('✅ AuthContext: Token validated, user loaded', response.data.user.role);
           } else {
             throw new Error('Invalid API response format');
           }
-        } catch (error) {
-          console.error('❌ AuthContext: Token validation failed', error);
-          // Chỉ logout nếu token thực sự invalid (401/403), không phải network error
-          if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
-            console.log('🚪 AuthContext: Logging out due to invalid token');
-            await authService.logout(); 
-            setUser(null);
-          } else {
-            console.log('🔄 AuthContext: Keeping cached user due to network error');
-            // Giữ cached user nếu chỉ là network error
-          }
-          // Xóa token không hợp lệ
-          await authService.logout(); 
-          setUser(null);
+        
+      } catch (error: any) {
+        if (error.name === 'AbortError' || error.name === 'CanceledError' || error.message === 'Request timeout' || error.message === 'canceled') {
+          // Request was cancelled, ignore
+          return;
         }
-      } else {
-        console.log('❌ AuthContext: No token found');
-        setUser(null);
+        
+        if (isMounted) {
+          // Only logout on auth errors, not network errors
+          if (error?.response?.status === 401 || error?.response?.status === 403) {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            localStorage.removeItem('user');
+            setUser(null);
+            setIsAuthenticated(false);
+            setToken(null);
+          }
+          // Keep cached user for network errors
+        }
+        
+        console.error('Token validation failed:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        isValidatingRef.current = false;
       }
-      setIsLoading(false);
     };
     
     validateToken();
 
     const handleStorageChange = (event: StorageEvent) => {
-      // Dùng key của authService thay vì key cục bộ
-      if (event.key === 'gencare_auth_token' || event.key === 'user') {
+      if (event.key === AUTH_TOKEN_KEY || event.key === 'user') {
+        // Debounce storage events
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+          if (isMounted) {
         validateToken();
+          }
+        }, 100);
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
 
+    // Cleanup function
     return () => {
+      isMounted = false;
+      
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
       window.removeEventListener('storage', handleStorageChange);
+      isValidatingRef.current = false;
     };
   }, []);
 
-
-  const login = (userData: User, token: string) => {
+  const login = (userData: User, userToken: string) => {
     setUser(userData);
-    authService.setToken(token);
+    setToken(userToken);
+    setIsAuthenticated(true);
+    localStorage.setItem(AUTH_TOKEN_KEY, userToken);
     localStorage.setItem('user', JSON.stringify(userData));
-    // apiClient interceptor sẽ tự động xử lý header
   };
 
-  const logout = async () => {
-    // Clear user state immediately for faster UX
-    setUser(null);
+  const logout = async (): Promise<void> => {
+    // Cancel any ongoing validation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     
-    // Call logout service but don't wait for it
-    authService.logout();
-    // Note: clearAllTokens() and redirect are handled in authService.logout()
+    try {
+      // Try to call logout endpoint if token exists
+      const currentToken = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (currentToken) {
+        await apiClient.post('/auth/logout', {}, {
+          headers: { Authorization: `Bearer ${currentToken}` }
+        });
+      }
+    } catch (error) {
+      // Ignore logout API errors
+      console.error('Logout API call failed:', error);
+    } finally {
+      // Always clear local state
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem('user');
+    setUser(null);
+    setToken(null);
+      setIsAuthenticated(false);
+      closeModal();
+      
+      // Mở modal đăng nhập sau khi logout
+      setTimeout(() => {
+        openModal('login');
+      }, 500);
+    }
   };
 
-  const updateUserInfo = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+  const updateUserInfo = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
+  const openModal = (mode: ModalMode = 'login') => {
+    setModalMode(mode);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !isLoading && !!user, login, logout, isLoading, updateUserInfo }}>
+      <AuthContext.Provider value={{
+        isAuthenticated: isAuthenticatedState,
+        user,
+        token,
+        isModalOpen,
+        modalMode,
+        isLoading,
+        login,
+        logout,
+        updateUserInfo,
+        openModal,
+        closeModal
+      }}>
       {children}
+      <LoginModal 
+        isOpen={isModalOpen} 
+        onClose={closeModal} 
+        initialMode={modalMode}
+      />
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
   return context;
-};
+}; 
