@@ -213,8 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthenticated(false);
       closeModal();
       
-      // Hiển thị toast và mở modal đăng nhập
-      toast.error('Bạn cần đăng nhập để sử dụng chức năng này');
+      // Mở modal đăng nhập sau khi logout
       setTimeout(() => {
         openModal('login');
       }, 500);
