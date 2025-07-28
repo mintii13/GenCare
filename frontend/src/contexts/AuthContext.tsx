@@ -5,6 +5,7 @@ import { API } from '../config/apiEndpoints';
 import { getToken, getUser, isAuthenticated } from '../utils/authUtils';
 import { env } from '../config/environment';
 import LoginModal from '../components/auth/LoginModal';
+import toast from 'react-hot-toast';
   
 const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
 
@@ -207,10 +208,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Always clear local state
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem('user');
-    setUser(null);
-    setToken(null);
+      setUser(null);
+      setToken(null);
       setIsAuthenticated(false);
       closeModal();
+      
+      // Hiển thị toast và mở modal đăng nhập
+      toast.error('Bạn cần đăng nhập để sử dụng chức năng này');
+      setTimeout(() => {
+        openModal('login');
+      }, 500);
     }
   };
 
