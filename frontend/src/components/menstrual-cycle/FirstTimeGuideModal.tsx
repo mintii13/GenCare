@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -36,9 +36,9 @@ const FirstTimeGuideModal: React.FC<FirstTimeGuideModalProps> = ({ isOpen, onClo
           <DialogTitle className="text-2xl font-bold text-gray-900">
             Chào mừng bạn đến với tính năng theo dõi chu kỳ kinh nguyệt!
           </DialogTitle>
-          <p className="text-gray-600 mt-2">
+          <DialogDescription className="text-gray-600 mt-2">
             Hướng dẫn sử dụng và lưu ý quan trọng về sức khỏe sinh sản
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

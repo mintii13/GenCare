@@ -67,7 +67,7 @@ History and Audit Log mechanism for Admin: Cần có cơ chế để ghi lại l
 Canceled Order Rule: Đơn đã ở trạng thái Canceled thì không được sử dụng lại ở bất kỳ trường hợp nào
 
 MENSTRUAL CYCLE
-Period Grouping Rule: Nếu giữa thời gian hành kinh cách nhau không quá 1 ngày thì gộp thành 1 chuỗi hành kinh
+Period Grouping Rule: Nếu giữa thời gian hành kinh cách nhau không quá 7 ngày thì gộp thành 1 chuỗi hành kinh
 Cycle Length Calculation Rule: Chu kỳ được tính là số ngày giữa ngày bắt đầu kỳ kinh hiện tại và ngày bắt đầu kỳ kinh trước đó.
 Algorithms for Prediction: 
 - Ovulation date(ov) = cycle_start + (cycle_len - 14): https://www.pharmacity.vn/kham-pha-ve-fertile-window-va-cach-xac-dinh-chinh-xac-thoi-gian-thu-thai.htm

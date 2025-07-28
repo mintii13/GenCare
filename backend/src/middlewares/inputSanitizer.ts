@@ -284,9 +284,12 @@ export const sanitizeParams = (options: SanitizeOptions = {}) => {
 export const sanitizeRequest = (options: SanitizeOptions = {}) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log('[sanitizeRequest] Original body:', req.body);
+      
       // Sanitize body
       if (req.body && typeof req.body === 'object') {
         req.body = sanitizeObject(req.body, options);
+        console.log('[sanitizeRequest] Sanitized body:', req.body);
       }
       
       // Sanitize query
