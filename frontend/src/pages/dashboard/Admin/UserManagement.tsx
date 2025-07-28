@@ -86,8 +86,8 @@ const ROLE_TITLES = {
 } as const;
 
 const SPECIALIZATION_LABELS: Record<SpecializationType, string> = {
-  [SpecializationType.General]: 'Nam Phụ khoa',
-  [SpecializationType.SexualHealth]: 'Sức khỏe sinh sản',
+  [SpecializationType.General]: 'Sức khỏe sinh sản',
+  [SpecializationType.SexualHealth]: 'Nam Phụ khoa',
 };
 // Create User Modal Component
 interface CreateUserModalProps {
