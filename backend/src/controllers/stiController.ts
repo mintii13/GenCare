@@ -821,9 +821,6 @@ router.patch(
     async (req: Request, res: Response) => {
       try {
         const resultId = req.params.resultId;
-        const userId = req.jwtUser.userId;
-        const user = await UserRepository.findById(userId);
-  
         const updatedResult = await StiResultRepository.confirmAndGetAllFields(resultId);
   
         if (!updatedResult) {
@@ -832,6 +829,9 @@ router.patch(
             message: 'STI result not found',
           });
         }
+        const result = await StiResultRepository.getUserByResultId(resultId);
+        const user = result[0].user;
+        console.log(result);
         await MailUtils.sendStiResultEmail(
             user.email, user, updatedResult
         )

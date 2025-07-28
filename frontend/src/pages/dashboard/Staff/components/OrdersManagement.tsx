@@ -691,7 +691,6 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       width: 110,
       render: (_: any, record: StiOrder) => {
         console.log(record.staff?.department);
-        const hasResult = !!orderResults[record._id];
         const isTestingCompleted = record.sti_result?.is_testing_completed == true;
         console.log("sti result: ======================>", record.sti_result)
         const canManageResult = record.order_status === 'Testing';
@@ -729,14 +728,14 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 disabled={!canManageResult || isTestingCompleted}
               />
             </Tooltip>
-            <Tooltip title="Xem kết quả">
+            {/* <Tooltip title="Xem kết quả">
               <Button
                 icon={<FileTextOutlined />}
                 onClick={() => handleViewResults(record._id)}
                 size="small"
                 disabled={!canManageResult || (orderResults[record._id]?.sti_result_items?.length ?? 0) === 0 }
               />
-            </Tooltip>
+            </Tooltip> */}
               </>
             )}
           </Space>

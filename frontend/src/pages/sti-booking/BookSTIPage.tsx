@@ -77,9 +77,9 @@ const BookSTIPage: React.FC = () => {
   }, [user]);
 
   const disabledDate = (current: dayjs.Dayjs) => {
-    const today = dayjs().startOf('day');
+    const tomorrow = dayjs().add(1, 'day').startOf('day');
     const isWeekend = current.day() === 0;
-    return current && (current < today || isWeekend);
+    return current && (current <= tomorrow || isWeekend);
   };
 
   const handleDateChange = (date: dayjs.Dayjs | null) => {

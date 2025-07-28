@@ -155,13 +155,13 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
           );
         }
       },
-      {
-        title: 'Giá trị tham chiếu',
-        dataIndex: 'normalRange',
-        key: 'normalRange',
-        width: '25%',
-        render: (text: string) => <Text type="secondary">{text}</Text>
-      },
+      // {
+      //   title: 'Giá trị tham chiếu',
+      //   dataIndex: 'normalRange',
+      //   key: 'normalRange',
+      //   width: '25%',
+      //   render: (text: string) => <Text type="secondary">{text}</Text>
+      // },
     //   {
     //     title: 'Đánh giá',
     //     key: 'assessment',

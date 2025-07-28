@@ -342,5 +342,50 @@ export class StiResultRepository {
         throw error;
       }
     }
-      
+    
+    public static async getUserByResultId(resultId: string){
+      try {
+        const objectedResultId = new mongoose.Types.ObjectId(resultId);
+        return await StiResult.aggregate([
+        {
+          $match: { _id: objectedResultId }
+        },
+        {
+          $lookup: {
+            from: 'stiorders',
+            localField: 'sti_order_id',
+            foreignField: '_id',
+            as: 'order'
+          }
+        },
+        { $unwind: '$order' },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'order.customer_id',
+            foreignField: '_id',
+            as: 'user'
+          }
+        },
+        { $unwind: '$user' },
+        {
+          $project: {
+            _id: 1,
+            is_testing_completed: 1,
+            diagnosis: 1,
+            is_confirmed: 1,
+            sti_order_id: 1,
+            'user._id': 1,
+            'user.email': 1,
+            'user.full_name': 1,
+            'user.phone': 1,
+            'user.gender': 1,
+            'user.date_of_birth': 1
+          }
+        }
+      ]);
+      } catch (error) {
+        
+      }
+    }
 }

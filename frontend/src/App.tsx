@@ -14,6 +14,8 @@ import DashboardRedirect from './components/common/DashboardRedirect';
 import LoginRedirect from './components/common/LoginRedirect';
 import OrdersManagement from './pages/dashboard/Staff/components/OrdersManagement';
 import StiResultsManagementConsultant from './pages/dashboard/Consultant/components/StiResultManagementPage';
+import path from 'path';
+import StiResultsPage from './pages/dashboard/Customer/MyStiResultsPage';
 
 // Lazy load all major pages for better performance
 const HomePage = lazy(() => import('./pages/home'));
@@ -201,7 +203,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
             } />
             <Route path="/my-sti-results" element={
               <RoleGuard allowedRoles={['customer']} showError={true}>
-                <MySTIResults />
+                <StiResultsPage />
               </RoleGuard>
             } />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />

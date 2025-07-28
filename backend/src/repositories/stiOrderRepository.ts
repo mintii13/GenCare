@@ -41,6 +41,17 @@ export class StiOrderRepository {
         return await order.save();
     }
 
+    public static async hasBookedOrder(customerId: string): Promise<boolean> {
+      const objectId = new mongoose.Types.ObjectId(customerId);
+
+      const exists = await StiOrder.exists({
+        customer_id: objectId,
+        order_status: 'Booked'
+      });
+
+      return !!exists;
+    }
+
     public static async getTotalRevenueByCustomer(customerId: string): Promise<number> {
         const result = await StiOrder.aggregate([
             {

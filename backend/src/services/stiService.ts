@@ -400,6 +400,14 @@ export class StiService {
                 };
             }
 
+            const hasBooked = await StiOrderRepository.hasBookedOrder(customer_id);
+            if (hasBooked){
+                return{
+                    success: false,
+                    message: 'Customer has already booked an STI order'
+                }
+            }
+
             // =================== VALIDATION END ===================
 
             const scheduleResult = await this.prepareScheduleForOrder(order_date);
