@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export enum SpecializationType {
-    General = 'General',
-    SexualHealth = 'Sexual Health'
+    General = 'Nam Phụ khoa',
+    SexualHealth = 'Sức khỏe sinh sản'
 }
 
 export interface IConsultant extends Document {

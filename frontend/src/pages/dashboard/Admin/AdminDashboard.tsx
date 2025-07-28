@@ -111,16 +111,16 @@ const AdminDashboard: React.FC = () => {
       textColor: "text-blue-600",
       count: stats.totalUsers
     },
-    {
-      title: "Quản lý gói xét nghiệm",
-      description: "Thêm, sửa, xóa các gói xét nghiệm và quản lý giá",
-      icon: FaVial,
-      link: "/admin/test-packages",
-      color: "bg-green-500",
-      bgColor: "bg-green-50",
-      textColor: "text-green-600",
-      count: 45
-    },
+    // {
+    //   title: "Quản lý gói xét nghiệm",
+    //   description: "Thêm, sửa, xóa các gói xét nghiệm và quản lý giá",
+    //   icon: FaVial,
+    //   link: "/admin/test-packages",
+    //   color: "bg-green-500",
+    //   bgColor: "bg-green-50",
+    //   textColor: "text-green-600",
+    //   count: 45
+    // },
     {
       title: "Quản lý bài viết",
       description: "Quản lý nội dung blog, kiểm duyệt và xuất bản bài viết",
@@ -131,16 +131,16 @@ const AdminDashboard: React.FC = () => {
       textColor: "text-purple-600",
       count: stats.newBlogs
     },
-    {
-      title: "Thống kê doanh thu",
-      description: "Xem báo cáo doanh thu từ dịch vụ xét nghiệm và tư vấn",
-      icon: FaChartLine,
-      link: "/admin/revenue",
-      color: "bg-yellow-500",
-      bgColor: "bg-yellow-50",
-      textColor: "text-yellow-600",
-      count: null
-    },
+    // {
+    //   title: "Thống kê doanh thu",
+    //   description: "Xem báo cáo doanh thu từ dịch vụ xét nghiệm và tư vấn",
+    //   icon: FaChartLine,
+    //   link: "/admin/revenue",
+    //   color: "bg-yellow-500",
+    //   bgColor: "bg-yellow-50",
+    //   textColor: "text-yellow-600",
+    //   count: null
+    // },
     {
       title: "Quản lý lịch hẹn",
       description: "Theo dõi và quản lý lịch hẹn tư vấn và xét nghiệm",
