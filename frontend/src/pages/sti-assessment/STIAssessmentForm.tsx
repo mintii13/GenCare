@@ -24,7 +24,7 @@ const STIAssessmentForm = () => {
       try {
         setPackagesLoading(true);
         const response = await STIAssessmentService.getPackageInfo();
-        
+
         if (response.success && response.data) {
           // Backend trả về { data: { packages: [...], tests: [...] } }
           const responseData = response.data as any;
@@ -129,13 +129,72 @@ const STIAssessmentForm = () => {
 
   useEffect(() => {
     if (formData.sexually_active === 'not_active') {
-      // Clear sexual orientation when not active
       updateFormData('sexual_orientation', 'heterosexual');
       updateFormData('new_partner_recently', false);
       updateFormData('partner_has_sti', false);
-      updateFormData('condom_use', 'never'); // Set condom_use to 'never' when not sexually active
+      updateFormData('condom_use', ''); //  Set to empty, not 'never'
+    } else if (formData.sexually_active && formData.sexually_active !== 'not_active') {
+      //  Only set default condom_use when actually sexually active
+      if (!formData.condom_use || formData.condom_use === '') {
+        updateFormData('condom_use', 'sometimes'); // Better default than 'never'
+      }
     }
   }, [formData.sexually_active]);
+
+  // Pregnancy logic - auto-set sexually active  
+  useEffect(() => {
+    if (formData.is_pregnant === true) {
+      // Pregnant women must be sexually active - just clear 'not_active' if selected
+      if (formData.sexually_active === 'not_active') {
+        updateFormData('sexually_active', ''); // Clear to let user choose active_single or active_multiple
+        toast.success('Phụ nữ mang thai cần chọn mức độ hoạt động tình dục để đánh giá chính xác', {
+          duration: 3000,
+          position: 'top-center',
+        });
+      }
+    }
+  }, [formData.is_pregnant]);
+
+  // Gender-based validation
+  useEffect(() => {
+    // Clear pregnancy when not female
+    if (formData.gender !== 'female' && formData.is_pregnant) {
+      updateFormData('is_pregnant', false);
+      updateFormData('pregnancy_trimester', '');
+    }
+
+    // Clear MSM orientation when not male
+    if (formData.gender !== 'male' && formData.sexual_orientation === 'msm') {
+      updateFormData('sexual_orientation', 'heterosexual');
+    }
+
+    // Clear cervix option when not transgender
+    if (formData.gender !== 'transgender' && formData.risk_factors.includes('has_cervix')) {
+      const newRiskFactors = formData.risk_factors.filter(factor => factor !== 'has_cervix');
+      updateFormData('risk_factors', newRiskFactors);
+    }
+  }, [formData.gender]);
+
+  // HIV status validation
+  useEffect(() => {
+    if (formData.hiv_status === 'positive') {
+      // HIV+ patients shouldn't use PrEP
+      if (formData.risk_factors.includes('prep_user')) {
+        const newRiskFactors = formData.risk_factors.filter(factor => factor !== 'prep_user');
+        updateFormData('risk_factors', newRiskFactors);
+      }
+    }
+  }, [formData.hiv_status]);
+
+  useEffect(() => {
+    const age = parseInt(formData.age);
+
+    // Clear pregnancy when woman is over 60
+    if (formData.gender === 'female' && age > 60 && formData.is_pregnant) {
+      updateFormData('is_pregnant', false);
+      updateFormData('pregnancy_trimester', '');
+    }
+  }, [formData.age, formData.gender]);
 
   const validateAge = (value: string) => {
     if (value) {
@@ -177,12 +236,12 @@ const STIAssessmentForm = () => {
         has_symptoms: formData.symptoms.length > 0,
         number_of_partners: formData.sexually_active === 'not_active' ? 'none' :
           formData.sexually_active === 'active_single' ? 'one' : 'multiple',
-        // Use actual_orientation for backend if it exists, otherwise use sexual_orientation
         sexual_orientation: formData.actual_orientation || formData.sexual_orientation,
         previous_sti_history: formData.previous_sti_history || [],
         symptoms: formData.symptoms || [],
         risk_factors: formData.risk_factors || [],
-        age: parseInt(formData.age) || 0
+        age: parseInt(formData.age) || 0,
+        condom_use: formData.sexually_active === 'not_active' ? 'never' : formData.condom_use
       };
 
       // Remove the actual_orientation field before sending to backend
@@ -249,33 +308,32 @@ const STIAssessmentForm = () => {
 
     setBookingLoading(true);
     try {
-      // Sử dụng cùng API như ở useEffect để đảm bảo consistency
       const response = await STIAssessmentService.getPackageInfo();
 
-                    if (response.success && response.data) {
-          const responseData = response.data as any;
-          const availablePackages = Array.isArray(responseData.packages) ? responseData.packages : [];
+      if (response.success && response.data) {
+        const responseData = response.data as any;
+        const availablePackages = Array.isArray(responseData.packages) ? responseData.packages : [];
 
-                  console.log('[DEBUG] handleBookingSTI - recommendation.recommended_package:', recommendation.recommended_package);
-         console.log('[DEBUG] handleBookingSTI - availablePackages:', availablePackages.map((pkg: any) => ({
-           code: pkg.code,
-           sti_package_code: pkg.sti_package_code,
-           name: pkg.name
-         })));
+        console.log('[DEBUG] handleBookingSTI - recommendation.recommended_package:', recommendation.recommended_package);
+        console.log('[DEBUG] handleBookingSTI - availablePackages:', availablePackages.map((pkg: any) => ({
+          code: pkg.code,
+          sti_package_code: pkg.sti_package_code,
+          name: pkg.name
+        })));
 
-         let targetPackage = availablePackages.find((pkg: any) =>
-           pkg.code === recommendation.recommended_package
-         );
-         
-         // Fallback: thử tìm bằng sti_package_code nếu không tìm thấy bằng code
-         if (!targetPackage) {
-           targetPackage = availablePackages.find((pkg: any) =>
-          pkg.sti_package_code === recommendation.recommended_package
+        let targetPackage = availablePackages.find((pkg: any) =>
+          pkg.code === recommendation.recommended_package
         );
-           console.log('[DEBUG] handleBookingSTI - Found using sti_package_code:', targetPackage);
-         }
 
-         console.log('[DEBUG] handleBookingSTI - Final targetPackage:', targetPackage);
+        // Fallback: thử tìm bằng sti_package_code nếu không tìm thấy bằng code
+        if (!targetPackage) {
+          targetPackage = availablePackages.find((pkg: any) =>
+            pkg.sti_package_code === recommendation.recommended_package
+          );
+          console.log('[DEBUG] handleBookingSTI - Found using sti_package_code:', targetPackage);
+        }
+
+        console.log('[DEBUG] handleBookingSTI - Final targetPackage:', targetPackage);
 
         if (targetPackage) {
           // Sử dụng code làm packageId hoặc có thể cần mapping với backend package ID
@@ -344,30 +402,37 @@ const STIAssessmentForm = () => {
   };
 
   const getPackageInfo = (packageCode: string) => {
-      // Đảm bảo packages là array trước khi gọi find
-      if (!Array.isArray(packages)) {
-        console.error('packages is not an array:', packages);
-        return null;
-      }
-      
-      console.log('[DEBUG] getPackageInfo called with packageCode:', packageCode);
-      console.log('[DEBUG] Available packages:', packages.map(pkg => ({
-        code: pkg.code,
-        sti_package_code: pkg.sti_package_code,
-        name: pkg.name,
-        sti_package_name: pkg.sti_package_name
-      })));
-      
-      // Thử tìm bằng cả 2 field để đảm bảo
-      let found = packages.find(pkg => pkg.code === packageCode);
-      if (!found) {
-        found = packages.find(pkg => pkg.sti_package_code === packageCode);
-        console.log('[DEBUG] Found using sti_package_code:', found);
-      } else {
-        console.log('[DEBUG] Found using code:', found);
-      }
-      
-      return found;
+    // Đảm bảo packages là array trước khi gọi find
+    if (!Array.isArray(packages)) {
+      console.error('packages is not an array:', packages);
+      return null;
+    }
+
+    console.log('[DEBUG] getPackageInfo called with packageCode:', packageCode);
+    console.log('[DEBUG] Available packages:', packages.map(pkg => ({
+      code: pkg.code,
+      sti_package_code: pkg.sti_package_code,
+      name: pkg.name,
+      sti_package_name: pkg.sti_package_name
+    })));
+
+    // Thử tìm bằng cả 2 field để đảm bảo
+    let found = packages.find(pkg => pkg.code === packageCode);
+    if (!found) {
+      found = packages.find(pkg => pkg.sti_package_code === packageCode);
+      console.log('[DEBUG] Found using sti_package_code:', found);
+    } else {
+      console.log('[DEBUG] Found using code:', found);
+    }
+
+    return found;
+  };
+
+  const shouldShowPregnancyOptions = () => {
+    if (formData.gender !== 'female') return false;
+    const age = parseInt(formData.age);
+    if (age > 60) return false;
+    return true;
   };
 
   const renderPersonalInfo = () => (
@@ -407,7 +472,7 @@ const STIAssessmentForm = () => {
         </div>
       </div>
 
-      {formData.gender === 'female' && (
+      {shouldShowPregnancyOptions() && (
         <div className="bg-pink-50 p-4 rounded-lg border border-pink-200 mt-4">
           <div className="flex items-center space-x-2 mb-3">
             <input
@@ -467,10 +532,13 @@ const STIAssessmentForm = () => {
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
           >
             <option value="">Chọn tình trạng</option>
-            <option value="not_active">Không hoạt động tình dục</option>
+            {!formData.is_pregnant && (
+              <option value="not_active">Không hoạt động tình dục</option>
+            )}
             <option value="active_single">Có hoạt động - 1 bạn tình cố định</option>
             <option value="active_multiple">Có hoạt động - nhiều bạn tình (≥2 người)</option>
           </select>
+
           <p className="text-xs text-gray-500 mt-1">
           </p>
         </div>
@@ -494,7 +562,7 @@ const STIAssessmentForm = () => {
                 <option value="bisexual">Lưỡng tính</option>
               </select>
 
-              {/* ✅ Enhanced MSM information */}
+              {/*  Enhanced MSM information */}
               {formData.sexual_orientation === 'msm' && (
                 <div className="bg-blue-50 p-3 rounded border border-blue-200 mt-2">
                   <p className="text-xs text-blue-700">
@@ -554,7 +622,9 @@ const STIAssessmentForm = () => {
                 value={formData.condom_use}
                 onChange={(e) => updateFormData('condom_use', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                required
               >
+                <option value="">Chọn tần suất sử dụng</option>
                 <option value="always">Luôn luôn sử dụng</option>
                 <option value="sometimes">Thỉnh thoảng sử dụng</option>
                 <option value="rarely">Hiếm khi sử dụng</option>
@@ -581,7 +651,7 @@ const STIAssessmentForm = () => {
         <div>
           <label className="block text-sm font-medium mb-3">Tiền sử mắc STI (có thể chọn nhiều)</label>
           <div className="grid grid-cols-2 gap-3">
-            {/* ✅ ENHANCED: Updated STI codes to match backend mapping */}
+            {/*  ENHANCED: Updated STI codes to match backend mapping */}
             {[
               { code: 'chlamydia', label: 'Chlamydia' },
               { code: 'gonorrhea', label: 'Lậu (Gonorrhea)' },
@@ -705,7 +775,7 @@ const STIAssessmentForm = () => {
               { key: 'blood_transfusion', label: 'Truyền máu/ghép tạng' },
               { key: 'prep_user', label: 'Đang dùng PrEP (thuốc dự phòng HIV)' },
               { key: 'immunocompromised', label: 'Suy giảm miễn dịch' },
-              // ✅ NEW: Added geographic risk factor
+              //  NEW: Added geographic risk factor
               { key: 'geographic_risk', label: 'Sống ở vùng có nguy cơ STI cao theo địa lý' }
             ].map(risk => (
               <div key={risk.key} className="flex items-center space-x-2">
@@ -729,7 +799,7 @@ const STIAssessmentForm = () => {
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
           >
             <option value="normal">Khu vực bình thường</option>
-            {/* ✅ ENHANCED: All high-prevalence settings from backend */}
+            {/*  ENHANCED: All high-prevalence settings from backend */}
             <option value="sti_clinic">Phòng khám STI/Sức khỏe tình dục</option>
             <option value="correctional_facility">Cơ sở giam giữ/Nhà tù</option>
             <option value="adolescent_clinic">Phòng khám thanh thiếu niên</option>
@@ -831,7 +901,7 @@ const STIAssessmentForm = () => {
                   console.log('[DEBUG] packageInfo.tests length:', packageInfo.tests?.length);
                   return null;
                 })()}
-                
+
                 {packageInfo.tests && packageInfo.tests.length > 0 ? (
                   <div className="grid grid-cols-1 gap-3">
                     {packageInfo.tests.map((test: string, index: number) => (
@@ -845,9 +915,9 @@ const STIAssessmentForm = () => {
                         <div className="flex-shrink-0 text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded-full">
                           ✓ Bao gồm
                         </div>
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center">
@@ -963,8 +1033,15 @@ const STIAssessmentForm = () => {
 
   const isStepValid = () => {
     const age = parseInt(formData.age);
-    return formData.age && formData.gender && age >= 13 && age <= 100 &&
+    const basicValid = formData.age && formData.gender && age >= 13 && age <= 100 &&
       formData.sexually_active && formData.hiv_status;
+
+    // Additional validation for sexually active users
+    if (formData.sexually_active !== 'not_active' && formData.sexually_active) {
+      return basicValid && formData.condom_use; // Must select condom use when sexually active
+    }
+
+    return basicValid;
   };
 
   return (
