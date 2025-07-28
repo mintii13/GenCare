@@ -68,10 +68,9 @@ const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
 // Add new lazy import for Staff STI Management components
 const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrdersManagement'));
-// const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
 const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
-const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
+const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // 
 
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
