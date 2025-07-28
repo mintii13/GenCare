@@ -448,4 +448,51 @@ export class PaginationUtils {
 
         return filter;
     }
+
+    static validateStiResultPagination(query: any): {
+        page: number;
+        limit: number;
+        sort_by: string;
+        sort_order: 1 | -1;
+    } {
+        const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
+        const sort_by = query.sort_by || 'test_date'; // Giả sử STI Result sort theo ngày test
+        const sort_order = query.sort_order === 'asc' ? 1 : -1; // Default: newest first
+    
+        return { page, limit, sort_by, sort_order };
+    }
+
+    static buildStiResultFilter(query: any): Record<string, any> {
+        const filter: Record<string, any> = {};
+    
+        if (query.sti_order_id) {
+            filter.sti_order_id = query.sti_order_id;
+        }
+    
+        if (query.test_type) {
+            filter['sti_result_items.result.sample_type'] = query.test_type;
+        }
+    
+        if (query.date_from || query.date_to) {
+            filter['sti_result_items.result.time_completed'] = {};
+            if (query.date_from) {
+                filter['sti_result_items.result.time_completed'].$gte = new Date(query.date_from);
+            }
+            if (query.date_to) {
+                filter['sti_result_items.result.time_completed'].$lte = new Date(query.date_to);
+            }
+        }
+    
+        if (query.is_testing_completed !== undefined) {
+            filter.is_testing_completed = query.is_testing_completed === 'true';
+        }
+    
+        if (query.is_confirmed !== undefined) {
+            filter.is_confirmed = query.is_confirmed === 'true';
+        }
+    
+        return filter;
+    }
+    
 }

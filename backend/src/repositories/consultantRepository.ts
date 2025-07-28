@@ -46,7 +46,6 @@ export class ConsultantRepository {
         try {
             const userObjectId = new mongoose.Types.ObjectId(userId);
             console.log('Updating consultant where user_id =', userObjectId);
-            console.log('Update data:', updateData);
 
             const result = await Consultant.findOneAndUpdate(
                 { user_id: userObjectId },

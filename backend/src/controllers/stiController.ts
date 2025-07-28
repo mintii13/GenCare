@@ -10,8 +10,8 @@ import { StiTestScheduleRepository } from '../repositories/stiTestScheduleReposi
 import { stiAuditLogger } from '../middlewares/stiAuditLogger';
 import { TargetType } from '../models/StiAuditLog';
 import { StiOrder } from '../models/StiOrder';
-import { validateStiOrderPagination } from '../middlewares/paginationValidation';
-import { StiOrderQuery } from '../dto/requests/StiRequest';
+import { validateStiOrderPagination, validateStiResultPagination } from '../middlewares/paginationValidation';
+import { StiOrderQuery, SendResultRequest } from '../dto/requests/StiRequest';
 import { validateAuditLogPagination } from '../middlewares/paginationValidation';
 import { AuditLogQuery } from '../dto/requests/AuditLogRequest';
 import { StiResultRepository } from '../repositories/stiResultRepository';
@@ -20,6 +20,9 @@ import session from 'express-session';
 import { StiTestRepository } from '../repositories/stiTestRepository';
 import { StiResult } from '../models/StiResult';
 import { StiPackageTest } from '../models/StiPackageTest';
+import { StiResultQuery } from '../dto/requests/PaginationRequest';
+import { MailUtils } from '../utils/mailUtils';
+import { UserRepository } from '../repositories/userRepository';
 
 const router = Router();
 /**
@@ -454,7 +457,6 @@ router.post('/createStiOrder', validateStiOrderCreate, authenticateToken, author
     try {
         const customer_id = (req.user as any).userId;
         const {order_date, notes } = req.body;
-        console.log("BODY===>", req.body)
         const result = await StiService.createStiOrder(customer_id, order_date, notes);
         if (result.success) {
             return res.status(201).json(result);
@@ -599,7 +601,6 @@ router.get('/getAllAuditLogs', authenticateToken, authorizeRoles('admin'), async
 router.get('/getRevenueByCustomer/:id', async (req: Request, res: Response) => {
     try {
         const customerId = req.params.id;
-        console.log('GET /getRevenueByCustomer - customerId:', customerId);
         const result = await StiService.getTotalRevenueByCustomer(customerId);
         if (result.success === false) {
             if (result.message === 'Invalid customer ID') {
@@ -784,11 +785,76 @@ router.patch('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 
     }
 });
 
+//save diagnosis and medical notes
+router.patch('/sti-result/result-id/:resultId', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) => {
+    try {
+        const { diagnosis, medical_notes } = req.body;
+        const resultId = req.params.resultId;
+        const user = req.user as any;
+
+        const result = await StiService.saveOrUpdateResultById(
+            resultId,
+            user,
+            diagnosis,
+            medical_notes
+        );
+        if (result.success){
+            return res.status(200).json(result);
+        }
+        if (result.message === 'Result id not found'){
+            return res.status(400).json(result)
+        }
+        return res.status(404).json(result);
+    } catch (error) {
+        console.error('Error saving STI results:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+router.patch(
+    '/sti-result/is-confirmed/:resultId',
+    authenticateToken,
+    authorizeRoles('staff', 'admin', 'consultant'),
+    async (req: Request, res: Response) => {
+      try {
+        const resultId = req.params.resultId;
+        const userId = req.jwtUser.userId;
+        const user = await UserRepository.findById(userId);
+  
+        const updatedResult = await StiResultRepository.confirmAndGetAllFields(resultId);
+  
+        if (!updatedResult) {
+          return res.status(404).json({
+            success: false,
+            message: 'STI result not found',
+          });
+        }
+        await MailUtils.sendStiResultEmail(
+            user.email, user, updatedResult
+        )
+        return res.status(200).json({
+          success: true,
+          message: 'STI result confirmed successfully',
+          data: updatedResult,
+        });
+      } catch (error) {
+        console.error('Error confirming STI result:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Internal server error',
+        });
+      }
+    }
+);
+  
+
 router.patch('/sti-result/:orderId/completed', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) =>{
     try {
         const orderId = req.params.orderId;
         const result = await StiResultRepository.completedResult(orderId);
-        console.log(result);
         if (!result) {
             return res.status(404).json({ success: false, message: 'Result not found' });
         }
@@ -797,8 +863,21 @@ router.patch('/sti-result/:orderId/completed', authenticateToken, authorizeRoles
         console.error('Error updating result:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
-}
-)
+})
+
+router.patch('/sti-result/result-id/:resultId/completed', authenticateToken, authorizeRoles('staff', 'admin', 'consultant'), async (req: Request, res: Response) =>{
+    try {
+        const resultId = req.params.resultId;
+        const result = await StiResultRepository.completedResultById(resultId);
+        if (!result) {
+            return res.status(404).json({ success: false, message: 'Result not found' });
+        }
+        return res.status(200).json({ success: true, message: 'Result updated successfully', result });
+    } catch (error) {
+        console.error('Error updating result:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+})
 
 router.get('/sti-test/:orderId', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -890,14 +969,25 @@ router.get('/my-result/:orderId', authenticateToken, authorizeRoles('customer'),
     }
 });
 
-router.get('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'customer'), async (req: Request, res: Response) => {
+router.get('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'customer','consultant'), async (req: Request, res: Response) => {
     try {
         const orderId = req.params.orderId;
+        const userId = req.jwtUser.userId;
         if (!orderId || orderId.trim() === '' || orderId === 'undefined') {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid order ID'
             });
+        }
+        const order = await StiOrderRepository.findOrderById(orderId);
+        if (!order){
+            return{
+                success: false,
+                message: 'Cannot find order'
+            }
+        }
+        if (!order.consultant_id) {
+            return res.status(403).json({ success: false, message: 'Consultant id is not found' });
         }
 
         const result = await StiService.getStiResultByOrderId(orderId);
@@ -914,6 +1004,7 @@ router.get('/sti-result/:orderId', authenticateToken, authorizeRoles('staff', 'a
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
+
 
 router.get('/sti-test/non-updated/:orderId', authenticateToken, authorizeRoles('staff', 'admin', 'customer'), async (req: Request, res: Response) => {
     try {
@@ -950,5 +1041,43 @@ router.get('/sti-test/non-updated/:orderId', authenticateToken, authorizeRoles('
     }
 });
 
+router.get(
+    '/sti-results',
+    authenticateToken,
+    authorizeRoles('staff', 'admin', 'consultant'),
+    validateStiResultPagination, // Nếu có middleware riêng
+    async (req: Request, res: Response) => {
+      try {
+        const query = req.query as StiResultQuery;
+        const result = await StiService.getStiResultsWithPagination(query);
+  
+        if (result.success) {
+          return res.status(200).json(result);
+        } else {
+          return res.status(500).json(result);
+        }
+      } catch (error) {
+        console.error('Error fetching STI results:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Internal server error',
+          data: {
+            items: [],
+            pagination: {
+              current_page: 1,
+              total_pages: 0,
+              total_items: 0,
+              items_per_page: 10,
+              has_next: false,
+              has_prev: false
+            },
+            filters_applied: {}
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+);
+  
   
 export default router;

@@ -17,3 +17,4 @@ export interface PaginatedResponse<T> {
     };
     timestamp: string;
 }
+

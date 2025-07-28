@@ -104,7 +104,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
     // Staff fields
     department: undefined,
     hire_date: undefined,
-    permissions: [],
     // Consultant fields
     specialization: undefined,
     qualifications: undefined,
@@ -192,7 +191,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
         // Required for Staff model
         cleanData.department = formData.department?.trim();
         cleanData.hire_date = formData.hire_date?.trim();
-        cleanData.permissions = formData.permissions || [];
       } else if (role === 'consultant') {
         // Required for Consultant model
         cleanData.specialization = formData.specialization?.trim();
@@ -220,7 +218,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
           // Staff fields
           department: undefined,
           hire_date: undefined,
-          permissions: [],
           // Consultant fields
           specialization: undefined,
           qualifications: undefined,
@@ -367,43 +364,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                     value={formData.hire_date || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, hire_date: e.target.value || undefined }))}
                   />
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium">Quyền hạn <span className="text-gray-400">(tuỳ chọn)</span></Label>
-                <div className="grid grid-cols-2 gap-2 p-2 border rounded-md bg-gray-50">
-                  {[
-                    { id: 'user_management', label: 'Người dùng' },
-                    { id: 'appointment_management', label: 'Lịch hẹn' },
-                    { id: 'sti_management', label: 'STI' },
-                    { id: 'blog_management', label: 'Blog' },
-                    { id: 'system_admin', label: 'Hệ thống' }
-                  ].slice(0, 4).map(permission => (
-                    <div key={permission.id} className="flex items-center space-x-1">
-                      <input
-                        type="checkbox"
-                        id={`permission_${permission.id}`}
-                        checked={formData.permissions?.includes(permission.id) || false}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          setFormData(prev => ({
-                            ...prev,
-                            permissions: isChecked
-                              ? [...(prev.permissions || []), permission.id]
-                              : (prev.permissions || []).filter(p => p !== permission.id)
-                          }));
-                        }}
-                        className="rounded border-gray-300 w-3 h-3"
-                      />
-                      <Label 
-                        htmlFor={`permission_${permission.id}`} 
-                        className="text-xs font-normal cursor-pointer"
-                      >
-                        {permission.label}
-                      </Label>
-                    </div>
-                  ))}
                 </div>
               </div>
             </>

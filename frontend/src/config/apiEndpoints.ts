@@ -201,11 +201,18 @@ export const API = {
     // STI Results - NEW ENDPOINTS
     CREATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     GET_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
+    GET_ALL_RESULTS_PAGINATED: `/sti/sti-results`,                        //chưa có
     UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
+    UPDATE_STI_RESULT_BY_ID: (id: string) => `/sti/sti-result/result-id/${id}`,
+    UPDATE_STI_RESULT_BY_CONSULTANT: (id: string) => `/sti/sti-result/${id}`,
+    DELETE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,     //chưa có DELETE
     GET_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/${id}`,
     GET_NONUPDATED_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/non-updated/${id}`,
     SAVE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
-    COMPLETED_STI_RESULT: (id: string) => `/sti/sti-result/${id}/completed`,
+    COMPLETED_STI_RESULT: (id: string) => `/sti/sti-result/${id}/completed`,              //id là order id
+    CONFIRMED_STI_RESULT: (id: string) => `/sti/sti-result/is-confirmed/${id}`,           //id là result id
+    EXPORT_STI_RESULTS: '/api/sti-results/export',                  //chưa có
+    GET_STI_STATS: '/api/sti-results/statistics',
     // Customer STI Results
     MY_STI_RESULTS: '/sti/my-results',
     MY_STI_RESULT: (orderId: string) => `/sti/my-result/${orderId}`,
@@ -242,6 +249,9 @@ export const API = {
   Payment:{
     CREATE_PAYMENT: (id: string) =>  `/payment/create/${id}`,
     MOMO_IPN_PROXY: '/payment/momo/ipn'
+  },
+  Staff:{
+    GET_STAFF_BY_USER_ID: `/staff/by-user`
   }
 
 } as const;

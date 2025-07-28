@@ -13,6 +13,7 @@ import RoleGuard from './components/guards/RoleGuard';
 import DashboardRedirect from './components/common/DashboardRedirect';
 import LoginRedirect from './components/common/LoginRedirect';
 import OrdersManagement from './pages/dashboard/Staff/components/OrdersManagement';
+import StiResultsManagementConsultant from './pages/dashboard/Consultant/components/StiResultManagementPage';
 
 // Lazy load all major pages for better performance
 const HomePage = lazy(() => import('./pages/home'));
@@ -67,9 +68,8 @@ const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
 // Add new lazy import for Staff STI Management components
 const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrdersManagement'));
-const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
+// const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
-const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
 const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
 
@@ -85,6 +85,7 @@ interface AppContentProps {
 const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
   const { isAuthenticated, user } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshTriggerResult, setRefreshTriggerResult] = useState(0);
 
 
   useEffect(() => {
@@ -169,16 +170,16 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="special-schedule" element={<div>Điều chỉnh lịch đặc biệt</div>} />
               <Route path="unavailable" element={<div>Ngày nghỉ</div>} />
               <Route path="blogs" element={<ConsultantBlogList />} />
-              <Route path="sti-results" element={<StiResultsManagement />} />
               <Route path="documents" element={<div>Tài liệu chuyên môn</div>} />
               <Route path="training" element={<div>Đào tạo & Cập nhật</div>} />
               <Route path="consultation-stats" element={<ConsultationStats />} />
               <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
               <Route path="revenue" element={<div>Báo cáo doanh thu</div>} />
               <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
+              <Route path="sti-results" element={<StiResultsManagementConsultant refreshTrigger={refreshTriggerResult} />} />
             </Route>
 
-                        {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}
+            {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}
             <Route path="/my-appointments" element={
               <RoleGuard allowedRoles={['customer']} showError={true}>
                 <MyAppointments />
@@ -269,7 +270,7 @@ const AppContent: React.FC<AppContentProps> = ({ showLogin, setShowLogin }) => {
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
               <Route path="sti-management" element={<OrdersManagement refreshTrigger={refreshTrigger}/>} />
               <Route path="sti-orders" element={<StiOrdersManagement />} />
-              <Route path="sti-results" element={<StiResultsManagement />} />
+              {/* <Route path="sti-results" element={<StiResultsManagement />} /> */}
               <Route path="orders/:orderId/result" element={<TestResultEntryPage />} />
               <Route path="test-schedules" element={<TestScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />

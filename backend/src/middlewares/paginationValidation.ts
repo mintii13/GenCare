@@ -504,5 +504,76 @@ export const validateAuditLogPagination = (req: Request, res: Response, next: Ne
     }
 };
 
+export const validateStiResultPagination = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    console.log('🔍 [DEBUG] STI Result Validation - Raw query:', req.query);
 
+    const { page, limit, sort_order, is_testing_completed, is_confirmed, received_time_from, received_time_to } = req.query;
 
+    // Validate page
+    if (page !== undefined) {
+      const pageNum = parseInt(page.toString());
+      if (isNaN(pageNum) || pageNum < 1) {
+        return res.status(400).json({ success: false, message: 'Invalid page parameter. Must be a positive integer.' });
+      }
+    }
+
+    // Validate limit
+    if (limit !== undefined) {
+      const limitNum = parseInt(limit.toString());
+      if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+        return res.status(400).json({ success: false, message: 'Invalid limit parameter. Must be between 1 and 100.' });
+      }
+    }
+
+    // Validate sort_order
+    if (sort_order !== undefined && !['asc', 'desc'].includes(sort_order.toString())) {
+      return res.status(400).json({ success: false, message: 'Invalid sort_order parameter. Must be "asc" or "desc".' });
+    }
+
+    // Validate is_testing_completed
+    if (is_testing_completed !== undefined) {
+      const val = is_testing_completed.toString().toLowerCase();
+      if (val !== 'true' && val !== 'false') {
+        return res.status(400).json({ success: false, message: 'Invalid is_testing_completed. Must be true or false.' });
+      }
+    }
+
+    // Validate is_confirmed
+    if (is_confirmed !== undefined) {
+      const val = is_confirmed.toString().toLowerCase();
+      if (val !== 'true' && val !== 'false') {
+        return res.status(400).json({ success: false, message: 'Invalid is_confirmed. Must be true or false.' });
+      }
+    }
+
+    // Validate date range
+    if (received_time_from !== undefined) {
+      const d = new Date(received_time_from.toString());
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid received_time_from. Must be a valid date (YYYY-MM-DD).' });
+      }
+    }
+
+    if (received_time_to !== undefined) {
+      const d = new Date(received_time_to.toString());
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid received_time_to. Must be a valid date (YYYY-MM-DD).' });
+      }
+    }
+
+    if (received_time_from && received_time_to) {
+      const from = new Date(received_time_from.toString());
+      const to = new Date(received_time_to.toString());
+      if (from > to) {
+        return res.status(400).json({ success: false, message: 'received_time_from cannot be later than received_time_to.' });
+      }
+    }
+
+    console.log('✅ [DEBUG] STI Result Validation passed successfully');
+    next();
+  } catch (error) {
+    console.error('❌ [DEBUG] Error in STI result validation:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error during validation.' });
+  }
+};

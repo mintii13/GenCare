@@ -6,7 +6,6 @@ interface StaffDropdownItem {
     full_name: string;
     department: string;
     hire_date: Date;
-    permissions: string[];
 }
 
 export class StaffRepository {
@@ -75,8 +74,7 @@ export class StaffRepository {
                 staff_id: s._id.toString(),
                 full_name: user.full_name,
                 department: s.department,
-                hire_date: s.hire_date,
-                permissions: s.permissions || []
+                hire_date: s.hire_date
             };
         });
     }

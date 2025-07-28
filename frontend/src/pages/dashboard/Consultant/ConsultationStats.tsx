@@ -187,7 +187,7 @@ const ConsultationStats: React.FC = () => {
                   </div>
                   <span className="text-sm text-gray-500">{new Date(fb.feedback_date).toLocaleDateString('vi-VN')}</span>
                 </div>
-                <p className="text-gray-700 italic">"{fb.comment || 'Không có bình luận'}"</p>
+                <p className="text-gray-700 italic">{fb.comment || 'Không có bình luận'}</p>
                 <p className="text-right text-sm text-gray-500 mt-1">— {fb.customer_name}</p>
               </li>
             ))}

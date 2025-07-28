@@ -25,6 +25,9 @@ import { SpecializationType } from '../models/Consultant';
 import { StaffRepository } from '../repositories/staffRepository';
 import { TimeUtils } from '../utils/timeUtils';
 import { JWTPayload } from '../utils/jwtUtils';
+import { StiResultQuery } from '../dto/requests/PaginationRequest';
+import { PaginatedResponse } from '../dto/responses/PaginationResponse';
+import { StiResultPaginationResponse } from '../dto/responses/StiResultPaginationResponse';
 
 export class StiService {
     public static async createStiTest(stiTest: IStiTest): Promise<StiTestResponse> {
@@ -332,7 +335,6 @@ export class StiService {
         }
 
         const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id);
-        console.log(stiPackageTests);
         const sti_test_ids = stiPackageTests.map(item => item.sti_test_id);
         return {
             success: true,
@@ -721,10 +723,7 @@ export class StiService {
                         }
                         order.consultant_id = new mongoose.Types.ObjectId(updates.consultant_id);
                         const staff = await StaffRepository.findByUserId(userId);
-                        console.log(userId);
-                        console.log(staff);
                         order.staff_id = new mongoose.Types.ObjectId(staff._id);
-                        order.order_status = 'Accepted';                    //trick lỏ xíu, sửa sau
                     } else {
                         return {
                             success: false,
@@ -990,7 +989,7 @@ export class StiService {
             if (query.sort_by) filters_applied.sort_by = query.sort_by;
             if (query.sort_order) filters_applied.sort_order = query.sort_order;
 
-            console.log('[DEBUG] Order sample:', JSON.stringify(result.orders[0], null, 2));
+            // console.log('[DEBUG] Order sample:', JSON.stringify(result.orders[0], null, 2));
 
             return {
                 success: true,
@@ -1220,14 +1219,13 @@ export class StiService {
             }
         }
     
-        const staff = await StaffRepository.findByUserId(user.userId);
-        if (!staff) {
-            return { success: false, message: 'Staff not found' };
-        }
-    
         const processedItems = [];
     
         if (Array.isArray(sti_result_items)) {
+            const staff = await StaffRepository.findByUserId(user.userId);
+            if (!staff) {
+                return { success: false, message: 'Staff not found' };
+            }
             for (const item of sti_result_items) {
                 const { sti_test_id, result } = item;
                 if (!sti_test_id || !result) continue;
@@ -1278,14 +1276,12 @@ export class StiService {
     
         if (existingResult) {
             existingResult.sti_result_items = processedItems;
-        if (user.role === 'consultant' && user.userId === order.consultant_id.toString()){
-            if (diagnosis !== undefined) 
-                existingResult.diagnosis = diagnosis;
-            if (is_confirmed !== undefined) 
-                existingResult.is_confirmed = is_confirmed;
-            if (medical_notes !== undefined) 
-                existingResult.medical_notes = medical_notes;
-        }
+        if (diagnosis !== undefined) 
+            existingResult.diagnosis = diagnosis;
+        if (is_confirmed !== undefined) 
+            existingResult.is_confirmed = is_confirmed;
+        if (medical_notes !== undefined) 
+            existingResult.medical_notes = medical_notes;
         
         existingResult.markModified('sti_result_items');
         savedResult = await existingResult.save();
@@ -1308,7 +1304,56 @@ export class StiService {
         };
     }
       
-
+    public static async saveOrUpdateResultById(
+        resultId: string,
+        user: JWTPayload,
+        diagnosis: string,
+        medical_notes: string
+    ) {
+        if (!resultId) {
+            return { success: false, message: 'Result id not found' };
+        }
+    
+        let result = await StiResultRepository.findById(resultId);
+        if (!result) {
+            return {
+                success: false,
+                message: 'Result not found'
+            };
+        }
+    
+        let order = await StiOrderRepository.findOrderById(result.sti_order_id?.toString());
+        if (!order) {
+            return {
+                success: false,
+                message: 'Order not found'
+            };
+        }
+        const consultant = await ConsultantRepository.findByUserId(user.userId);
+        if (!consultant){
+            return{
+                success: false,
+                message: 'Consultant is not found'
+            }
+        }
+        console.log("Consultant id:", consultant._id);
+        console.log("Consultant id in order:", consultant._id);
+        if (user.role === 'consultant' && consultant._id.equals(order.consultant_id)) {
+            if (diagnosis !== undefined)
+                result.diagnosis = diagnosis;
+            if (medical_notes !== undefined)
+                result.medical_notes = medical_notes;
+        }
+    
+        const savedResult = await result.save();
+    
+        return {
+            success: true,
+            message: `Successfully saved diagnosis and medical notes successfully`,
+            data: savedResult
+        };
+    }
+    
     public static async getStiResultByOrderId(orderId: string) {
         try {
             const result = await StiResultRepository.getStiResultByOrder(orderId);
@@ -1329,4 +1374,65 @@ export class StiService {
           throw error;
         }
     }
+
+    public static async getStiResultsWithPagination(query: StiResultQuery): Promise<StiResultPaginationResponse> {
+        try {
+            console.log('[DEBUG] STI Result Service - Input query:', query);
+        
+            const { page, limit, sort_by, sort_order } = PaginationUtils.validateStiResultPagination(query);
+            const filters = PaginationUtils.buildStiResultFilter(query);
+        
+            console.log('[DEBUG] STI Result filters:', filters);
+        
+            const result = await StiResultRepository.findWithPagination(filters, page, limit, sort_by, sort_order);
+            const pagination = PaginationUtils.calculatePagination(result.total, page, limit);
+        
+            const filters_applied: Record<string, any> = {};
+            if (query.page) filters_applied.page = query.page;
+            if (query.limit) filters_applied.limit = query.limit;
+            if (query.sort_by) filters_applied.sort_by = query.sort_by;
+            if (query.sort_order) filters_applied.sort_order = query.sort_order;
+
+            if (query.sti_order_id) filters_applied.sti_order_id = query.sti_order_id;
+            if (query.is_testing_completed) filters_applied.is_testing_completed = query.is_testing_completed;
+            if (query.is_confirmed) filters_applied.is_confirmed = query.is_confirmed;
+            if (query.staff_id) filters_applied.staff_id = query.staff_id;
+            if (query.received_time_from) filters_applied.received_time_from = query.received_time_from;
+            if (query.received_time_to) filters_applied.received_time_to = query.received_time_to;
+      
+            return {
+                success: true,
+                message: result.results.length > 0
+                ? `Found ${result.results.length} STI results`
+                : 'No STI results found with the given criteria',
+                data: {
+                    items: result.results,
+                    pagination,
+                    filters_applied
+                },
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+          console.error('❌ Error getting STI results with pagination:', error);
+          return {
+            success: false,
+            message: 'Internal server error when getting STI results',
+            data: {
+              items: [],
+              pagination: {
+                current_page: 1,
+                total_pages: 0,
+                total_items: 0,
+                items_per_page: 10,
+                has_next: false,
+                has_prev: false
+              },
+              filters_applied: {}
+            },
+            timestamp: new Date().toISOString()
+          };
+        }
+      }
+      
+      
 }
