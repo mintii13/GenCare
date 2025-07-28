@@ -77,7 +77,25 @@ export const appointmentService = {
   
   // Customer APIs
   async bookAppointment(data: BookAppointmentRequest): Promise<ApiResponse<GetAppointmentHistoryListResponse>> {
-    return apiClient.safePost(API.Appointment.BOOK, data);
+    try {
+      const response = await apiClient.post(API.Appointment.BOOK, data);
+      return {
+        success: true,
+        data: response.data,
+        message: 'Đặt lịch thành công'
+      };
+    } catch (error: any) {
+      // Xử lý response error từ backend
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.message || 'Đặt lịch thất bại',
+          errorType: error.response.data.errorType,
+          details: error.response.data.details
+        };
+      }
+      throw error;
+    }
   },
 
   async getMyAppointments(query: AppointmentQuery): Promise<ApiResponse<AppointmentsPaginatedResponse>> {
