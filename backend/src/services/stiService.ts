@@ -763,6 +763,18 @@ export class StiService {
 
                     const sti_package_id  = updates.sti_package_item.sti_package_id;
                     const stiPackageTests = await StiPackageTestRepository.getPackageTest(sti_package_id.toString());
+                    
+                    const selectedTestIds = (order.sti_test_items || []).map(id => id.toString());
+                    const packageTestIds = stiPackageTests.map(i => i.sti_test_id.toString());
+                    const duplicated = selectedTestIds.filter(id => packageTestIds.includes(id));
+                    if (duplicated.length > 0){
+                        const duplicatedTests = await StiTest.find({ _id: { $in: duplicated } }).select('sti_test_name');
+                        const testNames = duplicatedTests.map(t => t.sti_test_name).join(', ');
+                        return{
+                            success: false,
+                            message: `Các xét nghiệm lẻ ${testNames} đã nằm trong gói xét nghiệm.`
+                        }
+                    }
                     sti_package_name = await StiPackageRepository.getPackageNameById(sti_package_id.toString());
                     if (!stiPackageTests || stiPackageTests.length === 0) {
                         return {
@@ -778,7 +790,9 @@ export class StiService {
                     };
                     const pkg = await StiPackageRepository.findPackageById(sti_package_id.toString());
                     total_amount += pkg.price;
+
                 }
+
 
                 if (updates.sti_package_item || Array.isArray(updates.sti_test_items)){
                     order.total_amount = total_amount;

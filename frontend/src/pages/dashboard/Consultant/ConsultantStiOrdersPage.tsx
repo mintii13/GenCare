@@ -152,8 +152,9 @@ const ConsultantStiOrdersPage: React.FC = () => {
       message.success('Cập nhật thành công!');
       setModalVisible(false);
       fetchOrders();
-    } catch {
-      message.error('Cập nhật thất bại!');
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || 'Cập nhật thất bại!';
+      message.error(errMsg);
     }
   };
 
@@ -166,7 +167,11 @@ const ConsultantStiOrdersPage: React.FC = () => {
       r.sti_package_lookup && r.sti_package_lookup.length > 0
         ? r.sti_package_lookup[0].sti_package_name
         : '-' },
+<<<<<<< HEAD
+    { title: 'Xét nghiệm lẻ', dataIndex: 'sti_test_details', key: 'tests', render: (_: unknown, r: StiOrder) => (r.sti_test_details?.map(t => t.sti_test_name).join(', ') || '-') },
+=======
     { title: 'Test lẻ', dataIndex: 'sti_test_details', key: 'tests', render: (_: unknown, r: StiOrder) => (r.sti_test_details?.map(t => t.sti_test_name).join(', ') || '-') },
+>>>>>>> e27dadd9bbb88346272f3cfb2875fc6d5fa6c2ca
     // { title: 'Note', dataIndex: 'notes', key: 'notes', render: (_: unknown, r: StiOrder) => (r.notes || 'Không có ghi chú') },
     {
       title: 'Thông tin chi tiết',
@@ -227,7 +232,7 @@ const ConsultantStiOrdersPage: React.FC = () => {
         pagination={{ pageSize: 10 }}
       />
       <Modal
-        title="Cập nhật package/tests cho đơn hàng"
+        title="Cập nhật gói xét nghiệm và xét nghiệm lẻ cho đơn hàng"
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
@@ -249,11 +254,11 @@ const ConsultantStiOrdersPage: React.FC = () => {
           </Select>
         </div>
         <div>
-          <label>Chọn test lẻ:</label>
+          <label>Chọn xét nghiệm lẻ:</label>
           <Select
             mode="multiple"
             style={{ width: '100%' }}
-            placeholder="Chọn test lẻ"
+            placeholder="Chọn xét nghiệm lẻ"
             value={selectedTests}
             onChange={setSelectedTests}
             allowClear
