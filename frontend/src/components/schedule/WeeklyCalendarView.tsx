@@ -89,7 +89,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       });
       return;
     }
-    
+
     onSlotSelect(date, startTime, endTime);
   };
 
@@ -189,46 +189,46 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   // Tính toán số slot thực sự có thể đặt được
   const getBookableSlots = () => {
     if (!weeklyData?.days) return 0;
-    
+
     let bookableCount = 0;
     const now = new Date();
-    
+
     // Duyệt qua tất cả các ngày trong tuần
     Object.values(weeklyData.days).forEach(dayData => {
       if (!dayData || dayData.total_slots === 0) return;
-      
+
       // Duyệt qua tất cả time slots (7h-18h)
       for (let hour = 7; hour <= 17; hour++) {
         const startTime = `${hour.toString().padStart(2, '0')}:00`;
         const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
-        
+
         // Tìm ngày tương ứng với dayData
         const dayName = Object.keys(weeklyData.days).find(key => weeklyData.days[key] === dayData);
         if (!dayName) continue;
-        
+
         const dayIndex = DAY_NAMES.indexOf(dayName as DayName);
         if (dayIndex === -1) continue;
-        
+
         const dayDate = addDays(currentWeek, dayIndex);
         const dayDateString = format(dayDate, 'yyyy-MM-dd');
-        
+
         // Kiểm tra slot có thể đặt được không
         const slotDateTime = new Date(`${dayDateString}T${startTime}:00`);
         const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
         const isPast = slotDateTime <= now;
-        
+
         // Kiểm tra slot có available không
         const availableSlot = dayData.available_slots?.find((slot: any) =>
           slot.start_time === startTime && slot.is_available
         );
-        
+
         // Kiểm tra slot có bị đặt không
         const isBooked = dayData.booked_appointments?.some((appt: any) =>
           appt.status !== 'cancelled' &&
           startTime >= appt.start_time &&
           startTime < appt.end_time
         );
-        
+
         // Slot có thể đặt được nếu:
         // 1. Có available slot
         // 2. Không bị đặt
@@ -239,40 +239,40 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         }
       }
     });
-    
+
     return bookableCount;
   };
 
   // Tính toán số slot có thể đặt được cho từng ngày
   const getBookableSlotsForDay = (dayData: any, dayIndex: number) => {
     if (!dayData || dayData.total_slots === 0) return 0;
-    
+
     let bookableCount = 0;
     const now = new Date();
     const dayDate = addDays(currentWeek, dayIndex);
     const dayDateString = format(dayDate, 'yyyy-MM-dd');
-    
+
     // Duyệt qua tất cả time slots (7h-18h)
     for (let hour = 7; hour <= 17; hour++) {
       const startTime = `${hour.toString().padStart(2, '0')}:00`;
-      
+
       // Kiểm tra slot có thể đặt được không
       const slotDateTime = new Date(`${dayDateString}T${startTime}:00`);
       const diffHours = (slotDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
       const isPast = slotDateTime <= now;
-      
+
       // Kiểm tra slot có available không
       const availableSlot = dayData.available_slots?.find((slot: any) =>
         slot.start_time === startTime && slot.is_available
       );
-      
+
       // Kiểm tra slot có bị đặt không
       const isBooked = dayData.booked_appointments?.some((appt: any) =>
         appt.status !== 'cancelled' &&
         startTime >= appt.start_time &&
         startTime < appt.end_time
       );
-      
+
       // Slot có thể đặt được nếu:
       // 1. Có available slot
       // 2. Không bị đặt
@@ -282,7 +282,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         bookableCount++;
       }
     }
-    
+
     return bookableCount;
   };
 
@@ -536,10 +536,6 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
           <div className="flex items-center">
             <div className="w-6 h-4 bg-green-100 border border-green-300 rounded mr-2"></div>
             <span className="text-green-700">Có thể đặt</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-6 h-4 bg-blue-500 border border-blue-600 rounded mr-2"></div>
-            <span className="text-blue-700">Đã chọn</span>
           </div>
           <div className="flex items-center">
             <div className="w-6 h-4 bg-red-100 border border-red-300 rounded mr-2"></div>
