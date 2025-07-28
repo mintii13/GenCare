@@ -254,6 +254,9 @@ const AppContent: React.FC = () => {
                 <BookAppointment />
               </RoleGuard>
             } />
+<<<<<<< HEAD
+          
+=======
             
             {/* Admin Dashboard routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -267,6 +270,7 @@ const AppContent: React.FC = () => {
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
             </Route>
+>>>>>>> e27dadd9bbb88346272f3cfb2875fc6d5fa6c2ca
 
             {/* Staff Dashboard routes */}
             <Route path="/staff/*" element={<StaffDashboard />}>
