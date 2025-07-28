@@ -678,7 +678,7 @@ export class PillTrackingReminderService {
         console.log("Giờ hiện tại:", now.toFormat('HH:mm'));
 
         const schedules = await PillTrackingRepository.findReminderPill();
-        console.log("Schedule", schedules);
+        // console.log("Schedule", schedules);
         let validReminder = 0;
 
         for (const schedule of schedules) {

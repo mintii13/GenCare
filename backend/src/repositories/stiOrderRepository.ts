@@ -21,7 +21,7 @@ export class StiOrderRepository {
 
     public static async findOrderById(id: string) {
         try {
-            return await StiOrder.findById(id);
+            return await StiOrder.findById(id).populate('customer_id', 'full_name email phone');
         } catch (error) {
             console.error(error);
             throw error;
@@ -39,6 +39,17 @@ export class StiOrderRepository {
 
     public static async saveOrder(order: IStiOrder): Promise<IStiOrder> {
         return await order.save();
+    }
+
+    public static async hasBookedOrder(customerId: string): Promise<boolean> {
+      const objectId = new mongoose.Types.ObjectId(customerId);
+
+      const exists = await StiOrder.exists({
+        customer_id: objectId,
+        order_status: 'Booked'
+      });
+
+      return !!exists;
     }
 
     public static async getTotalRevenueByCustomer(customerId: string): Promise<number> {
@@ -224,6 +235,21 @@ export class StiOrderRepository {
                     localField: "sti_schedule_id",
                     foreignField: "_id",
                     as: "schedule_details"
+                  }
+                },
+                //Lookup sti result
+                {
+                  $lookup: {
+                    from: 'stiresults',
+                    localField: '_id',               // _id của đơn hàng
+                    foreignField: 'sti_order_id',    // sti_order_id trong bảng kết quả
+                    as: 'sti_result'
+                  }
+                },
+                {
+                  $unwind: {
+                    path: '$sti_result',
+                    preserveNullAndEmptyArrays: true
                   }
                 },
               

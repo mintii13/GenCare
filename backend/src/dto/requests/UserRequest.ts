@@ -24,7 +24,6 @@ export interface CreateUserRequest {
     // Staff-specific fields
     department?: string;
     hire_date?: string;
-    permissions?: string[];
     
     // Consultant-specific fields
     specialization?: string;

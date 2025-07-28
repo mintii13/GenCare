@@ -5,7 +5,6 @@ export interface IStaff extends Document {
     manager_id?: mongoose.Types.ObjectId;
     department: string;
     hire_date: Date;
-    permissions: string[];
 }
 
 const staffSchema = new Schema<IStaff>({
@@ -13,7 +12,6 @@ const staffSchema = new Schema<IStaff>({
     manager_id: { type: Schema.Types.ObjectId, ref: 'Staff' },
     department: { type: String, required: true },
     hire_date: { type: Date, required: true },
-    permissions: [{ type: String }]
 }, {
     timestamps: true
 });

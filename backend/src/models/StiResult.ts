@@ -57,7 +57,6 @@ export interface IStiResult extends Document{
     received_time?: Date;                            //time will be predicted, then updated to true time after result is received
     diagnosis?: string;
     is_confirmed: boolean;
-    is_critical: boolean;                           //will be first determined by the backend, then recommended to consultant
     medical_notes?: string;                          //notes for consultant
 }
 
@@ -109,14 +108,13 @@ const stiResultSchema = new Schema<IStiResult>({
                 culture_Trichomonas:{type:Boolean,default:null}
             },
             time_completed: { type: Date, required: true },
-            staff_id: { type: Schema.Types.ObjectId, ref: 'Staff', required: true } // Reference to the staff who created/updated the result
+            staff_id: { type: Schema.Types.ObjectId, ref: 'LaboratoryTechnician', required: true } // Reference to the staff who created/updated the result
         }
     }],
     is_testing_completed: {type: Boolean, default: false},
     received_time: { type: Date },
     diagnosis: { type: String },
     is_confirmed: { type: Boolean, default: false },
-    is_critical: { type: Boolean, default: false },
     medical_notes: { type: String }
 }, { timestamps: true });
 

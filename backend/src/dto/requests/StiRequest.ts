@@ -24,3 +24,22 @@ export interface StiOrderQuery extends PaginationQuery {
     staff_id?: string;
     sti_package_id?: string;
 }
+
+export interface SendResultRequest{
+    customerName: string,
+    birthYear: number,
+    gender: string,
+    diagnosis: string,
+    resultValue: string,
+    notes: string,
+    consultantName: string,
+    staffName: string,
+    sample: {
+        timeReceived?: Date,
+        timeTesting?: Date,
+        sampleQualities?: Record<string, boolean | null>
+    },
+    testNames: string[],
+    resultDate?: Date,
+    emailSendTo?: string
+}

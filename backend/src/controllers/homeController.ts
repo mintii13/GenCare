@@ -34,9 +34,9 @@ export class HomeController {
       const blogs = blogsResponse.success ? blogsResponse.data?.blogs || [] : [];
       
       // Debug consultant response
-      console.log('🔍 HomeController: consultantsResponse:', JSON.stringify(consultantsResponse, null, 2));
+      // console.log('🔍 HomeController: consultantsResponse:', JSON.stringify(consultantsResponse, null, 2));
       const consultants = (consultantsResponse as any).success ? (consultantsResponse as any).data.consultants : [];
-      console.log('🔍 HomeController: extracted consultants:', consultants.length);
+      // console.log('🔍 HomeController: extracted consultants:', consultants.length);
 
       // Filter active items
       const activeStiTests = stiTests.filter((test: any) => test.is_active !== false);
