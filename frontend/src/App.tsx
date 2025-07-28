@@ -33,27 +33,24 @@ const BlogDetailPage = lazy(() => import('./pages/blog/BlogDetailPage'));
 const BlogFormPage = lazy(() => import('./pages/blog/BlogFormPage'));
 
 // Dashboard imports - Keep lazy
-const ConsultantBlogList = lazy(() => import('./pages/dashboard/Consultant/components/ConsultantBlogList'));
-const WeeklyScheduleManager = lazy(() => import('./pages/dashboard/Consultant/WeeklyScheduleManager'));
-const AppointmentManagement = lazy(() => import('./pages/dashboard/Consultant/AppointmentManagement'));
+
 const MyAppointments = lazy(() => import('./pages/dashboard/Customer/MyAppointments'));
 const ConsultantList = lazy(() => import('./pages/dashboard/Customer/ConsultantList'));
 const BookAppointment = lazy(() => import('./pages/consultation/BookAppointment'));
-const ConsultationStats = lazy(() => import('./pages/dashboard/Consultant/ConsultationStats'));
+
 
 // Feature-specific lazy loads
 const MenstrualCyclePage = lazy(() => import('./pages/menstrual-cycle/MenstrualCyclePage'));
 const MonthlyDiaryPage = lazy(() => import('./pages/menstrual-cycle/MonthlyDiaryPage'));
 const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
-const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
+
 
 // Admin Dashboard - Lazy load
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
-const ConsultantLayout = lazy(() => import('./components/layout/ConsultantLayout'));
-const CustomerLayout = lazy(() => import('./components/layout/CustomerLayout'));
 const AdminAppointmentManagement = lazy(() => import('./pages/dashboard/Admin/AdminAppointmentManagement'));
 const AdminAuditLog = lazy(() => import('./pages/dashboard/Admin/AdminAuditLog'));
+const AdminRevenue = lazy(() => import('./pages/dashboard/Admin/AdminRevenue'));
 
 // Staff Dashboard - Lazy load
 const StaffDashboard = lazy(() => import('./pages/dashboard/Staff'));
@@ -75,7 +72,7 @@ const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components
 
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
-const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/ConsultantStiOrdersPage'));
+
 
 
 const AppContent: React.FC = () => {
@@ -84,8 +81,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Khởi động AutoConfirmService khi user đăng nhập
     if (isAuthenticated && user) {
-
-      
       // Yêu cầu quyền notification
       AutoConfirmService.requestNotificationPermission();
       
@@ -117,26 +112,7 @@ const AppContent: React.FC = () => {
           </div>
         }>
         <Routes>
-          {/* Dashboard Routes - No Layout wrapper to avoid Footer overlap */}
-          <Route path="/consultant/*" element={<ConsultantLayout />}>
-            <Route index element={<Navigate to="schedule" replace />} />
-            <Route path="schedule" element={<AppointmentManagement />} />
-            <Route path="clients" element={<div className="p-4">Khách hàng</div>} />
-            <Route path="online" element={<div className="p-4">Tư vấn trực tuyến</div>} />
-            <Route path="records" element={<div className="p-4">Hồ sơ tư vấn</div>} />
-            <Route path="qa" element={<div className="p-4">Q&A / Câu hỏi</div>} />
-            <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
-            <Route path="special-schedule" element={<div className="p-4">Điều chỉnh lịch đặc biệt</div>} />
-            <Route path="unavailable" element={<div className="p-4">Ngày nghỉ</div>} />
-            <Route path="blogs" element={<ConsultantBlogList />} />
-            <Route path="sti-results" element={<StiResultsManagement />} />
-            <Route path="documents" element={<div className="p-4">Tài liệu chuyên môn</div>} />
-            <Route path="training" element={<div className="p-4">Đào tạo & Cập nhật</div>} />
-            <Route path="consultation-stats" element={<ConsultationStats />} />
-            <Route path="feedback" element={<ConsultantFeedbackDashboard />} />
-            <Route path="revenue" element={<div className="p-4">Báo cáo doanh thu</div>} />
-            <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
-          </Route>
+
 
 
 
@@ -152,6 +128,7 @@ const AppContent: React.FC = () => {
             <Route path="sti-management" element={<AdminSTIManagement />} />
             <Route path="audit-log" element={<AdminAuditLog />} />
             <Route path="settings" element={<div className="p-4">Cài đặt hệ thống</div>} />
+            <Route path="revenue" element={<AdminRevenue />} />
           </Route>
 
           {/* Staff Dashboard routes */}
@@ -285,11 +262,12 @@ const AppContent: React.FC = () => {
               <Route path="users" element={<UserManagement />} />
               <Route path="test-packages" element={<div>Quản lý gói xét nghiệm</div>} />
               <Route path="blogs" element={<AdminBlogManagement />} />
-              <Route path="revenue" element={<div>Thống kê doanh thu</div>} />
+        
               <Route path="appointments" element={<AdminAppointmentManagement />} />
               <Route path="sti-management" element={<AdminSTIManagement />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
+              <Route path="revenue" element={<AdminRevenue />} />
             </Route>
 
             {/* Staff Dashboard routes */}
@@ -318,8 +296,16 @@ const AppContent: React.FC = () => {
   );
 };
 
+const AppWrapper: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
 const App: React.FC = () => {
-  return <AppContent />;
+  return <AppWrapper />;
 };
 
 export default App;

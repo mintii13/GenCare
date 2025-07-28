@@ -208,8 +208,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Always clear local state
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem('user');
-      setUser(null);
-      setToken(null);
+    setUser(null);
+    setToken(null);
       setIsAuthenticated(false);
       closeModal();
       

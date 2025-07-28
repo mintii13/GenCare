@@ -76,9 +76,9 @@ const PackagesManagement: React.FC<PackagesManagementProps> = ({ refreshTrigger 
 
   const fetchAvailableTests = async () => {
     try {
-      const response = await STITestService.getActiveTests();
+      const response = await STITestService.getAllTests({ is_active: true });
       if (response.success && response.data) {
-        setAvailableTests(response.data);
+        setAvailableTests(response.data.items);
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách xét nghiệm:', error);
@@ -98,7 +98,6 @@ const PackagesManagement: React.FC<PackagesManagementProps> = ({ refreshTrigger 
       sti_package_code: pkg.sti_package_code,
       description: pkg.description,
       price: pkg.price,
-      sti_test_ids: pkg.sti_test_ids,
       is_active: pkg.is_active
     });
     setModalVisible(true);
@@ -120,7 +119,7 @@ const PackagesManagement: React.FC<PackagesManagementProps> = ({ refreshTrigger 
 
   const handleToggleStatus = async (packageId: string, currentStatus: boolean) => {
     try {
-      const response = await STIPackageService.togglePackageStatus(packageId, !currentStatus);
+      const response = await STIPackageService.updatePackage(packageId, { is_active: !currentStatus });
       if (response.success) {
         message.success(`Đã ${currentStatus ? 'vô hiệu hóa' : 'kích hoạt'} gói xét nghiệm`);
         fetchPackages();
@@ -142,7 +141,6 @@ const PackagesManagement: React.FC<PackagesManagementProps> = ({ refreshTrigger 
           sti_package_code: values.sti_package_code,
           description: values.description,
           price: values.price,
-          sti_test_ids: values.sti_test_ids,
           is_active: values.is_active
         };
         
@@ -159,9 +157,7 @@ const PackagesManagement: React.FC<PackagesManagementProps> = ({ refreshTrigger 
           sti_package_name: values.sti_package_name,
           sti_package_code: values.sti_package_code,
           description: values.description,
-          price: values.price,
-          sti_test_ids: values.sti_test_ids,
-          is_active: values.is_active
+          price: values.price
         };
         
         const response = await STIPackageService.createPackage(createData);
@@ -225,21 +221,17 @@ const PackagesManagement: React.FC<PackagesManagementProps> = ({ refreshTrigger 
       title: 'Số xét nghiệm',
       key: 'test_count',
       width: 100,
-      render: (_: any, record: STIPackage) => record.sti_test_ids?.length || 0,
+      render: (_: any, record: STIPackage) => 0,
     },
     {
       title: 'Danh sách xét nghiệm',
       key: 'tests',
       width: 200,
       render: (_: any, record: STIPackage) => {
-        const testNames = getSelectedTestNames(record.sti_test_ids || []);
         return (
-          <Tooltip title={testNames.join(', ')}>
             <div style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {testNames.length > 0 ? testNames.slice(0, 2).join(', ') : 'Không có xét nghiệm'}
-              {testNames.length > 2 && ` +${testNames.length - 2} khác`}
+            Không có xét nghiệm
             </div>
-          </Tooltip>
         );
       },
     },

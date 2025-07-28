@@ -124,9 +124,9 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
             <Link to="/blogs" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Blog
             </Link>
-            <Link to="/about" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
+            {/* <Link to="/about" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
               Về chúng tôi
-            </Link>
+            </Link> */}
             {isAuthenticated && user?.role === 'consultant' && (
               <Link to="/consultant" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
                 Dashboard
@@ -184,7 +184,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           ⭐ Đánh giá của tôi
                         </Link>
-                        <Link to="/sti-assessment-history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                        <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           📋 Lịch sử đánh giá STI
                         </Link>
                         <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
@@ -377,7 +377,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                       <Link to="/my-feedback" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
                         Đánh giá của tôi
                       </Link>
-                      <Link to="/sti-assessment-history" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
+                      <Link to="/sti-assessment/history" className="block text-gray-600 hover:text-primary-700 mb-2 flex items-center" onClick={() => setIsMenuOpen(false)}>
                         Lịch sử đánh giá STI
                       </Link>
                       <div className="border-b border-gray-200 pb-2 mb-2 mt-3">

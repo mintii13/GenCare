@@ -309,12 +309,6 @@ const OrdersPage: React.FC = () => {
       )
     },
     {
-      title: 'Ghi chú',
-      dataIndex: 'notes',
-      key: 'notes',
-      render: (notes: string) => notes || 'Không có ghi chú'
-    },
-    {
       title: 'Thao tác',
       key: 'actions',
       render: (record: STIOrder) => (
@@ -623,7 +617,23 @@ const OrdersPage: React.FC = () => {
                 {selectedOrder.notes && (
                   <div>
                     <Text strong>Ghi chú: </Text>
-                    <Text>{selectedOrder.notes}</Text>
+                    <div 
+                      style={{ 
+                        marginTop: 8,
+                        padding: 12,
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: 6,
+                        border: '1px solid #e9ecef',
+                        maxHeight: 200,
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        lineHeight: 1.5,
+                        fontSize: 14
+                      }}
+                    >
+                      {selectedOrder.notes}
+                    </div>
                   </div>
                 )}
                 <div>

@@ -17,6 +17,7 @@ const STIAssessmentForm = () => {
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [recommendation, setRecommendation] = useState<STIRecommendation | null>(null);
   const [showConsultantModal, setShowConsultantModal] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Fetch packages info from API
   useEffect(() => {
@@ -299,76 +300,58 @@ const STIAssessmentForm = () => {
     }
   };
 
+  // Hàm tạo ghi chú từ kết quả sàng lọc (dùng chung cho cả consultation và STI booking)
+  const createScreeningNotes = () => {
+    if (!recommendation) return '';
+    
+    return `Kết quả sàng lọc STI:
+Mức độ nguy cơ: ${recommendation.risk_level}
+
+Lý do đề xuất:
+${recommendation.reasoning.map(reason => `- ${reason}`).join('\n')}
+
+Chi tiết câu trả lời:
+- Tuổi: ${formData.age}
+- Giới tính: ${formData.gender === 'female' ? 'Nữ' : formData.gender === 'male' ? 'Nam' : 'Chuyển giới'}
+- Hoạt động tình dục: ${formData.sexually_active === 'not_active' ? 'Không hoạt động' : formData.sexually_active === 'active_single' ? 'Có bạn tình' : 'Nhiều bạn tình'}
+- Có bạn tình mới gần đây: ${formData.new_partner_recently ? 'Có' : 'Không'}
+- Bạn tình có STI: ${formData.partner_has_sti ? 'Có' : 'Không'}
+- Sử dụng bao cao su: ${formData.condom_use === 'always' ? 'Luôn luôn' : formData.condom_use === 'sometimes' ? 'Thỉnh thoảng' : formData.condom_use === 'rarely' ? 'Hiếm khi' : 'Không bao giờ'}
+- Tiền sử STI: ${formData.previous_sti_history?.length > 0 ? formData.previous_sti_history.join(', ') : 'Không có'}
+- Tình trạng HIV: ${formData.hiv_status === 'unknown' ? 'Không biết' : formData.hiv_status === 'negative' ? 'Âm tính' : 'Dương tính'}
+- Lần xét nghiệm STI cuối: ${formData.last_sti_test === 'never' ? 'Chưa bao giờ' : formData.last_sti_test === 'within_3months' ? 'Trong 3 tháng qua' : formData.last_sti_test === '3_to_6_months' ? '3-6 tháng trước' : formData.last_sti_test === '6_to_12_months' ? '6-12 tháng trước' : 'Hơn 1 năm trước'}
+- Có triệu chứng: ${formData.has_symptoms ? 'Có' : 'Không'}
+${formData.has_symptoms && formData.symptoms?.length > 0 ? `- Triệu chứng: ${formData.symptoms.join(', ')}` : ''}
+- Yếu tố nguy cơ: ${formData.risk_factors?.length > 0 ? formData.risk_factors.join(', ') : 'Không có'}`;
+  };
+
   const handleBookingSTI = async () => {
-    if (!recommendation) return;
+    setShowBookingModal(true);
+  };
 
+  const handleConfirmBookingSTI = (sendScreeningResults: boolean) => {
+    setShowBookingModal(false);
     setBookingLoading(true);
-    try {
-      const response = await STIAssessmentService.getPackageInfo();
-
-      if (response.success && response.data) {
-        const responseData = response.data as any;
-        const availablePackages = Array.isArray(responseData.packages) ? responseData.packages : [];
-
-        console.log('[DEBUG] handleBookingSTI - recommendation.recommended_package:', recommendation.recommended_package);
-        console.log('[DEBUG] handleBookingSTI - availablePackages:', availablePackages.map((pkg: any) => ({
-          code: pkg.code,
-          sti_package_code: pkg.sti_package_code,
-          name: pkg.name
-        })));
-
-        let targetPackage = availablePackages.find((pkg: any) =>
-          pkg.code === recommendation.recommended_package
-        );
-
-        // Fallback: thử tìm bằng sti_package_code nếu không tìm thấy bằng code
-        if (!targetPackage) {
-          targetPackage = availablePackages.find((pkg: any) =>
-            pkg.sti_package_code === recommendation.recommended_package
-          );
-          console.log('[DEBUG] handleBookingSTI - Found using sti_package_code:', targetPackage);
-        }
-
-        console.log('[DEBUG] handleBookingSTI - Final targetPackage:', targetPackage);
-
-        if (targetPackage) {
-          // Sử dụng code làm packageId hoặc có thể cần mapping với backend package ID
-          const packageId = targetPackage.code;
-
-          console.log('Package found! Details:', {
-            code: targetPackage.code,
-            name: targetPackage.name,
-            price: targetPackage.price
-          });
-
-          console.log('About to navigate to:', `/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
-          navigate(`/sti-booking/book?recommendedPackage=${recommendation.recommended_package}&packageId=${packageId}`);
-          console.log('Navigation completed');
-        } else {
-          console.log('Package not found! Available packages:', availablePackages.map((pkg: any) => ({
-            code: pkg.code,
-            name: pkg.name
-          })));
-          toast.error(`Không tìm thấy gói xét nghiệm với mã: ${recommendation.recommended_package}`, {
-            duration: 4000,
-            position: 'top-center',
-          });
-        }
-      } else {
-        toast.error('Không thể tải thông tin gói xét nghiệm: ' + (response.message || 'Unknown error'), {
-          duration: 4000,
-          position: 'top-center',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching packages:', error);
-      toast.error('Có lỗi xảy ra khi tải thông tin gói xét nghiệm', {
-        duration: 4000,
-        position: 'top-center',
-      });
-    } finally {
-      setBookingLoading(false);
+    if (sendScreeningResults && recommendation) {
+      const consultationNotes = createScreeningNotes();
+      localStorage.setItem('sti_screening_consultation_notes', consultationNotes);
+      const screeningData = {
+        answers: formData,
+        result: {
+          risk_level: recommendation.risk_level,
+          reasoning: recommendation.reasoning,
+        },
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('sti_screening_results', JSON.stringify(screeningData));
+    } else {
+      localStorage.removeItem('sti_screening_results');
+      localStorage.removeItem('sti_screening_consultation_notes');
     }
+    setTimeout(() => {
+      setBookingLoading(false);
+      navigate('/sti-booking/book');
+    }, 300); // Cho UX mượt hơn
   };
 
   const handleConsultantBooking = () => {
@@ -377,12 +360,15 @@ const STIAssessmentForm = () => {
 
   const handleConfirmConsultantBooking = (sendScreeningResults: boolean) => {
     if (sendScreeningResults && recommendation) {
-      // Lưu cả câu trả lời và kết quả tổng hợp vào localStorage
+      // Sử dụng hàm chung để tạo ghi chú
+      const consultationNotes = createScreeningNotes();
+      localStorage.setItem('sti_screening_consultation_notes', consultationNotes);
+      
+      // Lưu câu trả lời và kết quả tổng hợp vào localStorage
       const screeningData = {
         answers: formData,
         result: {
           risk_level: recommendation.risk_level,
-          recommended_package: recommendation.recommended_package,
           reasoning: recommendation.reasoning,
         },
         timestamp: new Date().toISOString()
@@ -391,6 +377,7 @@ const STIAssessmentForm = () => {
       toast.success('Kết quả và câu trả lời đã được gửi cho chuyên gia');
     } else {
       localStorage.removeItem('sti_screening_results');
+      localStorage.removeItem('sti_screening_consultation_notes');
     }
 
     setShowConsultantModal(false);
@@ -965,7 +952,7 @@ const STIAssessmentForm = () => {
                 Đang xử lý...
               </>
             ) : (
-              'Đặt lịch xét nghiệm STI ngay'
+              'Đặt lịch xét nghiệm nay '
             )}
           </button>
         </div>
@@ -1016,6 +1003,56 @@ const STIAssessmentForm = () => {
               </button>
               <button
                 onClick={() => handleConfirmConsultantBooking(true)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Đồng ý gửi
+              </button>
+            </div>
+          </div>
+        </Modal>
+        {/* Modal xác nhận gửi kết quả sàng lọc cho booking STI */}
+        <Modal
+          title="Gửi kết quả sàng lọc vào ghi chú khi đặt lịch xét nghiệm?"
+          open={showBookingModal}
+          onCancel={() => setShowBookingModal(false)}
+          footer={null}
+          width={500}
+        >
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Bạn có muốn tự động điền kết quả sàng lọc STI này vào phần ghi chú khi đặt lịch xét nghiệm không?
+            </p>
+            {recommendation && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2">Kết quả sàng lọc:</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Mức độ nguy cơ:</span>
+                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${recommendation.risk_level === 'Cao' ? 'bg-red-100 text-red-800' :
+                      recommendation.risk_level === 'Trung bình' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                      {recommendation.risk_level}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Gói đề xuất:</span>
+                    <span className="ml-2 text-blue-700">{recommendation.recommended_package}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-gray-600">
+              Nếu đồng ý, kết quả sàng lọc sẽ được tự động điền vào phần ghi chú khi bạn đặt lịch xét nghiệm STI.
+            </p>
+            <div className="flex space-x-3 pt-4">
+              <button
+                onClick={() => handleConfirmBookingSTI(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Không gửi
+              </button>
+              <button
+                onClick={() => handleConfirmBookingSTI(true)}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Đồng ý gửi

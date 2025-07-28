@@ -104,9 +104,8 @@ const BookAppointment: React.FC = () => {
         setSelectedConsultant(consultantId);
         setStep(1);
         log.component('BookAppointment', 'Pre-selected consultant from URL', { consultantId });
-      } else {
-        window.location.replace('/consultants');
       }
+      // Không redirect nếu không có consultantId (có thể đến từ STI assessment)
 
       const screeningNotes = localStorage.getItem('sti_screening_consultation_notes');
       if (screeningNotes) {
@@ -227,8 +226,8 @@ const BookAppointment: React.FC = () => {
         // Kiểm tra nếu có pending appointment
         if (response.errorType === 'PENDING_APPOINTMENT_EXISTS') {
           showWarning('Không thể đặt lịch', response.message || 'Bạn đã có lịch hẹn đang chờ xác nhận');
-        } else {
-          showError('Đặt lịch thất bại', response.message || 'Có lỗi xảy ra khi đặt lịch');
+      } else {
+        showError('Đặt lịch thất bại', response.message || 'Có lỗi xảy ra khi đặt lịch');
         }
       }
     } catch (error) {

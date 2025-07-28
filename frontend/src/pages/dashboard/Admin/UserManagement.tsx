@@ -50,6 +50,7 @@ import { Badge } from "@/components/ui/badge";
 import { FaEye, FaEdit, FaTrash, FaPlus, FaUser, FaMale, FaFemale } from 'react-icons/fa';
 import { UserManagementService, UserData, CreateUserData, UpdateUserData } from '@/services/userManagementService';
 import { analyticsService } from '@/services/analyticsService';
+import { any } from 'zod';
 
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
@@ -252,11 +253,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
             <div className="text-xs text-blue-600 mt-1 font-medium">
               ℹ️ Tài khoản được tạo bởi admin sẽ tự động xác thực email
             </div>
-            {user && (
-              <div className="text-xs text-gray-500 mt-1">
-                Đăng nhập với role: {user.role} | ID: {user.id}
-              </div>
-            )}
+
           </DialogDescription>
         </DialogHeader>
 
@@ -617,7 +614,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
 
  
           if (response.success) {
-            setRevenue(response.data.total_revenue);
+            setRevenue(response.data?.total_revenue || 0);
           }
         } catch (error) {
           console.error("Failed to fetch customer revenue", error);
