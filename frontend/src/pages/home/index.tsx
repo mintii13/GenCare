@@ -26,7 +26,7 @@ const HomePage = () => {
     {
       icon: (
         <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 mb-4">
-          <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" stroke="#2563eb" strokeWidth="2"/><path d="M8 3v4M16 3v4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/><path d="M4 9h16" stroke="#2563eb" strokeWidth="2"/></svg>
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" stroke="#2563eb" strokeWidth="2" /><path d="M8 3v4M16 3v4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" /><path d="M4 9h16" stroke="#2563eb" strokeWidth="2" /></svg>
         </span>
       ),
       title: 'Theo dõi chu kỳ',
@@ -36,7 +36,7 @@ const HomePage = () => {
     {
       icon: (
         <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 mb-4">
-          <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.5 4 8.5C4 5.46243 6.46243 3 9.5 3C11.1566 3 12.7357 3.87972 13.5 5.15385C14.2643 3.87972 15.8434 3 17.5 3C20.5376 3 23 5.46243 23 8.5C23 13.5 15 21 15 21H12Z" stroke="#2563eb" strokeWidth="2"/></svg>
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.5 4 8.5C4 5.46243 6.46243 3 9.5 3C11.1566 3 12.7357 3.87972 13.5 5.15385C14.2643 3.87972 15.8434 3 17.5 3C20.5376 3 23 5.46243 23 8.5C23 13.5 15 21 15 21H12Z" stroke="#2563eb" strokeWidth="2" /></svg>
         </span>
       ),
       title: 'Tư vấn trực tuyến',
@@ -46,7 +46,7 @@ const HomePage = () => {
     {
       icon: (
         <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 mb-4">
-          <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" stroke="#2563eb" strokeWidth="2"/><path d="M8 3v4M16 3v4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/><path d="M4 9h16" stroke="#2563eb" strokeWidth="2"/></svg>
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" stroke="#2563eb" strokeWidth="2" /><path d="M8 3v4M16 3v4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" /><path d="M4 9h16" stroke="#2563eb" strokeWidth="2" /></svg>
         </span>
       ),
       title: 'Xét nghiệm STIs',
@@ -60,34 +60,34 @@ const HomePage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       console.log('🏠 HomePage: Fetching data...');
-      
+
       // Fetch data in parallel
       const [homepageData, consultantsData] = await Promise.all([
         homeService.getHomepageData(),
         consultantService.getAllConsultants(1, 10)
       ]);
-      
+
       if (homepageData.success) {
         const { blogs } = homepageData.data;
         
         setBlogsData(blogs || []);
-        
+
         console.log('✅ HomePage: Homepage data fetched successfully', {
           blogs: blogs?.length || 0
         });
       }
-      
+
       if (consultantsData.data) {
         const consultants = consultantsData.data.consultants || [];
         setConsultantsData(consultants as unknown as Consultant[]);
-        
+
         console.log('✅ HomePage: Consultants fetched successfully', {
           consultants: consultants.length
         });
       }
-      
+
     } catch (error) {
       console.error('❌ HomePage: Error fetching data:', error);
       setError('Không thể tải dữ liệu trang chủ. Vui lòng thử lại sau.');
@@ -101,10 +101,9 @@ const HomePage = () => {
   }, []);
 
   // Memoized data processing
-  const topConsultants = useMemo(() => 
+  const topConsultants = useMemo(() =>
     consultantsData.slice(0, 3), [consultantsData]
   );
-
 
 
   if (isLoading) {
@@ -123,7 +122,7 @@ const HomePage = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <button 
+          <button
             onClick={fetchData}
             className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
           >
@@ -138,23 +137,20 @@ const HomePage = () => {
     <div className="min-h-screen">
       <MemoizedBanner />
 
-  
+
 
       {/* Services Section - 3 dịch vụ cứng với links thật */}
       <section id="services-section" className="py-8 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
           <h2 className="text-4xl font-bold text-center text-blue-700 mb-4">Dịch vụ của chúng tôi</h2>
-          <p className="text-lg text-center text-blue-700/80 mb-12 max-w-2xl mx-auto">
-            GenCare cung cấp các dịch vụ chăm sóc sức khỏe sinh sản toàn diện, từ tư vấn đến xét nghiệm.
-          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {serviceCards.map((card) => (
               <div key={card.link} className="bg-white rounded-xl shadow border border-blue-100 p-8 flex flex-col items-center text-center transition hover:shadow-lg">
                 {card.icon}
                 <h3 className="text-xl font-bold text-blue-700 mb-2">{card.title}</h3>
                 <p className="text-blue-700/80 mb-6">{card.desc}</p>
-                <Link 
-                  to={card.link} 
+                <Link
+                  to={card.link}
                   className="px-6 py-2 rounded border border-blue-400 text-blue-700 font-semibold hover:bg-blue-50 transition"
                 >
                   Tìm hiểu thêm
@@ -188,8 +184,8 @@ const HomePage = () => {
                 <div key={consultant.consultant_id} className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
                   <div className="w-20 h-20 rounded-full bg-blue-100 mx-auto mb-4 flex items-center justify-center">
                     {consultant.avatar ? (
-                      <img 
-                        src={consultant.avatar} 
+                      <img
+                        src={consultant.avatar}
                         alt={consultant.full_name}
                         className="w-20 h-20 rounded-full object-cover"
                       />
@@ -234,7 +230,7 @@ const HomePage = () => {
               Xem tất cả bài viết
             </Link>
           </div>
-          
+
           {blogsData.length > 0 ? (
             <div className="relative">
                <div className="overflow-x-auto scrollbar-hide">
@@ -274,9 +270,9 @@ const HomePage = () => {
             </div>
           )}
         </div>
-        
-                 {/* Custom Scrollbar Styles */}
-         <style>{`
+
+        {/* Custom Scrollbar Styles */}
+        <style>{`
            .scrollbar-hide {
              -ms-overflow-style: none;
              scrollbar-width: none;
@@ -355,39 +351,6 @@ const HomePage = () => {
            }
          `}</style>
       </section>
-
-      {/* CTA Section */}
-      <section className="bg-primary/5 py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-6">
-            Sẵn sàng chăm sóc sức khỏe của bạn?
-          </h2>
-          <p className="text-lg mb-8 max-w-2xl mx-auto">
-            Đặt lịch xét nghiệm ngay hôm nay để nhận được tư vấn miễn phí từ đội ngũ chuyên gia của chúng tôi
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/test-packages/sti"
-              className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-            >
-              Xem gói xét nghiệm
-            </Link>
-            <Link
-              to="/sti-booking/book"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Đặt lịch xét nghiệm
-            </Link>
-            <Link
-              to="/consultation/book-appointment"
-              className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-            >
-              Tư vấn trực tuyến
-            </Link>
-          </div>
-        </div>
-      </section>
-
 
     </div>
   );
