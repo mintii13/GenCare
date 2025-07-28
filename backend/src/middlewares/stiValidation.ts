@@ -134,8 +134,8 @@ export const stiOrderCreateSchema = Joi.object({
     'any.invalid': 'Ngày không hợp lệ'
   }),
 
-  notes: Joi.string().max(500).allow('').optional().messages({
-    'string.max': 'Ghi chú không được vượt quá 500 ký tự'
+  notes: Joi.string().max(2000).allow('').optional().messages({
+    'string.max': 'Ghi chú không được vượt quá 2000 ký tự'
   })
 })
 
@@ -215,8 +215,8 @@ export const stiOrderUpdateSchema = Joi.object({
     'any.required': 'Tổng tiền là bắt buộc'
   }),
 
-  notes: Joi.string().max(500).allow('').optional().messages({
-    'string.max': 'Ghi chú không được vượt quá 500 ký tự'
+  notes: Joi.string().max(2000).allow('').optional().messages({
+    'string.max': 'Ghi chú không được vượt quá 2000 ký tự'
   })
 });
 

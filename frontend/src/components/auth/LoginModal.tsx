@@ -410,9 +410,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                     disabled={modalState !== 'login'}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                   />
+                  <div className="form-error-container">
                   {loginForm.formState.errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{loginForm.formState.errors.email.message}</p>
+                      <p className="form-error-message">{loginForm.formState.errors.email.message}</p>
                   )}
+                  </div>
                 </div>
 
                 {/* Password field */}
@@ -444,9 +446,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                       <Eye className="h-5 w-5 text-gray-400" />
                     )}
                   </button>
+                  <div className="form-error-container">
                   {loginForm.formState.errors.password && (
-                    <p className="mt-1 text-sm text-red-600">{loginForm.formState.errors.password.message}</p>
+                      <p className="form-error-message">{loginForm.formState.errors.password.message}</p>
                   )}
+                  </div>
                 </div>
 
                 {/* Login button */}
@@ -543,11 +547,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                       disabled={modalState !== 'register'}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                     />
+                    <div className="form-error-container">
                     {(emailError || step1Form.formState.errors.email) && (
-                      <p className="mt-1 text-sm text-red-600">
+                        <p className="form-error-message">
                         {emailError || step1Form.formState.errors.email?.message}
                       </p>
                     )}
+                    </div>
                   </div>
 
                   {/* Password */}
@@ -578,9 +584,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                         <Eye className="h-5 w-5 text-gray-400" />
                       )}
                     </button>
+                    <div className="form-error-container">
                     {step1Form.formState.errors.password && (
-                      <p className="mt-1 text-sm text-red-600">{step1Form.formState.errors.password.message}</p>
+                        <p className="form-error-message">{step1Form.formState.errors.password.message}</p>
                     )}
+                    </div>
                   </div>
 
                   {/* Confirm Password */}
@@ -611,9 +619,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                         <Eye className="h-5 w-5 text-gray-400" />
                       )}
                     </button>
+                    <div className="form-error-container">
                     {step1Form.formState.errors.confirmPassword && (
-                      <p className="mt-1 text-sm text-red-600">{step1Form.formState.errors.confirmPassword.message}</p>
+                        <p className="form-error-message">{step1Form.formState.errors.confirmPassword.message}</p>
                     )}
+                    </div>
                   </div>
 
                   <Button
@@ -668,9 +678,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                       disabled={modalState !== 'register'}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                     />
+                    <div className="form-error-container">
                     {registerForm.formState.errors.fullName && (
-                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.fullName.message}</p>
+                        <p className="form-error-message">{registerForm.formState.errors.fullName.message}</p>
                     )}
+                    </div>
                   </div>
 
                   {/* Phone */}
@@ -689,9 +701,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                       disabled={modalState !== 'register'}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                     />
+                    <div className="form-error-container">
                     {registerForm.formState.errors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.phone.message}</p>
+                        <p className="form-error-message">{registerForm.formState.errors.phone.message}</p>
                     )}
+                    </div>
                   </div>
 
                   {/* Date of Birth */}
@@ -706,9 +720,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                       disabled={modalState !== 'register'}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                     />
+                    <div className="form-error-container">
                     {registerForm.formState.errors.dateOfBirth && (
-                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.dateOfBirth.message}</p>
+                        <p className="form-error-message">{registerForm.formState.errors.dateOfBirth.message}</p>
                     )}
+                    </div>
                   </div>
 
                   {/* Gender */}
@@ -724,9 +740,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
                       <option value="female">Nữ</option>
                       <option value="other">Khác</option>
                     </select>
+                    <div className="form-error-container">
                     {registerForm.formState.errors.gender && (
-                      <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.gender.message}</p>
+                        <p className="form-error-message">{registerForm.formState.errors.gender.message}</p>
                     )}
+                    </div>
                   </div>
 
                   <div className="flex space-x-4 pt-4">

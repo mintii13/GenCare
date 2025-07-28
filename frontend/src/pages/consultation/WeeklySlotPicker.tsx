@@ -102,6 +102,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         status = 'unavailable';
       } else if (diffHours < 2) {
         status = 'restricted';
+        disabled = false; // Cho phép click slot quá gần
       } else if (isSelected) {
         status = 'selected';
         disabled = false;
@@ -296,7 +297,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                              slot.status === 'available' ? `Đặt lịch ${slot.displayTime}` :
                              slot.status === 'booked' ? 'Đã được đặt' :
                              slot.status === 'past' ? 'Đã qua thời gian' :
-                             slot.status === 'restricted' ? `Quá gấp (${slot.diffHours?.toFixed(1)}h)` :
+                             slot.status === 'restricted' ? `Quá gần (${slot.diffHours?.toFixed(1)}h)` :
                              slot.status === 'selected' ? 'Đã chọn' :
                              'Không khả dụng'
                            }
@@ -305,10 +306,10 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                              type={slot.status === 'selected' ? 'primary' : 'default'}
                              size="small"
                              block
-                             disabled={slot.disabled}
+                             disabled={slot.status === 'booked' || slot.status === 'past' || slot.status === 'unavailable'}
                              onClick={(e) => {
                                e.stopPropagation();
-                               if (!slot.disabled) {
+                               if (slot.status !== 'booked' && slot.status !== 'past' && slot.status !== 'unavailable') {
                                  handleSlotSelect(
                                    dayDate.format('YYYY-MM-DD'),
                                    slot.startTime,
@@ -320,7 +321,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                                slot.status === 'available' ? 'border-green-500 text-green-600 hover:border-green-600 hover:bg-green-50' :
                                slot.status === 'booked' ? 'border-red-500 text-red-600 bg-red-50' :
                                slot.status === 'past' ? 'border-gray-400 text-gray-500 bg-gray-50' :
-                               slot.status === 'restricted' ? 'border-orange-500 text-orange-600 bg-orange-50' :
+                               slot.status === 'restricted' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
                                slot.status === 'selected' ? '' :
                                'border-gray-300 text-gray-400 bg-gray-50'
                              }`}
@@ -356,7 +357,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                 <Badge status="success" text="Có thể đặt" />
                 <Badge status="processing" text="Đã chọn" />
                 <Badge status="error" text="Đã đặt" />
-                <Badge status="warning" text="Quá gấp" />
+                <Badge status="warning" text="Quá gần" />
                 <Badge status="default" text="Không khả dụng" />
               </Space>
             </Col>
@@ -367,7 +368,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         description={
           <div className="flex items-center justify-between text-sm">
             <span><ClockCircleOutlined className="mr-1" />Không thể đặt lịch trong quá khứ</span>
-            <span><ExclamationCircleOutlined className="mr-1" />Đặt trước tối thiểu 2 giờ</span>
+            <span><ExclamationCircleOutlined className="mr-1" />Đặt trước tối thiểu 2 giờ (màu vàng)</span>
             <span><CheckCircleOutlined className="mr-1" />Click vào slot xanh để đặt lịch</span>
           </div>
         }

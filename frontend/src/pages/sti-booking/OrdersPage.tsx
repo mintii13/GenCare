@@ -75,7 +75,6 @@ const OrdersPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) {
-      toast.error('Vui lòng đăng nhập để sử dụng chức năng này!');
       setShowLoginModal(true);
       return;
     }
@@ -308,12 +307,6 @@ const OrdersPage: React.FC = () => {
           {getStatusText(status)}
         </Tag>
       )
-    },
-    {
-      title: 'Ghi chú',
-      dataIndex: 'notes',
-      key: 'notes',
-      render: (notes: string) => notes || 'Không có ghi chú'
     },
     {
       title: 'Thao tác',
@@ -624,7 +617,23 @@ const OrdersPage: React.FC = () => {
                 {selectedOrder.notes && (
                   <div>
                     <Text strong>Ghi chú: </Text>
-                    <Text>{selectedOrder.notes}</Text>
+                    <div 
+                      style={{ 
+                        marginTop: 8,
+                        padding: 12,
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: 6,
+                        border: '1px solid #e9ecef',
+                        maxHeight: 200,
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        lineHeight: 1.5,
+                        fontSize: 14
+                      }}
+                    >
+                      {selectedOrder.notes}
+                    </div>
                   </div>
                 )}
                 <div>

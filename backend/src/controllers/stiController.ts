@@ -361,6 +361,8 @@ router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('customer', '
 });
 
 
+
+
 //update sti-package API
 router.put('/updateStiPackage/:id', validateStiPackage, authenticateToken, authorizeRoles('staff', 'admin'), stiAuditLogger('StiPackage', 'Update StiPackage'), async (req: Request, res: Response): Promise<void> => {
     try {

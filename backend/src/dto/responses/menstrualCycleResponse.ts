@@ -25,6 +25,19 @@ export interface TodayStatus {
     period_mood_data?: IDailyMoodData; // Add mood data for period days
     day_in_cycle?: number;
     cycle_phase?: string;
+    // Current cycle predictions
+    predicted_cycle_end?: string;
+    predicted_ovulation_date?: string;
+    predicted_fertile_start?: string;
+    predicted_fertile_end?: string;
+    // Next cycle predictions
+    next_cycle_start?: string;
+    next_ovulation_date?: string;
+    next_fertile_start?: string;
+    next_fertile_end?: string;
+    // Cycle information
+    cycle_length?: number;
+    period_length?: number;
 }
 
 export interface CycleComparison {

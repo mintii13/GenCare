@@ -34,7 +34,7 @@ import {
   ClearOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../../contexts/AuthContext';
-import StiResultService, { StiResult, CreateStiResultRequest, UpdateStiResultRequest } from '../../../../services/stiResultService';
+import StiResultService, { StiResult, CreateStiResultRequest, UpdateStiResultByStaffRequest } from '../../../../services/stiResultService';
 import apiClient from '../../../../services/apiClient';
 import { API } from '../../../../config/apiEndpoints';
 import dayjs from 'dayjs';
@@ -168,13 +168,12 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
     setSelectedOrder(null);
     
     form.setFieldsValue({
-      result_value: result.result_value,
       diagnosis: result.diagnosis,
       is_confirmed: result.is_confirmed,
       is_critical: result.is_critical,
       is_notified: result.is_notified,
-      notes: result.notes,
-      time_result: result.time_result ? dayjs(result.time_result) : null
+      notes: result.medical_notes,
+      time_result: result.received_time ? dayjs(result.received_time) : null
     });
     
     setResultModalVisible(true);
@@ -185,19 +184,15 @@ const ResultsManagement: React.FC<ResultsManagementProps> = ({ refreshTrigger })
       const values = await form.validateFields();
       
       if (editingResult) {
-        const updateData: UpdateStiResultRequest = {
-          result_value: values.result_value,
-          diagnosis: values.diagnosis,
-          is_confirmed: values.is_confirmed,
-          is_critical: values.is_critical,
-          notes: values.notes,
-          time_result: values.time_result ? values.time_result.toDate() : undefined
+        const updateData: UpdateStiResultByStaffRequest = {
+          sti_order_id: editingResult.sti_order_id,
+          sti_result_items: editingResult.sti_result_items
         };
         
-        const response = await StiResultService.updateStiResult(editingResult._id, updateData);
+        const response = await StiResultService.updateStiResultByStaff(editingResult.sti_order_id, updateData);
         if (response.success) {
           message.success('Cập nhật kết quả thành công');
-          fetchResultsByOrder(editingResult.order_id);
+          fetchResultsByOrder(editingResult.sti_order_id);
         } else {
           message.error(response.message || 'Lỗi khi cập nhật kết quả');
         }

@@ -48,7 +48,14 @@ const BookAppointment: React.FC = () => {
     toast.error(`${title}${message ? ': ' + message : ''}`);
   };
   const showWarning = (title: string, message?: string) => {
-    toast.error(`${title}${message ? ': ' + message : ''}`);
+    toast(`${title}${message ? ': ' + message : ''}`, { 
+      icon: '⚠️',
+      style: {
+        background: '#fef3c7',
+        color: '#92400e',
+        border: '1px solid #f59e0b'
+      }
+    });
   };
   const ToastContainer = () => null;
   
@@ -97,9 +104,8 @@ const BookAppointment: React.FC = () => {
         setSelectedConsultant(consultantId);
         setStep(1);
         log.component('BookAppointment', 'Pre-selected consultant from URL', { consultantId });
-      } else {
-        window.location.replace('/consultants');
       }
+      // Không redirect nếu không có consultantId (có thể đến từ STI assessment)
 
       const screeningNotes = localStorage.getItem('sti_screening_consultation_notes');
       if (screeningNotes) {
@@ -217,7 +223,12 @@ const BookAppointment: React.FC = () => {
         showSuccess('Đặt lịch thành công', 'Chuyên gia sẽ xác nhận lịch hẹn trong vòng 24 giờ');
         navigate('/my-appointments');
       } else {
+        // Kiểm tra nếu có pending appointment
+        if (response.errorType === 'PENDING_APPOINTMENT_EXISTS') {
+          showWarning('Không thể đặt lịch', response.message || 'Bạn đã có lịch hẹn đang chờ xác nhận');
+      } else {
         showError('Đặt lịch thất bại', response.message || 'Có lỗi xảy ra khi đặt lịch');
+        }
       }
     } catch (error) {
       log.error('BookAppointment', 'Error booking appointment', error);

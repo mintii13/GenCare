@@ -1224,6 +1224,12 @@ export class MenstrualCycleService {
                 pregnancyChance = 'medium';
             }
 
+            // Calculate next cycle predictions
+            const nextCycleStart = latestCycle.predicted_cycle_end ? new Date(latestCycle.predicted_cycle_end) : null;
+            const nextOvulationDate = nextCycleStart ? this.predictOvulationDate(nextCycleStart, cycleLength) : null;
+            const nextFertileStart = nextCycleStart ? this.predictFertileStart(nextCycleStart, cycleLength) : null;
+            const nextFertileEnd = nextCycleStart ? this.predictFertileEnd(nextCycleStart, cycleLength) : null;
+
             const todayStatus: TodayStatus = {
                 date: today.toISOString().split('T')[0],
                 is_period_day: isPeriodDay,
@@ -1233,7 +1239,19 @@ export class MenstrualCycleService {
                 recommendations: this.getRecommendations(cyclePhase, isPeriodDay, finalIsFertileDay, finalIsOvulationDay),
                 period_mood_data: periodMoodData,
                 day_in_cycle: dayInCycle,
-                cycle_phase: cyclePhase
+                cycle_phase: cyclePhase,
+                // Add prediction data
+                predicted_cycle_end: latestCycle.predicted_cycle_end?.toISOString().split('T')[0],
+                predicted_ovulation_date: latestCycle.predicted_ovulation_date?.toISOString().split('T')[0],
+                predicted_fertile_start: latestCycle.predicted_fertile_start?.toISOString().split('T')[0],
+                predicted_fertile_end: latestCycle.predicted_fertile_end?.toISOString().split('T')[0],
+                // Next cycle predictions
+                next_cycle_start: nextCycleStart?.toISOString().split('T')[0],
+                next_ovulation_date: nextOvulationDate?.toISOString().split('T')[0],
+                next_fertile_start: nextFertileStart?.toISOString().split('T')[0],
+                next_fertile_end: nextFertileEnd?.toISOString().split('T')[0],
+                cycle_length: cycleLength,
+                period_length: latestCycle.period_days.length
             };
 
             return {

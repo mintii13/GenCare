@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Banner from "./components/Banner";
 import BlogCard from '../../components/blog/BlogCard';
+import STITestPackages from './components/STITestPackages';
 import { homeService, consultantService } from '../../services';
 import { Blog as BlogType } from '../../types/blog';
 import { StiPackage, StiTest } from '@/types/sti';
@@ -14,13 +15,12 @@ const MemoizedBlogCard = React.memo(BlogCard);
 const HomePage = () => {
   const navigate = useNavigate();
 
-  const [packagesData, setPackagesData] = useState<StiPackage[]>([]);
-  const [testsData, setTestsData] = useState<StiTest[]>([]);
+
   const [blogsData, setBlogsData] = useState<BlogType[]>([]);
   const [consultantsData, setConsultantsData] = useState<Consultant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [testTab, setTestTab] = useState<'packages' | 'single'>('packages');
+
   // Service cards config
   const serviceCards = [
     {
@@ -70,14 +70,11 @@ const HomePage = () => {
       ]);
       
       if (homepageData.success) {
-        const { sti_packages, sti_tests, blogs } = homepageData.data;
+        const { blogs } = homepageData.data;
         
-        setPackagesData(sti_packages || []);
-        setTestsData(sti_tests || []);
         setBlogsData(blogs || []);
         
         console.log('✅ HomePage: Homepage data fetched successfully', {
-          packages: sti_packages?.length || 0,
           blogs: blogs?.length || 0
         });
       }
@@ -108,15 +105,7 @@ const HomePage = () => {
     consultantsData.slice(0, 3), [consultantsData]
   );
 
-  const activePackages = useMemo(() => 
-    packagesData.filter((p) => p.is_active !== false),
-    [packagesData]
-  );
 
-  const activeTests = useMemo(() => 
-    testsData.filter((t) => t.is_active !== false),
-    [testsData]
-  );
 
   if (isLoading) {
     return (
@@ -214,7 +203,7 @@ const HomePage = () => {
                   <p className="text-blue-600 mb-2">{consultant.specialization}</p>
                   <p className="text-sm text-gray-600 mb-4">{consultant.experience_years} năm kinh nghiệm</p>
                   <Link
-                    to="/consultants"
+                    to={`/consultation/book-appointment?consultant=${consultant.consultant_id}`}
                     className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                   >
                     Chọn chuyên gia
@@ -227,93 +216,8 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* STI Test Packages / Single Tests Section */}
-      {(
-        <section className="py-8 bg-white">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-blue-700 mb-4">Dịch vụ xét nghiệm</h2>
-              <p className="text-lg text-blue-700/80 max-w-2xl mx-auto mb-8">
-                Các gói xét nghiệm và các dịch vụ xét nghiệm được cung cấp bởi chúng tôi
-              </p>
-              {/* Tabs */}
-              <div className="inline-flex bg-blue-100 rounded-lg overflow-hidden shadow-sm">
-                <button
-                  onClick={() => setTestTab('packages')}
-                  className={`px-6 py-2 font-medium transition-colors ${testTab==='packages' ? 'bg-blue-600 text-white' : 'text-blue-600 hover:bg-blue-200'}`}
-                >
-                  Gói xét nghiệm
-                </button>
-                <button
-                  onClick={() => setTestTab('single')}
-                  className={`px-6 py-2 font-medium transition-colors ${testTab==='single' ? 'bg-blue-600 text-white' : 'text-blue-600 hover:bg-blue-200'}`}
-                >
-                  Xét nghiệm lẻ
-                </button>
-              </div>
-            </div>
-
-            {/* Content - Logic for centering or scrolling */}
-            <div className="relative">
-              <div
-                className={
-                  (testTab === 'packages' ? activePackages.length : activeTests.length) > 4
-                    ? 'overflow-x-auto scrollbar-hide'
-                    : 'flex justify-center'
-                }
-              >
-                <div
-                  className={`flex flex-wrap gap-6 pb-4 ${
-                    (testTab === 'packages' ? activePackages.length : activeTests.length) <= 4
-                      ? 'justify-center'
-                      : ''
-                  }`}
-                  style={
-                    (testTab === 'packages' ? activePackages.length : activeTests.length) > 4
-                      ? { width: 'max-content' }
-                      : {}
-                  }
-                >
-                  {(testTab === 'packages' ? activePackages : activeTests).map((service: StiPackage | StiTest) => (
-                    <div key={service._id} className="w-80 h-50 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition flex flex-col">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate" title={'sti_package_name' in service ? service.sti_package_name : service.sti_test_name}>
-                        {'sti_package_name' in service ? service.sti_package_name : service.sti_test_name}
-                      </h3>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{service.description}</p>
-                      <div className="flex-grow" />
-                      <div className="flex justify-between items-center mb-4 mt-auto">
-                        <span className="text-2xl font-bold text-blue-600">
-                          {service.price?.toLocaleString('vi-VN')}đ
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {testTab==='packages' ? 'Gói' : ('sti_test_type' in service && service.sti_test_type) || 'Test'}
-                        </span>
-                      </div>
-                  
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="text-center mt-8">
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  to="/sti-assessment"
-                  className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-                >
-                  Đánh giá sàng lọc STi
-                </Link>
-                <Link
-                  to="/sti-booking/book"
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Đặt lịch xét nghiệm
-                </Link>
-              </div>
-            </div>
-          </div>  
-        </section>
-      )}
+      {/* STI Test Packages Section */}
+      <STITestPackages />
 
       {/* Blog Section - Sử dụng data thật từ API */}
       <section className="py-8 bg-gray-50">
@@ -337,7 +241,7 @@ const HomePage = () => {
                  <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
                    {blogsData.map((blog) => (
                      <div key={blog.blog_id} className="w-96 flex-shrink-0">
-                       <div className="h-full">
+                       <div className="h-full flex">
                          <MemoizedBlogCard
                            blog={blog}
                            onClick={(blogId) => navigate(`/blogs/${blogId}`)}
@@ -386,9 +290,17 @@ const HomePage = () => {
              scroll-behavior: smooth;
            }
            
-           /* Blog card consistent height and title display */
+           /* Blog card consistent height */
            .scrollbar-hide .w-96 > div > div {
-             height: 420px;
+             height: auto;
+             min-height: 420px;
+             display: flex;
+             flex-direction: column;
+           }
+           
+           /* Ensure BlogCard takes full height */
+           .scrollbar-hide .w-96 > div > div > article {
+             height: 100%;
              display: flex;
              flex-direction: column;
            }
@@ -399,18 +311,18 @@ const HomePage = () => {
              flex-direction: column;
            }
            
-           /* Override title line-clamp to show full title */
+           /* Title display */
            .scrollbar-hide .w-96 h3 {
              line-height: 1.4;
              height: auto;
-             overflow: visible;
-             display: block;
-             -webkit-line-clamp: unset;
-             -webkit-box-orient: unset;
+             overflow: hidden;
+             display: -webkit-box;
+             -webkit-line-clamp: 2;
+             -webkit-box-orient: vertical;
              margin-bottom: 1rem;
            }
            
-           /* Content area should take remaining space */
+           /* Content area */
            .scrollbar-hide .w-96 p {
              flex: 1;
              overflow: hidden;

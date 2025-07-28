@@ -424,6 +424,11 @@ const MyAppointments: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setSelectedAppointment(appointment)}>
               Chi tiết
             </Button>
+            {appointment.status === 'confirmed' && (
+              <Button variant="outline" size="sm" onClick={() => handleEditAppointment(appointment)}>
+                Đổi lịch
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -432,14 +437,9 @@ const MyAppointments: React.FC = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {appointment.status === 'confirmed' && (
-                  <>
-                    <DropdownMenuItem onClick={() => handleEditAppointment(appointment)}>
-                      Đổi lịch
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleCancelAppointment(appointment._id)} className="text-red-600">
                       Hủy hẹn
                     </DropdownMenuItem>
-                  </>
                 )}
                 {appointment.status === 'completed' && (
                   <DropdownMenuItem onClick={() => { setSelectedAppointment(appointment); setShowFeedbackModal(true); }}>

@@ -1,0 +1,219 @@
+/* Form Stable Layout - Ngăn layout shift khi có lỗi validation */
+
+/* Container cho form fields */
+.form-field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Error message container - luôn có chiều cao cố định */
+.form-error-container {
+  min-height: 1rem; /* 16px */
+  display: flex;
+  align-items: flex-start;
+}
+
+.form-error-message {
+  font-size: 0.75rem; /* 12px */
+  color: #ef4444; /* red-500 */
+  margin: 0;
+  line-height: 1rem;
+}
+
+/* Description container - chỉ hiển thị khi không có lỗi */
+.form-description-container {
+  min-height: 1rem; /* 16px */
+  display: flex;
+  align-items: flex-start;
+}
+
+.form-description {
+  font-size: 0.75rem; /* 12px */
+  color: #6b7280; /* gray-500 */
+  margin: 0;
+  line-height: 1rem;
+}
+
+/* Input wrapper với icon support */
+.form-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input-wrapper .form-input {
+  width: 100%;
+  padding: 0.375rem 0.75rem; /* 6px 12px */
+  border: 1px solid #d1d5db; /* gray-300 */
+  border-radius: 0.375rem; /* 6px */
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+  transition: all 0.15s ease-in-out;
+}
+
+.form-input-wrapper .form-input:focus {
+  outline: none;
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input-wrapper .form-input.error {
+  border-color: #ef4444; /* red-500 */
+}
+
+.form-input-wrapper .form-input.error:focus {
+  border-color: #ef4444; /* red-500 */
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Icon positioning */
+.form-input-wrapper .form-input-icon-left {
+  position: absolute;
+  left: 0.75rem; /* 12px */
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af; /* gray-400 */
+  pointer-events: none;
+}
+
+.form-input-wrapper .form-input-icon-right {
+  position: absolute;
+  right: 0.75rem; /* 12px */
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af; /* gray-400 */
+}
+
+/* Padding cho input có icon */
+.form-input-wrapper .form-input.has-left-icon {
+  padding-left: 2.5rem; /* 40px */
+}
+
+.form-input-wrapper .form-input.has-right-icon {
+  padding-right: 2.5rem; /* 40px */
+}
+
+/* Textarea specific styles */
+.form-textarea {
+  width: 100%;
+  padding: 0.375rem 0.75rem; /* 6px 12px */
+  border: 1px solid #d1d5db; /* gray-300 */
+  border-radius: 0.375rem; /* 6px */
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+  resize: vertical;
+  min-height: 2.5rem; /* 40px */
+  transition: all 0.15s ease-in-out;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-textarea.error {
+  border-color: #ef4444; /* red-500 */
+}
+
+.form-textarea.error:focus {
+  border-color: #ef4444; /* red-500 */
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Select specific styles */
+.form-select {
+  width: 100%;
+  padding: 0.375rem 0.75rem; /* 6px 12px */
+  border: 1px solid #d1d5db; /* gray-300 */
+  border-radius: 0.375rem; /* 6px */
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-select.error {
+  border-color: #ef4444; /* red-500 */
+}
+
+.form-select.error:focus {
+  border-color: #ef4444; /* red-500 */
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Character count */
+.form-char-count {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem; /* 14px */
+  color: #6b7280; /* gray-500 */
+  margin-top: 0.25rem; /* 4px */
+}
+
+/* Label styles */
+.form-label {
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  color: #374151; /* gray-700 */
+  margin-bottom: 0.125rem; /* 2px */
+}
+
+.form-label .required {
+  color: #ef4444; /* red-500 */
+  margin-left: 0.25rem; /* 4px */
+}
+
+/* Disabled state */
+.form-input-wrapper .form-input:disabled,
+.form-textarea:disabled,
+.form-select:disabled {
+  background-color: #f9fafb; /* gray-50 */
+  color: #6b7280; /* gray-500 */
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .form-input-wrapper .form-input,
+  .form-textarea,
+  .form-select {
+    font-size: 1rem; /* 16px - prevent zoom on iOS */
+  }
+}
+
+/* Animation cho error messages */
+.form-error-message {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility classes */
+.form-stable-layout {
+  /* Đảm bảo layout ổn định */
+  contain: layout style;
+}
+
+.form-no-shift {
+  /* Ngăn layout shift */
+  min-height: 0;
+  overflow: visible;
+} 

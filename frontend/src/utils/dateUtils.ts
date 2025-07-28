@@ -218,9 +218,9 @@ export const getSlotStatus = (date: string, startTime: string, endTime: string):
     return {
       status: 'restricted',
       isClickable: true,
-      displayText: 'Hạn chế',
+      displayText: 'Quá gần',
       tooltipText: `Slot ${startTime} - ${endTime} chỉ còn ${diffHours.toFixed(1)} giờ nữa (tối thiểu 2 giờ)`,
-      cssClass: 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 cursor-pointer transform hover:scale-102 border-dashed'
+      cssClass: 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 cursor-pointer transform hover:scale-102 border-dashed'
     };
   }
   

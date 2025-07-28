@@ -5,6 +5,7 @@ import { API } from '../config/apiEndpoints';
 import { getToken, getUser, isAuthenticated } from '../utils/authUtils';
 import { env } from '../config/environment';
 import LoginModal from '../components/auth/LoginModal';
+import toast from 'react-hot-toast';
   
 const AUTH_TOKEN_KEY = env.AUTH_TOKEN_KEY;
 
@@ -211,6 +212,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
       setIsAuthenticated(false);
       closeModal();
+      
+      // Mở modal đăng nhập sau khi logout
+      setTimeout(() => {
+        openModal('login');
+      }, 500);
     }
   };
 

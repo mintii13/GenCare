@@ -962,30 +962,27 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                           </span>
                         </div>
                       )}
-                      {latestCycle.predicted_cycle_end && (
+                      {todayStatus?.next_cycle_start && (
                         <div className="flex items-center justify-between p-2 bg-white rounded-lg">
                           <span className="text-gray-600">Chu kỳ tiếp:</span>
                           <span className="font-medium text-blue-800">
-                            {new Date(latestCycle.predicted_cycle_end).toLocaleDateString('vi-VN')}
+                            {new Date(todayStatus.next_cycle_start).toLocaleDateString('vi-VN')}
                           </span>
                         </div>
                       )}
-                      {latestCycle.cycle_length && (
+                      {todayStatus?.cycle_length && (
                         <div className="flex items-center justify-between p-2 bg-white rounded-lg">
                           <span className="text-gray-600">Độ dài chu kỳ:</span>
                           <span className="font-medium text-blue-800">
-                            {todayStatus?.day_in_cycle && todayStatus.day_in_cycle > 28 ? todayStatus.day_in_cycle : 28} ngày
-                            {todayStatus?.day_in_cycle && todayStatus.day_in_cycle > 28 && (
-                              <span className="text-xs text-blue-600 ml-1">(cá nhân)</span>
-                            )}
+                            {todayStatus.cycle_length} ngày
                           </span>
                         </div>
                       )}
-                      {latestCycle.period_days?.length > 0 && (
+                      {todayStatus?.period_length && (
                         <div className="flex items-center justify-between p-2 bg-white rounded-lg">
                           <span className="text-gray-600">Độ dài kinh nguyệt:</span>
                           <span className="font-medium text-blue-800">
-                            {latestCycle.period_days.length} ngày
+                            {todayStatus.period_length} ngày
                           </span>
                         </div>
                       )}

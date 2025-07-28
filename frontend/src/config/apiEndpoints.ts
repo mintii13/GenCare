@@ -206,6 +206,7 @@ export const API = {
     GET_ALL_PACKAGES: '/sti/getAllStiPackage',//122
     GET_ALL_PACKAGES_PAGINATED: '/sti/getAllStiPackage', // Tạm thời dùng endpoint cũ//123
     GET_PACKAGE: (id: string) => `/sti/getStiPackage/${id}`,//124
+
     UPDATE_PACKAGE: (id: string) => `/sti/updateStiPackage/${id}`,//125
     DELETE_PACKAGE: (id: string) => `/sti/deleteStiPackage/${id}`, // Note: Backend uses PUT method//126
     GET_PACKAGE_STATS: '/sti/packages/stats', // Stats cho packages//127
