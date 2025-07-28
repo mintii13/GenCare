@@ -246,22 +246,20 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
               return (
                 <div
                   key={index}
-                  className={`min-h-[200px] p-2 border rounded transition-all ${
-                    isToday 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : isSelected 
-                        ? 'border-blue-300 bg-blue-100' 
-                        : 'border-gray-200'
-                  }`}
+                  className={`min-h-[200px] p-2 border rounded transition-all ${isToday
+                    ? 'border-blue-500 bg-blue-50'
+                    : isSelected
+                      ? 'border-blue-300 bg-blue-100'
+                      : 'border-gray-200'
+                    }`}
                 >
                   {/* Date Number */}
-                  <div className={`text-center mb-2 ${
-                    isToday ? 'text-blue-600 font-bold' : 'text-gray-700'
-                  }`}>
+                  <div className={`text-center mb-2 ${isToday ? 'text-blue-600 font-bold' : 'text-gray-700'
+                    }`}>
                     {dayDate.format('DD')}
                     {isToday && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">Hôm nay</span>}
                   </div>
-                  
+
                   {/* Time Slots */}
                   <div className="space-y-1">
                     {!daySlots.isWorkingDay ? (
@@ -274,11 +272,11 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                           key={slot.startTime}
                           title={
                             slot.status === 'available' ? `Đặt lịch ${slot.displayTime}` :
-                            slot.status === 'booked' ? 'Đã được đặt' :
-                            slot.status === 'past' ? 'Đã qua thời gian' :
-                            slot.status === 'restricted' ? `Quá gần (${slot.diffHours?.toFixed(1)}h)` :
-                            slot.status === 'selected' ? 'Đã chọn' :
-                            'Không khả dụng'
+                              slot.status === 'booked' ? 'Đã được đặt' :
+                                slot.status === 'past' ? 'Đã qua thời gian' :
+                                  slot.status === 'restricted' ? `Quá gần (${slot.diffHours?.toFixed(1)}h)` :
+                                    slot.status === 'selected' ? 'Đã chọn' :
+                                      'Không khả dụng'
                           }
                         >
                           <Button
@@ -296,20 +294,19 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                                 );
                               }
                             }}
-                            className={`text-xs h-6 ${
-                              slot.status === 'available' ? 'border-green-500 text-green-600 hover:border-green-600 hover:bg-green-50' :
+                            className={`text-xs h-6 ${slot.status === 'available' ? 'border-green-500 text-green-600 hover:border-green-600 hover:bg-green-50' :
                               slot.status === 'booked' ? 'border-red-500 text-red-600 bg-red-50' :
-                              slot.status === 'past' ? 'border-gray-400 text-gray-500 bg-gray-50' :
-                              slot.status === 'restricted' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
-                              slot.status === 'selected' ? '' :
-                              'border-gray-300 text-gray-400 bg-gray-50'
-                            }`}
+                                slot.status === 'past' ? 'border-gray-400 text-gray-500 bg-gray-50' :
+                                  slot.status === 'restricted' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
+                                    slot.status === 'selected' ? '' :
+                                      'border-gray-300 text-gray-400 bg-gray-50'
+                              }`}
                             icon={
                               slot.status === 'selected' ? <CheckCircleOutlined /> :
-                              slot.status === 'booked' ? <CloseCircleOutlined /> :
-                              slot.status === 'past' ? <ClockCircleOutlined /> :
-                              slot.status === 'restricted' ? <ExclamationCircleOutlined /> :
-                              undefined
+                                slot.status === 'booked' ? <CloseCircleOutlined /> :
+                                  slot.status === 'past' ? <ClockCircleOutlined /> :
+                                    slot.status === 'restricted' ? <ExclamationCircleOutlined /> :
+                                      undefined
                             }
                           >
                             {slot.displayTime}
@@ -326,49 +323,30 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
       </Card>
 
 
-              {/* Legend */}
-        <Card size="small" className="shadow-sm">
-          <div className="text-center mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
-          </div>
-          <Row gutter={16} justify="center">
-            <Col>
-              <Space>
-                <Badge status="success" text="Có thể đặt" />
-                <Badge status="processing" text="Đã chọn" />
-                <Badge status="error" text="Đã đặt" />
-                <Badge status="warning" text="Quá gần" />
-                <Badge status="default" text="Không khả dụng" />
-              </Space>
-            </Col>
-          </Row>
-        </Card>
+      {/* Legend */}
+      <Card size="small" className="shadow-sm">
+        <div className="text-center mb-2">
+          <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
+        </div>
+        <Row gutter={16} justify="center">
+          <Col>
+            <Space>
+              <Badge status="success" text="Có thể đặt" />
+              <Badge status="error" text="Đã đặt" />
+              <Badge status="warning" text="Quá gần" />
+              <Badge status="default" text="Không khả dụng" />
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
-        {/* Legend */}
-        <Card size="small" className="shadow-sm">
-          <div className="text-center mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
-          </div>
-          <Row gutter={16} justify="center">
-            <Col>
-              <Space>
-                <Badge status="success" text="Có thể đặt" />
-                <Badge status="processing" text="Đã chọn" />
-                <Badge status="error" text="Đã đặt" />
-                <Badge status="warning" text="Quá gần" />
-                <Badge status="default" text="Không khả dụng" />
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-        
-        <Alert
+      <Alert
 
         message="Quy tắc đặt lịch hẹn"
         description={
           <div className="flex items-center justify-between text-sm">
             <span><ClockCircleOutlined className="mr-1" />Không thể đặt lịch trong quá khứ</span>
-            <span><ExclamationCircleOutlined className="mr-1" />Đặt trước tối thiểu 2 giờ (màu vàng)</span>
+            <span><ExclamationCircleOutlined className="mr-1" />Đặt trước tối thiểu 2 giờ</span>
             <span><CheckCircleOutlined className="mr-1" />Click vào slot xanh để đặt lịch</span>
           </div>
         }
