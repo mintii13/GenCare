@@ -325,6 +325,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         </div>
       </Card>
 
+
               {/* Legend */}
         <Card size="small" className="shadow-sm">
           <div className="text-center mb-2">
@@ -362,6 +363,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         </Card>
         
         <Alert
+
         message="Quy tắc đặt lịch hẹn"
         description={
           <div className="flex items-center justify-between text-sm">
