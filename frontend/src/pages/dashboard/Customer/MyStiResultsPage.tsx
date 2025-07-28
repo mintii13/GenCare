@@ -282,6 +282,7 @@ const StiResultsPage: React.FC<StiResultsPageProps> = () => {
           </div>
         )}
 
+<<<<<<< HEAD
         {result.swab && (((result.swab.bacteria?.length ?? 0) > 0 ||
                           (result.swab.virus?.length ?? 0) > 0 ||
                           (result.swab.parasites?.length ?? 0) > 0 ||
@@ -290,6 +291,9 @@ const StiResultsPage: React.FC<StiResultsPageProps> = () => {
                           result.swab.NAAT_Trichomonas !== null ||
                           result.swab.rapidAntigen_Trichomonas !== null ||
                           result.swab.culture_Trichomonas !== null) &&
+=======
+        {result.swab && (
+>>>>>>> e27dadd9bbb88346272f3cfb2875fc6d5fa6c2ca
           <div style={{ marginTop: 12 }}>
             <strong>Kết quả xét nghiệm dịch:</strong>
             <div style={{ marginTop: 8 }}>

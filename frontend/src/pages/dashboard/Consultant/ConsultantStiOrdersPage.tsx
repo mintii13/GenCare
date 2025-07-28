@@ -167,7 +167,11 @@ const ConsultantStiOrdersPage: React.FC = () => {
       r.sti_package_lookup && r.sti_package_lookup.length > 0
         ? r.sti_package_lookup[0].sti_package_name
         : '-' },
+<<<<<<< HEAD
     { title: 'Xét nghiệm lẻ', dataIndex: 'sti_test_details', key: 'tests', render: (_: unknown, r: StiOrder) => (r.sti_test_details?.map(t => t.sti_test_name).join(', ') || '-') },
+=======
+    { title: 'Test lẻ', dataIndex: 'sti_test_details', key: 'tests', render: (_: unknown, r: StiOrder) => (r.sti_test_details?.map(t => t.sti_test_name).join(', ') || '-') },
+>>>>>>> e27dadd9bbb88346272f3cfb2875fc6d5fa6c2ca
     // { title: 'Note', dataIndex: 'notes', key: 'notes', render: (_: unknown, r: StiOrder) => (r.notes || 'Không có ghi chú') },
     {
       title: 'Thông tin chi tiết',
