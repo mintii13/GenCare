@@ -289,8 +289,7 @@ const StiResultsPage: React.FC<StiResultsPageProps> = () => {
                           result.swab.HPV !== null ||
                           result.swab.NAAT_Trichomonas !== null ||
                           result.swab.rapidAntigen_Trichomonas !== null ||
-                          result.swab.culture_Trichomonas !== null) && (
-
+                          result.swab.culture_Trichomonas !== null) &&
           <div style={{ marginTop: 12 }}>
             <strong>Kết quả xét nghiệm dịch:</strong>
             <div style={{ marginTop: 8 }}>
