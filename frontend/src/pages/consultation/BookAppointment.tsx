@@ -485,12 +485,74 @@ const BookAppointment: React.FC = () => {
           </div>
         )}
 
+        {/* Step 1: Choose Consultant */}
+        {step === 1 && !selectedConsultant && isAuthenticated && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Chọn Chuyên Gia</h2>
+            </div>
+            
+            {consultantsLoading ? (
+              <div className="text-center py-8">
+                <LoadingSpinner />
+                <p className="text-sm text-gray-600 mt-2">Đang tải danh sách chuyên gia...</p>
+              </div>
+            ) : consultants.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {consultants.map((consultant) => (
+                  <div
+                    key={consultant.consultant_id}
+                    onClick={() => handleConsultantSelect(consultant.consultant_id)}
+                    className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        {consultant.avatar ? (
+                          <img src={consultant.avatar} alt={consultant.full_name} className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          <span className="text-blue-600 font-semibold text-lg">
+                            {consultant.full_name.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800 text-sm">{consultant.full_name}</h3>
+                        <p className="text-xs text-blue-600 font-medium">{consultant.specialization}</p>
+                        <p className="text-xs text-gray-600 mt-1">{consultant.qualifications}</p>
+                        <p className="text-xs text-gray-500 mt-1">{consultant.experience_years} năm kinh nghiệm</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FaExclamationTriangle className="mx-auto text-gray-400 text-2xl mb-2" />
+                <p className="text-sm text-gray-600">Không có chuyên gia nào khả dụng</p>
+                <button
+                  onClick={handleRetryFetchConsultants}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-700 underline"
+                >
+                  Thử lại
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Step 1: Choose Time (when consultant pre-selected) */}
         {step === 1 && selectedConsultant && isAuthenticated && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold text-gray-800">Chọn Thời Gian</h2>
+                <button
+                  onClick={() => setSelectedConsultant('')}
+                  className="text-blue-600 hover:text-blue-700 text-xs"
+                >
+                  <FaArrowLeft className="inline mr-1" />
+                  Chọn chuyên gia khác
+                </button>
               </div>
               <div className="mb-3 p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">

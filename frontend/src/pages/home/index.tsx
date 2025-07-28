@@ -71,7 +71,7 @@ const HomePage = () => {
 
       if (homepageData.success) {
         const { blogs } = homepageData.data;
-
+        
         setBlogsData(blogs || []);
 
         console.log('✅ HomePage: Homepage data fetched successfully', {
@@ -233,21 +233,21 @@ const HomePage = () => {
 
           {blogsData.length > 0 ? (
             <div className="relative">
-              <div className="overflow-x-auto scrollbar-hide">
-                <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
-                  {blogsData.map((blog) => (
-                    <div key={blog.blog_id} className="w-96 flex-shrink-0">
-                      <div className="h-full flex">
-                        <MemoizedBlogCard
-                          blog={blog}
-                          onClick={(blogId) => navigate(`/blogs/${blogId}`)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+               <div className="overflow-x-auto scrollbar-hide">
+                 <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                   {blogsData.map((blog) => (
+                     <div key={blog.blog_id} className="w-96 flex-shrink-0">
+                       <div className="h-full flex">
+                         <MemoizedBlogCard
+                           blog={blog}
+                           onClick={(blogId) => navigate(`/blogs/${blogId}`)}
+                         />
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+              
               {/* Scroll Indicators */}
               <div className="flex justify-center mt-4 space-x-2">
                 {Array.from({ length: Math.ceil(blogsData.length / 3) }).map((_, index) => (
