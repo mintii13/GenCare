@@ -282,7 +282,14 @@ const StiResultsPage: React.FC<StiResultsPageProps> = () => {
           </div>
         )}
 
-        {result.swab && (
+        {result.swab && (((result.swab.bacteria?.length ?? 0) > 0 ||
+                          (result.swab.virus?.length ?? 0) > 0 ||
+                          (result.swab.parasites?.length ?? 0) > 0 ||
+                          result.swab.PCR_HSV !== null ||
+                          result.swab.HPV !== null ||
+                          result.swab.NAAT_Trichomonas !== null ||
+                          result.swab.rapidAntigen_Trichomonas !== null ||
+                          result.swab.culture_Trichomonas !== null) &&
           <div style={{ marginTop: 12 }}>
             <strong>Kết quả xét nghiệm dịch:</strong>
             <div style={{ marginTop: 8 }}>

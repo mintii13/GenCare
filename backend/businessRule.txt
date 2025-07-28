@@ -65,6 +65,8 @@ Children in STI Test: Trẻ vị thành niên cần được sự chấp nhận 
 Processing in Order: Pending -> (Accepted, Canceled), Accepted -> (Processing, Canceled), Processing -> SpecimenCollected -> Testing -> Completed, Canceled và Completed là trạng thái cuối cùng, nên không được thay đổi status sau đó.
 History and Audit Log mechanism for Admin: Cần có cơ chế để ghi lại lịch sử các thao tác để đảm bảo tính pháp lý, và truy vết minh bạch
 Canceled Order Rule: Đơn đã ở trạng thái Canceled thì không được sử dụng lại ở bất kỳ trường hợp nào
+Package/Tests Uniqueness: Test trong combo không được trùng với test lẻ
+
 
 MENSTRUAL CYCLE
 Period Grouping Rule: Nếu giữa thời gian hành kinh cách nhau không quá 7 ngày thì gộp thành 1 chuỗi hành kinh

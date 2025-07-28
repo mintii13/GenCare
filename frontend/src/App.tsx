@@ -157,11 +157,6 @@ const AppContent: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/menstrual-cycle" element={
-              <RoleGuard allowedRoles={['customer']}>
-                <MenstrualCyclePage />
-              </RoleGuard>
-            } />
             <Route path="/monthly-diary" element={
               <RoleGuard allowedRoles={['customer']}>
                 <MonthlyDiaryPage />
@@ -259,19 +254,7 @@ const AppContent: React.FC = () => {
                 <BookAppointment />
               </RoleGuard>
             } />
-            
-            {/* Admin Dashboard routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route path="overview" element={<AdminDashboard />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="test-packages" element={<div>Quản lý gói xét nghiệm</div>} />
-              <Route path="blogs" element={<AdminBlogManagement />} />
-        
-              <Route path="appointments" element={<AdminAppointmentManagement />} />
-              <Route path="sti-management" element={<AdminSTIManagement />} />
-              <Route path="audit-log" element={<AdminAuditLog />} />
-              <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
-            </Route>
+          
 
             {/* Staff Dashboard routes */}
             <Route path="/staff/*" element={<StaffDashboard />}>
