@@ -266,6 +266,8 @@ export class StiService {
     }
 
 
+
+
     public static async updateStiPackage(sti_package_id: string, updateData: Partial<IStiPackage>): Promise<StiPackageResponse> {
         try {
             const exists = await StiPackageRepository.findByStiPackageCode(updateData.sti_package_code);
@@ -391,10 +393,10 @@ export class StiService {
             }
 
             // Defect D3, D6: Kiểm tra độ dài của notes
-            if (notes && notes.length > 500) {
+            if (notes && notes.length > 2000) {
                 return {
                     success: false,
-                    message: 'Notes cannot exceed 500 characters'
+                    message: 'Notes cannot exceed 2000 characters'
                 };
             }
 

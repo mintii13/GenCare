@@ -73,10 +73,10 @@ const createWeeklyScheduleSchema = Joi.object({
             'number.max': 'Default slot duration must be at most 120 minutes'
         }),
     notes: Joi.string()
-        .max(500)
+        .max(2000)
         .optional()
         .messages({
-            'string.max': 'Notes cannot exceed 500 characters'
+            'string.max': 'Notes cannot exceed 2000 characters'
         }),
     created_by: Joi.object({
         user_id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/),
@@ -153,10 +153,10 @@ const updateWeeklyScheduleSchema = Joi.object({
             'number.max': 'Default slot duration must be at most 120 minutes'
         }),
     notes: Joi.string()
-        .max(500)
+        .max(2000)
         .optional()
         .messages({
-            'string.max': 'Notes cannot exceed 500 characters'
+            'string.max': 'Ghi chú không được vượt quá 2000 ký tự'
         })
 }).unknown(true).custom((value, helpers) => {
     // Validate working hours and breaks if provided
