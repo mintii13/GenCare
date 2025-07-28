@@ -8,10 +8,20 @@ export const getSlotStatusColor = (
   startTime: string, 
   endTime: string, 
   isAvailable: boolean,
-  isSelected: boolean = false
+  isSelected: boolean = false,
+  isBooked: boolean = false,
+  isRestricted: boolean = false
 ): string => {
   if (isSelected) {
     return 'bg-blue-600 text-white border-blue-600';
+  }
+  
+  if (isBooked) {
+    return 'bg-red-100 text-red-600 border-red-300 cursor-not-allowed';
+  }
+  
+  if (isRestricted) {
+    return 'bg-yellow-100 text-yellow-600 border-yellow-300 cursor-not-allowed';
   }
   
   if (!isAvailable) {

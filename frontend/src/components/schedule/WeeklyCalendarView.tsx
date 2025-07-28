@@ -176,7 +176,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       case 'unavailable':
         return baseClass + " bg-gray-100 border-gray-200 cursor-not-allowed opacity-70";
       case 'restricted':
-        return baseClass + " bg-orange-100 border-orange-300 text-orange-700 cursor-not-allowed";
+        return baseClass + " bg-yellow-100 border-yellow-300 text-yellow-700 cursor-not-allowed";
       case 'selected':
         return baseClass + " bg-blue-500 border-blue-600 text-white shadow-md transform scale-105 z-10";
       case 'available':
@@ -447,7 +447,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                             slotInfo.type === 'available' ? `Đặt lịch ${timeSlot.displayTime}` :
                               slotInfo.type === 'booked' ? 'Đã được đặt' :
                                 slotInfo.type === 'past' ? 'Đã qua thời gian' :
-                                  slotInfo.type === 'restricted' ? `Quá gấp (${slotInfo.diffHours?.toFixed(1)}h)` :
+                                  slotInfo.type === 'restricted' ? `Quá gần (${slotInfo.diffHours?.toFixed(1)}h)` :
                                     slotInfo.type === 'selected' ? 'Đã chọn' :
                                       slotInfo.type === 'not-working' ? 'Không làm việc' :
                                         'Không khả dụng'

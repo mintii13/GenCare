@@ -37,8 +37,7 @@ const AuthRequiredButton: React.FC<AuthRequiredButtonProps> = ({
         navigate(redirectTo);
       }
     } else {
-      // Hiển thị thông báo và modal đăng nhập
-      toast.error(message);
+      // Chỉ hiển thị modal đăng nhập, không hiển thị toast để tránh duplicate
       setShowLoginModal(true);
     }
   };
