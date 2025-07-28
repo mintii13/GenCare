@@ -51,6 +51,7 @@ import { FaEye, FaEdit, FaTrash, FaPlus, FaUser, FaMale, FaFemale } from 'react-
 import { UserManagementService, UserData, CreateUserData, UpdateUserData } from '@/services/userManagementService';
 import { analyticsService } from '@/services/analyticsService';
 import { any } from 'zod';
+import { SpecializationType } from '../../../../../backend/src/models/Consultant';
 
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
@@ -84,6 +85,10 @@ const ROLE_TITLES = {
   consultant: 'Danh sách tư vấn viên'
 } as const;
 
+const SPECIALIZATION_LABELS: Record<SpecializationType, string> = {
+  [SpecializationType.General]: 'Nam Phụ khoa',
+  [SpecializationType.SexualHealth]: 'Sức khỏe sinh sản',
+};
 // Create User Modal Component
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -373,18 +378,20 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                 <Label htmlFor="specialization">Chuyên môn *</Label>
                 <Select
                   value={formData.specialization || ''}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, specialization: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, specialization: value as SpecializationType }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn chuyên môn" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gynecology">Phụ khoa</SelectItem>
-                    <SelectItem value="reproductive_health">Sức khỏe sinh sản</SelectItem>
-                    <SelectItem value="family_planning">Kế hoạch hóa gia đình</SelectItem>
-                    <SelectItem value="sexual_health">Sức khỏe tình dục</SelectItem>
-                    <SelectItem value="psychology">Tâm lý học</SelectItem>
-                    <SelectItem value="nutrition">Dinh dưỡng</SelectItem>
+                    <SelectItem value={SpecializationType.General}>
+                      {SPECIALIZATION_LABELS[SpecializationType.General]}
+                    </SelectItem>
+                    <SelectItem value={SpecializationType.SexualHealth}>
+                      {SPECIALIZATION_LABELS[SpecializationType.SexualHealth]}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
