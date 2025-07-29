@@ -211,13 +211,13 @@ const OrdersPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
-      Booked: 'blue',
-      Accepted: 'cyan',
-      Processing: 'orange',
-      SpecimenCollected: 'purple',
-      Testing: 'geekblue',
-      Completed: 'green',
-      Canceled: 'red',
+      Booked: '#1E90FF',         // Dodger Blue
+    Accepted: '#00BFFF',       // Deep Sky Blue
+    Processing: '#FFA500',     // Orange
+    SpecimenCollected: '#800080', // Purple
+    Testing: '#FF1493',        // Deep Pink
+    Completed: '#32CD32',      // Lime Green
+    Canceled: '#DC143C',        // Crimson Red
       // Fallback cho status cũ
       pending: 'orange',
       confirmed: 'green',
@@ -280,11 +280,17 @@ const OrdersPage: React.FC = () => {
       key: 'type',
       render: (record: STIOrder) => (
         <div>
-          {record.sti_package_item ? (
-            <Tag color="blue">Gói xét nghiệm</Tag>
-          ) : (
-            <Tag color="green">Xét nghiệm lẻ</Tag>
-          )}
+          { ((record.order_status == 'Booked') 
+            ? (<Tag color="gray">Chưa có xét nghiệm</Tag>)
+            : ((record.sti_package_item?.sti_package_id && Array.isArray(record.sti_test_items) && record.sti_test_items.length > 0) 
+              ? (<><Tag color="purple">Gói xét nghiệm</Tag><br/><Tag color="yellow">Xét nghiệm lẻ</Tag></>)
+              : ((!record.sti_test_items || record.sti_test_items.length === 0) && record.sti_package_item
+                ? (<Tag color="purple">Gói xét nghiệm</Tag>)
+                : (<Tag color="yellow">Xét nghiệm lẻ</Tag>) 
+                )
+              )
+            )
+          }
         </div>
       )
     },
@@ -308,6 +314,12 @@ const OrdersPage: React.FC = () => {
         </Tag>
       )
     },
+    // {
+    //   title: 'Ghi chú',
+    //   dataIndex: 'notes',
+    //   key: 'notes',
+    //   render: (notes: string) => notes || 'Không có ghi chú'
+    // },
     {
       title: 'Thao tác',
       key: 'actions',
@@ -338,9 +350,12 @@ const OrdersPage: React.FC = () => {
             type="link"
             danger
             icon={<CloseOutlined />}
-            disabled={record.order_status !== 'Booked'}
+            disabled={
+              record.order_status !== 'Booked' ||
+              dayjs(record.order_date).isBefore(dayjs())  // so sánh đến từng phút
+            }
             onClick={(e) => {
-              e.stopPropagation(); // Ngăn event bubbling
+              e.stopPropagation();
               showCancelConfirmModal(record);
             }}
           >
@@ -592,11 +607,17 @@ const OrdersPage: React.FC = () => {
                 </div>
                 <div>
                   <Text strong>Loại: </Text>
-                  {selectedOrder.sti_package_item ? (
-                    <Tag color="blue">Gói xét nghiệm</Tag>
-                  ) : (
-                    <Tag color="green">Xét nghiệm lẻ</Tag>
-                  )}
+                  { ((selectedOrder.order_status == 'Booked') 
+                    ? (<Tag color="gray">Chưa có xét nghiệm</Tag>)
+                    : ((selectedOrder.sti_package_item?.sti_package_id && Array.isArray(selectedOrder.sti_test_items) && selectedOrder.sti_test_items.length > 0) 
+                      ? (<><Tag color="purple">Gói xét nghiệm</Tag><Tag color="yellow">Xét nghiệm lẻ</Tag></>)
+                      : ((!selectedOrder.sti_test_items || selectedOrder.sti_test_items.length === 0) && selectedOrder.sti_package_item
+                        ? (<Tag color="purple">Gói xét nghiệm</Tag>)
+                        : (<Tag color="yellow">Xét nghiệm lẻ</Tag>) 
+                        )
+                      )
+                    )
+                  }
                 </div>
                 <div>
                   <Text strong>Ngày xét nghiệm: </Text>
@@ -638,7 +659,7 @@ const OrdersPage: React.FC = () => {
                 )}
                 <div>
                   <Text strong>Ngày đặt: </Text>
-                  <Text>{dayjs(selectedOrder.createdAt).format('DD/MM/YYYY HH:mm')}</Text>
+                  <Text>{dayjs(selectedOrder.createdAt).format('DD/MM/YYYY HH:mm:ss')}</Text>
                 </div>
               </Space>
             </Card>

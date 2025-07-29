@@ -14,15 +14,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
 
   // Define sidebar navigation items
   const navItems = [
-    { path: '/admin/overview', label: 'Tổng quan' },
+    // { path: '/admin/overview', label: 'Tổng quan' },
     { path: '/admin/users', label: 'Quản lý người dùng' },
-    { path: '/admin/test-packages', label: 'Gói xét nghiệm' },
+    // { path: '/admin/test-packages', label: 'Gói xét nghiệm' },
     { path: '/admin/blogs', label: 'Quản lý bài viết' },
-    { path: '/admin/revenue', label: 'Thống kê doanh thu' },
+    // { path: '/admin/revenue', label: 'Thống kê doanh thu' },
     { path: '/admin/appointments', label: 'Quản lý lịch hẹn' },
     { path: '/admin/sti-management', label: 'Quản lý STI' },
-    { path: '/admin/audit-log', label: 'Nhật ký hệ thống' },
-    { path: '/admin/settings', label: 'Cài đặt hệ thống' },
+    // { path: '/admin/audit-log', label: 'Nhật ký hệ thống' },
+    // { path: '/admin/settings', label: 'Cài đặt hệ thống' },
   ];
 
   return (

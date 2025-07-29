@@ -102,6 +102,7 @@ interface StiOrder {
   staff?: { // Thêm staff object
     _id: string;
     full_name: string;
+    department: string;
   };
   consultant_user?: { // Thêm consultant_user object
     _id: string;
@@ -111,6 +112,13 @@ interface StiOrder {
     _id: string;
     full_name: string;
   };
+  sti_result?:{
+    sti_result_items: any,
+    is_testing_completed: boolean,
+    diagnosis: string,
+    is_confirmed: boolean,
+    medical_notes: string,
+  }
 }
 
 interface OrderFilters {
@@ -125,6 +133,14 @@ interface OrderFilters {
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
   search?: string;
+}
+
+export interface StaffInfo {
+    _id: string;
+    user_id: string;
+    manager_id?: string;
+    department: string;
+    hire_date: string; // hoặc Date nếu bạn parse rồi
 }
 
 interface OrdersManagementProps {
@@ -159,6 +175,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   // Forms
   const [orderForm] = Form.useForm();
   const paymentMethod = Form.useWatch('paymentMethod', orderForm); // theo dõi real-time
+  const [payment, setPayment] = useState<{ status: string } | null>(null);
+
   // Pagination and filters
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -176,7 +194,19 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [amountRange, setAmountRange] = useState<[number?, number?]>([undefined, undefined]);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  
+  const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
 
+  useEffect(() => {
+    apiClient.get(API.Staff.GET_STAFF_BY_USER_ID)
+      .then(res => {
+        setStaffInfo((res.data as any).data);
+        console.log('Staff info:', (res.data as any).data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch staff info:', err);
+      });
+  }, []);
   // Fetch data on mount and refresh
   useEffect(() => {
     fetchOrders();
@@ -198,7 +228,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       const resData = (response as any).data;
 
       if (resData?.success) {
-        const mapped = (resData.data?.orders || resData.data?.items || []).map((item: any) => ({
+        const mapped = (resData.data?.orders || resData.data?.items || []).filter((item: any) => item).map((item: any) => ({
           ...item,
           customer_name: item.customer?.full_name || item.customer_id?.full_name,
           customer_email: item.customer?.email || item.customer_id?.email,
@@ -215,6 +245,21 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       message.error('Có lỗi xảy ra khi tải danh sách đơn hàng');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrderResult = async (orderId: string) => {
+    if (orderResults[orderId] !== undefined) return; // Đã có cache
+  
+    try {
+      const response = await apiClient.get(API.STI.GET_STI_RESULT(orderId));
+      if (response.data && (response.data as any).success && (response.data as any).data) {
+        setOrderResults(prev => ({ ...prev, [orderId]: (response.data as any).data }));
+      } else {
+        setOrderResults(prev => ({ ...prev, [orderId]: null }));
+      }
+    } catch (error) {
+      setOrderResults(prev => ({ ...prev, [orderId]: null }));
     }
   };
 
@@ -245,7 +290,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     setFilters(prev => ({
       ...prev,
       page: 1,
-      [key]: value
+      [key]: value,
     }));
   };
 
@@ -427,6 +472,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       });
 
       const paymentData = (res.data as any).data;
+      setPayment({ status: 'Completed' });
 
       if (paymentMethod === 'MoMo' && paymentData?.paymentUrl) {
         window.location.href = paymentData.paymentUrl;
@@ -468,19 +514,19 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   const getStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
-      Booked: 'blue',
-      Accepted: 'cyan',
-      Processing: 'orange',
-      SpecimenCollected: 'purple',
-      Testing: 'geekblue',
-      Completed: 'green',
-      Canceled: 'red'
+      Booked: '#00BFFF',         // Dodger Blue
+      Accepted: '#1E90FF',       // Deep Sky Blue
+      Processing: '#FFA500',     // Orange
+      SpecimenCollected: '#800080', // Purple
+      Testing: '#FF1493',        // Deep Pink
+      Completed: '#32CD32',      // Lime Green
+      Canceled: '#DC143C'        // Crimson Red
     };
     return colors[status] || 'default';
   };
 
   const getPaymentStatusColor = (isPaid: boolean) => {
-    return isPaid ? 'green' : 'orange';
+    return isPaid ? 'violet' : 'orange';
   };
 
   const getStatusText = (status: string) => {
@@ -512,9 +558,21 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
     }));
   };
 
+  const isPatientServices = staffInfo?.department == 'Patient Services';
+  // const isPatientServices = true
+  console.log("patient service: ======", isPatientServices)
+
   const columns = [
-        
     {
+      title: 'Mã đơn',
+      dataIndex: 'order_code',
+      key: 'order_code',
+      width: 120,
+      render: (code: string, record: StiOrder) => (
+        <span>{code || record._id.slice(-8)}</span>
+      )
+    },
+    ...(isPatientServices ? [{
       title: 'Khách hàng',
       key: 'customer',
       width: 180,
@@ -533,26 +591,24 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           )}
         </div>
       )
-    },
+    }] : []),
     {
       title: 'Dịch vụ',
       key: 'services',
       width: 200,
       render: (_: any, record: StiOrder) => (
         <div>
-          {record.sti_package_item && (
-            <Tag color="blue" style={{ marginBottom: 4 }}>
-              Gói: {record.sti_package_item.package_name || 'N/A'}
-            </Tag>
-          )}
-          {record.sti_test_items && record.sti_test_items.length > 0 && (
-            <div>
-              <Tag color="green">Test đơn lẻ: {record.sti_test_items.length}</Tag>
-            </div>
-          )}
-          {!record.sti_package_item && (!record.sti_test_items || record.sti_test_items.length === 0) && (
-            <Tag color="orange">Tư vấn chung</Tag>
-          )}
+          { ((record.order_status == 'Booked') 
+            ? (<Tag color="gray">Chưa có xét nghiệm</Tag>)
+            : ((record.sti_package_item?.sti_package_id && Array.isArray(record.sti_test_items) && record.sti_test_items.length > 0) 
+              ? (<><Tag color="purple">Gói xét nghiệm</Tag><br/><Tag color="yellow">Xét nghiệm lẻ</Tag></>)
+              : ((!record.sti_test_items || record.sti_test_items.length === 0) && record.sti_package_item
+                ? (<Tag color="purple">Gói xét nghiệm</Tag>)
+                : (<Tag color="yellow">Xét nghiệm lẻ</Tag>) 
+                )
+              )
+            )
+          }
         </div>
       )
     },
@@ -564,7 +620,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       sorter: true,
       render: (date: string) => dayjs(date).format('DD/MM/YYYY')
     },
-    {
+    ...(isPatientServices ? [{
       title: 'Tổng tiền',
       dataIndex: 'total_amount',
       key: 'total_amount',
@@ -575,9 +631,9 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
           {formatPrice(amount)}
         </span>
       )
-    },
+    }] : []),
     {
-      title: 'Trạng thái',
+      title: 'Trạng thái đơn hàng',
       dataIndex: 'order_status',
       key: 'order_status',
       width: 140,
@@ -591,7 +647,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       title: 'Thanh toán',
       dataIndex: 'is_paid',
       key: 'is_paid',
-      width: 120,
+      width: 150,
       render: (isPaid: boolean) => (
         <Tag color={getPaymentStatusColor(isPaid)}>
           {getPaymentStatusText(isPaid)}
@@ -599,7 +655,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       )
     },
     {
-      title: 'Consultant',
+      title: 'Chuyên gia',
       key: 'consultant',
       width: 160,
       render: (record: StiOrder & { consultant_user?: { full_name?: string } }) => (
@@ -609,7 +665,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       )
     },
     {
-      title: 'Staff',
+      title: 'Nhân viên',
       key: 'staff',
       width: 160,
       render: (record: StiOrder & { staff_user?: { full_name?: string } }) => (
@@ -619,13 +675,25 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
       )
     },
     {
+      title: 'Trạng thái kết quả',
+      key: 'is_testing_completed',
+      width: 160,
+      render: (record: StiOrder) => (
+        <span>
+          {(record.sti_result?.is_testing_completed == true) ? 'Đã cập nhật' : 'Đang cập nhật'}
+        </span>
+      )
+    },
+    {
       title: 'Hành động',
       key: 'actions',
-      width: 280,
+      width: 110,
       render: (_: any, record: StiOrder) => {
-        const hasResult = !!orderResults[record._id];
-        const canManageResult = record.order_status === 'Testing' ;
-
+        console.log(record.staff?.department);
+        const isTestingCompleted = record.sti_result?.is_testing_completed == true;
+        console.log("sti result: ======================>", record.sti_result)
+        const canManageResult = record.order_status === 'Testing';
+        console.log("ORDER RESULTS: =================>", orderResults[record._id]);
         return (
           <Space size="small">
             <Tooltip title="Xem chi tiết">
@@ -638,30 +706,37 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 size="small"
               />
             </Tooltip>
-            <Tooltip title="Sửa đơn hàng">
-              <Button
-                icon={<EditOutlined />}
-                onClick={() => handleEditOrder(record)}
-                size="small"
-              />
-            </Tooltip>
-            <Tooltip title="Cập nhật kết quả">
+            {isPatientServices &&
+                (<Tooltip title="Sửa đơn hàng">
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => handleEditOrder(record)}
+                    size="small"
+                    disabled={((record.consultant_id ?? null) !== null && record.order_status === 'Booked')}
+                    />
+                </Tooltip>)
+            }
+            {!isPatientServices && (
+              <>
+              <Tooltip title="Cập nhật kết quả">
               <Button
                 type="primary"
                 icon={<FormOutlined />}
                 onClick={() => handleCreateOrEditResult(record)}
                 size="small"
-                disabled={!canManageResult || orderResults[record._id]?.is_testing_completed}
+                disabled={!canManageResult || isTestingCompleted}
               />
             </Tooltip>
-            <Tooltip title="Xem kết quả">
+            {/* <Tooltip title="Xem kết quả">
               <Button
                 icon={<FileTextOutlined />}
                 onClick={() => handleViewResults(record._id)}
                 size="small"
-                disabled={!canManageResult}
+                disabled={!canManageResult || (orderResults[record._id]?.sti_result_items?.length ?? 0) === 0 }
               />
-            </Tooltip>
+            </Tooltip> */}
+              </>
+            )}
           </Space>
         );
       }
@@ -939,7 +1014,8 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                   Debug: Order ID = {editingOrder._id} | Status = {editingOrder.order_status} | Paid = {editingOrder.is_paid ? 'Yes' : 'No'}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                {payment?.status !== 'Completed' && (
+                  <div style={{ display: 'flex', gap: '12px' }}>
                   {paymentMethod === 'MoMo' && (
                     <Button
                       type="primary"
@@ -962,6 +1038,9 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                     </Button>
                   )}
                 </div>
+                )}
+                
+
               </>
               )}
               {['Processing', 'SpecimenCollected'].includes(editingOrder.order_status) && (

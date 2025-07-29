@@ -325,25 +325,6 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         </div>
       </Card>
 
-
-              {/* Legend */}
-        <Card size="small" className="shadow-sm">
-          <div className="text-center mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
-          </div>
-          <Row gutter={16} justify="center">
-            <Col>
-              <Space>
-                <Badge status="success" text="Có thể đặt" />
-                <Badge status="processing" text="Đã chọn" />
-                <Badge status="error" text="Đã đặt" />
-                <Badge status="warning" text="Quá gần" />
-                <Badge status="default" text="Không khả dụng" />
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-
         {/* Legend */}
         <Card size="small" className="shadow-sm">
           <div className="text-center mb-2">
@@ -362,13 +343,12 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
           </Row>
         </Card>
         
-        <Alert
-
+      <Alert
         message="Quy tắc đặt lịch hẹn"
         description={
           <div className="flex items-center justify-between text-sm">
             <span><ClockCircleOutlined className="mr-1" />Không thể đặt lịch trong quá khứ</span>
-            <span><ExclamationCircleOutlined className="mr-1" />Đặt trước tối thiểu 2 giờ (màu vàng)</span>
+            <span><ExclamationCircleOutlined className="mr-1" />Đặt trước tối thiểu 2 giờ</span>
             <span><CheckCircleOutlined className="mr-1" />Click vào slot xanh để đặt lịch</span>
           </div>
         }

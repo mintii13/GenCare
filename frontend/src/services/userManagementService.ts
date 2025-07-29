@@ -33,7 +33,6 @@ export interface CreateUserData {
   // Staff-specific fields
   department?: string; // Required for staff
   hire_date?: string; // Required for staff
-  permissions?: string[]; // Optional for staff
   // Consultant-specific fields
   specialization?: string; // Required for consultant
   qualifications?: string; // Required for consultant

@@ -71,3 +71,17 @@ export interface AppointmentHistoryQuery extends PaginationQuery {
     date_from?: string;
     date_to?: string;
 }
+
+export type StiResultQuery = {
+    page?: string;
+    limit?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+  
+    sti_order_id?: string;
+    is_testing_completed?: string;
+    is_confirmed?: string;        
+    staff_id?: string;
+    received_time_from?: string;   
+    received_time_to?: string;    
+};

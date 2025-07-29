@@ -115,7 +115,6 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                       <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                         Lịch sử đặt lịch STI
                       </Link>
-
                     </>
                   )}
                 </div>
@@ -138,7 +137,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
               </Link>
             )}
             {isAuthenticated && user?.role === 'admin' && (
-              <Link to="/admin/overview" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
+              <Link to="/admin/users" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
                 Quản trị viên
               </Link>
             )}

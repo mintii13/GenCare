@@ -51,7 +51,6 @@ export class UserService {
                         user_id: userId,
                         department: roleData?.department || '',
                         hire_date: roleData?.hire_date ? new Date(roleData.hire_date) : new Date(),
-                        permissions: roleData?.permissions || []
                     });
                     await staff.save();
                     console.log(`Created Staff entity for user ${userId} with department: ${roleData?.department}`);
@@ -60,8 +59,7 @@ export class UserService {
                 case 'admin':
                     const admin = new Admin({
                         admin_id: `ADMIN_${Date.now()}`,
-                        user_id: userId,
-                        system_permissions: []
+                        user_id: userId
                     });
                     await admin.save();
                     console.log(`Created Admin entity for user ${userId}`);
@@ -284,7 +282,6 @@ export class UserService {
                     // Staff fields
                     department: userData.department,
                     hire_date: userData.hire_date,
-                    permissions: userData.permissions,
                     // Consultant fields
                     specialization: userData.specialization,
                     qualifications: userData.qualifications,

@@ -51,6 +51,7 @@ import { FaEye, FaEdit, FaTrash, FaPlus, FaUser, FaMale, FaFemale } from 'react-
 import { UserManagementService, UserData, CreateUserData, UpdateUserData } from '@/services/userManagementService';
 import { analyticsService } from '@/services/analyticsService';
 import { any } from 'zod';
+import { SpecializationType } from '../../../../../backend/src/models/Consultant';
 
 const AUTH_TOKEN_KEY = "gencare_auth_token";
 
@@ -84,6 +85,10 @@ const ROLE_TITLES = {
   consultant: 'Danh sách tư vấn viên'
 } as const;
 
+const SPECIALIZATION_LABELS: Record<SpecializationType, string> = {
+  [SpecializationType.General]: 'Sức khỏe sinh sản',
+  [SpecializationType.SexualHealth]: 'Nam Phụ khoa',
+};
 // Create User Modal Component
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -105,7 +110,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
     // Staff fields
     department: undefined,
     hire_date: undefined,
-    permissions: [],
     // Consultant fields
     specialization: undefined,
     qualifications: undefined,
@@ -193,7 +197,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
         // Required for Staff model
         cleanData.department = formData.department?.trim();
         cleanData.hire_date = formData.hire_date?.trim();
-        cleanData.permissions = formData.permissions || [];
       } else if (role === 'consultant') {
         // Required for Consultant model
         cleanData.specialization = formData.specialization?.trim();
@@ -221,7 +224,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
           // Staff fields
           department: undefined,
           hire_date: undefined,
-          permissions: [],
           // Consultant fields
           specialization: undefined,
           qualifications: undefined,
@@ -366,43 +368,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                   />
                 </div>
               </div>
-
-              <div>
-                <Label className="text-sm font-medium">Quyền hạn <span className="text-gray-400">(tuỳ chọn)</span></Label>
-                <div className="grid grid-cols-2 gap-2 p-2 border rounded-md bg-gray-50">
-                  {[
-                    { id: 'user_management', label: 'Người dùng' },
-                    { id: 'appointment_management', label: 'Lịch hẹn' },
-                    { id: 'sti_management', label: 'STI' },
-                    { id: 'blog_management', label: 'Blog' },
-                    { id: 'system_admin', label: 'Hệ thống' }
-                  ].slice(0, 4).map(permission => (
-                    <div key={permission.id} className="flex items-center space-x-1">
-                      <input
-                        type="checkbox"
-                        id={`permission_${permission.id}`}
-                        checked={formData.permissions?.includes(permission.id) || false}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          setFormData(prev => ({
-                            ...prev,
-                            permissions: isChecked
-                              ? [...(prev.permissions || []), permission.id]
-                              : (prev.permissions || []).filter(p => p !== permission.id)
-                          }));
-                        }}
-                        className="rounded border-gray-300 w-3 h-3"
-                      />
-                      <Label 
-                        htmlFor={`permission_${permission.id}`} 
-                        className="text-xs font-normal cursor-pointer"
-                      >
-                        {permission.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
 
@@ -413,18 +378,20 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                 <Label htmlFor="specialization">Chuyên môn *</Label>
                 <Select
                   value={formData.specialization || ''}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, specialization: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, specialization: value as SpecializationType }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn chuyên môn" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gynecology">Phụ khoa</SelectItem>
-                    <SelectItem value="reproductive_health">Sức khỏe sinh sản</SelectItem>
-                    <SelectItem value="family_planning">Kế hoạch hóa gia đình</SelectItem>
-                    <SelectItem value="sexual_health">Sức khỏe tình dục</SelectItem>
-                    <SelectItem value="psychology">Tâm lý học</SelectItem>
-                    <SelectItem value="nutrition">Dinh dưỡng</SelectItem>
+                    <SelectItem value={SpecializationType.General}>
+                      {SPECIALIZATION_LABELS[SpecializationType.General]}
+                    </SelectItem>
+                    <SelectItem value={SpecializationType.SexualHealth}>
+                      {SPECIALIZATION_LABELS[SpecializationType.SexualHealth]}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

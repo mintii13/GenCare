@@ -3,12 +3,15 @@ import { Table, Button, Modal, Select, message, Input, Space, Tag } from 'antd';
 import { useAuth } from '../../../contexts/AuthContext';
 import apiClient from '../../../services/apiClient';
 import { API } from '../../../config/apiEndpoints';
-import { PlusOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, SearchOutlined, EyeFilled } from '@ant-design/icons';
 import type { AxiosResponse } from 'axios';
+import dayjs from 'dayjs';
 
 // Types
 interface StiOrder {
   _id: string;
+  order_date: string;
+  notes: string;
   order_code: string;
   customer_id: {
     _id: string;
@@ -52,13 +55,14 @@ const ConsultantStiOrdersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [consultantId, setConsultantId] = useState<string | null>(null);
+  const [viewModalVisible, setViewModalVisible] = useState(false);
 
   // Lấy consultantId khi mount
   useEffect(() => {
     const fetchConsultantProfile = async () => {
       try {
         const res = await apiClient.get(API.Consultant.MY_PROFILE);
-        const data = res.data?.data as { _id?: string };
+        const data = (res.data as any).data as { _id?: string };
         if (data && typeof data._id === 'string' && data._id.length === 24) {
           setConsultantId(data._id);
           console.log('Consultant ID lấy từ profile:', data._id);
@@ -115,6 +119,14 @@ const ConsultantStiOrdersPage: React.FC = () => {
     } catch {}
   };
 
+  const handleViewClick = (record: StiOrder) => {
+    setSelectedOrder(record);
+    setViewModalVisible(true);
+  };
+  const handleCloseModal = () => {
+    setViewModalVisible(false);
+    setSelectedOrder(null);
+  };  
   const handleUpdateClick = (order: StiOrder) => {
     setSelectedOrder(order);
     setSelectedTests(order.sti_test_items || []);
@@ -140,13 +152,14 @@ const ConsultantStiOrdersPage: React.FC = () => {
       message.success('Cập nhật thành công!');
       setModalVisible(false);
       fetchOrders();
-    } catch {
-      message.error('Cập nhật thất bại!');
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || 'Cập nhật thất bại!';
+      message.error(errMsg);
     }
   };
 
   const columns = [
-    { title: 'Mã đơn', dataIndex: 'order_code', key: 'order_code' },
+    { title: 'Ngày xét nghiệm', key: 'order_date', render: (_: unknown, r: StiOrder) => r.order_date ? dayjs(r.order_date).format('DD/MM/YYYY') : '—'},
     { title: 'Khách hàng', key: 'customer', render: (_: unknown, r: StiOrder & { customer?: { full_name?: string } }) => r.customer?.full_name },
     { title: 'Tổng tiền', dataIndex: 'total_amount', key: 'total_amount', render: (v: number) => v?.toLocaleString() },
     { title: 'Trạng thái', dataIndex: 'order_status', key: 'order_status', render: (v: string) => <Tag color={v === 'completed' ? 'green' : 'blue'}>{v}</Tag> },
@@ -154,15 +167,34 @@ const ConsultantStiOrdersPage: React.FC = () => {
       r.sti_package_lookup && r.sti_package_lookup.length > 0
         ? r.sti_package_lookup[0].sti_package_name
         : '-' },
-    { title: 'Test lẻ', dataIndex: 'sti_test_details', key: 'tests', render: (_: unknown, r: StiOrder) => (r.sti_test_details?.map(t => t.sti_test_name).join(', ') || '-') },
+    { title: 'Xét nghiệm lẻ', dataIndex: 'sti_test_details', key: 'tests', render: (_: unknown, r: StiOrder) => (r.sti_test_details?.map(t => t.sti_test_name).join(', ') || '-') },
+    // { title: 'Note', dataIndex: 'notes', key: 'notes', render: (_: unknown, r: StiOrder) => (r.notes || 'Không có ghi chú') },
     {
-      title: 'Hành động',
-      key: 'action',
-      render: (_: unknown, record: StiOrder) => (
-        <Button icon={<EditOutlined />} onClick={() => handleUpdateClick(record)}>
-          Cập nhật
-        </Button>
-      ),
+      title: 'Thông tin chi tiết',
+      key: 'view',
+      render: (_: unknown, record: StiOrder) => {
+        return(
+          <>
+          <Button icon={<EyeFilled />} onClick={() => handleViewClick(record)}>
+            Xem thông tin
+          </Button>
+          </>
+        )
+     }
+    },
+    {
+      title: 'Sửa đơn hàng',
+      key: 'edit',
+      render: (_: unknown, record: StiOrder) => {
+        const canEdit = record.order_status === 'Booked' || record.order_status === 'Accepted'; 
+        return(
+          <>
+          <Button icon={<EditOutlined />} onClick={() => handleUpdateClick(record)} disabled={!canEdit}>
+            Cập nhật
+          </Button>
+          </>
+        )
+    }
     },
   ];
 
@@ -196,7 +228,7 @@ const ConsultantStiOrdersPage: React.FC = () => {
         pagination={{ pageSize: 10 }}
       />
       <Modal
-        title="Cập nhật package/tests cho đơn hàng"
+        title="Cập nhật gói xét nghiệm và xét nghiệm lẻ cho đơn hàng"
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
@@ -218,11 +250,11 @@ const ConsultantStiOrdersPage: React.FC = () => {
           </Select>
         </div>
         <div>
-          <label>Chọn test lẻ:</label>
+          <label>Chọn xét nghiệm lẻ:</label>
           <Select
             mode="multiple"
             style={{ width: '100%' }}
-            placeholder="Chọn test lẻ"
+            placeholder="Chọn xét nghiệm lẻ"
             value={selectedTests}
             onChange={setSelectedTests}
             allowClear
@@ -232,6 +264,15 @@ const ConsultantStiOrdersPage: React.FC = () => {
             ))}
           </Select>
         </div>
+      </Modal>
+      <Modal
+        title="Thông tin đơn hàng"
+        open={viewModalVisible}
+        onCancel={handleCloseModal}
+        footer={null}
+      >
+        <p><strong>Ngày đặt hàng:</strong> {selectedOrder?.order_date ? new Date((selectedOrder as StiOrder).order_date).toISOString().slice(0, 10).split('-').reverse().join('/') : 'Không có'}</p>
+        <p><strong>Ghi chú:</strong> {(selectedOrder as StiOrder)?.notes || 'Không có'}</p>
       </Modal>
     </div>
   );

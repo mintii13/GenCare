@@ -12,6 +12,10 @@ import AutoConfirmNotification from './components/notifications/AutoConfirmNotif
 import RoleGuard from './components/guards/RoleGuard';
 import DashboardRedirect from './components/common/DashboardRedirect';
 import LoginRedirect from './components/common/LoginRedirect';
+import OrdersManagement from './pages/dashboard/Staff/components/OrdersManagement';
+import StiResultsManagementConsultant from './pages/dashboard/Consultant/components/StiResultManagementPage';
+import StiResultsPage from './pages/dashboard/Customer/MyStiResultsPage';
+import StiResultsManagement from './pages/dashboard/Staff/StiResultsManagement';
 
 // Lazy load all major pages for better performance
 const HomePage = lazy(() => import('./pages/home'));
@@ -33,24 +37,27 @@ const BlogDetailPage = lazy(() => import('./pages/blog/BlogDetailPage'));
 const BlogFormPage = lazy(() => import('./pages/blog/BlogFormPage'));
 
 // Dashboard imports - Keep lazy
-
+const ConsultantBlogList = lazy(() => import('./pages/dashboard/Consultant/components/ConsultantBlogList'));
+const WeeklyScheduleManager = lazy(() => import('./pages/dashboard/Consultant/WeeklyScheduleManager'));
+const AppointmentManagement = lazy(() => import('./pages/dashboard/Consultant/AppointmentManagement'));
 const MyAppointments = lazy(() => import('./pages/dashboard/Customer/MyAppointments'));
 const ConsultantList = lazy(() => import('./pages/dashboard/Customer/ConsultantList'));
 const BookAppointment = lazy(() => import('./pages/consultation/BookAppointment'));
-
+const ConsultationStats = lazy(() => import('./pages/dashboard/Consultant/ConsultationStats'));
 
 // Feature-specific lazy loads
 const MenstrualCyclePage = lazy(() => import('./pages/menstrual-cycle/MenstrualCyclePage'));
 const MonthlyDiaryPage = lazy(() => import('./pages/menstrual-cycle/MonthlyDiaryPage'));
 const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
-
+const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
 
 // Admin Dashboard - Lazy load
 const AdminDashboard = lazy(() => import('./pages/dashboard/Admin/AdminDashboard'));
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
+const ConsultantDashboard = lazy(() => import('./pages/dashboard/Consultant/ConsultantDashboard'));
+const CustomerDashboard = lazy(() => import('./pages/dashboard/Customer/MyAppointments'));
 const AdminAppointmentManagement = lazy(() => import('./pages/dashboard/Admin/AdminAppointmentManagement'));
 const AdminAuditLog = lazy(() => import('./pages/dashboard/Admin/AdminAuditLog'));
-const AdminRevenue = lazy(() => import('./pages/dashboard/Admin/AdminRevenue'));
 
 // Staff Dashboard - Lazy load
 const StaffDashboard = lazy(() => import('./pages/dashboard/Staff'));
@@ -64,19 +71,22 @@ const UserProfilePage = lazy(() => import('./pages/auth/user-profile'));
 
 // Add new lazy import for Staff STI Management components
 const StiOrdersManagement = lazy(() => import('./pages/dashboard/Staff/StiOrdersManagement'));
-const StiResultsManagement = lazy(() => import('./pages/dashboard/Staff/StiResultsManagement'));
 const TestScheduleManagement = lazy(() => import('./pages/dashboard/Staff/TestScheduleManagement'));
 const STIManagement = lazy(() => import('./pages/dashboard/Staff/STIManagement'));
 const TestResultEntryPage = lazy(() => import('./pages/dashboard/Staff/components/TestResultEntryPage'));
-const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage')); // <-- THÊM DÒNG NÀY
+const PaymentSuccessPage = lazy(() => import('./pages/dashboard/Staff/components/PaymentSuccessPage'));
 
 
 const MySTIResults = lazy(() => import('./pages/dashboard/Customer/MySTIResults'));
+const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/ConsultantStiOrdersPage'));
 
 
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshTriggerResult, setRefreshTriggerResult] = useState(0);
+
 
   useEffect(() => {
     // Khởi động AutoConfirmService khi user đăng nhập
@@ -112,10 +122,21 @@ const AppContent: React.FC = () => {
           </div>
         }>
         <Routes>
-
-
-
-
+          {/* Dashboard Routes - No Layout wrapper to avoid Footer overlap */}
+          <Route path="/consultant/*" element={
+            <RoleGuard allowedRoles={['consultant']}>
+              <ConsultantDashboard />
+            </RoleGuard>
+          }>
+            <Route index element={<Navigate to="schedule" replace />} />
+            <Route path="schedule" element={<AppointmentManagement />} />
+            <Route path="weekly-schedule" element={<WeeklyScheduleManager />} />
+            <Route path="blogs" element={<ConsultantBlogList />} />
+            <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
+            <Route path="consultation-stats" element={<ConsultationStats />} />
+            <Route path="sti-orders" element={<ConsultantStiOrdersPage />} />
+            <Route path="sti-results" element={<StiResultsManagementConsultant refreshTrigger={refreshTriggerResult} />} />
+          </Route>
           {/* Admin Dashboard routes */}
           <Route path="/admin/*" element={<AdminLayout />}>
             <Route index element={<Navigate to="overview" replace />} />
@@ -128,23 +149,6 @@ const AppContent: React.FC = () => {
             <Route path="sti-management" element={<AdminSTIManagement />} />
             <Route path="audit-log" element={<AdminAuditLog />} />
             <Route path="settings" element={<div className="p-4">Cài đặt hệ thống</div>} />
-            <Route path="revenue" element={<AdminRevenue />} />
-          </Route>
-
-          {/* Staff Dashboard routes */}
-          <Route path="/staff/*" element={<StaffDashboard />}>
-            <Route index element={<Navigate to="overview" replace />} />
-            <Route path="overview" element={<div className="p-4">Trang tổng quan nhân viên</div>} />
-            <Route path="appointments" element={<StaffAppointmentManagement />} />
-            <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
-            <Route path="sti-management" element={<STIManagement />} />
-            <Route path="sti-orders" element={<StiOrdersManagement />} />
-            <Route path="sti-results" element={<StiResultsManagement />} />
-            <Route path="test-schedules" element={<TestScheduleManagement />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="consultants" element={<div className="p-4">Quản lý chuyên gia</div>} />
-            <Route path="blogs" element={<StaffBlogManagement />} />
-            <Route path="settings" element={<div className="p-4">Cài đặt</div>} />
           </Route>
 
           {/* Public Routes with Layout wrapper */}
@@ -153,11 +157,6 @@ const AppContent: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/menstrual-cycle" element={
-              <RoleGuard allowedRoles={['customer']}>
-                <MenstrualCyclePage />
-              </RoleGuard>
-            } />
             <Route path="/monthly-diary" element={
               <RoleGuard allowedRoles={['customer']}>
                 <MonthlyDiaryPage />
@@ -190,7 +189,7 @@ const AppContent: React.FC = () => {
             <Route path="/blogs/:blogId" element={<BlogDetailPage />} />
             <Route path="/blogs/:blogId/edit" element={<BlogFormPage />} />
 
-            {/* Customer routes - Direct access */}
+            {/* Customer routes - Customer không có dashboard riêng, chỉ có direct access */}
             <Route path="/my-appointments" element={
               <RoleGuard allowedRoles={['customer']}>
                 <MyAppointments />
@@ -213,11 +212,11 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/my-sti-results" element={
               <RoleGuard allowedRoles={['customer']}>
-                <MySTIResults />
+                <StiResultsPage />
               </RoleGuard>
             } />
-
-            {/* STI Booking routes */}
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
+              {/* STI Booking routes */}
               <Route path="/sti-booking/book" element={
               <RoleGuard allowedRoles={['customer']}>
                 <BookSTIPage />
@@ -255,6 +254,9 @@ const AppContent: React.FC = () => {
                 <BookAppointment />
               </RoleGuard>
             } />
+<<<<<<< HEAD
+          
+=======
             
             {/* Admin Dashboard routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -267,24 +269,25 @@ const AppContent: React.FC = () => {
               <Route path="sti-management" element={<AdminSTIManagement />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
-              <Route path="revenue" element={<AdminRevenue />} />
             </Route>
+>>>>>>> e27dadd9bbb88346272f3cfb2875fc6d5fa6c2ca
 
             {/* Staff Dashboard routes */}
             <Route path="/staff/*" element={<StaffDashboard />}>
               <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
               <Route path="appointments" element={<StaffAppointmentManagement />} />
               <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
-              <Route path="sti-management" element={<STIManagement />} />
+              <Route path="sti-management" element={<OrdersManagement refreshTrigger={refreshTrigger}/>} />
               <Route path="sti-orders" element={<StiOrdersManagement />} />
-              <Route path="sti-results" element={<StiResultsManagement />} />
+              {/* <Route path="sti-results" element={<StiResultsManagement />} /> */}
+              <Route path="orders/:orderId/result" element={<TestResultEntryPage />} />
               <Route path="test-schedules" element={<TestScheduleManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
               <Route path="blogs" element={<StaffBlogManagement />} />
               <Route path="settings" element={<div>Cài đặt</div>} />
             </Route>
-
+            {/* Staff Dashboard routes */}
 
           </Routes>
 
