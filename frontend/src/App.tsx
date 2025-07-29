@@ -248,8 +248,8 @@ const AppContent: React.FC = () => {
               </RoleGuard>
             } />
             
-            <Route path="/consultation/book" element={<Navigate to="/consultation/book-appointment" replace />} />
-            <Route path="/consultation/book-appointment" element={
+            <Route path="/consultation" element={<Navigate to="/consultation/book-appointment" replace />} />
+            <Route path="/consultants" element={
               <RoleGuard allowedRoles={['customer']}>
                 <BookAppointment />
               </RoleGuard>

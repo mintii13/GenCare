@@ -1,12 +1,11 @@
 /* Import Design System */
 @import './styles/design-system.css';
+/* Import form stable layout styles */
+@import './styles/form-stable.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import form stable layout styles */
-@import './styles/form-stable.css';
 
 /* Hide scrollbar for Webkit browsers */
 .scrollbar-hide::-webkit-scrollbar {
@@ -47,6 +46,11 @@
 /* Backdrop blur fallback for older browsers */
 .backdrop-blur-sm {
   backdrop-filter: blur(4px);
+}
+
+/* Toast z-index fix */
+[data-sonner-toaster] {
+  z-index: 9999 !important;
 }
 
 /* Modern scrollbar styles */

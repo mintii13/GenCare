@@ -66,6 +66,10 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
 
   // Current cycle for predictions
   const currentCycle = cycles && cycles.length > 0 ? cycles[0] : null;
+  
+  // Debug current cycle data
+  console.log('Current cycle:', currentCycle);
+  console.log('Period days:', currentCycle?.period_days);
 
   // Helper function to convert date to local date string (fix timezone issue)
   const getLocalDateString = (date: Date): string => {
@@ -88,10 +92,20 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
   };
 
   const isPeriodDay = (date: Date) => {
-    if (!currentCycle) return false;
-    return currentCycle.period_days.some(periodDay => 
+    if (!currentCycle) {
+      console.log('No current cycle found');
+      return false;
+    }
+    
+    const isPeriod = currentCycle.period_days.some(periodDay => 
       isSameDay(new Date(periodDay.date), date)
     );
+    
+    if (isPeriod) {
+      console.log(`Period day found: ${date.toDateString()}`);
+    }
+    
+    return isPeriod;
   };
 
   const isPredictedPeriodDay = (date: Date) => {

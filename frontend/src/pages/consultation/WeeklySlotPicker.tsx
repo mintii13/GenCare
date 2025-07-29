@@ -236,12 +236,13 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
             const daySlots = getDaySlots(dayDate);
             const isToday = dayDate.isSame(dayjs(), 'day');
             const isSelected = selectedDate.isSame(dayDate, 'day');
+            const isCurrentWeek = dayDate.isSame(dayjs(), 'week');
 
             return (
               <div
                 key={index}
                 className={`min-h-[200px] p-2 border rounded transition-all ${
-                  isToday 
+                  isToday && isCurrentWeek
                     ? 'border-blue-500 bg-blue-50' 
                     : isSelected 
                       ? 'border-blue-300 bg-blue-100' 
@@ -250,10 +251,10 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
               >
                 {/* Date Number */}
                 <div className={`text-center mb-2 ${
-                  isToday ? 'text-blue-600 font-bold' : 'text-gray-700'
+                  isToday && isCurrentWeek ? 'text-blue-600 font-bold' : 'text-gray-700'
                 }`}>
                   {dayDate.format('DD')}
-                  {isToday && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">Hôm nay</span>}
+                  {isToday && isCurrentWeek && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">Hôm nay</span>}
                 </div>
                 
                 {/* Time Slots */}

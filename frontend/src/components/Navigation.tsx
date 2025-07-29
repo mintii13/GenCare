@@ -100,7 +100,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                   <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
                   </Link>
-                  <Link to="/consultation/book-appointment" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                  <Link to="/consultants" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Đặt lịch tư vấn
                   </Link>
                   <Link to="/test-packages/sti" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
