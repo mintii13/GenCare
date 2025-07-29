@@ -138,7 +138,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
             )}
             {isAuthenticated && user?.role === 'admin' && (
               <Link to="/admin/users" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
-                Quản trị viên
+                Dashboard
               </Link>
             )}
           </div>
