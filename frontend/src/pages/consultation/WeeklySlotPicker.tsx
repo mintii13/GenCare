@@ -123,8 +123,6 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
     return { isWorkingDay: true, slots };
   };
 
-
-
   // Tính toán số slot có thể đặt được
   const getBookableSlots = () => {
     if (!weeklySlotData?.days) return 0;
@@ -189,160 +187,155 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
 
   return (
     <div className="space-y-6">
+      {/* Custom Weekly View */}
+      <div className="space-y-4">
+        {/* Week Header */}
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+          <Button
+            type="text"
+            icon={<LeftOutlined />}
+            onClick={() => {
+              const newDate = selectedDate.subtract(1, 'week');
+              setSelectedDate(newDate);
+            }}
+            className="text-white hover:text-blue-200"
+          />
 
-
-      {/* Quy tắc đặt lịch */}
-      <Card className="shadow-sm">
-        {/* Custom Weekly View */}
-        <div className="space-y-4">
-          {/* Week Header */}
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-            <Button
-              type="text"
-              icon={<LeftOutlined />}
-              onClick={() => {
-                const newDate = selectedDate.subtract(1, 'week');
-                setSelectedDate(newDate);
-              }}
-              className="text-white hover:text-blue-200"
-            />
-
-            <div className="text-center">
-              <h3 className="text-lg font-semibold">
-                Tuần {selectedDate.startOf('week').format('DD/MM/YYYY')} - {selectedDate.startOf('week').add(6, 'day').format('DD/MM/YYYY')}
-              </h3>
-              <p className="text-sm text-blue-100">
-                {selectedDate.format('MMMM YYYY')}
-              </p>
-            </div>
-
-            <Button
-              type="text"
-              icon={<RightOutlined />}
-              onClick={() => {
-                const newDate = selectedDate.add(1, 'week');
-                setSelectedDate(newDate);
-              }}
-              className="text-white hover:text-blue-200"
-            />
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">
+              Tuần {selectedDate.startOf('week').format('DD/MM/YYYY')} - {selectedDate.startOf('week').add(6, 'day').format('DD/MM/YYYY')}
+            </h3>
+            <p className="text-sm text-blue-100">
+              {selectedDate.format('MMMM YYYY')}
+            </p>
           </div>
 
-          {/* Week Grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {/* Day Headers */}
-            {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((dayName, index) => (
-              <div key={dayName} className="text-center py-2 bg-gray-50 rounded font-semibold text-gray-700">
-                {dayName}
-              </div>
-            ))}
+          <Button
+            type="text"
+            icon={<RightOutlined />}
+            onClick={() => {
+              const newDate = selectedDate.add(1, 'week');
+              setSelectedDate(newDate);
+            }}
+            className="text-white hover:text-blue-200"
+          />
+        </div>
 
-            {/* Day Cells */}
-            {Array.from({ length: 7 }, (_, index) => {
-              const dayDate = selectedDate.startOf('week').add(index, 'day');
-              const daySlots = getDaySlots(dayDate);
-              const isToday = dayDate.isSame(dayjs(), 'day');
-              const isSelected = selectedDate.isSame(dayDate, 'day');
+        {/* Week Grid */}
+        <div className="grid grid-cols-7 gap-2">
+          {/* Day Headers */}
+          {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((dayName, index) => (
+            <div key={dayName} className="text-center py-2 bg-gray-50 rounded font-semibold text-gray-700">
+              {dayName}
+            </div>
+          ))}
 
-              return (
-                <div
-                  key={index}
-                  className={`min-h-[200px] p-2 border rounded transition-all ${
-                    isToday 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : isSelected 
-                        ? 'border-blue-300 bg-blue-100' 
-                        : 'border-gray-200'
-                  }`}
-                >
-                  {/* Date Number */}
-                  <div className={`text-center mb-2 ${
-                    isToday ? 'text-blue-600 font-bold' : 'text-gray-700'
-                  }`}>
-                    {dayDate.format('DD')}
-                    {isToday && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">Hôm nay</span>}
-                  </div>
-                  
-                  {/* Time Slots */}
-                  <div className="space-y-1">
-                    {!daySlots.isWorkingDay ? (
-                      <div className="text-center py-2">
-                        <Badge status="default" text="Nghỉ" />
-                      </div>
-                    ) : (
-                      daySlots.slots.map((slot) => (
-                        <Tooltip
-                          key={slot.startTime}
-                          title={
-                            slot.status === 'available' ? `Đặt lịch ${slot.displayTime}` :
-                            slot.status === 'booked' ? 'Đã được đặt' :
-                            slot.status === 'past' ? 'Đã qua thời gian' :
-                            slot.status === 'restricted' ? `Quá gần (${slot.diffHours?.toFixed(1)}h)` :
-                            slot.status === 'selected' ? 'Đã chọn' :
-                            'Không khả dụng'
+          {/* Day Cells */}
+          {Array.from({ length: 7 }, (_, index) => {
+            const dayDate = selectedDate.startOf('week').add(index, 'day');
+            const daySlots = getDaySlots(dayDate);
+            const isToday = dayDate.isSame(dayjs(), 'day');
+            const isSelected = selectedDate.isSame(dayDate, 'day');
+
+            return (
+              <div
+                key={index}
+                className={`min-h-[200px] p-2 border rounded transition-all ${
+                  isToday 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : isSelected 
+                      ? 'border-blue-300 bg-blue-100' 
+                      : 'border-gray-200'
+                }`}
+              >
+                {/* Date Number */}
+                <div className={`text-center mb-2 ${
+                  isToday ? 'text-blue-600 font-bold' : 'text-gray-700'
+                }`}>
+                  {dayDate.format('DD')}
+                  {isToday && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">Hôm nay</span>}
+                </div>
+                
+                {/* Time Slots */}
+                <div className="space-y-1">
+                  {!daySlots.isWorkingDay ? (
+                    <div className="text-center py-2">
+                      <Badge status="default" text="Nghỉ" />
+                    </div>
+                  ) : (
+                    daySlots.slots.map((slot) => (
+                      <Tooltip
+                        key={slot.startTime}
+                        title={
+                          slot.status === 'available' ? `Đặt lịch ${slot.displayTime}` :
+                          slot.status === 'booked' ? 'Đã được đặt' :
+                          slot.status === 'past' ? 'Đã qua thời gian' :
+                          slot.status === 'restricted' ? `Quá gần (${slot.diffHours?.toFixed(1)}h)` :
+                          slot.status === 'selected' ? 'Đã chọn' :
+                          'Không khả dụng'
+                        }
+                      >
+                        <Button
+                          type={slot.status === 'selected' ? 'primary' : 'default'}
+                          size="small"
+                          block
+                          disabled={slot.status === 'booked' || slot.status === 'past' || slot.status === 'unavailable'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (slot.status !== 'booked' && slot.status !== 'past' && slot.status !== 'unavailable') {
+                              handleSlotSelect(
+                                dayDate.format('YYYY-MM-DD'),
+                                slot.startTime,
+                                slot.endTime
+                              );
+                            }
+                          }}
+                          className={`text-xs h-6 ${
+                            slot.status === 'available' ? 'border-green-500 text-green-600 hover:border-green-600 hover:bg-green-50' :
+                            slot.status === 'booked' ? 'border-red-500 text-red-600 bg-red-50' :
+                            slot.status === 'past' ? 'border-gray-400 text-gray-500 bg-gray-50' :
+                            slot.status === 'restricted' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
+                            slot.status === 'selected' ? '' :
+                            'border-gray-300 text-gray-400 bg-gray-50'
+                          }`}
+                          icon={
+                            slot.status === 'selected' ? <CheckCircleOutlined /> :
+                            slot.status === 'booked' ? <CloseCircleOutlined /> :
+                            slot.status === 'past' ? <ClockCircleOutlined /> :
+                            slot.status === 'restricted' ? <ExclamationCircleOutlined /> :
+                            undefined
                           }
                         >
-                          <Button
-                            type={slot.status === 'selected' ? 'primary' : 'default'}
-                            size="small"
-                            block
-                            disabled={slot.status === 'booked' || slot.status === 'past' || slot.status === 'unavailable'}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (slot.status !== 'booked' && slot.status !== 'past' && slot.status !== 'unavailable') {
-                                handleSlotSelect(
-                                  dayDate.format('YYYY-MM-DD'),
-                                  slot.startTime,
-                                  slot.endTime
-                                );
-                              }
-                            }}
-                            className={`text-xs h-6 ${
-                              slot.status === 'available' ? 'border-green-500 text-green-600 hover:border-green-600 hover:bg-green-50' :
-                              slot.status === 'booked' ? 'border-red-500 text-red-600 bg-red-50' :
-                              slot.status === 'past' ? 'border-gray-400 text-gray-500 bg-gray-50' :
-                              slot.status === 'restricted' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
-                              slot.status === 'selected' ? '' :
-                              'border-gray-300 text-gray-400 bg-gray-50'
-                            }`}
-                            icon={
-                              slot.status === 'selected' ? <CheckCircleOutlined /> :
-                              slot.status === 'booked' ? <CloseCircleOutlined /> :
-                              slot.status === 'past' ? <ClockCircleOutlined /> :
-                              slot.status === 'restricted' ? <ExclamationCircleOutlined /> :
-                              undefined
-                            }
-                          >
-                            {slot.displayTime}
-                          </Button>
-                        </Tooltip>
-                      ))
-                    )}
-                  </div>
+                          {slot.displayTime}
+                        </Button>
+                      </Tooltip>
+                    ))
+                  )}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
-      </Card>
+      </div>
 
-        {/* Legend */}
-        <Card size="small" className="shadow-sm">
-          <div className="text-center mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
-          </div>
-          <Row gutter={16} justify="center">
-            <Col>
-              <Space>
-                <Badge status="success" text="Có thể đặt" />
-                <Badge status="processing" text="Đã chọn" />
-                <Badge status="error" text="Đã đặt" />
-                <Badge status="warning" text="Quá gần" />
-                <Badge status="default" text="Không khả dụng" />
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-        
+      {/* Legend */}
+      <Card size="small" className="shadow-sm">
+        <div className="text-center mb-2">
+          <h4 className="text-sm font-semibold text-gray-700">Chú thích trạng thái slot</h4>
+        </div>
+        <Row gutter={16} justify="center">
+          <Col>
+            <Space>
+              <Badge status="success" text="Có thể đặt" />
+              <Badge status="processing" text="Đã chọn" />
+              <Badge status="error" text="Đã đặt" />
+              <Badge status="warning" text="Quá gần" />
+              <Badge status="default" text="Không khả dụng" />
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+      
       <Alert
         message="Quy tắc đặt lịch hẹn"
         description={

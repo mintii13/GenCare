@@ -254,41 +254,9 @@ const AppContent: React.FC = () => {
                 <BookAppointment />
               </RoleGuard>
             } />
-            
-            {/* Admin Dashboard routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route path="overview" element={<AdminDashboard />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="test-packages" element={<div>Quản lý gói xét nghiệm</div>} />
-              <Route path="blogs" element={<AdminBlogManagement />} />
-        
-              <Route path="appointments" element={<AdminAppointmentManagement />} />
-              <Route path="sti-management" element={<AdminSTIManagement />} />
-              <Route path="audit-log" element={<AdminAuditLog />} />
-              <Route path="settings" element={<div>Cài đặt hệ thống</div>} />
-            </Route>
-
-            {/* Staff Dashboard routes */}
-            <Route path="/staff/*" element={<StaffDashboard />}>
-              <Route path="overview" element={<div>Trang tổng quan nhân viên</div>} />
-              <Route path="appointments" element={<StaffAppointmentManagement />} />
-              <Route path="weekly-schedule" element={<WeeklyScheduleManagement />} />
-              <Route path="sti-management" element={<OrdersManagement refreshTrigger={refreshTrigger}/>} />
-              <Route path="sti-orders" element={<StiOrdersManagement />} />
-              {/* <Route path="sti-results" element={<StiResultsManagement />} /> */}
-              <Route path="orders/:orderId/result" element={<TestResultEntryPage />} />
-              <Route path="test-schedules" element={<TestScheduleManagement />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="consultants" element={<div>Quản lý chuyên gia</div>} />
-              <Route path="blogs" element={<StaffBlogManagement />} />
-              <Route path="settings" element={<div>Cài đặt</div>} />
-            </Route>
-            {/* Staff Dashboard routes */}
-
           </Routes>
-
-      </Layout>
-          } />
+        </Layout>
+      } />
         </Routes>
       </Suspense>
     </>
