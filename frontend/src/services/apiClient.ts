@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, AxiosRequestHeaders } from 'axios';
 import { log } from '../utils/logger';
+import toast from 'react-hot-toast';
 import { env } from '../config/environment';
 
 // Sử dụng environment config thống nhất
@@ -29,6 +30,7 @@ class ApiClient {
     delay: 1000,
     backoff: true
   };
+  private authErrorShown = false; // Flag to prevent double toast
 
   constructor(baseURL: string = env.API_BASE_URL) {
     this.instance = axios.create({
@@ -106,6 +108,20 @@ class ApiClient {
           // Token expired or invalid for other requests - clear immediately
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem('user');
+          
+          // Show toast notification for authentication error (only once)
+          if (!this.authErrorShown) {
+            this.authErrorShown = true;
+            toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', {
+              duration: 4000,
+              position: 'top-right'
+            });
+            
+            // Reset flag after a delay
+            setTimeout(() => {
+              this.authErrorShown = false;
+            }, 5000);
+          }
           
           // Only redirect if not already on home page - use setTimeout for better UX
           if (!window.location.pathname.includes('/') || window.location.pathname !== '/') {

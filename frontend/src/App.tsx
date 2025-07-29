@@ -229,34 +229,34 @@ const AppContent: React.FC = () => {
                 } />
                 <Route path="/sti-booking/multiple" element={<Navigate to="/sti-booking/book" replace />} />
                 <Route path="/sti-booking/consultation" element={<Navigate to="/sti-booking/book" replace />} />
-
-                {/* STI Assessment routes */}
-                <Route path="/sti-assessment" element={
-                  <RoleGuard allowedRoles={['customer']}>
-                    <STIAssessmentForm />
-                  </RoleGuard>
-                } />
-                <Route path="/sti-assessment/history" element={
-                  <RoleGuard allowedRoles={['customer']}>
-                    <STIAssessmentHistory />
-                  </RoleGuard>
-                } />
-
-                <Route path="/appointment" element={
-                  <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']}>
-                    <Navigate to="/my-appointments" replace />
-                  </RoleGuard>
-                } />
-
-                <Route path="/consultation/book" element={<Navigate to="/consultation/book-appointment" replace />} />
-                <Route path="/consultation/book-appointment" element={
-                  <RoleGuard allowedRoles={['customer']}>
-                    <BookAppointment />
-                  </RoleGuard>
-                } />
-                {/* <<<<<<< HEAD
-          
-======= */}
+            
+            {/* STI Assessment routes */}
+            <Route path="/sti-assessment" element={
+              <RoleGuard allowedRoles={['customer']}>
+                <STIAssessmentForm />
+              </RoleGuard>
+            } />
+            <Route path="/sti-assessment/history" element={
+              <RoleGuard allowedRoles={['customer']}>
+                <STIAssessmentHistory />
+              </RoleGuard>
+            } />
+                
+            <Route path="/appointment" element={
+              <RoleGuard allowedRoles={['customer', 'consultant', 'staff', 'admin']}>
+                <Navigate to="/my-appointments" replace />
+              </RoleGuard>
+            } />
+            
+            <Route path="/consultation" element={<Navigate to="/consultation/book-appointment" replace />} />
+            <Route path="/consultants" element={
+              <RoleGuard allowedRoles={['customer']}>
+                <BookAppointment />
+              </RoleGuard>
+            } />
+          </Routes>
+        </Layout>
+      } />
 
                 {/* Admin Dashboard routes */}
                 <Route path="/admin" element={<AdminLayout />}>
