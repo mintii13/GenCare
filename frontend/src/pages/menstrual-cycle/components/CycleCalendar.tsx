@@ -66,17 +66,15 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
 
   // Current cycle for predictions
   const currentCycle = cycles && cycles.length > 0 ? cycles[0] : null;
-  
-  // Debug current cycle data
-  console.log('Current cycle:', currentCycle);
-  console.log('Period days:', currentCycle?.period_days);
 
   // Helper function to convert date to local date string (fix timezone issue)
-  const getLocalDateString = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const getLocalDateString = (date: Date) => {
+    // Đảm bảo xử lý timezone local
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
   };
 
   const isSameDay = (date1: Date, date2: Date) => {
@@ -92,20 +90,10 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
   };
 
   const isPeriodDay = (date: Date) => {
-    if (!currentCycle) {
-      console.log('No current cycle found');
-      return false;
-    }
-    
-    const isPeriod = currentCycle.period_days.some(periodDay => 
+    if (!currentCycle) return false;
+    return currentCycle.period_days.some(periodDay => 
       isSameDay(new Date(periodDay.date), date)
     );
-    
-    if (isPeriod) {
-      console.log(`Period day found: ${date.toDateString()}`);
-    }
-    
-    return isPeriod;
   };
 
   const isPredictedPeriodDay = (date: Date) => {
@@ -132,16 +120,34 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
     return date >= fertileStart && date <= fertileEnd && !isOvulationDay(date);
   };
 
-  const handleDateClick = (date: Date) => {
-    const dateString = getLocalDateString(date);
+  const isDateSelectable = (date: Date) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
-    // Kiểm tra ngày trong tương lai
-    if (date > today) {
-      customMenstrualToast('Không thể chọn ngày trong tương lai!', 'error');
+    // Debug: in ra để xem giá trị
+    console.log('Today:', today);
+    console.log('Selected date:', date);
+    console.log('Today string:', today.toDateString());
+    console.log('Selected date string:', date.toDateString());
+    
+    // So sánh đơn giản bằng toDateString()
+    const isSelectable = date.toDateString() <= today.toDateString();
+    
+    console.log('Is selectable:', isSelectable);
+    
+    return isSelectable;
+  };
+
+  const handleDateClick = (date: Date) => {
+    console.log('Date clicked:', date);
+    
+    if (!isDateSelectable(date)) {
+      console.log('Date not selectable!');
+      toast.error('Không thể chọn ngày trong tương lai');
       return;
     }
+    
+    console.log('Date is selectable, proceeding...');
+    const dateString = getLocalDateString(date);
     
     // Check if date is already selected
     const existingIndex = selectedPeriodDays.findIndex(periodDay => 

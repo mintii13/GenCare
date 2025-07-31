@@ -130,7 +130,7 @@ router.get('/appointment/:appointmentId',
                 });
             }
 
-            // ✅ THÊM: Permission check như trong appointmentController cũ
+            //  THÊM: Permission check như trong appointmentController cũ
             if (user.role === 'customer' || user.role === 'consultant') {
                 const appointment = await AppointmentRepository.findById(appointmentId);
                 if (!appointment) {

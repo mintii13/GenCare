@@ -235,11 +235,11 @@ const ConsultantBlogList: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button variant="ghost" size="sm" onClick={() => navigate(`/blogs/${blog.blog_id}`)}>
-                    <Eye className="w-4 h-4 mr-1" /> Xem
+                    <Eye className="w-4 h-4 mr-1" /> Chi tiết
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => navigate(`/blogs/edit/${blog.blog_id}`)}>
+                  {/* <Button variant="ghost" size="sm" onClick={() => navigate(`/blogs/edit/${blog.blog_id}`)}>
                     <Edit className="w-4 h-4 mr-1" /> Sửa
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             ))}

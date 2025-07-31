@@ -424,7 +424,7 @@ const MyAppointments: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setSelectedAppointment(appointment)}>
               Chi tiết
             </Button>
-            {appointment.status === 'confirmed' && (
+            {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
               <Button variant="outline" size="sm" onClick={() => handleEditAppointment(appointment)}>
                 Đổi lịch
               </Button>
@@ -436,7 +436,7 @@ const MyAppointments: React.FC = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {appointment.status === 'confirmed' && (
+                {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
                     <DropdownMenuItem onClick={() => handleCancelAppointment(appointment._id)} className="text-red-600">
                       Hủy hẹn
                     </DropdownMenuItem>
@@ -485,15 +485,6 @@ const MyAppointments: React.FC = () => {
                 </Button>
               </div>
               <div className="mt-4 flex flex-col md:flex-row gap-2">
-                <div className="relative flex-1">
-                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    placeholder="Tìm kiếm chuyên gia..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
                 <Select onValueChange={handleStatusFilter} defaultValue="all">
                   <SelectTrigger className="w-full md:w-[180px]">
                     <SelectValue placeholder="Trạng thái" />

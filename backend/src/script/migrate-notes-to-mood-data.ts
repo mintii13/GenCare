@@ -75,14 +75,14 @@ async function migrateNotesToMoodData() {
         if (cyclesWithOldNotes.length > 0) {
             console.log(`Warning: ${cyclesWithOldNotes.length} cycles still have notes field`);
         } else {
-            console.log('✅ All notes fields have been successfully removed');
+            console.log(' All notes fields have been successfully removed');
         }
 
         const cyclesWithMoodData = await MenstrualCycle.find({
             mood_data: { $exists: true, $ne: {} }
         });
 
-        console.log(`✅ ${cyclesWithMoodData.length} cycles now have mood_data`);
+        console.log(` ${cyclesWithMoodData.length} cycles now have mood_data`);
 
     } catch (error) {
         console.error('Migration failed:', error);

@@ -181,7 +181,7 @@ const WeeklyScheduleManager: React.FC = () => {
       ]);
       console.log('🚀 [DEBUG] Both fetch functions completed');
     } catch (error) {
-      console.log('🚀 [DEBUG] ❌ fetchWeekData error:', error);
+      console.log('🚀 [DEBUG]  fetchWeekData error:', error);
       // Error handled by individual fetch functions
     } finally {
       setLoading(false);
@@ -276,12 +276,12 @@ const WeeklyScheduleManager: React.FC = () => {
         console.log('📅 [DEBUG] getMyAppointments response:', myData);
         
         if (myData && myData.success && myData.data && myData.data.appointments) {
-          console.log('📅 [DEBUG] ✅ getMyAppointments successful, found:', myData.data.appointments.length, 'appointments');
+          console.log('📅 [DEBUG]  getMyAppointments successful, found:', myData.data.appointments.length, 'appointments');
           setAppointments(myData.data.appointments);
           return;
         }
       } catch (myError) {
-        console.log('📅 [DEBUG] ❌ getMyAppointments failed:', myError);
+        console.log('📅 [DEBUG]  getMyAppointments failed:', myError);
       }
       */
       
@@ -304,14 +304,14 @@ const WeeklyScheduleManager: React.FC = () => {
             return appointment && appointment.customer_id && appointment.customer_id.full_name;
           });
           
-          console.log('📅 [DEBUG] ✅ Found appointments via getConsultantAppointmentsPaginated:', validAppointments);
+          console.log('📅 [DEBUG]  Found appointments via getConsultantAppointmentsPaginated:', validAppointments);
           setAppointments(validAppointments);
           return;
         } else {
-          console.log('📅 [DEBUG] ❌ getConsultantAppointmentsPaginated failed or no data');
+          console.log('📅 [DEBUG]  getConsultantAppointmentsPaginated failed or no data');
         }
       } catch (paginatedError) {
-        console.log('📅 [DEBUG] ❌ getConsultantAppointmentsPaginated error:', paginatedError);
+        console.log('📅 [DEBUG]  getConsultantAppointmentsPaginated error:', paginatedError);
 
       }
       
@@ -331,14 +331,14 @@ const WeeklyScheduleManager: React.FC = () => {
             return inRange;
           });
           
-          console.log('📅 [DEBUG] ✅ Found filtered appointments:', weekAppointments);
+          console.log('📅 [DEBUG]  Found filtered appointments:', weekAppointments);
           setAppointments(weekAppointments);
           return;
         } else {
-          console.log('📅 [DEBUG] ❌ getConsultantAppointments failed or no data');
+          console.log('📅 [DEBUG]  getConsultantAppointments failed or no data');
         }
       } catch (consultantError) {
-        console.log('📅 [DEBUG] ❌ getConsultantAppointments error:', consultantError);
+        console.log('📅 [DEBUG]  getConsultantAppointments error:', consultantError);
       }
       
       // Fallback 2: Try direct apiClient call with proper parameters
@@ -356,26 +356,26 @@ const WeeklyScheduleManager: React.FC = () => {
         const directData = directResponse.data;
         
         if (directData && (directData as any).success && (directData as any).data && (directData as any).data.appointments) {
-          console.log('📅 [DEBUG] ✅ Found appointments via direct call (structure 1):', (directData as any).data.appointments);
+          console.log('📅 [DEBUG]  Found appointments via direct call (structure 1):', (directData as any).data.appointments);
           setAppointments((directData as any).data.appointments);
           return;
         } else if (directData && (directData as any).appointments) {
           // Fallback for different response structure
-          console.log('📅 [DEBUG] ✅ Found appointments via direct call (structure 2):', (directData as any).appointments);
+          console.log('📅 [DEBUG]  Found appointments via direct call (structure 2):', (directData as any).appointments);
           setAppointments((directData as any).appointments);
           return;
         } else {
-          console.log('📅 [DEBUG] ❌ Direct apiClient call failed or no data');
+          console.log('📅 [DEBUG]  Direct apiClient call failed or no data');
         }
       } catch (directError) {
-        console.log('📅 [DEBUG] ❌ Direct apiClient call error:', directError);
+        console.log('📅 [DEBUG]  Direct apiClient call error:', directError);
       }
       
-      console.log('📅 [DEBUG] ❌ All API calls failed, setting appointments to empty array');
+      console.log('📅 [DEBUG]  All API calls failed, setting appointments to empty array');
       setAppointments([]);
       
     } catch (error) {
-      console.log('📅 [DEBUG] ❌ fetchAppointmentsForWeek main catch error:', error);
+      console.log('📅 [DEBUG]  fetchAppointmentsForWeek main catch error:', error);
       setAppointments([]);
     }
   };
@@ -779,7 +779,7 @@ const WeeklyScheduleManager: React.FC = () => {
                                   const matches = isSameDay(appointmentDate, dayDate) && appointmentHour === hour;
                                   
                                   if (matches) {
-                                    console.log(`✅ [DEBUG] Found matching appointment:`, appointment);
+                                    console.log(` [DEBUG] Found matching appointment:`, appointment);
                                   }
                                   
                                   return matches;

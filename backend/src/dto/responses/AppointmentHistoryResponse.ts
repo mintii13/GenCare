@@ -10,7 +10,7 @@ export interface AppointmentHistoryResponse {
         action_stats?: any;
         role_stats?: any;
         deleted_count?: number;
-        user_id?: string;  // ✅ THÊM: Support user_id
+        user_id?: string;  //  THÊM: Support user_id
         pagination?: {
             current_page: number;
             total_pages: number;

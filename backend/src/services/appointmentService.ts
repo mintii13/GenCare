@@ -150,7 +150,7 @@ export class AppointmentService {
 
             console.log('Appointment created:', newAppointment._id);
 
-            // ✅ THÊM: Log appointment history cho action "created"
+            // THÊM: Log appointment history cho action "created"
             try {
                 await AppointmentHistoryService.logAppointmentCreated(
                     newAppointment._id.toString(),
@@ -168,9 +168,9 @@ export class AppointmentService {
                     appointmentData.customer_id,
                     'customer'
                 );
-                console.log('✅ Appointment history created successfully for:', newAppointment._id);
+                console.log(' Appointment history created successfully for:', newAppointment._id);
             } catch (historyError) {
-                console.error('❌ Failed to create appointment history:', historyError);
+                console.error(' Failed to create appointment history:', historyError);
                 // Don't fail the appointment creation if history logging fails
             }
 
@@ -1068,13 +1068,13 @@ export class AppointmentService {
                     EmailNotificationService.sendFeedbackReminder(emailData)
                         .then(result => {
                             if (result.success) {
-                                console.log('✅ Feedback reminder email sent successfully to:', customer.email);
+                                console.log(' Feedback reminder email sent successfully to:', customer.email);
                             } else {
-                                console.error('❌ Failed to send feedback reminder:', result.message);
+                                console.error('Failed to send feedback reminder:', result.message);
                             }
                         })
                         .catch(error => {
-                            console.error('❌ Error sending feedback reminder email:', error);
+                            console.error('Error sending feedback reminder email:', error);
                         });
                 }
             } catch (emailError) {
@@ -1614,13 +1614,12 @@ export class AppointmentService {
                 query.search = PaginationUtils.sanitizeSearch(query.search);
             }
 
-            // Get data từ repository - with appointment-specific default
-            const final_sort_by = sort_by === '_id' ? 'appointment_date' : sort_by;
+            // Get data từ repository
             const result = await AppointmentRepository.findWithPagination(
                 filters,
                 page,
                 limit,
-                final_sort_by,
+                sort_by || 'appointment_date',
                 sort_order
             );
 

@@ -165,6 +165,12 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                     {user?.role === 'customer' ? (
                       // Customer dropdown menu
                       <>
+                       <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Tài khoản</span>
+                        </div>
+                      <Link to="/user-profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          👤 Hồ sơ cá nhân
+                        </Link>
                         <div className="border-b border-gray-200 pb-2 mb-2">
                           <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Chăm sóc sức khỏe</span>
                         </div>
@@ -186,12 +192,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           📋 Lịch sử đánh giá STI
                         </Link>
-                        <div className="border-b border-gray-200 pb-2 mb-2 mt-3">
-                          <span className="text-xs text-gray-500 uppercase tracking-wide px-4">Tài khoản</span>
-                        </div>
-                        <Link to="/user-profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                          👤 Hồ sơ cá nhân
-                        </Link>
+                        
                       </>
                     ) : (
                       // Other roles dropdown menu
@@ -305,7 +306,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                       Theo dõi kinh nguyệt
                     </Link>
                     <Link
-                      to="/consultation/book-appointment"
+                      to="/consultants"
                       className="block text-gray-600 hover:text-primary-700"
                       onClick={() => setIsMenuOpen(false)}
                     >

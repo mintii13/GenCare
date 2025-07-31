@@ -92,7 +92,7 @@ const STITestPackages: React.FC = () => {
     <div key={test._id} style={{ width: '280px', height: '280px', flexShrink: 0 }}>
       <Card
         style={{ 
-          height: '100%',
+          height: '115%',
           borderRadius: '8px',
         }}
         bodyStyle={{ padding: '16px' }}
@@ -180,7 +180,7 @@ const STITestPackages: React.FC = () => {
               msOverflowStyle: 'none', // IE and Edge
             }}
             className="scrollbar-hide">
-              <div style={{ display: 'flex', gap: '16px', minWidth: 'max-content' }}>
+              <div style={{ display: 'flex', gap: '16px', minWidth: 'max-content', height: '300px'}}>
                 {tests.map(renderTestCard)}
               </div>
             </div>

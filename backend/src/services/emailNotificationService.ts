@@ -42,7 +42,7 @@ export class EmailNotificationService {
             const mailContent = {
                 from: `"GenCare - Xác nhận lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
                 to: emailData.customerEmail,
-                subject: `✅ Lịch tư vấn đã được xác nhận - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
+                subject: ` Lịch tư vấn đã được xác nhận - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
                 html: `
                 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
                     <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
@@ -72,14 +72,14 @@ export class EmailNotificationService {
                         ${GoogleMeetService.generateMeetingInstructions(emailData.meetingInfo)}
 
                         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <h4 style="color: #495057; margin-top: 0;">✅ CHECKLIST TRƯỚC KHI THAM GIA</h4>
+                            <h4 style="color: #495057; margin-top: 0;"> CHECKLIST TRƯỚC KHI THAM GIA</h4>
                             <ul style="color: #495057;">
-                                <li>✅ Kiểm tra kết nối internet</li>
-                                <li>✅ Test camera và microphone</li>
-                                <li>✅ Tìm nơi yên tĩnh</li>
-                                <li>✅ Chuẩn bị các câu hỏi cần tư vấn</li>
-                                <li>✅ Đóng các ứng dụng không cần thiết</li>
-                                <li>✅ Đảm bảo đã đăng nhập tài khoản Google</li>
+                                <li> Kiểm tra kết nối internet</li>
+                                <li> Test camera và microphone</li>
+                                <li> Tìm nơi yên tĩnh</li>
+                                <li> Chuẩn bị các câu hỏi cần tư vấn</li>
+                                <li> Đóng các ứng dụng không cần thiết</li>
+                                <li> Đảm bảo đã đăng nhập tài khoản Google</li>
                             </ul>
                         </div>
 
@@ -220,10 +220,10 @@ export class EmailNotificationService {
                         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
                             <h4 style="color: #495057; margin-top: 0;">🎯 Tại sao đánh giá quan trọng?</h4>
                             <ul style="color: #495057; margin: 0; padding-left: 20px;">
-                                <li>✅ Giúp cải thiện chất lượng dịch vụ</li>
-                                <li>✅ Hỗ trợ chuyên gia phát triển kỹ năng</li>
-                                <li>✅ Giúp khách hàng khác lựa chọn phù hợp</li>
-                                <li>✅ Xây dựng cộng đồng chăm sóc sức khỏe tốt hơn</li>
+                                <li> Giúp cải thiện chất lượng dịch vụ</li>
+                                <li> Hỗ trợ chuyên gia phát triển kỹ năng</li>
+                                <li> Giúp khách hàng khác lựa chọn phù hợp</li>
+                                <li> Xây dựng cộng đồng chăm sóc sức khỏe tốt hơn</li>
                             </ul>
                         </div>
 
@@ -272,11 +272,11 @@ export class EmailNotificationService {
             const mailContent = {
                 from: `"GenCare - Hủy lịch tư vấn" <${process.env.EMAIL_FOR_VERIFY}>`,
                 to: emailData.customerEmail,
-                subject: `❌ Lịch tư vấn đã được hủy - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
+                subject: ` Lịch tư vấn đã được hủy - ${emailData.appointmentDate} lúc ${emailData.startTime}`,
                 html: `
                 <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
                     <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                        <h2 style="color: #dc3545; text-align: center;">❌ Lịch tư vấn đã được hủy</h2>
+                        <h2 style="color: #dc3545; text-align: center;"> Lịch tư vấn đã được hủy</h2>
                         
                         <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
                             <h3 style="color: #721c24; margin-top: 0;">📅 THÔNG TIN CUỘC HẸN ĐÃ HỦY</h3>

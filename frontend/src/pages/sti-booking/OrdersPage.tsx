@@ -156,7 +156,7 @@ const OrdersPage: React.FC = () => {
           params.append('is_paid', paymentStatusFilter === 'true' ? 'true' : paymentStatusFilter === 'false' ? 'false' : '');
         }
         
-        // ✅ FIXED: Validate sortBy field before sending to backend
+        //  FIXED: Validate sortBy field before sending to backend
         if (sortBy !== 'order_date' && validSortFields.includes(sortBy)) {
           params.append('sort_by', sortBy);
         }
@@ -530,7 +530,7 @@ const OrdersPage: React.FC = () => {
           <Select.Option value="Canceled">Đã hủy</Select.Option>
         </Select>
 
-        {/* ✅ ADDED: Sort controls for testing */}
+        {/*  ADDED: Sort controls for testing */}
         {isStaffView && (
           <Select
             placeholder="Sắp xếp theo"

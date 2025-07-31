@@ -287,7 +287,7 @@ const ConsultantList: React.FC = () => {
         <div className="p-6">
           {error ? (
             <div className="text-center py-8">
-              <div className="text-red-600 mb-4">❌ {error}</div>
+              <div className="text-red-600 mb-4"> {error}</div>
               <button
                 onClick={fetchConsultants}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

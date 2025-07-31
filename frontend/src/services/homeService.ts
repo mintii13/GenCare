@@ -26,10 +26,10 @@ class HomeService {
     try {
       console.log('🏠 HomeService: Fetching homepage data...');
       const response = await apiClient.get<HomepageData>(API.Home.GET_DATA);
-      console.log('✅ HomeService: Homepage data fetched successfully', response.data);
+      console.log(' HomeService: Homepage data fetched successfully', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ HomeService: Failed to fetch homepage data', error);
+      console.error(' HomeService: Failed to fetch homepage data', error);
       throw error;
     }
   }

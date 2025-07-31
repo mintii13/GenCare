@@ -454,7 +454,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSucces
     full_name: '',
     phone: '',
     date_of_birth: '',
-    gender: undefined
+    gender: undefined,
+    role: 'customer'
   });
   const [loading, setLoading] = useState(false);
 
@@ -464,7 +465,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSucces
         full_name: user.full_name || '',
         phone: user.phone || '',
         date_of_birth: user.date_of_birth || '',
-        gender: user.gender || undefined
+        gender: user.gender || undefined,
+        role: user.role || 'customer'
       });
     }
   }, [user]);

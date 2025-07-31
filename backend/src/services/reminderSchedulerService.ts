@@ -97,9 +97,9 @@ export class ReminderSchedulerService {
 
                         if (result.success) {
                             remindersSent++;
-                            console.log(`✅ Reminder sent successfully for appointment ${appointment._id}`);
+                            console.log(` Reminder sent successfully for appointment ${appointment._id}`);
                         } else {
-                            console.error(`❌ Failed to send reminder for appointment ${appointment._id}:`, result.message);
+                            console.error(` Failed to send reminder for appointment ${appointment._id}:`, result.message);
                         }
                     }
                 } catch (error) {
@@ -162,14 +162,14 @@ export class ReminderSchedulerService {
 
                     if (result.success) {
                         feedbackRemindersSent++;
-                        console.log(`✅ Feedback reminder sent successfully for appointment ${appointment._id}`);
+                        console.log(` Feedback reminder sent successfully for appointment ${appointment._id}`);
                         
                         // Mark reminder as sent to avoid duplicate sends
                         await AppointmentRepository.updateById(appointment._id.toString(), {
                             feedback_reminder_sent: true
                         });
                     } else {
-                        console.error(`❌ Failed to send feedback reminder for appointment ${appointment._id}:`, result.message);
+                        console.error(` Failed to send feedback reminder for appointment ${appointment._id}:`, result.message);
                     }
                 } catch (error) {
                     console.error(`Error processing feedback reminder for appointment ${appointment._id}:`, error);

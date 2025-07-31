@@ -270,7 +270,7 @@ export class BlogService {
 
             const newComment = await BlogComment.create({
                 blog_id: commentData.blog_id,
-                customer_id: commentData.is_anonymous ? undefined : commentData.customer_id,
+                customer_id: commentData.customer_id,
                 content: commentData.content.trim(),
                 is_anonymous: commentData.is_anonymous || false,
                 parent_comment_id: commentData.parent_comment_id || undefined,
@@ -518,7 +518,7 @@ export class BlogService {
             // Validate và normalize pagination, đặt giá trị mặc định nếu cần
             const { page, limit, sort_by, sort_order } = PaginationUtils.validatePagination(query);
             
-            // ✅ FIXED: Blog-specific default sort field
+            //  FIXED: Blog-specific default sort field
             const final_sort_by = sort_by === '_id' ? 'publish_date' : sort_by;
             const final_sort_order = sort_order || -1;
 

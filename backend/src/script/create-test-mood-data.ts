@@ -126,7 +126,7 @@ async function createTestMoodData() {
             mood_data: { $exists: true, $ne: {} }
         });
 
-        console.log('\n✅ Test data creation completed!');
+        console.log('\n Test data creation completed!');
         console.log(`- Total cycles with mood data: ${cyclesWithMoodData.length}`);
         
         // Show sample data

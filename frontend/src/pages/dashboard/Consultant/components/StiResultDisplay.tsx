@@ -36,26 +36,74 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
 
   const getNormalRange = (testName: string) => {
     const ranges: Record<string, string> = {
-      'platelets': '150-450 (×10³/μL)',
-      'red_blood_cells': '4.2-5.4 (×10⁶/μL)',
-      'white_blood_cells': '4.5-11.0 (×10³/μL)',
-      'hemo_level': '12-16 g/dL'
+      // Blood tests
+      'platelets': '150-400 (×10³/μL)',
+      'red_blood_cells': '3.9-5.8 (×10⁶/μL)',
+      'white_blood_cells': '4-10 (×10³/μL)',
+      'hemo_level': '12-16 g/dL',
+      'hiv': 'Âm tính',
+      'HBsAg': 'Âm tính',
+      'anti_HBs': 'Âm tính',
+      'anti_HBc': 'Âm tính',
+      'anti_HCV': 'Âm tính',
+      'HCV_RNA': 'Âm tính',
+      'TPHA_syphilis': 'Âm tính',
+      'VDRL_syphilis': 'Âm tính',
+      'RPR_syphilis': 'Âm tính',
+      'treponema_pallidum_IgM': 'Âm tính',
+      'treponema_pallidum_IgG': 'Âm tính',
+      // Urine tests
+      'URO': '0.2-1.0 mg/dL',
+      'GLU': '> 0.8 mmol/l',
+      'KET': '0-5 mg/dL',
+      'BIL': '0.4-0.8 mg/dL', 
+      'PRO': '7.5-10 mg/dL',
+      'NIT': '0.05-0.1 mg/dL',
+      'pH': '6.0-7.5',
+      'specific_gravity': '1.005-1.025',
+      'LEU': '10-25 cells/μL',
+      'color': 'Vàng nhạt',
+      'clarity': 'Trong',
+      //Swab tests
+      'PCR_HSV': 'Âm tính',
+      'HPV': 'Âm tính',
+      'NAAT_Trichomonas': 'Âm tính',
+      'rapidAntigen_Trichomonas': 'Âm tính',
+      'culture_Trichomonas': 'Âm tính',
+      'bacteria': 'Không',
+      'virus': 'Không',
+      'parasites': 'Không'
     };
     return ranges[testName] || '';
   };
 
-  const isAbnormal = (testName: string, value: number) => {
-    const abnormalRanges: Record<string, boolean> = {
-      'platelets': value < 150 || value > 450,
-      'red_blood_cells': value < 4.2 || value > 5.4,
-      'white_blood_cells': value < 4.5 || value > 11.0,
-      'hemo_level': value < 12 || value > 16
+  const isAbnormal = (testName: string, value: any) => {
+    const abnormalChecks: Record<string, boolean> = {
+      // Blood tests
+      'platelets': typeof value === 'number' && (value < 150 || value > 400),
+      'red_blood_cells': typeof value === 'number' && (value < 4.2 || value > 5.4),
+      'white_blood_cells': typeof value === 'number' && (value < 4.5 || value > 11.0),
+      'hemo_level': typeof value === 'number' && (value < 12 || value > 16),
+      // Urine tests
+      'URO': typeof value === 'number' && (value < 0.2 || value > 1.0),
+      'GLU': typeof value === 'number' && value > 0,
+      'KET': typeof value === 'number' && value > 0,
+      'BIL': typeof value === 'number' && value > 0,
+      'PRO': typeof value === 'number' && value > 30,
+      'NIT': typeof value === 'number' && value > 0,
+      'pH': typeof value === 'number' && (value < 4.6 || value > 8.0),
+      'specific_gravity': typeof value === 'number' && (value < 1.003 || value > 1.030),
+      'LEU': typeof value === 'number' && value > 0,
+      'blood': value === true,
+      'color': value !== 'light yellow' && value !== 'clear',
+      'clarity': value === 'cloudy'
     };
-    return abnormalRanges[testName] || false;
+    return abnormalChecks[testName] || false;
   };
 
   const formatTestName = (key: string) => {
     const names: Record<string, string> = {
+      // Blood tests
       'platelets': 'Tiểu cầu',
       'red_blood_cells': 'Hồng cầu',
       'white_blood_cells': 'Bạch cầu',
@@ -71,27 +119,98 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
       'RPR_syphilis': 'RPR (Giang mai)',
       'treponema_pallidum_IgM': 'Treponema pallidum IgM',
       'treponema_pallidum_IgG': 'Treponema pallidum IgG',
+      // Urine tests
+      'color': 'Màu sắc',
+      'clarity': 'Độ trong',
+      'URO': 'Urobilinogen',
+      'GLU': 'Glucose',
+      'KET': 'Ketone',
+      'BIL': 'Bilirubin',
+      'PRO': 'Protein',
+      'NIT': 'Nitrite',
+      'pH': 'pH',
+      'blood': 'Máu ẩn',
+      'specific_gravity': 'Tỷ trọng',
+      'LEU': 'Leukocyte',
+      // Swab tests
       'PCR_HSV': 'PCR HSV',
       'HPV': 'HPV',
       'NAAT_Trichomonas': 'NAAT Trichomonas',
       'rapidAntigen_Trichomonas': 'Rapid Antigen Trichomonas',
-      'culture_Trichomonas': 'Culture Trichomonas'
+      'culture_Trichomonas': 'Culture Trichomonas',
+      'bacteria': 'Vi khuẩn',
+      'virus': 'Virus',
+      'parasites': 'Ký sinh trùng'
     };
     return names[key] || key;
+  };
+
+  const formatUrineColor = (color: string) => {
+    const colorNames: Record<string, string> = {
+      'light yellow': 'Vàng nhạt',
+      'clear': 'Trong suốt',
+      'dark yellow to orange': 'Vàng đậm đến cam',
+      'dark brown': 'Nâu đậm', 
+      'pink or red': 'Hồng hoặc đỏ',
+      'blue or green': 'Xanh lam hoặc xanh lá',
+      'black': 'Đen'
+    };
+    return colorNames[color] || color;
+  };
+
+  const formatUrineClarity = (clarity: string) => {
+    const clarityNames: Record<string, string> = {
+      'clearly': 'Trong',
+      'cloudy': 'Đục'
+    };
+    return clarityNames[clarity] || clarity;
   };
 
   const formatValue = (key: string, value: any) => {
     if (value === null || value === undefined) return 'Chưa có kết quả';
     if (typeof value === 'boolean') return value ? 'Dương tính' : 'Âm tính';
+    
+    // Special formatting for urine tests
+    if (key === 'color') return formatUrineColor(value);
+    if (key === 'clarity') return formatUrineClarity(value);
+    
     if (typeof value === 'number') {
       const units: Record<string, string> = {
+        // Blood tests
         'platelets': '×10³/μL',
         'red_blood_cells': '×10⁶/μL', 
         'white_blood_cells': '×10³/μL',
-        'hemo_level': 'g/dL'
+        'hemo_level': 'g/dL',
+        // Urine tests
+        'URO': 'mg/dL',
+        'GLU': 'mg/dL',
+        'KET': 'mg/dL',
+        'BIL': 'mg/dL',
+        'PRO': 'mg/dL',
+        'NIT': 'mg/dL',
+        'LEU': 'mg/dL',
+        'specific_gravity': ''
       };
+      
+      // For urine tests, show "Âm tính" for 0 values in certain tests
+      if (['GLU', 'KET', 'BIL', 'NIT', 'LEU'].includes(key) && value === 0) {
+        return 'Âm tính';
+      }
+      if (key === 'blood' && value === 0) {
+        return 'Âm tính';
+      }
+      if (key === 'PRO' && value === 0) {
+        return 'Âm tính';
+      }
+      
       return `${value} ${units[key] || ''}`;
     }
+    
+    // Handle arrays (for swab tests)
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ') : 'Không phát hiện';
+    }
+    
     return value.toString();
   };
 
@@ -102,16 +221,24 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
       if (testData[key] !== undefined) {
         const value = testData[key];
         const isNumeric = typeof value === 'number';
+        const isBoolean = typeof value === 'boolean';
+        const isArray = Array.isArray(value);
         const resultStatus = getResultStatus(value);
         
         tests.push({
           key,
           test: formatTestName(key),
           result: formatValue(key, value),
-          normalRange: isNumeric ? getNormalRange(key) : 'Âm tính',
-          status: isNumeric 
-            ? (isAbnormal(key, value) ? 'abnormal' : 'normal')
-            : (value === true ? 'positive' : (value === false ? 'negative' : 'pending')),
+          normalRange: getNormalRange(key),
+          status: (() => {
+            if (isAbnormal(key, value)) return 'abnormal';
+            if (isBoolean && value === true) return 'positive';
+            if (isBoolean && value === false) return 'negative';
+            if (isNumeric || key === 'color' || key === 'clarity') return 'normal';
+            if (isArray && value.length > 0) return 'positive';
+            if (isArray && value.length === 0) return 'negative';
+            return 'pending';
+          })(),
           rawValue: value
         });
       }
@@ -122,7 +249,7 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
         title: 'Xét nghiệm',
         dataIndex: 'test',
         key: 'test',
-        width: '40%',
+        width: '30%',
         render: (text: string) => <Text strong>{text}</Text>
       },
       {
@@ -155,27 +282,27 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
           );
         }
       },
+      {
+        title: 'Giá trị tham chiếu',
+        dataIndex: 'normalRange',
+        key: 'normalRange',
+        width: '25%',
+        render: (text: string) => <Text type="secondary">{text}</Text>
+      }
       // {
-      //   title: 'Giá trị tham chiếu',
-      //   dataIndex: 'normalRange',
-      //   key: 'normalRange',
-      //   width: '25%',
-      //   render: (text: string) => <Text type="secondary">{text}</Text>
-      // },
-    //   {
-    //     title: 'Đánh giá',
-    //     key: 'assessment',
-    //     width: '10%',
-    //     render: (_: any, record: any) => {
-    //       if (record.status === 'abnormal' || record.status === 'positive') {
-    //         return <Badge status="error" text="Bất thường" />;
-    //       } else if (record.status === 'normal' || record.status === 'negative') {
-    //         return <Badge status="success" text="Bình thường" />;
-    //       } else {
-    //         return <Badge status="default" text="Chờ kết quả" />;
-    //       }
-    //     }
-    //   }
+      //   title: 'Đánh giá',
+      //   key: 'assessment',
+      //   width: '10%',
+      //   render: (_: any, record: any) => {
+      //     if (record.status === 'abnormal' || record.status === 'positive') {
+      //       return <Badge status="error" text="Bất thường" />;
+      //     } else if (record.status === 'normal' || record.status === 'negative') {
+      //       return <Badge status="success" text="Bình thường" />;
+      //     } else {
+      //       return <Badge status="default" text="Chờ kết quả" />;
+      //     }
+      //   }
+      // }
     ];
 
     return (
@@ -231,7 +358,10 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
               </Col>
               <Col span={12}>
                 <Text strong>Loại mẫu: </Text>
-                <Tag color="blue">{result?.sample_type === 'blood' ? 'Máu' : 'Swab'}</Tag>
+                <Tag color="blue">
+                  {result?.sample_type === 'blood' ? 'Máu' : 
+                   result?.sample_type === 'urine' ? 'Nước tiểu' : 'Swab'}
+                </Tag>
               </Col>
               <Col span={12}>
                 <Text strong>Thời gian hoàn thành: </Text>
@@ -247,6 +377,10 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
           {/* Test Results */}
           {result?.blood && Object.keys(result.blood).some(key => result.blood[key] !== null && result.blood[key] !== undefined) && (
             createTestTable(result.blood, 'Xét nghiệm máu')
+          )}
+
+          {result?.urine && Object.keys(result.urine).some(key => result.urine[key] !== null && result.urine[key] !== undefined) && (
+            createTestTable(result.urine, 'Xét nghiệm nước tiểu')
           )}
 
           {result?.swab && Object.keys(result.swab).some(key => 
@@ -366,38 +500,5 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
     </div>
   );
 };
-
-// Component để thay thế trong modal "Xem kết quả"
-// Thay thế phần này trong StiResultsManagement:
-
-/*
-<Modal
-  open={viewResultModalVisible}
-  onCancel={() => setViewResultModalVisible(false)}
-  footer={null}
-  width={600}
-  title="Kết quả xét nghiệm"
->
-  {viewResult ? (
-    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{JSON.stringify(viewResult, null, 2)}</pre>
-  ) : null}
-</Modal>
-*/
-
-// Thành:
-
-/*
-<Modal
-  open={viewResultModalVisible}
-  onCancel={() => setViewResultModalVisible(false)}
-  footer={null}
-  width={1000}
-  title="Kết quả xét nghiệm"
->
-  {viewResult ? (
-    <StiResultDisplay resultData={viewResult} />
-  ) : null}
-</Modal>
-*/
 
 export default StiResultDisplay;

@@ -309,7 +309,7 @@ export const validateStiOrderPagination = (req: Request, res: Response, next: Ne
             }
         }
 
-        // ✅ ADDED: Validate sort_by parameter with actual database field names
+        //  ADDED: Validate sort_by parameter with actual database field names
         if (query.sort_by !== undefined) {
             const validSortFields = ['order_date', 'total_amount', 'order_status', 'createdAt', 'updatedAt'];
             if (!validSortFields.includes(query.sort_by.toString())) {
@@ -410,10 +410,10 @@ export const validateStiOrderPagination = (req: Request, res: Response, next: Ne
             }
         }
 
-        console.log('✅ [DEBUG] STI Order Validation passed successfully');
+        console.log(' [DEBUG] STI Order Validation passed successfully');
         next();
     } catch (error) {
-        console.error('❌ [DEBUG] Error in STI order validation:', error);
+        console.error(' [DEBUG] Error in STI order validation:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error during validation.'
@@ -581,10 +581,10 @@ export const validateStiResultPagination = (req: Request, res: Response, next: N
       }
     }
 
-    console.log('✅ [DEBUG] STI Result Validation passed successfully');
+    console.log(' [DEBUG] STI Result Validation passed successfully');
     next();
   } catch (error) {
-    console.error('❌ [DEBUG] Error in STI result validation:', error);
+    console.error(' [DEBUG] Error in STI result validation:', error);
     return res.status(500).json({ success: false, message: 'Internal server error during validation.' });
   }
 };

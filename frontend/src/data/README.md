@@ -46,15 +46,15 @@ const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true' || true;
 
 Mock service hỗ trợ tất cả các tính năng như API thật:
 
-- ✅ Lấy danh sách blog với filter và sorting
-- ✅ Lấy chi tiết blog
-- ✅ Lấy comments của blog
-- ✅ Tạo comment mới (có persisted trong session)
-- ✅ Tạo blog mới (có persisted trong session)
-- ✅ Cập nhật blog
-- ✅ Xóa blog
-- ✅ Lấy danh sách specializations
-- ✅ Simulate API delays (100-800ms)
+-  Lấy danh sách blog với filter và sorting
+-  Lấy chi tiết blog
+-  Lấy comments của blog
+-  Tạo comment mới (có persisted trong session)
+-  Tạo blog mới (có persisted trong session)
+-  Cập nhật blog
+-  Xóa blog
+-  Lấy danh sách specializations
+-  Simulate API delays (100-800ms)
 
 ## Khi nào sử dụng Mock Data
 

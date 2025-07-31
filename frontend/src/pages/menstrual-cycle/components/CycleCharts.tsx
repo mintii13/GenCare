@@ -373,7 +373,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Chart 1: Cycle Length Trend */}
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
@@ -406,7 +406,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
 
       {/* Chart 2: Period Length Trend */}
       <Card className="shadow-sm">
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-6">
           <CardTitle className="flex items-center gap-3 text-base font-semibold">
             <FaChartBar className="h-5 w-5 text-pink-600" />
             Xu Hướng Độ Dài Kinh Nguyệt
@@ -435,7 +435,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
       </Card>
 
       {/* Chart 3: Mood Statistics */}
-      <Card className="shadow-sm">
+      {/* <Card className="shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-3 text-base font-semibold">
             <FaSmile className="h-5 w-5 text-green-600" />
@@ -455,7 +455,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
             />
           </Suspense>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 };
