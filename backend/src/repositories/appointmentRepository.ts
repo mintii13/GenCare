@@ -190,7 +190,7 @@ export class AppointmentRepository {
 
             // Ensure consultantId is a valid string and not an object
             if (!consultantId || typeof consultantId !== 'string') {
-                console.error('❌ Invalid consultantId:', consultantId);
+                console.error(' Invalid consultantId:', consultantId);
                 throw new Error('Invalid consultant ID provided');
             }
 

@@ -7,10 +7,263 @@ import { homeService, consultantService } from '../../services';
 import { Blog as BlogType } from '../../types/blog';
 import { StiPackage, StiTest } from '@/types/sti';
 import { Consultant } from '@/types/user';
+import { STIPackageService } from '../../services/stiPackageService';
+import { LoadingSpinner } from '../../components/common/LoadingSkeleton';
+import toast from 'react-hot-toast';
+import { STITestService } from '../../services/stiTestService';
+// Thêm import cho modal
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 
 // Memoized components để tránh re-render không cần thiết
 const MemoizedBanner = React.memo(Banner);
 const MemoizedBlogCard = React.memo(BlogCard);
+
+// Add proper type definition for the component
+// Sửa lại interface để khớp với dữ liệu thật từ API
+interface STIPackageCardProps {
+  packageData: {
+    _id: string;
+    sti_package_name: string;
+    sti_package_code: string;
+    price: number; // Thay vì sti_package_price
+    description: string; // Thay vì sti_package_description
+  };
+}
+
+// Sửa lại component STIPackageCard
+const STIPackageCard: React.FC<STIPackageCardProps> = ({ packageData }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN').format(price);
+  };
+
+  return (
+    <>
+      <div
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-blue-300"
+        onClick={() => setIsModalOpen(true)}
+      >
+        {/* Chỉ hiển thị tên và giá - luôn hiển thị */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-full">
+            <h3 className="font-semibold text-gray-800 text-base mb-1">{packageData.sti_package_name}</h3>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold text-green-600">{formatPrice(packageData.price)} VNĐ</p>
+          </div>
+        </div>
+
+        {/* Hover indicator */}
+        <div className="text-center mt-4">
+          <p className="text-xs text-gray-500">Nhấp để xem chi tiết</p>
+        </div>
+      </div>
+
+      {/* Modal chi tiết */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-800">
+              {packageData.sti_package_name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Thông tin cơ bản */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm text-gray-600">Mã gói</p>
+                <p className="font-semibold">{packageData.sti_package_code}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Giá</p>
+                <p className="text-2xl font-bold text-green-600">{formatPrice(packageData.price)} VNĐ</p>
+              </div>
+            </div>
+
+            {/* Mô tả */}
+            <div>
+              <h4 className="font-medium text-gray-800 mb-2">Chi tiết gói xét nghiệm:</h4>
+              <p className="text-gray-600 leading-relaxed">{packageData.description}</p>
+            </div>
+
+            {/* Các xét nghiệm bao gồm */}
+            <div>
+              <h4 className="font-medium text-gray-800 mb-3">Bao gồm:</h4>
+              <ul className="space-y-2">
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                  <span>Test nhanh HIV combo Alere</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                  <span>Test nhanh Giang mai</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                  <span>Test nhanh Lậu, Chlamydia</span>
+                </li>
+                {packageData.sti_package_code === 'STI-BASIC-02' && (
+                  <>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                      <span>Test nhanh Viêm gan B</span>
+                    </li>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                      <span>Test nhanh Viêm gan C</span>
+                    </li>
+                  </>
+                )}
+                {packageData.sti_package_code === 'STI-ADVANCE' && (
+                  <>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                      <span>Test nhanh Viêm gan B, C</span>
+                    </li>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                      <span>Test Herpes</span>
+                    </li>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                      <span>RPR, Syphilis TP IgM/IgG</span>
+                    </li>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                      <span>Phương pháp kỹ thuật cao</span>
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+
+            {/* Thông tin bổ sung */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
+              <div>
+                <p className="text-sm text-gray-600">Thời gian</p>
+                <p className="font-semibold">30-45 phút</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Trạng thái</p>
+                <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                  Hoạt động
+                </span>
+              </div>
+            </div>
+
+            {/* Call to action */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  window.location.href = '/sti-booking/book';
+                }}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Đặt lịch xét nghiệm
+              </button>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+// Sửa lại component IndividualTestCard
+const IndividualTestCard: React.FC<{test: any}> = ({ test }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  return (
+    <>
+      <div 
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-full cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-blue-300"
+        onClick={() => setIsModalOpen(true)}
+      >
+        {/* Chỉ hiển thị tên và giá - luôn hiển thị */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-full">
+            <h3 className="font-semibold text-gray-800 text-base mb-1">{test.sti_test_name}</h3>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold text-green-600">{new Intl.NumberFormat('vi-VN').format(test.price)} VNĐ</p>
+          </div>
+        </div>
+        
+        {/* Hover indicator */}
+        <div className="text-center mt-4">
+          <p className="text-xs text-gray-500">Nhấp để xem chi tiết</p>
+        </div>
+      </div>
+
+      {/* Modal chi tiết */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-800">
+              {test.sti_test_name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Thông tin cơ bản */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm text-gray-600">Mã xét nghiệm</p>
+                <p className="font-semibold">{test.test_code}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Giá</p>
+                <p className="text-2xl font-bold text-green-600">{new Intl.NumberFormat('vi-VN').format(test.price)} VNĐ</p>
+              </div>
+            </div>
+
+            {/* Mô tả */}
+            <div>
+              <h4 className="font-medium text-gray-800 mb-2">Mô tả:</h4>
+              <p className="text-gray-600 leading-relaxed">{test.description}</p>
+            </div>
+
+            {/* Thông tin bổ sung */}
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-gray-600 mb-2">Trạng thái</p>
+              <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                Hoạt động
+              </span>
+            </div>
+
+            {/* Call to action */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  window.location.href = '/sti-booking/book';
+                }}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Đặt lịch xét nghiệm
+              </button>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -41,7 +294,7 @@ const HomePage = () => {
       ),
       title: 'Tư vấn trực tuyến',
       desc: 'Đặt lịch tư vấn trực tuyến với các chuyên gia về sức khỏe sinh sản và nhận giải đáp cho mọi thắc mắc.',
-      link: '/consultation/book-appointment',
+      link: '/consultants',
     },
     {
       icon: (
@@ -74,7 +327,7 @@ const HomePage = () => {
         
         setBlogsData(blogs || []);
 
-        console.log('✅ HomePage: Homepage data fetched successfully', {
+        console.log(' HomePage: Homepage data fetched successfully', {
           blogs: blogs?.length || 0
         });
       }
@@ -83,21 +336,129 @@ const HomePage = () => {
         const consultants = consultantsData.data.consultants || [];
         setConsultantsData(consultants as unknown as Consultant[]);
 
-        console.log('✅ HomePage: Consultants fetched successfully', {
+        console.log(' HomePage: Consultants fetched successfully', {
           consultants: consultants.length
         });
       }
 
     } catch (error) {
-      console.error('❌ HomePage: Error fetching data:', error);
+      console.error(' HomePage: Error fetching data:', error);
       setError('Không thể tải dữ liệu trang chủ. Vui lòng thử lại sau.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Fix the state type
+  const [stiPackages, setStiPackages] = useState<any[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
+  // Sửa lại fetchStiPackages để sử dụng dữ liệu từ homeService
+  const fetchStiPackages = async () => {
+    try {
+      setLoadingPackages(true);
+      console.log('🔄 Fetching STI packages from home data...');
+      
+      const response = await homeService.getHomepageData();
+      console.log('📦 Home data response:', response);
+      
+      if (response.success && response.data && response.data.sti_packages) {
+        const packages = response.data.sti_packages;
+        console.log('✅ STI packages loaded:', packages.length);
+        setStiPackages(packages);
+      } else {
+        console.log('❌ No STI packages found in home data');
+        setStiPackages([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching STI packages:', error);
+      toast.error('Không thể tải danh sách gói xét nghiệm');
+      setStiPackages([]);
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
+
+  // Thêm fetch cho individual tests
+  const [individualTests, setIndividualTests] = useState<any[]>([]);
+  const [loadingTests, setLoadingTests] = useState(true);
+
+  // Sửa lại fetchIndividualTests để sử dụng dữ liệu từ homeService
+  const fetchIndividualTests = async () => {
+    try {
+      setLoadingTests(true);
+      console.log('🔄 Fetching individual STI tests from home data...');
+      
+      const response = await homeService.getHomepageData();
+      console.log('📦 Home data response for tests:', response);
+      
+      if (response.success && response.data && response.data.sti_tests) {
+        const tests = response.data.sti_tests;
+        console.log('✅ Individual STI tests loaded:', tests.length);
+        setIndividualTests(tests);
+      } else {
+        console.log('❌ No individual STI tests found in home data');
+        setIndividualTests([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching individual tests:', error);
+      setIndividualTests([]);
+    } finally {
+      setLoadingTests(false);
+    }
+  };
+
+  // Thêm lại tab navigation cho STI packages
+  const [activeTab, setActiveTab] = useState<'packages' | 'individual'>('packages');
+
+  // Sửa lại useEffect để chỉ gọi homeService một lần
   useEffect(() => {
-    fetchData();
+    const fetchAllData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log('🏠 HomePage: Fetching all data...');
+        
+        const response = await homeService.getHomepageData();
+        console.log('📦 Home data response:', response);
+        
+        if (response.success) {
+          const { blogs, sti_packages, sti_tests, consultants } = response.data;
+          
+          // Set blogs data
+          setBlogsData(blogs || []);
+          
+          // Set STI packages data
+          if (sti_packages && Array.isArray(sti_packages)) {
+            setStiPackages(sti_packages);
+            console.log('✅ STI packages loaded:', sti_packages.length);
+          }
+          
+          // Set individual tests data
+          if (sti_tests && Array.isArray(sti_tests)) {
+            setIndividualTests(sti_tests);
+            console.log('✅ Individual tests loaded:', sti_tests.length);
+          }
+          
+          // Set consultants data
+          if (consultants && Array.isArray(consultants)) {
+            setConsultantsData(consultants as unknown as Consultant[]);
+            console.log('✅ Consultants loaded:', consultants.length);
+          }
+          
+          console.log('✅ All data loaded successfully');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching all data:', error);
+        setError('Không thể tải dữ liệu trang chủ. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
+        setLoadingPackages(false);
+        setLoadingTests(false);
+      }
+    };
+    
+    fetchAllData();
   }, []);
 
   // Memoized data processing
@@ -134,7 +495,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       <MemoizedBanner />
 
 
@@ -199,7 +560,7 @@ const HomePage = () => {
                   <p className="text-blue-600 mb-2">{consultant.specialization}</p>
                   <p className="text-sm text-gray-600 mb-4">{consultant.experience_years} năm kinh nghiệm</p>
                   <Link
-                    to={`/consultation/book-appointment?consultant=${consultant.consultant_id}`}
+                    to={`/consultants`}
                     className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                   >
                     Chọn chuyên gia
@@ -212,8 +573,105 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* STI Test Packages Section */}
-      <STITestPackages />
+      {/* STI Packages Section with Tabs */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">
+              Dịch vụ Xét nghiệm STI
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Tham khảo thông tin các gói xét nghiệm và xét nghiệm đơn lẻ để lựa chọn dịch vụ phù hợp.
+            </p>
+          </div>
+
+          {/* Tabs Navigation */}
+          <div className="flex justify-center mb-8">
+            <div className="flex bg-white rounded-lg shadow-sm p-1">
+              <button
+                onClick={() => setActiveTab('packages')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'packages'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Gói xét nghiệm
+              </button>
+              <button
+                onClick={() => setActiveTab('individual')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'individual'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Xét nghiệm đơn lẻ
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'packages' && (
+            <>
+              {loadingPackages ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner />
+                </div>
+              ) : stiPackages.length > 0 ? (
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                    {stiPackages.map((pkg) => (
+                      <div key={pkg._id} className="w-80 flex-shrink-0">
+                        <STIPackageCard packageData={pkg} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Không có gói xét nghiệm nào hiện tại</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'individual' && (
+            <>
+              {loadingTests ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner />
+                </div>
+              ) : individualTests.length > 0 ? (
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                    {individualTests.map((test) => (
+                      <IndividualTestCard key={test._id} test={test} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Không có xét nghiệm đơn lẻ nào hiện tại</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Call to Action */}
+          <div className="text-center">
+            <button 
+              onClick={() => window.location.href = '/sti-booking/book'}
+              className="inline-flex items-center space-x-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium shadow-lg hover:shadow-xl"
+            >
+              <span>Đặt lịch xét nghiệm ngay</span>
+              <svg className="text-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* Blog Section - Sử dụng data thật từ API */}
       <section className="py-8 bg-gray-50">
@@ -352,6 +810,50 @@ const HomePage = () => {
          `}</style>
       </section>
 
+      {/* Custom Scrollbar Styles for STI Packages */}
+      <style>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Smooth scroll for horizontal container */
+        .overflow-x-auto {
+          scroll-behavior: smooth;
+        }
+        
+        /* Card consistent width and height */
+        .w-80 {
+          width: 320px;
+          min-width: 320px;
+        }
+        
+        /* Custom scrollbar for desktop */
+        @media (min-width: 768px) {
+          .scrollbar-hide {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: block;
+            height: 8px;
+          }
+          .scrollbar-hide::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 4px;
+          }
+          .scrollbar-hide::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+          }
+          .scrollbar-hide::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+          }
+        }
+      `}</style>
     </div>
   );
 };

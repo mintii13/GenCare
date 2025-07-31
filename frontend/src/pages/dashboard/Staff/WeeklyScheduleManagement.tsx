@@ -59,8 +59,8 @@ const WeeklyScheduleManagement: React.FC = () => {
                     // Map từ ConsultantType sang Consultant interface
                     const mappedConsultants: Consultant[] = response.data.consultants.map((consultant: any) => {
                         const mapped = {
-                            _id: consultant.consultant_id, // ✅ Dùng consultant_id - đây là ID thực của consultant
-                            name: consultant.full_name, // ✅ Dùng full_name từ user
+                            _id: consultant.consultant_id, //  Dùng consultant_id - đây là ID thực của consultant
+                            name: consultant.full_name, //  Dùng full_name từ user
                             email: consultant.email,
                             specialization: consultant.specialization,
                             user_id: consultant.user_id // Lưu user_id nếu cần

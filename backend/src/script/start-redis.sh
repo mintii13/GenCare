@@ -7,7 +7,7 @@ DOCKER_COMPOSE="$REDIS_DIR/docker-compose.yml"
 
 # Kiểm tra docker-compose
 if ! command -v docker-compose &> /dev/null; then
-  echo "❌ docker-compose chưa được cài. Hãy cài đặt trước."
+  echo " docker-compose chưa được cài. Hãy cài đặt trước."
   exit 1
 fi
 
@@ -42,4 +42,4 @@ fi
 cd "$REDIS_DIR"
 docker-compose up -d
 
-echo "✅ Redis đã được khởi động tại localhost:6379"
+echo " Redis đã được khởi động tại localhost:6379"

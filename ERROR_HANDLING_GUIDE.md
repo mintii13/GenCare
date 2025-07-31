@@ -223,10 +223,10 @@ handleApiError(error, 'Form validation');
 
 Hệ thống error handling mới cung cấp:
 
-- ✅ Thông báo lỗi chi tiết và thân thiện
-- ✅ Xử lý tự động các loại lỗi khác nhau  
-- ✅ Logging tốt hơn cho debugging
-- ✅ Tính nhất quán trong toàn bộ ứng dụng
-- ✅ Dễ dàng mở rộng và bảo trì
+-  Thông báo lỗi chi tiết và thân thiện
+-  Xử lý tự động các loại lỗi khác nhau  
+-  Logging tốt hơn cho debugging
+-  Tính nhất quán trong toàn bộ ứng dụng
+-  Dễ dàng mở rộng và bảo trì
 
 Hãy sử dụng hệ thống mới này trong tất cả các tính năng mới và migration dần các tính năng cũ. 

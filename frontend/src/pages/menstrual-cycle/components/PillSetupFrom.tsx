@@ -102,12 +102,12 @@ const PillSetupForm: React.FC<PillSetupFormProps> = ({ onSubmit, isLoading, late
               onCheckedChange={setReminderEnabled}
             />
           </div>
-          <div className="flex items-start gap-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+          {/* <div className="flex items-start gap-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
             <FaInfoCircle className="text-blue-500 mt-1 flex-shrink-0"/>
             <p className="text-sm text-gray-700">
               Lịch uống thuốc của bạn sẽ được tạo dựa trên chu kỳ kinh nguyệt gần nhất. Bạn chỉ có thể tạo lịch trong vòng 5 ngày đầu tiên của chu kỳ.
             </p>
-          </div>
+          </div> */}
           <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
             {isLoading ? 'Đang xử lý...' : 'Bắt đầu theo dõi'}
           </Button>

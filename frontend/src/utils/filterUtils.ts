@@ -252,7 +252,7 @@ export class FilterUtils {
     // STI Order-specific validation  
     stiOrder: {
       sort_by: (value: any) => {
-        // ✅ FIXED: Match database field names - MongoDB uses camelCase for timestamps
+        //  FIXED: Match database field names - MongoDB uses camelCase for timestamps
         const validFields = ['order_date', 'total_amount', 'order_status', 'createdAt', 'updatedAt'];
         return validFields.includes(String(value));
       },

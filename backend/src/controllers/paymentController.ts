@@ -29,7 +29,6 @@ async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
             order_status: 'Processing',
           });
     
-          console.log(`✅ Payment ${payment._id} completed successfully`);
         } else {
           // Thanh toán thất bại
           payment.status = 'Failed';
@@ -38,10 +37,10 @@ async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
           payment.momoResultCode = ipnData.resultCode;
           await payment.save();
     
-          console.warn(`❌ Payment ${payment._id} failed:`, ipnData.message);
+          console.warn(` Payment ${payment._id} failed:`, ipnData.message);
         }
       } catch (error) {
-        console.error('🔴 updatePaymentAndOrder error:', error);
+        console.error(' updatePaymentAndOrder error:', error);
         throw error;
       }
 }

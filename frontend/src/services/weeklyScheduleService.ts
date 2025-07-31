@@ -115,7 +115,7 @@ export const weeklyScheduleService = {
       console.log('📥 [DEBUG] WeeklyScheduleService.getConsultantSchedules response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('❌ [DEBUG] WeeklyScheduleService.getConsultantSchedules error:', {
+      console.error(' [DEBUG] WeeklyScheduleService.getConsultantSchedules error:', {
         error: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -141,7 +141,7 @@ export const weeklyScheduleService = {
       console.log('📥 [DEBUG] WeeklyScheduleService.getMySchedules response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('❌ [DEBUG] WeeklyScheduleService.getMySchedules error:', {
+      console.error(' [DEBUG] WeeklyScheduleService.getMySchedules error:', {
         error: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,

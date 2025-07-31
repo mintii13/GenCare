@@ -11,22 +11,22 @@ Dự án này sử dụng các loading states thống nhất để đảm bảo 
 - **Không sử dụng**: `isLoading` / `setIsLoading`
 
 ```typescript
-// ✅ Đúng
+//  Đúng
 const [loading, setLoading] = useState(false);
 
-// ❌ Sai
+//  Sai
 const [isLoading, setIsLoading] = useState(false);
 ```
 
 ### 2. Interface Properties
 ```typescript
-// ✅ Đúng
+//  Đúng
 interface ComponentProps {
   loading: boolean;
   error: string | null;
 }
 
-// ❌ Sai
+//  Sai
 interface ComponentProps {
   isLoading: boolean;
   error: string | null;
@@ -294,22 +294,22 @@ Dự án này sử dụng các loading states thống nhất để đảm bảo 
 - **Không sử dụng**: `isLoading` / `setIsLoading`
 
 ```typescript
-// ✅ Đúng
+//  Đúng
 const [loading, setLoading] = useState(false);
 
-// ❌ Sai
+//  Sai
 const [isLoading, setIsLoading] = useState(false);
 ```
 
 ### 2. Interface Properties
 ```typescript
-// ✅ Đúng
+//  Đúng
 interface ComponentProps {
   loading: boolean;
   error: string | null;
 }
 
-// ❌ Sai
+//  Sai
 interface ComponentProps {
   isLoading: boolean;
   error: string | null;

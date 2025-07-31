@@ -50,7 +50,7 @@ const stiAssessmentSchema = Joi.object({
 
     condom_use: Joi.when('sexually_active', {
         is: 'not_active',
-        then: Joi.string().valid('never').default('never'),
+        then: Joi.string().default('always').optional(),
         otherwise: Joi.string().valid('always', 'sometimes', 'rarely', 'never').required().messages({
             'any.required': 'Tần suất sử dụng bao cao su là bắt buộc khi có hoạt động tình dục',
             'any.only': 'Tần suất sử dụng bao cao su phải là always, sometimes, rarely hoặc never'
@@ -89,7 +89,7 @@ const stiAssessmentSchema = Joi.object({
 
 });
 
-// ✅ ENHANCED: Additional custom validation
+//  ENHANCED: Additional custom validation
 const customValidation = (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 

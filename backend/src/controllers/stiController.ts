@@ -103,7 +103,7 @@ router.get('/orders',
                 return res.status(500).json(result);
             }
         } catch (error) {
-            console.error('❌ [DEBUG] Error in STI orders pagination:', error);
+            console.error(' [DEBUG] Error in STI orders pagination:', error);
             return res.status(500).json({
                 success: false,
                 message: 'Internal server error',

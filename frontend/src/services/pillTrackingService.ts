@@ -55,8 +55,8 @@ export const pillTrackingService = {
   /**
    * Retrieves the pill schedule for the current user.
    */
-  getSchedule: async (): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE);
+  getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
+    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE(userId));
   },
 
   /**
@@ -73,4 +73,20 @@ export const pillTrackingService = {
     // This typically would be a PATCH or PUT request to update the 'is_taken' status.
     return apiClient.safePut(API.PillTracking.TAKE_PILL(scheduleId), { is_taken: true });
   },
+};
+
+export const getPillTrackingByUserId = async (userId: string) => {
+  // Kiểm tra userId trước khi gọi API
+  if (!userId || userId === 'undefined') {
+    console.warn('Invalid userId provided to getPillTrackingByUserId:', userId);
+    return null;
+  }
+  
+  try {
+    const response = await apiClient.get(`/pill-tracking/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching pill tracking:', error);
+    throw error;
+  }
 }; 

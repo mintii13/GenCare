@@ -4,8 +4,8 @@ export interface AppointmentResponse {
     success: boolean;
     message: string;
     data?: {
-        appointment?: any; // ✅ SỬA: Flexible hơn
-        appointments?: any[]; // ✅ THÊM: Support multiple appointments
+        appointment?: any; //  SỬA: Flexible hơn
+        appointments?: any[]; //  THÊM: Support multiple appointments
         appointmentId?: string;
         meetingDetails?: {
             meet_url: string;
@@ -19,15 +19,15 @@ export interface AppointmentResponse {
             total: number;
             totalPages: number;
         };
-        total?: number; // ✅ THÊM: Support total count
+        total?: number; //  THÊM: Support total count
         summary?: any;
         stats?: any;
     };
     requiresGoogleAuth?: boolean;
     googleAuthUrl?: string;
     timestamp?: string;
-    errorType?: string; // ✅ THÊM: Support error type
-    details?: any; // ✅ THÊM: Support error details
+    errorType?: string; //  THÊM: Support error type
+    details?: any; //  THÊM: Support error details
 }
 
 export interface AppointmentsResponse {

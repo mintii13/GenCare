@@ -17,10 +17,10 @@ export class PaginationUtils {
         const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
         const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
         
-        // ❌ REMOVED: Default sort field causing issues across different models
+        //  REMOVED: Default sort field causing issues across different models
         // const sort_by = query.sort_by || 'publish_date'; 
         
-        // ✅ FIXED: No default - let each service specify appropriate default
+        //  FIXED: No default - let each service specify appropriate default
         const sort_by = query.sort_by || '_id'; // Fallback to universal _id field
         const sort_order = query.sort_order === 'asc' ? 1 : -1; // Default: newest first
 
@@ -503,7 +503,7 @@ export class PaginationUtils {
         const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
         const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
         
-        // ✅ FIXED: Use actual database field names - MongoDB uses camelCase for timestamps
+        //  FIXED: Use actual database field names - MongoDB uses camelCase for timestamps
         const validSortFields = ['order_date', 'total_amount', 'order_status', 'createdAt', 'updatedAt'];
         const sort_by = validSortFields.includes(query.sort_by) ? query.sort_by : 'order_date';
         const sort_order = query.sort_order === 'asc' ? 1 : -1;
@@ -566,7 +566,7 @@ export class PaginationUtils {
         const page = Math.max(1, parseInt(query.page?.toString() || '1') || 1);
         const limit = Math.min(100, Math.max(1, parseInt(query.limit?.toString() || '10') || 10));
         
-        // ✅ FIXED: STI Assessment model uses custom timestamp names
+        //  FIXED: STI Assessment model uses custom timestamp names
         const validSortFields = ['timestamp', 'action', 'table_name', 'record_id', 'created_at', 'updated_at'];
         const sort_by = validSortFields.includes(query.sort_by) ? query.sort_by : 'timestamp';
         const sort_order = query.sort_order === 'asc' ? 1 : -1;

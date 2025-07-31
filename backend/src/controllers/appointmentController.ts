@@ -434,7 +434,7 @@ router.put('/:id/confirm', authenticateToken, authorizeRoles('consultant'), asyn
             });
         }
 
-        // ✅ THÊM: Kiểm tra Google Access Token BẮT BUỘC
+        //  THÊM: Kiểm tra Google Access Token BẮT BUỘC
         if (!googleAccessToken) {
             return res.status(400).json({
                 success: false,
@@ -453,7 +453,7 @@ router.put('/:id/confirm', authenticateToken, authorizeRoles('consultant'), asyn
         if (result.success) {
             res.status(200).json(result);
         } else {
-            // ✅ THÊM: Handle requiresGoogleAuth response
+            //  THÊM: Handle requiresGoogleAuth response
             if (result.requiresGoogleAuth) {
                 res.status(403).json({
                     ...result,
@@ -520,7 +520,7 @@ router.put('/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin
             });
         }
 
-        // ✅ THÊM: Kiểm tra nếu explicitAction là 'confirmed' thì cần Google Access Token
+        //  THÊM: Kiểm tra nếu explicitAction là 'confirmed' thì cần Google Access Token
         if (explicitAction === 'confirmed' && !googleAccessToken) {
             return res.status(400).json({
                 success: false,
@@ -530,7 +530,7 @@ router.put('/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin
             });
         }
 
-        // ✅ SỬA: Đúng thứ tự parameters
+        //  SỬA: Đúng thứ tự parameters
         const result = await AppointmentService.updateAppointment(
             appointmentId,
             updateData,
@@ -543,7 +543,7 @@ router.put('/:id', authenticateToken, authorizeRoles('customer', 'staff', 'admin
         if (result.success) {
             res.status(200).json(result);
         } else {
-            // ✅ THÊM: Handle requiresGoogleAuth response
+            //  THÊM: Handle requiresGoogleAuth response
             if (result.requiresGoogleAuth) {
                 res.status(403).json({
                     ...result,

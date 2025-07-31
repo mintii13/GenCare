@@ -61,7 +61,7 @@ const STIAssessmentForm = () => {
     actual_orientation: '', // Hidden field for backend
     new_partner_recently: false,
     partner_has_sti: false,
-    condom_use: 'sometimes',
+    condom_use: '',
 
     // Tiền sử y tế
     previous_sti_history: [] as string[],
@@ -137,7 +137,7 @@ const STIAssessmentForm = () => {
     } else if (formData.sexually_active && formData.sexually_active !== 'not_active') {
       //  Only set default condom_use when actually sexually active
       if (!formData.condom_use || formData.condom_use === '') {
-        updateFormData('condom_use', 'sometimes'); // Better default than 'never'
+        updateFormData('condom_use', ''); // Keep empty as default
       }
     }
   }, [formData.sexually_active]);
@@ -238,7 +238,7 @@ const STIAssessmentForm = () => {
         symptoms: formData.symptoms || [],
         risk_factors: formData.risk_factors || [],
         age: parseInt(formData.age) || 0,
-        condom_use: formData.sexually_active === 'not_active' ? 'never' : formData.condom_use
+        condom_use: formData.sexually_active === 'not_active' ? '' : formData.condom_use
       };
 
       // Remove the actual_orientation field before sending to backend
@@ -316,7 +316,7 @@ Chi tiết câu trả lời:
 - Hoạt động tình dục: ${formData.sexually_active === 'not_active' ? 'Không hoạt động' : formData.sexually_active === 'active_single' ? 'Có bạn tình' : 'Nhiều bạn tình'}
 - Có bạn tình mới gần đây: ${formData.new_partner_recently ? 'Có' : 'Không'}
 - Bạn tình có STI: ${formData.partner_has_sti ? 'Có' : 'Không'}
-- Sử dụng bao cao su: ${formData.condom_use === 'always' ? 'Luôn luôn' : formData.condom_use === 'sometimes' ? 'Thỉnh thoảng' : formData.condom_use === 'rarely' ? 'Hiếm khi' : 'Không bao giờ'}
+- Sử dụng bao cao su: ${formData.condom_use === 'always' ? 'Luôn luôn' : formData.condom_use === 'sometimes' ? 'Thỉnh thoảng' : formData.condom_use === 'rarely' ? 'Hiếm khi' : formData.condom_use === 'never' ? 'Không bao giờ' : 'Chưa chọn'}
 - Tiền sử STI: ${formData.previous_sti_history?.length > 0 ? formData.previous_sti_history.join(', ') : 'Không có'}
 - Tình trạng HIV: ${formData.hiv_status === 'unknown' ? 'Không biết' : formData.hiv_status === 'negative' ? 'Âm tính' : 'Dương tính'}
 - Lần xét nghiệm STI cuối: ${formData.last_sti_test === 'never' ? 'Chưa bao giờ' : formData.last_sti_test === 'within_3months' ? 'Trong 3 tháng qua' : formData.last_sti_test === '3_to_6_months' ? '3-6 tháng trước' : formData.last_sti_test === '6_to_12_months' ? '6-12 tháng trước' : 'Hơn 1 năm trước'}

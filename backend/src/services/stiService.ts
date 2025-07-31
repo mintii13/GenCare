@@ -1437,7 +1437,7 @@ export class StiService {
                 timestamp: new Date().toISOString()
             };
         } catch (error) {
-          console.error('❌ Error getting STI results with pagination:', error);
+          console.error(' Error getting STI results with pagination:', error);
           return {
             success: false,
             message: 'Internal server error when getting STI results',

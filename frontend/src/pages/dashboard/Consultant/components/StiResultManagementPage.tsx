@@ -526,11 +526,16 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
   }, [orders]);
 
   const diagnosisOptions = [
+  { label: 'Âm tính (Negative)', value: 'Negative' },
+  { label: 'Alere', value: 'Alere' },
   { label: 'Chlamydia', value: 'Chlamydia' },
+  { label: 'Viêm gan siêu vi B', value: 'HBV' },
+  { label: 'Viêm gan siêu vi C', value: 'HCV' },
   { label: 'Lậu (Gonorrhea)', value: 'Gonorrhea' },
   { label: 'Giang mai (Syphilis)', value: 'Syphilis' },
-  { label: 'Nhiễm nấm', value: 'Fungal Infection' },
-  { label: 'Âm tính (Negative)', value: 'Negative' }
+  { label: 'Giang mai (Syphilis IgM/IgG)', value: 'Herpes' },
+  { label: 'Human Papillomavirus (HPV)', value: 'HPV' },
+  { label: 'Trichomonas', value: 'Trichomonas' }
 ];
   return (
     <div>
@@ -580,7 +585,7 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
 
       <Modal
         open={editResultModalVisible}
-        title="Sửa kết quả xét nghiệm"
+        title="Chẩn đoán"
         onCancel={() => setEditResultModalVisible(false)}
         onOk={handleUpdateResult}
         okText="Lưu"
@@ -591,16 +596,24 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
             label="Chẩn đoán"
             name="diagnosis"
             rules={[{ required: true, message: 'Vui lòng nhập chẩn đoán' }]}
+            normalize={(value) =>
+              Array.isArray(value)
+                ? value.filter(v => v?.trim()).join(', ')
+                : value
+            }
           >
-            <AutoComplete
-              options={diagnosisOptions}
-              placeholder="Chọn hoặc nhập chẩn đoán"
-              filterOption={(inputValue, option) =>
-                !!option?.label?.toLowerCase().includes(inputValue.toLowerCase())
-              }
+            <Select
+              mode="tags"
               allowClear
+              placeholder="Chọn hoặc nhập chẩn đoán"
+              options={diagnosisOptions}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
             />
           </Form.Item>
+
 
           <Form.Item
             label="Ghi chú"

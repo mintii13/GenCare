@@ -289,7 +289,7 @@ const CycleStatisticsComponent: React.FC<CycleStatisticsProps> = ({ onRefresh })
                   <div className="space-y-4">
                     {cycleStats?.cycle_regularity === 'regular' ? (
                       <div className="p-4 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-800 mb-2">✅ Chu kì đều đặn</h4>
+                        <h4 className="font-medium text-blue-800 mb-2"> Chu kì đều đặn</h4>
                         <p className="text-sm text-blue-700">
                           Chu kì của bạn rất đều đặn, đây là dấu hiệu tốt của sức khỏe sinh sản.
                         </p>
@@ -511,7 +511,7 @@ const CycleStatisticsComponent: React.FC<CycleStatisticsProps> = ({ onRefresh })
                   <div className="space-y-4">
                     {periodStats?.average_period_length >= 3 && periodStats?.average_period_length <= 7 ? (
                       <div className="p-4 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-800 mb-2">✅ Thời gian kinh nguyệt bình thường</h4>
+                        <h4 className="font-medium text-blue-800 mb-2"> Thời gian kinh nguyệt bình thường</h4>
                         <p className="text-sm text-blue-700">
                           Thời gian kinh nguyệt của bạn trong khoảng bình thường (3-7 ngày).
                         </p>
@@ -528,7 +528,7 @@ const CycleStatisticsComponent: React.FC<CycleStatisticsProps> = ({ onRefresh })
 
                     {periodStats?.period_regularity === 'regular' ? (
                       <div className="p-4 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-800 mb-2">✅ Kinh nguyệt đều đặn</h4>
+                        <h4 className="font-medium text-blue-800 mb-2"> Kinh nguyệt đều đặn</h4>
                         <p className="text-sm text-blue-700">
                           Thời gian kinh nguyệt của bạn khá đều đặn, đây là dấu hiệu tốt.
                         </p>

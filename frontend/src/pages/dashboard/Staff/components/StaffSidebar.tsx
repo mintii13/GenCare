@@ -23,7 +23,7 @@ const StaffSidebar: React.FC<StaffSidebarProps> = ({ isOpen }) => {
       title: 'Quản lý Lịch',
       items: [
         { name: 'Lịch làm việc tuần', path: '/staff/weekly-schedule', icon: FaCalendarAlt },
-        { name: 'Lịch hẹn tư vấn', path: '/staff/appointments', icon: FaCalendarAlt },
+        // { name: 'Lịch hẹn tư vấn', path: '/staff/appointments', icon: FaCalendarAlt },
       ]
     },
     {

@@ -8,10 +8,10 @@ async function testHealthCheck() {
     console.log('🔍 Testing Health Check...');
     try {
         const response = await axios.get('http://localhost:3000/health');
-        console.log('✅ Health Check Result:', response.data);
+        console.log(' Health Check Result:', response.data);
         return true;
     } catch (error) {
-        console.error('❌ Health Check Failed:', error.message);
+        console.error(' Health Check Failed:', error.message);
         return false;
     }
 }
@@ -29,12 +29,12 @@ async function testPillTrackingEndpoints() {
     for (const endpoint of endpoints) {
         try {
             const response = await axios.get(`${BASE_URL}${endpoint}`);
-            console.log(`✅ ${endpoint}:`, response.status);
+            console.log(` ${endpoint}:`, response.status);
         } catch (error) {
             if (error.response?.status === 401) {
-                console.log(`✅ ${endpoint}: Requires authentication (401)`);
+                console.log(` ${endpoint}: Requires authentication (401)`);
             } else {
-                console.log(`❌ ${endpoint}:`, error.response?.status || error.message);
+                console.log(` ${endpoint}:`, error.response?.status || error.message);
             }
         }
     }
@@ -52,12 +52,12 @@ async function testMenstrualCycleEndpoints() {
     for (const endpoint of endpoints) {
         try {
             const response = await axios.get(`${BASE_URL}${endpoint}`);
-            console.log(`✅ ${endpoint}:`, response.status);
+            console.log(` ${endpoint}:`, response.status);
         } catch (error) {
             if (error.response?.status === 401) {
-                console.log(`✅ ${endpoint}: Requires authentication (401)`);
+                console.log(` ${endpoint}: Requires authentication (401)`);
             } else {
-                console.log(`❌ ${endpoint}:`, error.response?.status || error.message);
+                console.log(` ${endpoint}:`, error.response?.status || error.message);
             }
         }
     }
@@ -68,10 +68,10 @@ async function testDatabaseConnection() {
     try {
         // Test if we can access any public endpoint
         const response = await axios.get('http://localhost:3000/health');
-        console.log('✅ Database connection appears to be working');
+        console.log(' Database connection appears to be working');
         return true;
     } catch (error) {
-        console.error('❌ Database connection test failed:', error.message);
+        console.error(' Database connection test failed:', error.message);
         return false;
     }
 }
@@ -91,7 +91,7 @@ async function runAllTests() {
     // Test 4: Menstrual Cycle Endpoints
     await testMenstrualCycleEndpoints();
     
-    console.log('\n✅ All tests completed!');
+    console.log('\n All tests completed!');
     console.log('\n📝 Note: Endpoints requiring authentication will return 401, which is expected.');
     console.log('To test with authentication, you need to:');
     console.log('1. Login to get a JWT token');

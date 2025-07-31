@@ -46,7 +46,7 @@ const MenstrualCyclePage: React.FC = () => {
     setupPillSchedule, 
     markPillAsTaken,
     updatePillSchedule
-  } = usePillTracking();
+  } = usePillTracking(user?.id);
 
   const getStatusColor = useCallback((pregnancyChance: string) => {
     switch (pregnancyChance) {

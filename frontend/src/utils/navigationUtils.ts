@@ -7,7 +7,7 @@ export type UserRole = 'admin' | 'staff' | 'consultant' | 'customer';
 export const getDashboardPathByRole = (role?: string): string => {
   switch (role) {
     case 'admin':
-      return '/admin/users';
+      return '/admin/overview';
     case 'staff':
       return '/staff/overview';
     case 'consultant':

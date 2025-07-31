@@ -12,6 +12,7 @@ import { log } from '../../utils/logger';
 import { CardSkeleton, LoadingSpinner } from '../../components/common/LoadingSkeleton';
 import { FaCalendarAlt, FaSpinner, FaArrowLeft, FaExclamationTriangle, FaEye } from 'react-icons/fa';
 import { AppointmentResponse } from '../../types/appointment';
+import BookingLayout from '../../components/layout/BookingLayout';
 
 interface Consultant {
   consultant_id: string;
@@ -405,75 +406,19 @@ const BookAppointment: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
-        {/* Compact Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">Đặt Lịch Tư Vấn</h1>
-              <p className="text-sm text-gray-600">Chọn chuyên gia và thời gian phù hợp</p>
-            </div>
-            <a
-              href="/my-appointments"
-              className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
-            >
-              <FaCalendarAlt className="inline mr-1" />
-              Lịch hẹn của tôi
-            </a>
-          </div>
-          
-          {/* Compact Steps */}
-          <div className="flex items-center mt-3 overflow-x-auto">
-            {Array.from({ length: getTotalSteps() }, (_, index) => {
-              const stepNum = index + 1;
-              const isActive = step >= stepNum;
-              const isCompleted = step > stepNum;
-              return (
-                <React.Fragment key={stepNum}>
-                  <div className={`flex items-center ${
-                    isCompleted ? 'text-green-600' : isActive ? 'text-blue-600' : 'text-gray-400'
-                  } flex-shrink-0`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                      isCompleted ? 'bg-green-600 text-white' : 
-                      isActive ? 'bg-blue-600 text-white' : 'bg-gray-200'
-                    }`}>
-                      {isCompleted ? '✓' : stepNum}
-                    </div>
-                    <span className="ml-1 text-xs font-medium">{getStepTitle(stepNum)}</span>
-                  </div>
-                  {stepNum < getTotalSteps() && <div className="w-4 h-px bg-gray-300 mx-2 flex-shrink-0"></div>}
-                </React.Fragment>
-              );
-            })}
-          </div>
-
-          {typeof errors.consultant === 'string' && errors.consultant.includes('tải') && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-2 flex-1">
-                  <p className="text-red-700 text-xs font-medium">{errors.consultant}</p>
-                  <button
-                    onClick={handleRetryFetchConsultants}
-                    className="mt-1 text-xs text-red-600 hover:text-red-700 underline"
-                  >
-                    Thử lại
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
+    <BookingLayout
+      title="Đặt Lịch Tư Vấn"
+      subtitle="Chọn chuyên gia và thời gian phù hợp"
+      currentStep={step}
+      totalSteps={getTotalSteps()}
+      stepTitles={['Chọn thời gian', 'Xác nhận']}
+      onBackToAppointments={() => window.location.href = '/my-appointments'}
+    >
+      {/* Main Content Container - Gộp tất cả vào một khối */}
+      <div className="bg-white rounded-lg shadow-sm">
         {/* Login Required */}
         {!isAuthenticated && (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-
+          <div className="p-8 text-center border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-800 mb-2">Yêu cầu đăng nhập</h2>
             <p className="text-sm text-gray-600 mb-4">Vui lòng đăng nhập để đặt lịch tư vấn</p>
             <button
@@ -487,7 +432,7 @@ const BookAppointment: React.FC = () => {
 
         {/* Step 1: Choose Consultant */}
         {step === 1 && !selectedConsultant && isAuthenticated && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-800">Chọn Chuyên Gia</h2>
             </div>
@@ -542,30 +487,30 @@ const BookAppointment: React.FC = () => {
 
         {/* Step 1: Choose Time (when consultant pre-selected) */}
         {step === 1 && selectedConsultant && isAuthenticated && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-800">Chọn Thời Gian</h2>
-                <button
-                  onClick={() => setSelectedConsultant('')}
-                  className="text-blue-600 hover:text-blue-700 text-xs"
-                >
-                  <FaArrowLeft className="inline mr-1" />
-                  Chọn chuyên gia khác
-                </button>
-              </div>
-              <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Chuyên gia:</strong> {getSelectedConsultantInfo()?.full_name} 
-                  - {getSelectedConsultantInfo()?.specialization}
-                </p>
-              </div>
-              {errors.slot && (
-                <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-700 text-xs">{errors.slot}</p>
-                </div>
-              )}
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-800">Chọn Thời Gian</h2>
+              <button
+                onClick={() => setSelectedConsultant('')}
+                className="text-blue-600 hover:text-blue-700 text-xs"
+              >
+                <FaArrowLeft className="inline mr-1" />
+                Chọn chuyên gia khác
+              </button>
             </div>
+            <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Chuyên gia:</strong> {getSelectedConsultantInfo()?.full_name} 
+                - {getSelectedConsultantInfo()?.specialization}
+              </p>
+            </div>
+            {errors.slot && (
+              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-xs">{errors.slot}</p>
+              </div>
+            )}
+            
+            {/* WeeklySlotPicker */}
             <WeeklySlotPicker
               consultantId={selectedConsultant}
               onSlotSelect={handleSlotSelect}
@@ -573,106 +518,79 @@ const BookAppointment: React.FC = () => {
             />
           </div>
         )}
+      </div>
 
-        {/* Step 2: Confirmation */}
-        {step === 2 && isAuthenticated && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-800">Xác Nhận Thông Tin</h2>
+      {/* Step 2: Confirmation - Tách riêng vì là step khác */}
+      {step === 2 && isAuthenticated && (
+        <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+          <form onSubmit={handlePreSubmit}>
+            {/* Compact Booking Summary */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <h3 className="font-medium text-gray-800 mb-2 text-sm">Thông tin đặt lịch:</h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-gray-600">Chuyên gia:</span>
+                  <p className="font-medium">{getSelectedConsultantInfo()?.full_name}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Chuyên khoa:</span>
+                  <p className="font-medium">{getSelectedConsultantInfo()?.specialization}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Ngày:</span>
+                  <p className="font-medium">
+                    {selectedSlot && new Date(selectedSlot.date).toLocaleDateString('vi-VN', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Giờ:</span>
+                  <p className="font-medium">
+                    {selectedSlot && `${selectedSlot.startTime} - ${selectedSlot.endTime}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ghi chú (tùy chọn)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Nhập ghi chú nếu cần..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                rows={3}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end">
               <button
-                onClick={() => setStep(1)}
-                className="text-blue-600 hover:text-blue-700 text-xs"
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                disabled={loading}
               >
-                <FaArrowLeft className="inline mr-1" />
-                Thay đổi thời gian
+                {loading ? 'Đang xử lý...' : 'Tiếp tục'}
               </button>
             </div>
-            <form onSubmit={handlePreSubmit}>
-              {/* Compact Booking Summary */}
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-800 mb-2 text-sm">Thông tin đặt lịch:</h3>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-gray-600">Chuyên gia:</span>
-                    <p className="font-medium">{getSelectedConsultantInfo()?.full_name}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Chuyên khoa:</span>
-                    <p className="font-medium">{getSelectedConsultantInfo()?.specialization}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Ngày hẹn:</span>
-                    <p className="font-medium">{selectedSlot && new Date(selectedSlot.date).toLocaleDateString('vi-VN')}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Thời gian:</span>
-                    <p className="font-medium">{selectedSlot && `${selectedSlot.startTime} - ${selectedSlot.endTime}`}</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Compact Notes */}
-              <div className="mb-4">
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                  Ghi chú (tùy chọn)
-                </label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                    errors.notes ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
-                  placeholder="Mô tả vấn đề muốn tư vấn..."
-                  maxLength={2000}
-                />
-                <div className="flex justify-between items-center mt-1">
-                  <div>
-                    {errors.notes && (
-                      <p className="text-xs text-red-600">{errors.notes}</p>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">{notes.length}/2000</p>
-                </div>
-              </div>
-              
-              {/* Compact Actions */}
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedConsultant('');
-                    setSelectedSlot(null);
-                    setNotes('');
-                    setErrors({});
-                    window.location.replace('/consultants');
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
-                >
-                  Bắt đầu lại
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
-                >
-                  {loading && <LoadingSpinner size="sm" />}
-                  <span>{loading ? 'Đang đặt lịch...' : 'Đặt lịch'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+          </form>
+        </div>
+      )}
 
-        <ConfirmationDialog />
-        <ToastContainer />
-        <LoginModal
-          isOpen={showLoginModal}
-          onClose={() => setShowLoginModal(false)}
-        />
-      </div>
-    </div>
+      {/* Modals */}
+      <LoginModal
+        visible={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={handleLoginSuccess}
+      />
+      <ConfirmationDialog />
+    </BookingLayout>
   );
 };
 

@@ -210,10 +210,10 @@ HƯỚNG DẪN THAM GIA CUỘC HỌP:
 ⏰ NHẮC NHỞ: Cuộc tư vấn của bạn sẽ bắt đầu trong ${minutesBefore} phút nữa!
 
 Vui lòng chuẩn bị:
-✅ Kiểm tra kết nối internet
-✅ Test camera và microphone
-✅ Tìm nơi yên tĩnh
-✅ Chuẩn bị các câu hỏi cần tư vấn
+ Kiểm tra kết nối internet
+ Test camera và microphone
+ Tìm nơi yên tĩnh
+ Chuẩn bị các câu hỏi cần tư vấn
         `.trim();
     }
 

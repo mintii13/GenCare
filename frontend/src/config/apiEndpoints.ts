@@ -62,7 +62,7 @@ export const API = {
     MY: '/appointments/my', // NEW: Simple endpoint for current user's appointments
     // From previous config
     MY_APPOINTMENTS: '/appointments',//39
-    CONSULTANT_APPOINTMENTS: '/appointments',//40
+CONSULTANT_APPOINTMENTS: '/appointments',//40
     ALL: '/appointments'//41
   },
 
@@ -119,7 +119,7 @@ export const API = {
     COMMENTS_FOR_BLOG: (blogId: string) => `/blogs/${blogId}/comments`,//76
     POST_COMMENT: (blogId: string) => `/blogs/${blogId}/comments`, // POST//77
     UPDATE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comments/${commentId}`, // PUT//78
-    DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comments/${commentId}`, // DELETE//79
+DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comments/${commentId}`, // DELETE//79
     // From previous config
     LIST: '/blogs',//80
     DETAIL: (id: string) => `/blogs/${id}`,//81
@@ -185,9 +185,9 @@ export const API = {
     GET_SCHEDULE: (userId: string) => `/pill-tracking/${userId}`,//108
     UPDATE_SCHEDULE: '/pill-tracking',//109
     TAKE_PILL: (scheduleId: string) => `/pill-tracking/mark-as-taken/${scheduleId}`,//110
-    WEEKLY: '/pill-tracking/weekly',//111
-    MONTHLY: '/pill-tracking/monthly',//112
-    STATISTICS: '/pill-tracking/statistics'//113
+    // WEEKLY: '/pill-tracking/weekly',//111
+    // MONTHLY: '/pill-tracking/monthly',//112
+    // STATISTICS: '/pill-tracking/statistics'//113
   },
 
   // ----------------------- STI (TESTS, PACKAGES, ORDERS) --------------------
@@ -230,7 +230,7 @@ export const API = {
     UPDATE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
     UPDATE_STI_RESULT_BY_ID: (id: string) => `/sti/sti-result/result-id/${id}`,
     UPDATE_STI_RESULT_BY_CONSULTANT: (id: string) => `/sti/sti-result/${id}`,
-    DELETE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,     //chưa có DELETE
+DELETE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,     //chưa có DELETE
     GET_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/${id}`,
     GET_NONUPDATED_TESTS_FROM_ORDER: (id: string) => `/sti/sti-test/non-updated/${id}`,
     SAVE_STI_RESULT: (id: string) => `/sti/sti-result/${id}`,
@@ -276,9 +276,10 @@ export const API = {
     MOMO_IPN_PROXY: '/payment/momo/ipn'
   },
   Staff:{
-    GET_STAFF_BY_USER_ID: `/staff/by-user`
+    GET_STAFF_BY_USER_ID: `/staff/by-user`,
+    DROPDOWN: '/staff/dropdown', // GET - Get dropdown list of staffs//158
   }
 
 } as const;
 
-export type ApiGroups = typeof API; 
+export type ApiGroups = typeof API;

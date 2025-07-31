@@ -211,7 +211,7 @@ router.get(
             if (schedules.success) {
                 res.json(schedules);
             } else {
-                console.log('❌ [DEBUG] Schedules request failed:', schedules);
+                console.log(' [DEBUG] Schedules request failed:', schedules);
                 res.status(400).json(schedules);
             }
         } catch (error: any) {

@@ -75,9 +75,9 @@ const BookSTIPage: React.FC = () => {
           
           if (data.success) {
             setSelectedPackage(data.stipackage);
-            console.log('✅ Package loaded:', data.stipackage);
+            console.log(' Package loaded:', data.stipackage);
           } else {
-            console.error('❌ Failed to load package:', data.message);
+            console.error(' Failed to load package:', data.message);
             toast.error('Không thể tải thông tin gói xét nghiệm');
           }
         } catch (error) {

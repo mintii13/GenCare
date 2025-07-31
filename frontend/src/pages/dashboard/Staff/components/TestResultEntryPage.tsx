@@ -64,20 +64,29 @@ const TestResultEntryPage: React.FC = () => {
 
   
   const fetchData = async (order_id: string) => {
+    console.log('🔍 [DEBUG] Starting fetchData with order_id:', order_id);
     setLoading(true);
     try {
       // 1. Luôn lấy thông tin đơn hàng
+      console.log('📡 [DEBUG] Calling GET_ORDER API...');
       const orderRes = await apiClient.get(API.STI.GET_ORDER(order_id));
+      console.log('📦 [DEBUG] Order response:', orderRes.data);
+      
       const orderData = (orderRes.data as any).order;
       if (!(orderRes.data as any).success || !orderData) {
+        console.error('[DEBUG] Order API failed:', orderRes.data);
         throw new Error('Không thể tải thông tin đơn hàng.');
       }
+      console.log(' [DEBUG] Order data set:', orderData);
       setOrder(orderData);
 
       // 2. Lấy tất cả các tests trong đơn
+      console.log('📡 [DEBUG] Calling GET_TESTS_FROM_ORDER API...');
       const allTestsRes = await apiClient.get(API.STI.GET_TESTS_FROM_ORDER(order_id));
-      console.log("all test res ============>", (allTestsRes.data as any).data);
+      console.log("🔬 [DEBUG] Tests response:", allTestsRes.data);
+      
       const testsData = (allTestsRes.data as any).data || [];
+      console.log(' [DEBUG] Tests data:', testsData);
       setTests(testsData);
       
       // Mở tất cả các panel khi có data
@@ -86,19 +95,32 @@ const TestResultEntryPage: React.FC = () => {
       }
 
       // 3. Luôn gọi GET kết quả, sẽ auto-create nếu chưa có
+      console.log('📡 [DEBUG] Calling GET_STI_RESULT API...');
       const resultRes = await apiClient.get(API.STI.GET_STI_RESULT(order_id));
+      console.log('📊 [DEBUG] Result response:', resultRes.data);
+      
       const resultData = (resultRes.data as any).data;
       if ((resultRes.data as any).success && resultData) {
+        console.log(' [DEBUG] Setting existing result:', resultData);
         setExistingResult(resultData);
         prefillExistingData(resultData, testsData);
       } else {
+        console.log('ℹ️ [DEBUG] No existing result, initializing default values');
         // Nếu chưa có result, khởi tạo form values mặc định
         initializeDefaultFormValues(testsData);
       }
     } catch (error: any) {
-      console.error('Fetch data error:', error);
-      message.error(error.message || 'Có lỗi xảy ra khi tải dữ liệu.');
-      navigate('/staff/sti-management');
+      console.error('[DEBUG] Fetch data error:', error);
+      console.error('[DEBUG] Error response:', error.response?.data);
+      console.error('[DEBUG] Error status:', error.response?.status);
+      
+      // Không navigate ngay lập tức, hiển thị error message trước
+      message.error(error.response?.data?.message || error.message || 'Có lỗi xảy ra khi tải dữ liệu.');
+      
+      // Chỉ navigate nếu thực sự cần thiết
+      if (error.response?.status === 404) {
+        navigate('/staff/sti-management');
+      }
     } finally {
       setLoading(false);
     }
@@ -241,7 +263,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="150-450" 
+              placeholder="150-400" 
               min={0}
               max={1000}
               addonAfter="x10³/μL"
@@ -258,7 +280,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="4.5-5.5" 
+              placeholder="3.9-5.8" 
               min={0}
               max={10}
               step={0.1}
@@ -276,7 +298,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="4-11" 
+              placeholder="4-10" 
               min={0}
               max={50}
               step={0.1}
@@ -531,7 +553,7 @@ const TestResultEntryPage: React.FC = () => {
     <div>
       {/* Pathogen Detection Arrays */}
       <Row gutter={24}>
-        <Col span={8}>
+        {/* <Col span={8}>
           <Form.Item
             label="Vi khuẩn (Bacteria)"
             name={[testId, 'bacteria']}
@@ -550,8 +572,8 @@ const TestResultEntryPage: React.FC = () => {
               <Option value="Streptococcus agalactiae">Streptococcus agalactiae</Option>
             </Select>
           </Form.Item>
-        </Col>
-        <Col span={8}>
+        </Col> */}
+        <Col span={12}>
           <Form.Item
             label="Virus"
             name={[testId, 'virus']}
@@ -565,13 +587,12 @@ const TestResultEntryPage: React.FC = () => {
             >
               <Option value="HSV-1">HSV-1</Option>
               <Option value="HSV-2">HSV-2</Option>
-              <Option value="HPV-16">HPV-16</Option>
-              <Option value="HPV-18">HPV-18</Option>
-              <Option value="CMV">CMV</Option>
+              <Option value="HPV">HPV</Option>
+           
             </Select>
           </Form.Item>
         </Col>
-        <Col span={8}>
+        <Col span={12}>
           <Form.Item
             label="Ký sinh trùng (Parasites)"
             name={[testId, 'parasites']}
@@ -584,8 +605,8 @@ const TestResultEntryPage: React.FC = () => {
               tokenSeparators={[',']}
             >
               <Option value="Trichomonas vaginalis">Trichomonas vaginalis</Option>
-              <Option value="Candida albicans">Candida albicans</Option>
-              <Option value="Gardnerella vaginalis">Gardnerella vaginalis</Option>
+              {/* <Option value="Candida albicans">Candida albicans</Option>
+              <Option value="Gardnerella vaginalis">Gardnerella vaginalis</Option> */}
             </Select>
           </Form.Item>
         </Col>
@@ -772,7 +793,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0.1-1.0" 
+              placeholder="0.2-1.0" 
               min={0}
               max={5}
               step={0.1}
@@ -789,10 +810,10 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0-15" 
+              placeholder="> 0.8" 
               min={0}
               max={1000}
-              addonAfter="mg/dL"
+              addonAfter="mmol/l"
             />
           </Form.Item>
         </Col>
@@ -805,7 +826,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0-10" 
+              placeholder="0-5" 
               min={0}
               max={160}
               addonAfter="mg/dL"
@@ -823,7 +844,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0-0.3" 
+              placeholder="0.4-0.8" 
               min={0}
               max={5}
               step={0.1}
@@ -840,7 +861,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0-30" 
+              placeholder="7.5-10" 
               min={0}
               max={2000}
               addonAfter="mg/dL"
@@ -856,7 +877,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0-1" 
+              placeholder="0.05-0.1" 
               min={0}
               max={3}
               step={0.1}
@@ -879,7 +900,7 @@ const TestResultEntryPage: React.FC = () => {
               min={0} 
               max={14} 
               step={0.1}
-              placeholder="4.5-8.0"
+              placeholder="6.0-7.5"
             />
           </Form.Item>
         </Col>
@@ -895,7 +916,7 @@ const TestResultEntryPage: React.FC = () => {
               min={1.000} 
               max={1.050} 
               step={0.001}
-              placeholder="1.005-1.030"
+              placeholder="1.005-1.025"
             />
           </Form.Item>
         </Col>
@@ -908,7 +929,7 @@ const TestResultEntryPage: React.FC = () => {
           >
             <InputNumber 
               style={{ width: '100%' }} 
-              placeholder="0-25" 
+              placeholder="10-25" 
               min={0}
               max={500}
               addonAfter="cells/μL"
@@ -1037,16 +1058,43 @@ const TestResultEntryPage: React.FC = () => {
 
   if (!order) {
     return (
-      <Result 
-        status="error" 
-        title="Tải dữ liệu thất bại" 
-        subTitle="Không thể tìm thấy thông tin đơn hàng." 
-        extra={
-          <Button type="primary" onClick={() => navigate('/staff/sti-management')}>
-            Về trang quản lý
+      <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+        <Header style={{ 
+          background: '#fff', 
+          padding: '0 24px', 
+          borderBottom: '1px solid #f0f0f0', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+        }}>
+          <div>
+            <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
+              <ExperimentOutlined style={{ marginRight: '8px' }} />
+              Cập nhật kết quả xét nghiệm
+            </Title>
+            <Text type="secondary">Đơn hàng: {orderId}</Text>
+          </div>
+          <Button 
+            icon={<ArrowLeftOutlined />} 
+            onClick={() => navigate('/staff/sti-management')}
+          >
+            Quay lại
           </Button>
-        } 
-      />
+        </Header>
+        <Content style={{ padding: '24px' }}>
+          <Result 
+            status="error" 
+            title="Tải dữ liệu thất bại" 
+            subTitle="Không thể tìm thấy thông tin đơn hàng." 
+            extra={
+              <Button type="primary" onClick={() => navigate('/staff/sti-management')}>
+                Về trang quản lý
+              </Button>
+            } 
+          />
+        </Content>
+      </Layout>
     );
   }
 
