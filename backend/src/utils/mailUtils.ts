@@ -218,7 +218,6 @@ export class MailUtils{
                         <li>Tiểu cầu: ${blood.platelets}, Hồng cầu: ${blood.red_blood_cells}, Bạch cầu: ${blood.white_blood_cells}</li>
                         <li>Hemoglobin: ${blood.hemo_level}</li>
                         ${blood.hiv !== null ? `<li>HIV: ${blood.hiv ? 'Dương tính' : 'Âm tính'}</li>` : ''}
-                        ${blood.HBsAg !== null ? `<li>HBsAg: ${blood.HBsAg ? 'Dương tính' : 'Âm tính'}</li>` : ''}
                         ${blood.anti_HCV !== null ? `<li>anti-HCV: ${blood.anti_HCV ? 'Dương tính' : 'Âm tính'}</li>` : ''}
                         ${blood.TPHA_syphilis !== null ? `<li>TPHA: ${blood.TPHA_syphilis ? 'Dương tính' : 'Âm tính'}</li>` : ''}
                         ...

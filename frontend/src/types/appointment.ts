@@ -78,6 +78,19 @@ export interface AppointmentQuery {
   sort_order?: 'asc' | 'desc';
 }
 
+export interface OrderQuery {
+  page?: number;
+  limit?: number;
+  status?: string;
+  customer_id?: string;
+  consultant_id?: string;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+  sort_by?: 'order_status'
+  sort_order?: 'asc' | 'desc';
+}
+
 // Query parameters cho appointment history
 export interface AppointmentHistoryQuery {
   page?: number;

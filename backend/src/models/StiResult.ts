@@ -23,13 +23,13 @@ export type StiResultItem = {
         white_blood_cells: number;       // white blood cells count in blood sample
         hemo_level: number;                // hemoglobin level in blood sample
         hiv?: boolean | null;                // true if HIV is present in blood sample, null if not tested
-        HBsAg?: boolean | null;                // true if HBsAg is present in blood sample, null if not tested
+        // HBsAg?: boolean | null;                // true if HBsAg is present in blood sample, null if not tested
         anti_HBs?: boolean | null;           // true if anti-HBs is present in blood sample, null if not tested
         anti_HBc?: boolean | null;           // true if anti-HBc is present in blood sample, null if not tested
         anti_HCV?: boolean | null;           // true if anti-HCV is present in blood sample, null if not tested
         HCV_RNA?: boolean | null;           // true if HCV RNA is present in blood sample, null if not tested
         TPHA_syphilis?: boolean | null;           // true if TPHA is present in blood sample, null if not tested
-        VDRL_syphilis?: boolean | null;           // true if VDRL is present in blood sample, null if not tested
+        // VDRL_syphilis?: boolean | null;           // true if VDRL is present in blood sample, null if not tested
         RPR_syphilis?: boolean | null;           // true if RPR is present in blood sample, null if not tested
         treponema_pallidum_IgM?: boolean | null;           // true if treponema pallidum is present in blood sample, null if not tested
         treponema_pallidum_IgG?: boolean | null;           // true if treponema pallidum is present in blood sample, null if not tested
@@ -86,13 +86,13 @@ const stiResultSchema = new Schema<IStiResult>({
                 white_blood_cells:{type:Number,required:false},
                 hemo_level:{type:Number,required:false},
                 hiv:{type:Boolean,default:null},
-                HBsAg:{type:Boolean,default:null},
+                // HBsAg:{type:Boolean,default:null},
                 anti_HBs:{type:Boolean,default:null},
                 anti_HBc:{type:Boolean,default:null},
                 anti_HCV:{type:Boolean,default:null},
                 HCV_RNA:{type:Boolean,default:null},
                 TPHA_syphilis:{type:Boolean,default:null},
-                VDRL_syphilis:{type:Boolean,default:null},
+                // VDRL_syphilis:{type:Boolean,default:null},
                 RPR_syphilis:{type:Boolean,default:null},
                 treponema_pallidum_IgM:{type:Boolean,default:null},
                 treponema_pallidum_IgG:{type:Boolean,default:null}

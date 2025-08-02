@@ -64,7 +64,7 @@ interface StiPackage {
   is_active: boolean;
 }
 
-interface StiOrder {
+export interface StiOrder {
   _id: string;
   order_code: string;
   customer_id: {
@@ -118,7 +118,8 @@ interface StiOrder {
     diagnosis: string,
     is_confirmed: boolean,
     medical_notes: string,
-  }
+  };
+  sti_package_lookup?: any
 }
 
 interface OrderFilters {
