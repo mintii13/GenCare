@@ -17,7 +17,8 @@ import {
   Switch,
   InputNumber,
   Select,
-  Modal
+  Modal,
+  Input
 } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined, ExperimentOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -26,6 +27,8 @@ import apiClient from '../../../../services/apiClient';
 import { API } from '../../../../config/apiEndpoints';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { TestTypes } from '../../../../services/stiResultService';
+import { StiOrder } from './OrdersManagement';
+import { TestCategory } from '../../../../types/sti';
 
 const { Panel } = Collapse;
 const { Title, Text } = Typography;
@@ -38,6 +41,17 @@ interface StiTest {
   sti_test_type: TestTypes;
 }
 
+interface IStiTest {
+  _id: string;
+  sti_test_name: string;
+  sti_test_code: string;
+  description: string;
+  price: number;
+  is_active: boolean;
+  category: 'bacterial' | 'viral' | 'parasitic';
+  sti_test_type: 'blood' | 'urine' | 'swab';
+}
+
 const TestResultEntryPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -46,7 +60,7 @@ const TestResultEntryPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [order, setOrder] = useState<any | null>(null);
+  const [order, setOrder] = useState<StiOrder | null>(null);
   const [tests, setTests] = useState<StiTest[]>([]);
   const [existingResult, setExistingResult] = useState<any | null>(null);
   const [activeKey, setActiveKey] = useState<string[]>([]);
@@ -249,12 +263,113 @@ const TestResultEntryPage: React.FC = () => {
 
   // Form cho blood test với dropdown options
   // Form cho blood test với tất cả fields từ StiResultItem
-  const renderBloodResultForm = (testId: string) => (
+  type TestField = {
+    name: string;       // key dùng trong Form
+    label: string;      // nhãn hiển thị (VD: "HIV")
+    tooltip?: string;   // mô tả ngắn nếu cần (VD: "Xét nghiệm HIV")
+  };
+  const stiTestCodes: string[] = [
+    ...((order?.sti_test_items?.map(t =>
+      typeof t === 'string' ? t : (t as IStiTest).sti_test_code
+    )) || []),
+    ...((order?.sti_package_item?.sti_test_ids?.map(t =>
+      typeof t === 'string' ? t : (t as IStiTest).sti_test_code
+    )) || [])
+  ];
+    const TEST_FIELDS_BY_CODE: Record<string, TestField[]> = {
+    'STI-VIR-BLD-HIV-COMBO': [
+      { name: 'hiv', label: 'HIV Test', tooltip: 'Test HIV' },
+    ],
+    'STI-VIR-BLD-HBV': [
+      { name: 'anti_HBs', label: 'Anti-HBs', tooltip: 'Test kháng thể bề mặt Viêm gan B' },
+      { name: 'anti_HBc', label: 'Anti-HBc', tooltip: 'Test kháng thể lõi Viêm gan B' },
+    ],
+    'STI-VIR-BLD-HCV': [
+      { name: 'anti_HCV', label: 'Anti-HCV', tooltip: 'Test kháng thể Viêm gan C' },
+  { name: 'HCV_RNA', label: 'HCV RNA', tooltip: 'Test virus Viêm gan C' },
+    ],
+
+    'STI-BAC-BLD-SYPHILIS': [
+      { name: 'TPHA_syphilis', label: 'TPHA Syphilis', tooltip: 'Test đặc hiệu TPHA, xác định bệnh giang mai' },
+  { name: 'treponema_pallidum_IgM', label: 'Treponema Pallidum IgM', tooltip: 'Test kháng thể Treponema Pallidum IgM trong Giang mai' },
+  { name: 'treponema_pallidum_IgG', label: 'Treponema Pallidum IgG', tooltip: 'Test kháng thể Treponema Pallidum IgG trong Giang mai' },
+
+    ],
+    'STI-BAC-BLD-RPR': [
+      { name: 'RPR_syphilis', label: 'RPR Syphilis', tooltip: 'Test RPR để sàng lọc giang mai' },
+    ],
+  // Swab tests (new)
+  'STI-VIR-SWB-HSV': [
+    { name: 'PCR_HSV', label: 'PCR HSV', tooltip: 'Test PCR phát hiện virus Herpes Simplex' },
+    // { name: 'HSV_1', label: 'HSV-1', tooltip: 'Herpes Simplex Virus type 1' },
+    // { name: 'HSV_2', label: 'HSV-2', tooltip: 'Herpes Simplex Virus type 2' },
+  ],
+  'STI-VIR-SWB-HPV': [
+    { name: 'HPV', label: 'HPV', tooltip: 'Human Papillomavirus' }
+  ],
+  'STI-PAR-SWB-TRI': [
+    { name: 'NAAT_Trichomonas', label: 'NAAT Trichomonas', tooltip: 'Nucleic Acid Amplification Test cho Trichomonas' },
+    { name: 'rapidAntigen_Trichomonas', label: 'Rapid Antigen Trichomonas', tooltip: 'Test kháng nguyên nhanh cho Trichomonas' },
+    { name: 'culture_Trichomonas', label: 'Culture Trichomonas', tooltip: 'Nuôi cấy cho Trichomonas' },
+  ],
+  };
+
+  // Cập nhật function renderBloodResultForm để chỉ hiển thị fields theo sti_test_code
+const renderBloodResultForm = (testId: string) => {
+  // Tìm test hiện tại để lấy sti_test_code
+  const currentTest = tests.find(test => test._id === testId);
+  if (!currentTest) return null;
+
+  // Lấy test code từ order items hoặc package items
+  let testCode = '';
+  
+  // Tìm trong sti_test_items
+  const testItem = order?.sti_test_items?.find(item => {
+    if (typeof item === 'string') return false;
+    return (item as IStiTest)._id === testId;
+  });
+  
+  if (testItem && typeof testItem !== 'string') {
+    testCode = (testItem as IStiTest).sti_test_code;
+  } else {
+    // Tìm trong sti_package_item
+    const packageTestItem = order?.sti_package_item?.sti_test_ids?.find(item => {
+      if (typeof item === 'string') return false;
+      return (item as IStiTest)._id === testId;
+    });
+    
+    if (packageTestItem && typeof packageTestItem !== 'string') {
+      testCode = (packageTestItem as IStiTest).sti_test_code;
+    }
+  }
+
+  // Lấy các fields tương ứng với test code
+  const testFields = TEST_FIELDS_BY_CODE[testCode] || [];
+  
+  // Nếu không có fields nào match, hiển thị thông báo
+  if (testFields.length === 0) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <Text type="secondary">
+          Không tìm thấy cấu hình fields cho test code: <code>{testCode}</code>
+        </Text>
+      </div>
+    );
+  }
+
+  return (
     <div>
-      {/* Basic Blood Count Fields */}
-      <Row gutter={24}>
-        <Col span={1}>
+      {/* Basic Blood Count Fields - luôn hiển thị cho tất cả blood tests */}
+      <Row gutter={24} style={{ marginBottom: '16px' }}>
+        <Col span={24}>
+          <Title level={5} style={{ color: '#1890ff', marginBottom: '16px' }}>
+            🩸 Thông số máu cơ bản
+          </Title>
         </Col>
+      </Row>
+      
+      <Row gutter={24}>
+        <Col span={1}></Col>
         <Col span={4}>
           <Form.Item 
             label="Tiểu cầu (Platelets)" 
@@ -270,8 +385,7 @@ const TestResultEntryPage: React.FC = () => {
             />
           </Form.Item>
         </Col>
-        <Col span={2}>
-        </Col>
+        <Col span={2}></Col>
         <Col span={4}>
           <Form.Item 
             label="Hồng cầu (RBC)" 
@@ -288,8 +402,7 @@ const TestResultEntryPage: React.FC = () => {
             />
           </Form.Item>
         </Col>
-        <Col span={2}>
-        </Col>
+        <Col span={2}></Col>
         <Col span={4}>
           <Form.Item 
             label="Bạch cầu (WBC)" 
@@ -306,8 +419,7 @@ const TestResultEntryPage: React.FC = () => {
             />
           </Form.Item>
         </Col>
-        <Col span={2}>
-        </Col>
+        <Col span={2}></Col>
         <Col span={4}>
           <Form.Item 
             label="Hemoglobin" 
@@ -324,409 +436,250 @@ const TestResultEntryPage: React.FC = () => {
             />
           </Form.Item>
         </Col>
-        <Col span={1}>
+        <Col span={1}></Col>
+      </Row>
+
+      {/* STI-specific tests - chỉ hiển thị theo testCode */}
+      <Row gutter={24} style={{ marginTop: '24px', marginBottom: '16px' }}>
+        <Col span={24}>
+          <Title level={5} style={{ color: '#ff4d4f', marginBottom: '16px' }}>
+            🦠 Xét nghiệm STI - {testCode}
+          </Title>
         </Col>
       </Row>
 
-      {/* STI Blood Tests */}
-      <Row gutter={24}>
-        <Col span={1}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="HIV Test" name={[testId, 'hiv']}>
-            <Select 
-              placeholder="Chọn kết quả HIV" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="HBsAg Test" name={[testId, 'HBsAg']}>
-            <Select 
-              placeholder="Chọn kết quả HBsAg" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="Anti-HBs" name={[testId, 'anti_HBs']}>
-            <Select 
-              placeholder="Chọn kết quả Anti-HBs" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="Anti-HBc" name={[testId, 'anti_HBc']}>
-            <Select 
-              placeholder="Chọn kết quả Anti-HBc" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={1}>  
-        </Col>
-      </Row>
-      <Row gutter={24}>
-        <Col span={1}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="Anti-HCV" name={[testId, 'anti_HCV']}>
-            <Select 
-              placeholder="Chọn kết quả Anti-HCV" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="HCV RNA" name={[testId, 'HCV_RNA']}>
-            <Select 
-              placeholder="Chọn kết quả HCV RNA" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Phát hiện (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Không phát hiện (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="TPHA Syphilis" name={[testId, 'TPHA_syphilis']}>
-            <Select 
-              placeholder="Chọn kết quả TPHA" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}>  
-        </Col>
-        <Col span={4}>
-          <Form.Item label="VDRL Syphilis" name={[testId, 'VDRL_syphilis']}>
-            <Select 
-              placeholder="Chọn kết quả VDRL" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={1}>  
-        </Col>
-      </Row>
-      <Row gutter={24}>
-        <Col span={3}></Col>
-        <Col span={5}>
-          <Form.Item label="RPR Syphilis" name={[testId, 'RPR_syphilis']}>
-            <Select 
-              placeholder="Chọn kết quả RPR" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}></Col>
-        <Col span={5}>
-          <Form.Item label="Treponema Pallidum IgM" name={[testId, 'treponema_pallidum_IgM']}>
-            <Select 
-              placeholder="Chọn kết quả IgM" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={2}></Col>
-        <Col span={5}>
-          <Form.Item label="Treponema Pallidum IgG" name={[testId, 'treponema_pallidum_IgG']}>
-            <Select 
-              placeholder="Chọn kết quả IgG" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-      </Row>
+      {/* Render các fields theo chunks 3 cột */}
+      {(() => {
+        const chunks = [];
+        for (let i = 0; i < testFields.length; i += 3) {
+          chunks.push(testFields.slice(i, i + 3));
+        }
+
+        return chunks.map((chunk, chunkIndex) => {
+              const chunkSize = chunk.length;
+              // Tính toán span và offset để căn giữa
+              let colSpan, offsetStart;
+              
+              if (chunkSize === 1) {
+                colSpan = 8;
+                offsetStart = 1; // (24 - 6) / 2 = 9
+              } else if (chunkSize === 2) {
+                colSpan = 6;
+                offsetStart = 5; // (24 - 6*2 - 2) / 2 = 5, nhưng để 3 cho đẹp
+              } else { // chunkSize === 3
+                colSpan = 6;
+                offsetStart = 1;
+              }
+
+              return (
+                <Row gutter={24} key={chunkIndex} style={{ marginBottom: '16px' }}>
+                  <Col span={offsetStart}></Col>
+                  {chunk.map((field, fieldIndex) => (
+                    <React.Fragment key={field.name}>
+                      <Col span={colSpan}>
+                        <Form.Item 
+                          label={field.label} 
+                          name={[testId, field.name]} 
+                          tooltip={field.tooltip}
+                        >
+                          <Select 
+                            placeholder={`Chọn kết quả ${field.label}`}
+                            allowClear
+                            size="large"
+                            style={{ width: '100%' }}
+                          >
+                            <Option value={true}>
+                              <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
+                            </Option>
+                            <Option value={false}>
+                              <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
+                            </Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      {fieldIndex < chunk.length - 1 && <Col span={2}></Col>}
+                    </React.Fragment>
+                  ))}
+                </Row>
+              );
+        });
+      })()}
     </div>
   );
+};
 
-  // Form cho swab test với tất cả fields từ StiResultItem
-  const renderSwabResultForm = (testId: string) => (
+// Cập nhật function renderSwabResultForm
+const renderSwabResultForm = (testId: string) => {
+  // Tìm test hiện tại để lấy sti_test_code
+  const currentTest = tests.find(test => test._id === testId);
+  if (!currentTest) return null;
+
+  // Lấy test code từ order items hoặc package items
+  let testCode = '';
+  let testCategory = '';
+  
+  // Tìm trong sti_test_items
+  const testItem = order?.sti_test_items?.find(item => {
+    if (typeof item === 'string') return false;
+    return (item as IStiTest)._id === testId;
+  });
+  
+  if (testItem && typeof testItem !== 'string') {
+    testCode = (testItem as IStiTest).sti_test_code;
+  } else {
+    // Tìm trong sti_package_item
+    const packageTestItem = order?.sti_package_item?.sti_test_ids?.find(item => {
+      if (typeof item === 'string') return false;
+      return (item as IStiTest)._id === testId;
+    });
+    
+    if (packageTestItem && typeof packageTestItem !== 'string') {
+      testCode = (packageTestItem as IStiTest).sti_test_code;
+    }
+  }
+
+  if (testItem && typeof testItem !== 'string') {
+    testCategory = (testItem as IStiTest).category;
+  }
+
+  // Lấy các fields tương ứng với test code
+  const testFields = TEST_FIELDS_BY_CODE[testCode] || [];
+  
+  // Lấy các fields tương ứng với test code (có thể là mảng rỗng)
+
+  return (
     <div>
-      {/* Pathogen Detection Arrays */}
-      <Row gutter={24}>
-        {/* <Col span={8}>
-          <Form.Item
-            label="Vi khuẩn (Bacteria)"
-            name={[testId, 'bacteria']}
-            tooltip="Danh sách vi khuẩn phát hiện được"
-          >
-            <Select 
-              mode="tags"
-              placeholder="Nhập tên vi khuẩn" 
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-            >
-              <Option value="Neisseria gonorrhoeae">Neisseria gonorrhoeae</Option>
-              <Option value="Chlamydia trachomatis">Chlamydia trachomatis</Option>
-              <Option value="Ureaplasma urealyticum">Ureaplasma urealyticum</Option>
-              <Option value="Mycoplasma genitalium">Mycoplasma genitalium</Option>
-              <Option value="Streptococcus agalactiae">Streptococcus agalactiae</Option>
-            </Select>
-          </Form.Item>
-        </Col> */}
-        <Col span={12}>
-          <Form.Item
-            label="Virus"
-            name={[testId, 'virus']}
-            tooltip="Danh sách virus phát hiện được"
-          >
-            <Select 
-              mode="tags"
-              placeholder="Nhập tên virus" 
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-            >
-              <Option value="HSV-1">HSV-1</Option>
-              <Option value="HSV-2">HSV-2</Option>
-              <Option value="HPV">HPV</Option>
-           
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            label="Ký sinh trùng (Parasites)"
-            name={[testId, 'parasites']}
-            tooltip="Danh sách ký sinh trùng phát hiện được"
-          >
-            <Select 
-              mode="tags"
-              placeholder="Nhập tên ký sinh trùng" 
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-            >
-              <Option value="Trichomonas vaginalis">Trichomonas vaginalis</Option>
-              {/* <Option value="Candida albicans">Candida albicans</Option>
-              <Option value="Gardnerella vaginalis">Gardnerella vaginalis</Option> */}
-            </Select>
-          </Form.Item>
+      {/* Default/Common Fields - luôn hiển thị */}
+      <Row gutter={24} style={{ marginBottom: '16px' }}>
+        <Col span={24}>
+          <Title level={5} style={{ color: '#1890ff', marginBottom: '16px' }}>
+            🧪 Thông tin chung - Swab Test
+          </Title>
         </Col>
       </Row>
 
-      {/* Specific STI Tests */}
       <Row gutter={24}>
-        <Col span={12}>
-          <Form.Item
-            label="PCR HSV"
-            name={[testId, 'PCR_HSV']}
-            tooltip="Kết quả xét nghiệm PCR Herpes Simplex Virus"
-          >
-            <Select 
-              placeholder="Chọn kết quả PCR HSV" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
+        {testCategory === 'viral' && (
+          <>
+          <Col span={1}>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label="Virus"
+              name={[testId, 'virus']}
+              tooltip="Danh sách virus phát hiện được"
             >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            label="HPV"
-            name={[testId, 'HPV']}
-            tooltip="Kết quả xét nghiệm Human Papillomavirus"
-          >
-            <Select 
-              placeholder="Chọn kết quả HPV" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
+              <Select 
+                mode="tags"
+                placeholder="Nhập tên virus" 
+                style={{ width: '100%' }}
+                tokenSeparators={[',']}
+              >
+                <Option value="HSV-1">HSV-1</Option>
+                <Option value="HSV-2">HSV-2</Option>
+                <Option value="HPV">HPV</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          </>
+        )}
+        
+        {/* Chỉ hiển thị field Parasites nếu test thuộc category parasitic */}
+        {testCategory === 'parasitic' && (
+          <>
+          <Col span={1}>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label="Ký sinh trùng (Parasites)"
+              name={[testId, 'parasites']}
+              tooltip="Danh sách ký sinh trùng phát hiện được"
             >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
+              <Select 
+                mode="tags"
+                placeholder="Nhập tên ký sinh trùng" 
+                style={{ width: '100%' }}
+                tokenSeparators={[',']}
+              >
+                <Option value="Trichomonas vaginalis">Trichomonas vaginalis</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          </>
+        )}
       </Row>
 
-      {/* Trichomonas Tests */}
-      <Row gutter={24}>
-        <Col span={8}>
-          <Form.Item
-            label="NAAT Trichomonas"
-            name={[testId, 'NAAT_Trichomonas']}
-            tooltip="Nucleic Acid Amplification Test cho Trichomonas"
-          >
-            <Select 
-              placeholder="Chọn kết quả NAAT" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item
-            label="Rapid Antigen Trichomonas"
-            name={[testId, 'rapidAntigen_Trichomonas']}
-            tooltip="Test kháng nguyên nhanh cho Trichomonas"
-          >
-            <Select 
-              placeholder="Chọn kết quả Rapid Antigen" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item
-            label="Culture Trichomonas"
-            name={[testId, 'culture_Trichomonas']}
-            tooltip="Nuôi cấy cho Trichomonas"
-          >
-            <Select 
-              placeholder="Chọn kết quả Culture" 
-              allowClear
-              size="large"
-              style={{ width: '100%' }}
-            >
-              <Option value={true}>
-                <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
-              </Option>
-              <Option value={false}>
-                <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
-              </Option>
-            </Select>
-          </Form.Item>
-        </Col>
-      </Row>
+      {/* Test-specific Fields - chỉ hiển thị nếu có config */}
+      {testFields.length > 0 && (
+        <>
+          <Row gutter={24} style={{ marginTop: '24px', marginBottom: '16px' }}>
+            <Col span={24}>
+              <Title level={5} style={{ color: '#ff4d4f', marginBottom: '16px' }}>
+                🦠 Xét nghiệm chuyên biệt - {testCode}
+              </Title>
+            </Col>
+          </Row>
+
+          {(() => {
+            const chunks = [];
+            for (let i = 0; i < testFields.length; i += 3) {
+              chunks.push(testFields.slice(i, i + 3));
+            }
+
+            return chunks.map((chunk, chunkIndex) => {
+              const chunkSize = chunk.length;
+              // Tính toán span và offset để căn giữa
+              let colSpan, offsetStart;
+              
+              if (chunkSize === 1) {
+                colSpan = 8;
+                offsetStart = 1; // (24 - 6) / 2 = 9
+              } else if (chunkSize === 2) {
+                colSpan = 6;
+                offsetStart = 3; // (24 - 6*2 - 2) / 2 = 5, nhưng để 3 cho đẹp
+              } else { // chunkSize === 3
+                colSpan = 6;
+                offsetStart = 1;
+              }
+
+              return (
+                <Row gutter={24} key={chunkIndex} style={{ marginBottom: '16px' }}>
+                  <Col span={offsetStart}></Col>
+                  {chunk.map((field, fieldIndex) => (
+                    <React.Fragment key={field.name}>
+                      <Col span={colSpan}>
+                        <Form.Item 
+                          label={field.label} 
+                          name={[testId, field.name]} 
+                          tooltip={field.tooltip}
+                        >
+                          <Select 
+                            placeholder={`Chọn kết quả ${field.label}`}
+                            allowClear
+                            size="large"
+                            style={{ width: '100%' }}
+                          >
+                            <Option value={true}>
+                              <span style={{ color: '#ff4d4f' }}>🔴 Dương tính (+)</span>
+                            </Option>
+                            <Option value={false}>
+                              <span style={{ color: '#52c41a' }}>🟢 Âm tính (-)</span>
+                            </Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      {fieldIndex < chunk.length - 1 && <Col span={2}></Col>}
+                    </React.Fragment>
+                  ))}
+                </Row>
+              );
+            });
+          })()}
+        </>
+      )}
     </div>
   );
-
+};
   // Form cho urine test với tất cả fields từ StiResultItem
   const renderUrineResultForm = (testId: string) => (
     <div>

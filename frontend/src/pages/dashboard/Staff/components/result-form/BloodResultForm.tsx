@@ -47,11 +47,11 @@ const BloodResultForm: React.FC<BloodResultFormProps> = ({ namePrefix, onSubmit 
               <InputNumber style={{ width: '100%' }} />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          {/* <Col span={12}>
             <Form.Item label="HBsAg Test Result" name={[namePrefix, 'HBsAg']}>
               <InputNumber style={{ width: '100%' }} />
             </Form.Item>
-          </Col>
+          </Col> */}
         </Row>
         <Form.Item>
           <Button type="primary" htmlType="submit">

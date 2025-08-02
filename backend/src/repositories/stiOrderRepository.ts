@@ -21,7 +21,13 @@ export class StiOrderRepository {
 
     public static async findOrderById(id: string) {
         try {
-            return await StiOrder.findById(id).populate('customer_id', 'full_name email phone');
+            return await StiOrder.findById(id)
+                          .populate('customer_id', 'full_name email phone')
+                          .populate('sti_test_items')
+                          .populate({
+                              path: 'sti_package_item.sti_test_ids',
+                              model: 'StiTest'
+                          });
         } catch (error) {
             console.error(error);
             throw error;

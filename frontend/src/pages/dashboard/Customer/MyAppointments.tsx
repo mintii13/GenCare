@@ -12,6 +12,7 @@ import { useConfirmModal } from '@/hooks/useConfirmModal';
 import {
   Appointment,
   AppointmentQuery,
+  OrderQuery,
   PaginationInfo,
 } from '../../../types/appointment';
 import {
@@ -41,7 +42,9 @@ import { MoreVertical } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { stiService } from '@/services/stiService';
 import { FaVial } from 'react-icons/fa';
-import { StiOrder, StiOrderQuery } from '@/types/sti';
+import { StiOrderQuery, StiOrder } from '@/types/sti';
+import { API } from '@/config/apiEndpoints';
+import { apiClient } from '@/services';
 
 interface FeedbackFormData {
   rating: number;
@@ -62,8 +65,24 @@ const TestBookingHistory: React.FC = () => {
   });
   const [query, setQuery] = useState<StiOrderQuery>({ page: 1, limit: 10 });
 
+  // const fetchOrders = useCallback(async () => {
+  //   setLoading(true);
+  //   try {
+  //     const response = await stiService.getMyOrdersPaginated(query);
+  //     if (response.success) {
+  //       setOrders(response.data.items || []);
+  //       setPagination(response.data.pagination);
+  //     } else {
+  //       setError(response.message);
+  //     }
+  //   } catch (err) {
+  //     setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [query]);
+
   const fetchOrders = useCallback(async () => {
-    setLoading(true);
     try {
       try {
         const response = await stiService.getMyOrdersPaginated(query);
@@ -76,8 +95,6 @@ const TestBookingHistory: React.FC = () => {
       } catch (err) {
         setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
       }
-    } catch (err) {
-      setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
     }
@@ -85,7 +102,7 @@ const TestBookingHistory: React.FC = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
+  }, []);
 
   const handlePageChange = (newPage: number) => {
     setQuery(prev => ({ ...prev, page: newPage }));
@@ -139,6 +156,23 @@ const TestBookingHistory: React.FC = () => {
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Lịch sử xét nghiệm</CardTitle>
       </CardHeader>
+      {/* <div className="mt-4 flex flex-col md:flex-row gap-2">
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="Booked">Đã đặt lịch</SelectItem>
+                    <SelectItem value="Accepted">Đã chấp nhận</SelectItem>
+                    <SelectItem value="Processing">Đang xử lý</SelectItem>
+                    <SelectItem value="SpecimenCollected">Đã lấy mẫu</SelectItem>
+                    <SelectItem value="Testing">Đang xét nghiệm</SelectItem>
+                    <SelectItem value="Completed">Đã hoàn thành</SelectItem>
+                    <SelectItem value="Canceled">Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div> */}
       <CardContent>
         {error && <div className="text-red-600 bg-red-50 p-4 rounded-md text-center">{error}</div>}
         {!loading && !error && orders.length > 0 ? (
@@ -220,6 +254,14 @@ const MyAppointments: React.FC = () => {
     sort_order: 'desc',
     status: undefined,
   });
+
+  const [orderQuery, setOrderQuery] = useState<OrderQuery>({
+    page: 1,
+    limit: 5,
+    sort_by: 'order_status',
+    sort_order: 'desc',
+    status: undefined,
+  });
   
   const statusLabels: { [key: string]: string } = {
     pending: 'Chờ xác nhận',
@@ -288,7 +330,13 @@ const MyAppointments: React.FC = () => {
     const timer = setTimeout(() => {
       setQuery(prev => ({ ...prev, page: 1, search: searchTerm.trim() || undefined }));
     }, 500);
-    return () => clearTimeout(timer);
+    const orderTimer = setTimeout(() => {
+      setOrderQuery(prev => ({ ...prev, page: 1, search: searchTerm.trim() || undefined }));
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(orderTimer);
+    }
   }, [searchTerm]);
 
   useEffect(() => {

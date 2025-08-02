@@ -21,6 +21,47 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
     );
   }
 
+  // Định nghĩa các test fields theo sti_test_code
+  type TestField = {
+    name: string;       // key dùng trong Form
+    label: string;      // nhãn hiển thị (VD: "HIV")
+    tooltip?: string;   // mô tả ngắn nếu cần (VD: "Xét nghiệm HIV")
+  };
+
+  const TEST_FIELDS_BY_CODE: Record<string, TestField[]> = {
+    'STI-VIR-BLD-HIV-COMBO': [
+      { name: 'hiv', label: 'HIV Test', tooltip: 'Test HIV' },
+    ],
+    'STI-VIR-BLD-HBV': [
+      { name: 'anti_HBs', label: 'Anti-HBs', tooltip: 'Test kháng thể bề mặt Viêm gan B' },
+      { name: 'anti_HBc', label: 'Anti-HBc', tooltip: 'Test kháng thể lõi Viêm gan B' },
+    ],
+    'STI-VIR-BLD-HCV': [
+      { name: 'anti_HCV', label: 'Anti-HCV', tooltip: 'Test kháng thể Viêm gan C' },
+      { name: 'HCV_RNA', label: 'HCV RNA', tooltip: 'Test virus Viêm gan C' },
+    ],
+    'STI-BAC-BLD-SYPHILIS': [
+      { name: 'TPHA_syphilis', label: 'TPHA Syphilis', tooltip: 'Test đặc hiệu TPHA, xác định bệnh giang mai' },
+      { name: 'treponema_pallidum_IgM', label: 'Treponema Pallidum IgM', tooltip: 'Test kháng thể Treponema Pallidum IgM trong Giang mai' },
+      { name: 'treponema_pallidum_IgG', label: 'Treponema Pallidum IgG', tooltip: 'Test kháng thể Treponema Pallidum IgG trong Giang mai' },
+    ],
+    'STI-BAC-BLD-RPR': [
+      { name: 'RPR_syphilis', label: 'RPR Syphilis', tooltip: 'Test RPR để sàng lọc giang mai' },
+    ],
+    // Swab tests
+    'STI-VIR-SWB-HSV': [
+      { name: 'PCR_HSV', label: 'PCR HSV', tooltip: 'Test PCR phát hiện virus Herpes Simplex' },
+    ],
+    'STI-VIR-SWB-HPV': [
+      { name: 'HPV', label: 'HPV', tooltip: 'Human Papillomavirus' }
+    ],
+    'STI-PAR-SWB-TRI': [
+      { name: 'NAAT_Trichomonas', label: 'NAAT Trichomonas', tooltip: 'Nucleic Acid Amplification Test cho Trichomonas' },
+      { name: 'rapidAntigen_Trichomonas', label: 'Rapid Antigen Trichomonas', tooltip: 'Test kháng nguyên nhanh cho Trichomonas' },
+      { name: 'culture_Trichomonas', label: 'Culture Trichomonas', tooltip: 'Nuôi cấy cho Trichomonas' },
+    ],
+  };
+
   const getResultStatus = (value: any) => {
     if (value === null || value === undefined) {
       return { text: 'Chưa có kết quả', color: 'default', icon: null };
@@ -42,13 +83,11 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
       'white_blood_cells': '4-10 (×10³/μL)',
       'hemo_level': '12-16 g/dL',
       'hiv': 'Âm tính',
-      'HBsAg': 'Âm tính',
       'anti_HBs': 'Âm tính',
       'anti_HBc': 'Âm tính',
       'anti_HCV': 'Âm tính',
       'HCV_RNA': 'Âm tính',
       'TPHA_syphilis': 'Âm tính',
-      'VDRL_syphilis': 'Âm tính',
       'RPR_syphilis': 'Âm tính',
       'treponema_pallidum_IgM': 'Âm tính',
       'treponema_pallidum_IgG': 'Âm tính',
@@ -111,11 +150,9 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
       'anti_HBs': 'Anti-HBs (Kháng thể bề mặt Hepatitis B)',
       'anti_HBc': 'Anti-HBc (Kháng thể lõi Hepatitis B)',
       'hiv': 'HIV',
-      'HBsAg': 'HBsAg (Kháng nguyên bề mặt Hepatitis B)',
       'anti_HCV': 'Anti-HCV (Kháng thể Hepatitis C)',
       'HCV_RNA': 'HCV RNA',
       'TPHA_syphilis': 'TPHA (Giang mai)',
-      'VDRL_syphilis': 'VDRL (Giang mai)',
       'RPR_syphilis': 'RPR (Giang mai)',
       'treponema_pallidum_IgM': 'Treponema pallidum IgM',
       'treponema_pallidum_IgG': 'Treponema pallidum IgG',
@@ -214,12 +251,41 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
     return value.toString();
   };
 
-  const createTestTable = (testData: any, title: string) => {
+  const createTestTable = (testData: any, title: string, testCode?: string, testCategory?: string) => {
     const tests: any[] = [];
+    
+    // Lấy các fields được phép hiển thị dựa trên test code
+    const allowedFields = testCode ? TEST_FIELDS_BY_CODE[testCode]?.map(field => field.name) || [] : [];
+    
+    // Luôn cho phép các basic fields cho blood test
+    const basicBloodFields = ['platelets', 'red_blood_cells', 'white_blood_cells', 'hemo_level'];
+    
+    // Luôn cho phép tất cả fields cho urine test
+    const urineFields = ['color', 'clarity', 'URO', 'GLU', 'KET', 'BIL', 'PRO', 'NIT', 'pH', 'blood', 'specific_gravity', 'LEU'];
+    
+    // Fields cho swab test dựa trên category
+    const commonSwabFields = testCategory === 'viral' ? ['virus'] : testCategory === 'parasitic' ? ['parasites'] : ['bacteria'];
     
     Object.keys(testData).forEach(key => {
       if (testData[key] !== undefined) {
         const value = testData[key];
+        
+        // Kiểm tra xem field này có được phép hiển thị không
+        let shouldShow = false;
+        
+        if (title.includes('máu')) {
+          // Cho blood test: luôn hiển thị basic fields + fields theo test code
+          shouldShow = basicBloodFields.includes(key) || allowedFields.includes(key);
+        } else if (title.includes('nước tiểu')) {
+          // Cho urine test: hiển thị tất cả
+          shouldShow = urineFields.includes(key);
+        } else if (title.includes('swab')) {
+          // Cho swab test: hiển thị common fields + fields theo test code
+          shouldShow = commonSwabFields.includes(key) || allowedFields.includes(key);
+        }
+        
+        if (!shouldShow) return;
+        
         const isNumeric = typeof value === 'number';
         const isBoolean = typeof value === 'boolean';
         const isArray = Array.isArray(value);
@@ -243,6 +309,11 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
         });
       }
     });
+
+    // Nếu không có test nào để hiển thị, không render table
+    if (tests.length === 0) {
+      return null;
+    }
 
     const columns = [
       {
@@ -289,26 +360,17 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
         width: '25%',
         render: (text: string) => <Text type="secondary">{text}</Text>
       }
-      // {
-      //   title: 'Đánh giá',
-      //   key: 'assessment',
-      //   width: '10%',
-      //   render: (_: any, record: any) => {
-      //     if (record.status === 'abnormal' || record.status === 'positive') {
-      //       return <Badge status="error" text="Bất thường" />;
-      //     } else if (record.status === 'normal' || record.status === 'negative') {
-      //       return <Badge status="success" text="Bình thường" />;
-      //     } else {
-      //       return <Badge status="default" text="Chờ kết quả" />;
-      //     }
-      //   }
-      // }
     ];
 
     return (
       <div style={{ marginBottom: 24 }}>
         <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
           <FileTextOutlined /> {title}
+          {testCode && (
+            <Text type="secondary" style={{ fontSize: '12px', marginLeft: '8px' }}>
+              ({testCode})
+            </Text>
+          )}
         </Title>
         <Table
           columns={columns}
@@ -342,6 +404,10 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
       const result = item.result;
       const testInfo = item.sti_test_id;
       
+      // Lấy test code và category từ testInfo
+      const testCode = testInfo?.sti_test_code || '';
+      const testCategory = testInfo?.category || '';
+      
       return (
         <Card key={index} style={{ marginBottom: 16 }}>
           {/* Test Information Header */}
@@ -354,7 +420,7 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
               </Col>
               <Col span={12}>
                 <Text strong>Mã xét nghiệm: </Text>
-                <Text code>{testInfo?.sti_test_code || 'N/A'}</Text>
+                <Text code>{testCode || 'N/A'}</Text>
               </Col>
               <Col span={12}>
                 <Text strong>Loại mẫu: </Text>
@@ -369,25 +435,25 @@ const StiResultDisplay: React.FC<StiResultDisplayProps> = ({ resultData }) => {
               </Col>
               <Col span={12}>
                 <Text strong>Danh mục: </Text>
-                <Tag>{testInfo?.category || 'N/A'}</Tag>
+                <Tag>{testCategory || 'N/A'}</Tag>
               </Col>
             </Row>
           </div>
 
           {/* Test Results */}
           {result?.blood && Object.keys(result.blood).some(key => result.blood[key] !== null && result.blood[key] !== undefined) && (
-            createTestTable(result.blood, 'Xét nghiệm máu')
+            createTestTable(result.blood, 'Xét nghiệm máu', testCode, testCategory)
           )}
 
           {result?.urine && Object.keys(result.urine).some(key => result.urine[key] !== null && result.urine[key] !== undefined) && (
-            createTestTable(result.urine, 'Xét nghiệm nước tiểu')
+            createTestTable(result.urine, 'Xét nghiệm nước tiểu', testCode, testCategory)
           )}
 
           {result?.swab && Object.keys(result.swab).some(key => 
             result.swab[key] !== null && result.swab[key] !== undefined && 
             (typeof result.swab[key] !== 'object' || (Array.isArray(result.swab[key]) && result.swab[key].length > 0))
           ) && (
-            createTestTable(result.swab, 'Xét nghiệm swab')
+            createTestTable(result.swab, 'Xét nghiệm swab', testCode, testCategory)
           )}
 
           {/* Test Description */}
