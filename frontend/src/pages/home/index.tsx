@@ -660,21 +660,26 @@ const HomePage = () => {
 
           {/* Call to Action */}
           <div className="text-center">
-            <button 
-              onClick={() => window.location.href = '/sti-booking/book'}
-              className="inline-flex items-center space-x-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium shadow-lg hover:shadow-xl"
-            >
-              <span>Đặt lịch xét nghiệm ngay</span>
-              <svg className="text-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </button>
+            <div className="flex justify-center gap-4">
+              <Link
+                to="/sti-booking/book"
+                className="w-56 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium shadow-lg hover:shadow-xl flex items-center justify-center text-center"
+              >
+                Đặt lịch xét nghiệm 
+              </Link>
+              <Link
+                to="/sti-assessment"
+                className="w-56 px-8 py-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-lg font-medium shadow-lg hover:shadow-xl flex items-center justify-center text-center"
+              >
+                Đánh giá sàng lọc
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Blog Section - Sử dụng data thật từ API */}
-      <section className="py-8 bg-gray-50">
+      <section className="py-8 bg-blue-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-10">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-blue-700 mb-4">Blog Sức Khỏe Sinh Sản</h2>

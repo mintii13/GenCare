@@ -439,10 +439,10 @@ export class AppointmentService {
             const diffHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
             // Staff và Admin có thể hủy bất cứ lúc nào
-            if (requestUserRole !== 'staff' && requestUserRole !== 'admin' && diffHours < 4) {
+            if (requestUserRole !== 'staff' && requestUserRole !== 'admin' && diffHours < 2) {
                 return {
                     success: false,
-                    message: 'Appointment can only be cancelled at least 4 hours before the scheduled time'
+                    message: 'Appointment can only be cancelled at least 2 hours before the scheduled time'
                 };
             }
 

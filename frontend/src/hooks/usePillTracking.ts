@@ -16,6 +16,8 @@ interface UsePillTrackingReturn {
   setupPillSchedule: (data: SetupPillTrackingRequest) => Promise<ApiResponse<any>>;
   updatePillSchedule: (data: UpdatePillTrackingRequest) => Promise<ApiResponse<any>>;
   markPillAsTaken: (scheduleId: string) => Promise<void>;
+  clearSchedules: () => Promise<void>;
+  testReminder: () => Promise<void>;
 }
 
 export const usePillTracking = (): UsePillTrackingReturn => {
@@ -122,6 +124,26 @@ export const usePillTracking = (): UsePillTrackingReturn => {
     }
   }, [refresh]);
 
+  const clearSchedules = useCallback(async () => {
+    try {
+      console.log('[usePillTracking] Clearing all pill schedules');
+      await pillTrackingService.clearSchedules();
+      setSchedules([]);
+      hasLoadedRef.current = false;
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi xóa lịch uống thuốc.');
+    }
+  }, []);
+
+  const testReminder = useCallback(async () => {
+    try {
+      console.log('[usePillTracking] Testing reminder');
+      await pillTrackingService.testReminder();
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi test mail nhắc nhở.');
+    }
+  }, []);
+
   useEffect(() => {
     console.log('[usePillTracking] useEffect triggered, user.id:', user?.id);
     if (user?.id && !hasLoadedRef.current) {
@@ -141,6 +163,8 @@ export const usePillTracking = (): UsePillTrackingReturn => {
     refresh, 
     setupPillSchedule, 
     updatePillSchedule,
-    markPillAsTaken 
+    markPillAsTaken,
+    clearSchedules,
+    testReminder
   };
 };

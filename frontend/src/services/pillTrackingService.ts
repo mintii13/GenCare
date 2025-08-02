@@ -73,6 +73,20 @@ export const pillTrackingService = {
     // This typically would be a PATCH or PUT request to update the 'is_taken' status.
     return apiClient.safePut(API.PillTracking.TAKE_PILL(scheduleId), { is_taken: true });
   },
+
+  /**
+   * Clears all pill tracking schedules for the current user.
+   */
+  clearSchedules: async (): Promise<ApiResponse<any>> => {
+    return apiClient.safeDelete(API.PillTracking.CLEAR_SCHEDULES);
+  },
+
+  /**
+   * Tests sending a reminder email.
+   */
+  testReminder: async (): Promise<ApiResponse<any>> => {
+    return apiClient.safePost(API.PillTracking.TEST_REMINDER);
+  },
 };
 
 export const getPillTrackingByUserId = async (userId: string) => {

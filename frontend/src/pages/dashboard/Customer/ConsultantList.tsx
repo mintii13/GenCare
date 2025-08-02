@@ -113,11 +113,11 @@ const ConsultantList: React.FC = () => {
     const hasHalfStar = rating % 1 !== 0;
 
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<span key={i} className="text-yellow-400">★</span>);
+      stars.push(<span key={i} className="text-warning">★</span>);
     }
     
     if (hasHalfStar) {
-      stars.push(<span key="half" className="text-yellow-400">☆</span>);
+      stars.push(<span key="half" className="text-warning">☆</span>);
     }
     
     const emptyStars = 5 - Math.ceil(rating);
@@ -132,23 +132,23 @@ const ConsultantList: React.FC = () => {
     {
       name: 'Chuyên gia',
       cell: row => (
-        <div className="flex items-center py-2">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+        <div className="flex items-center py-2" onClick={(e) => e.stopPropagation()}>
+          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center mr-2 flex-shrink-0">
             {row.avatar ? (
-              <img src={row.avatar} alt={row.full_name} className="w-12 h-12 rounded-full object-cover" />
+              <img src={row.avatar} alt={row.full_name} className="w-10 h-10 rounded-full object-cover" />
             ) : (
-              <span className="text-blue-600 font-semibold text-lg">
+              <span className="text-primary-600 font-semibold text-sm">
                 {row.full_name.charAt(0)}
               </span>
             )}
           </div>
-          <div>
-            <div className="font-semibold text-gray-900">{row.full_name}</div>
-            <div className="text-sm text-gray-600">{row.qualifications}</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-gray-800 text-sm truncate">{row.full_name}</div>
           </div>
         </div>
       ),
-      style: { minWidth: '200px' },
+      width: '280px',
+      style: { width: '280px' },
       sortable: true,
       selector: row => row.full_name,
     },
@@ -156,14 +156,16 @@ const ConsultantList: React.FC = () => {
       name: 'Chuyên khoa',
       selector: row => row.specialization,
       sortable: true,
-      style: { minWidth: '150px' },
+      width: '200px',
+      style: { width: '200px' },
     },
     {
       name: 'Kinh nghiệm',
       selector: row => row.experience_years || 0,
       format: row => `${row.experience_years || 0} năm`,
       sortable: true,
-      style: { minWidth: '100px' },
+      width: '140px',
+      style: { width: '140px' },
     },
     {
       name: 'Đánh giá',
@@ -179,39 +181,29 @@ const ConsultantList: React.FC = () => {
       ),
       sortable: true,
       selector: row => row.rating || 0,
-      style: { minWidth: '140px' },
+      width: '180px',
+      style: { width: '180px' },
     },
-    {
-      name: 'Tư vấn',
-      selector: row => row.total_consultations || 0,
-      format: row => `${row.total_consultations || 0} buổi`,
-      sortable: true,
-      style: { minWidth: '100px' },
-    },
-    {
-      name: 'Trạng thái',
-      cell: () => (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          Sẵn sàng tư vấn
-        </span>
-      ),
-      sortable: false,
-      style: { minWidth: '120px' },
-    },
+
+
     {
       name: 'Hành động',
       cell: (row: Consultant) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => setSelectedConsultant(row)}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedConsultant(row);
+            }}
+            className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700 transition-colors"
           >
             Xem chi tiết
           </button>
           {row.is_available && (
             <Link
               to={`/consultation/book-appointment?consultant=${row.consultant_id}`}
-              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              onClick={(e) => e.stopPropagation()}
+              className="px-3 py-1 bg-accent-600 text-white rounded text-sm hover:bg-accent-700 transition-colors"
             >
               Đặt lịch
             </Link>
@@ -219,38 +211,57 @@ const ConsultantList: React.FC = () => {
         </div>
       ),
       ignoreRowClick: true,
-      style: { minWidth: '150px' },
+      width: '200px',
+      style: { width: '200px' },
     },
   ];
 
   const customStyles = {
     header: {
       style: {
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--color-primary-50)',
+        borderBottom: '1px solid var(--color-primary-200)',
       },
     },
     headRow: {
       style: {
-        backgroundColor: '#f1f5f9',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--color-primary-100)',
+        borderBottom: '1px solid var(--color-primary-200)',
       },
     },
     headCells: {
       style: {
         fontSize: '14px',
         fontWeight: '600',
-        color: '#374151',
-        paddingLeft: '16px',
-        paddingRight: '16px',
+        color: 'var(--color-primary-800)',
+        padding: '16px',
+        textAlign: 'left' as const,
+        verticalAlign: 'middle' as const,
       },
     },
     cells: {
       style: {
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        paddingTop: '12px',
-        paddingBottom: '12px',
+        padding: '16px',
+        textAlign: 'left' as const,
+        verticalAlign: 'middle' as const,
+      },
+    },
+    rows: {
+      style: {
+        backgroundColor: 'white',
+        '&:nth-of-type(even)': {
+          backgroundColor: 'var(--color-gray-50)',
+        },
+        '&:hover': {
+          backgroundColor: 'var(--color-primary-50)',
+        },
+      },
+    },
+    table: {
+      style: {
+        borderCollapse: 'collapse' as const,
+        width: '100%',
+        tableLayout: 'fixed' as const,
       },
     },
   };
@@ -260,28 +271,11 @@ const ConsultantList: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Danh Sách Chuyên Gia</h1>
+          <h1 className="text-2xl font-bold text-blue-600 mb-2">Danh Sách Chuyên Gia</h1>
           <p className="text-gray-600">Tìm hiểu về các chuyên gia tư vấn sức khỏe</p>
         </div>
 
-        {/* Filters */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Chuyên khoa:</label>
-              <select
-                value={filterSpecialization}
-                onChange={(e) => setFilterSpecialization(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Tất cả</option>
-                {specializations.map(spec => (
-                  <option key={spec} value={spec}>{spec}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
+
 
         {/* Content */}
         <div className="p-6">
@@ -290,26 +284,28 @@ const ConsultantList: React.FC = () => {
               <div className="text-red-600 mb-4"> {error}</div>
               <button
                 onClick={fetchConsultants}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
                 Thử lại
               </button>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={consultants}
-              pagination
-              highlightOnHover
-              striped
-              progressPending={loading}
-              noDataComponent={
-                <div className="text-center py-8">
-                  <p className="text-gray-600">Không tìm thấy chuyên gia nào</p>
-                </div>
-              }
-              customStyles={customStyles}
-            />
+            <div className="table-fixed">
+              <DataTable
+                columns={columns}
+                data={consultants}
+                pagination
+                highlightOnHover
+                striped
+                progressPending={loading}
+                noDataComponent={
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">Không tìm thấy chuyên gia nào</p>
+                  </div>
+                }
+                customStyles={customStyles}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -336,13 +332,13 @@ const ConsultantList: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="flex" style={{ height: '500px' }}>
+                        <div className="flex" style={{ height: '500px' }}>
               {/* Left Half - Consultant Info */}
               <div className="w-1/2 p-6 border-r border-gray-200">
                 <div className="h-full flex flex-col">
                   {/* Avatar and Basic Info */}
                   <div className="text-center mb-6">
-                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       {selectedConsultant.avatar ? (
                         <img 
                           src={selectedConsultant.avatar} 
@@ -350,50 +346,41 @@ const ConsultantList: React.FC = () => {
                           className="w-24 h-24 rounded-full object-cover" 
                         />
                       ) : (
-                        <span className="text-blue-600 font-bold text-3xl">
+                        <span className="text-primary-600 font-bold text-3xl">
                           {selectedConsultant.full_name.charAt(0)}
                         </span>
                       )}
                     </div>
                     <h4 className="text-2xl font-bold text-gray-800 mb-1">{selectedConsultant.full_name}</h4>
-                    <p className="text-blue-600 font-medium text-lg">{selectedConsultant.specialization}</p>
+                    
                   </div>
 
-                  {/* Detailed Info */}
+                  {/* Basic Info */}
                   <div className="space-y-4 flex-1">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <span className="text-gray-600 text-sm font-medium block mb-1">Email liên hệ:</span>
-                        <p className="font-medium text-gray-800">{selectedConsultant.email}</p>
-                      </div>
-                      
-                      {selectedConsultant.phone && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <span className="text-gray-600 text-sm font-medium block mb-1">Số điện thoại:</span>
-                          <p className="font-medium text-gray-800">{selectedConsultant.phone}</p>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Email liên hệ:</span>
+                      <p className="font-medium text-gray-800">{selectedConsultant.email}</p>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Trình độ chuyên môn:</span>
+                      <p className="font-medium text-gray-800">{selectedConsultant.qualifications}</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Kinh nghiệm:</span>
+                      <p className="font-medium text-gray-800">{selectedConsultant.experience_years} năm</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium block mb-1">Đánh giá:</span>
+                      <div className="flex items-center">
+                        <div className="flex mr-2">
+                          {renderStars(selectedConsultant.rating || 0)}
                         </div>
-                      )}
-
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <span className="text-gray-600 text-sm font-medium block mb-1">Trình độ chuyên môn:</span>
-                        <p className="font-medium text-gray-800">{selectedConsultant.qualifications}</p>
-                      </div>
-
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <span className="text-gray-600 text-sm font-medium block mb-1">Kinh nghiệm:</span>
-                        <p className="font-medium text-gray-800">{selectedConsultant.experience_years} năm</p>
-                      </div>
-
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <span className="text-gray-600 text-sm font-medium block mb-1">Đánh giá:</span>
-                        <div className="flex items-center">
-                          <div className="flex mr-2">
-                            {renderStars(selectedConsultant.rating || 0)}
-                          </div>
-                          <span className="text-gray-600 font-medium">
-                            ({selectedConsultant.rating?.toFixed(1) || '0.0'}) - {selectedConsultant.total_consultations || 0} buổi tư vấn
-                          </span>
-                        </div>
+                        <span className="text-gray-600 font-medium">
+                          ({selectedConsultant.rating?.toFixed(1) || '0.0'}) - {selectedConsultant.total_consultations || 0} buổi tư vấn
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -402,14 +389,14 @@ const ConsultantList: React.FC = () => {
                   <div className="flex space-x-3 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => setSelectedConsultant(null)}
-                      className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                      className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                     >
                       Đóng
                     </button>
                     {selectedConsultant.is_available && (
                       <Link
                         to={`/consultation/book-appointment?consultant=${selectedConsultant.consultant_id}`}
-                        className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center font-medium"
+                        className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-center font-medium transition-colors"
                       >
                         Đặt lịch tư vấn
                       </Link>

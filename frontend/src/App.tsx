@@ -50,7 +50,6 @@ const ConsultationStats = lazy(() => import('./pages/dashboard/Consultant/Consul
 
 // Feature-specific lazy loads
 const MenstrualCyclePage = lazy(() => import('./pages/menstrual-cycle/MenstrualCyclePage'));
-const MonthlyDiaryPage = lazy(() => import('./pages/menstrual-cycle/MonthlyDiaryPage'));
 const CustomerFeedbackPage = lazy(() => import('./pages/feedback/CustomerFeedbackPage'));
 const ConsultantFeedbackDashboard = lazy(() => import('./pages/feedback/ConsultantFeedbackDashboard'));
 
@@ -199,16 +198,6 @@ AutoConfirmService.stop();
               <RoleGuard allowedRoles={['customer']}>
 
                 <MenstrualCyclePage />
-
-              </RoleGuard>
-
-            } />
-
-            <Route path="/monthly-diary" element={
-
-              <RoleGuard allowedRoles={['customer']}>
-
-                <MonthlyDiaryPage />
 
               </RoleGuard>
 

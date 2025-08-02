@@ -1,12 +1,9 @@
-import { IDailyMoodData, IPeriodDay } from '../../models/MenstrualCycle';
-
 export interface CycleData {
     _id: string;
     user_id: string;
     cycle_start_date: string;
-    period_days: IPeriodDay[]; // Changed to array of period day objects
+    period_days: string[]; // Simple array of date strings
     cycle_length?: number;
-    mood_data?: { [date: string]: IDailyMoodData }; // Keep for backward compatibility
     predicted_cycle_end?: string;
     predicted_ovulation_date?: string;
     predicted_fertile_start?: string;
@@ -20,9 +17,9 @@ export interface TodayStatus {
     is_period_day: boolean;
     is_fertile_day: boolean;
     is_ovulation_day: boolean;
+    is_pms_day?: boolean;
     pregnancy_chance: 'low' | 'medium' | 'high';
     recommendations: string[];
-    period_mood_data?: IDailyMoodData; // Add mood data for period days
     day_in_cycle?: number;
     cycle_phase?: string;
     // Current cycle predictions
@@ -30,6 +27,9 @@ export interface TodayStatus {
     predicted_ovulation_date?: string;
     predicted_fertile_start?: string;
     predicted_fertile_end?: string;
+    // PMS window
+    pms_window_start?: string;
+    pms_window_end?: string;
     // Next cycle predictions
     next_cycle_start?: string;
     next_ovulation_date?: string;
@@ -47,7 +47,6 @@ export interface CycleComparison {
         start_date: string;
         cycle_length: number;
         period_length: number;
-        mood_comparison: any;
     }>;
 }
 
@@ -77,57 +76,7 @@ export interface PeriodStatistics {
     }>;
 }
 
-// New interface for period mood statistics
-export interface PeriodMoodStatistics {
-    total_period_days: number;
-    days_with_mood_data: number;
-    average_mood: string;
-    most_common_mood: string;
-    most_common_symptoms: string[];
-    mood_trend: 'improving' | 'declining' | 'stable';
-    energy_distribution: {
-        high: number;
-        medium: number;
-        low: number;
-    };
-    common_notes: string[];
-}
 
-export interface MoodDataResponse {
-    success: boolean;
-    message: string;
-    data?: {
-        date: string;
-        mood_data: IDailyMoodData;
-    };
-}
-
-export interface MoodDataListResponse {
-    success: boolean;
-    message: string;
-    data?: {
-        mood_data: { [date: string]: IDailyMoodData };
-        total_entries: number;
-    };
-}
-
-export interface MonthlyMoodSummaryResponse {
-    success: boolean;
-    message: string;
-    data?: {
-        month: string;
-        total_days_with_mood: number;
-        average_mood: string;
-        most_common_symptoms: string[];
-        mood_trend: 'improving' | 'declining' | 'stable';
-        cycle_insights: {
-            pre_menstrual_mood: string;
-            during_period_mood: string;
-            post_period_mood: string;
-        };
-        period_mood_stats: PeriodMoodStatistics;
-    };
-}
 
 export interface MenstrualCycleResponse {
     success: boolean;

@@ -2,27 +2,27 @@
 import { Router, Request, Response} from 'express';
 import { MenstrualCycleService } from '../services/menstrualCycleService';
 import { authenticateToken } from '../middlewares/jwtMiddleware';
-import { 
-    validateProcessMenstrualCycle, 
-    validateCreateMoodData, 
-    validateUpdateMoodData, 
-    validateGetMoodData 
-} from '../middlewares/menstrualCycleValidation';
-import { sanitizeRequest } from '../middlewares/inputSanitizer';
 
 const router = Router();
 
-// ===== NEW MENSTRUAL CYCLE ENDPOINTS WITH MOOD DATA =====
+// ===== MENSTRUAL CYCLE ENDPOINTS =====
 
-// POST /api/menstrual-cycle/process - Process cycle with period day mood data
+// POST /api/menstrual-cycle/process - Process cycle with period days
 router.post('/process', 
-    // sanitizeRequest(), // Temporarily disabled for debugging
-    validateProcessMenstrualCycle,
     authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const result = await MenstrualCycleService.processCycleWithMoodData(user_id, req.body);
+            const { period_days } = req.body;
+            
+            if (!period_days || !Array.isArray(period_days)) {
+                        return res.status(400).json({
+            success: false,
+            message: 'period_days phải là một mảng các chuỗi ngày'
+        });
+            }
+            
+            const result = await MenstrualCycleService.processCycle(user_id, period_days);
             
             if (result.success) {
                 return res.status(201).json(result);
@@ -33,52 +33,19 @@ router.post('/process',
             console.error('Error in /process:', error);
             return res.status(500).json({ 
                 success: false, 
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
 
-// POST /api/menstrual-cycle/period-day/:date/mood - Create period day with mood data
-router.post('/period-day/:date/mood',
-    sanitizeRequest(),
-    validateUpdateMoodData,
-    authenticateToken,
+// GET /api/menstrual-cycle/cycles - Get all cycles for user
+router.get('/cycles', 
+    authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const date = req.params.date;
-            const mood_data = req.body.mood_data;
-
-            const result = await MenstrualCycleService.createPeriodDayWithMood(user_id, date, mood_data);
-            
-            if (result.success) {
-                return res.status(201).json(result);
-            } else {
-                return res.status(400).json(result);
-            }
-        } catch (error) {
-            console.error('Error in POST /period-day/:date/mood:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// PUT /api/menstrual-cycle/period-day/:date/mood - Update mood for specific period day
-router.put('/period-day/:date/mood',
-    sanitizeRequest(),
-    validateUpdateMoodData,
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            const user_id = (req.user as any).userId;
-            const date = req.params.date;
-            const mood_data = req.body.mood_data;
-
-            const result = await MenstrualCycleService.updatePeriodDayMood(user_id, date, mood_data);
+            const result = await MenstrualCycleService.getCycles(user_id);
             
             if (result.success) {
                 return res.status(200).json(result);
@@ -86,49 +53,45 @@ router.put('/period-day/:date/mood',
                 return res.status(400).json(result);
             }
         } catch (error) {
-            console.error('Error in PUT /period-day/:date/mood:', error);
+            console.error('Error in GET /cycles:', error);
             return res.status(500).json({
                 success: false,
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
 
-// GET /api/menstrual-cycle/period-day/:date/mood - Get mood for specific period day
-router.get('/period-day/:date/mood',
-    authenticateToken,
+// GET /api/menstrual-cycle/today - Get today's status
+router.get('/today', 
+    authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const date = req.params.date;
-
-            const result = await MenstrualCycleService.getPeriodDayMood(user_id, date);
+            const result = await MenstrualCycleService.getTodayStatus(user_id);
             
             if (result.success) {
                 return res.status(200).json(result);
             } else {
-                return res.status(404).json(result);
+                return res.status(400).json(result);
             }
         } catch (error) {
-            console.error('Error in GET /period-day/:date/mood:', error);
+            console.error('Error in GET /today:', error);
             return res.status(500).json({
                 success: false,
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
 
-// GET /api/menstrual-cycle/statistics - Get cycle statistics with mood data
-router.get('/statistics',
-    authenticateToken,
+// GET /api/menstrual-cycle/statistics - Get cycle statistics
+router.get('/statistics', 
+    authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const cycle_id = req.query.cycle_id as string;
-
-            const result = await MenstrualCycleService.getCycleMoodStatistics(user_id, cycle_id);
+            const result = await MenstrualCycleService.getCycleStatistics(user_id);
             
             if (result.success) {
                 return res.status(200).json(result);
@@ -139,43 +102,18 @@ router.get('/statistics',
             console.error('Error in GET /statistics:', error);
             return res.status(500).json({
                 success: false,
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
 
-// GET /api/menstrual-cycle/getCycleStatistics - Get comprehensive cycle statistics
-router.get('/getCycleStatistics',
-    authenticateToken,
+// GET /api/menstrual-cycle/period-statistics - Get period statistics
+router.get('/period-statistics', 
+    authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-
-            const result = await MenstrualCycleService.getCycleStatistics(user_id);
-            
-            if (result.success) {
-                return res.status(200).json(result);
-            } else {
-                return res.status(400).json(result);
-            }
-        } catch (error) {
-            console.error('Error in GET /getCycleStatistics:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// GET /api/menstrual-cycle/getPeriodStatistics - Get period statistics
-router.get('/getPeriodStatistics',
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            const user_id = (req.user as any).userId;
-
             const result = await MenstrualCycleService.getPeriodStatistics(user_id);
             
             if (result.success) {
@@ -184,7 +122,7 @@ router.get('/getPeriodStatistics',
                 return res.status(400).json(result);
             }
         } catch (error) {
-            console.error('Error in GET /getPeriodStatistics:', error);
+            console.error('Error in GET /period-statistics:', error);
             return res.status(500).json({
                 success: false,
                 message: 'System error'
@@ -193,191 +131,24 @@ router.get('/getPeriodStatistics',
     }
 );
 
-// GET /api/menstrual-cycle/getMoodStatistics - Get mood statistics
-router.get('/getMoodStatistics',
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            const user_id = (req.user as any).userId;
-
-            const result = await MenstrualCycleService.getMoodStatistics(user_id);
-            
-            if (result.success) {
-                return res.status(200).json(result);
-            } else {
-                return res.status(400).json(result);
-            }
-        } catch (error) {
-            console.error('Error in GET /getMoodStatistics:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// GET /api/menstrual-cycle/comparison - Get cycle comparison
-router.get('/comparison',
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            const user_id = (req.user as any).userId;
-
-            const result = await MenstrualCycleService.getCycleComparison(user_id);
-            
-            if (result.success) {
-                return res.status(200).json(result);
-            } else {
-                return res.status(400).json(result);
-            }
-        } catch (error) {
-            console.error('Error in GET /comparison:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// ===== EXISTING ENDPOINTS (KEPT FOR BACKWARD COMPATIBILITY) =====
-
-// POST /api/menstrual-cycle/processMenstrualCycle - Legacy endpoint
-router.post('/processMenstrualCycle', 
-    // sanitizeRequest(), // Temporarily disabled for debugging
+// DELETE /api/menstrual-cycle/period-day/:date - Delete a specific period day
+router.delete('/period-day/:date', 
     authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const period_days = req.body.period_days || [];
-            const mood_data = req.body.mood_data || {};
+            const dateToDelete = req.params.date;
             
-            // Convert old format to new format
-            const periodDayRequests = period_days.map((date: string) => ({
-                date,
-                mood_data: {
-                    mood: 'neutral',
-                    energy: 'medium',
-                    symptoms: [],
-                    notes: ''
-                }
-            }));
-
-            const request = { period_days: periodDayRequests };
-            const result = await MenstrualCycleService.processCycleWithMoodData(user_id, request);
-            
-            if (result.success) {
-                return res.status(201).json(result);
-            } else {
-                return res.status(400).json(result);
+            // Validate date format
+            const date = new Date(dateToDelete);
+            if (isNaN(date.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Định dạng ngày không hợp lệ'
+                });
             }
-        } catch (error) {
-            console.error('Error in /processMenstrualCycle:', error);
-            return res.status(500).json({ 
-                success: false, 
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// GET /api/menstrual-cycle/getCycles - Get cycles
-router.get('/getCycles', authenticateToken, async (req: Request, res: Response) => {
-    try {
-        const user_id = (req.user as any).userId;
-        console.log('[Controller] GET /getCycles called with user_id:', user_id);
-        console.log('[Controller] Request user object:', req.user);
-        
-        const result = await MenstrualCycleService.getCycles(user_id);
-        
-        console.log('[Controller] GET /getCycles result:', {
-            success: result.success,
-            dataLength: result.data?.length || 0,
-            message: result.message
-        });
-        
-        if (result.success) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(400).json(result);
-        }
-    } catch (error) {
-        console.error('Error in GET /getCycles:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'System error'
-        });
-    }
-});
-
-// GET /api/menstrual-cycle/today-status - Get today status
-router.get('/today-status', authenticateToken, async (req: Request, res: Response) => {
-    try {
-        const user_id = (req.user as any).userId;
-        const result = await MenstrualCycleService.getTodayStatus(user_id);
-        
-        if (result.success) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(400).json(result);
-        }
-    } catch (error) {
-        console.error('Error in GET /today-status:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'System error'
-        });
-    }
-});
-
-// ===== MOOD DATA ENDPOINTS (KEPT FOR BACKWARD COMPATIBILITY) =====
-
-// POST /api/menstrual-cycle/mood-data - Create mood data
-router.post('/mood-data',
-    // sanitizeRequest(), // Temporarily disabled for debugging
-    validateCreateMoodData,
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            console.log('[POST /mood-data] Request body:', req.body);
-            console.log('[POST /mood-data] Request headers:', req.headers);
             
-            const user_id = (req.user as any).userId;
-            const { date, mood_data } = req.body;
-
-            console.log('[POST /mood-data] Extracted data:', { user_id, date, mood_data });
-
-            const result = await MenstrualCycleService.updatePeriodDayMood(user_id, date, mood_data);
-            
-            console.log('[POST /mood-data] Service result:', result);
-            
-            if (result.success) {
-                return res.status(201).json(result);
-            } else {
-                return res.status(400).json(result);
-            }
-        } catch (error) {
-            console.error('Error in POST /mood-data:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// PUT /api/menstrual-cycle/mood-data - Update mood data
-router.put('/mood-data',
-    sanitizeRequest(),
-    validateUpdateMoodData,
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            const user_id = (req.user as any).userId;
-            const { date, mood_data } = req.body;
-
-            const result = await MenstrualCycleService.updatePeriodDayMood(user_id, date, mood_data);
+            const result = await MenstrualCycleService.deletePeriodDay(user_id, dateToDelete);
             
             if (result.success) {
                 return res.status(200).json(result);
@@ -385,127 +156,61 @@ router.put('/mood-data',
                 return res.status(400).json(result);
             }
         } catch (error) {
-            console.error('Error in PUT /mood-data:', error);
+            console.error('Error in DELETE /period-day/:date:', error);
             return res.status(500).json({
                 success: false,
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
 
-// GET /api/menstrual-cycle/mood-data - Get mood data
-router.get('/mood-data',
-    validateGetMoodData,
-    authenticateToken,
+// GET /api/menstrual-cycle/pregnancy-detection - Detect potential pregnancy
+router.get('/pregnancy-detection', 
+    authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const { date, start_date, end_date } = req.query;
-
-            if (date) {
-                const result = await MenstrualCycleService.getPeriodDayMood(user_id, date as string);
-                return res.status(result.success ? 200 : 404).json(result);
-            } else if (start_date && end_date) {
-                // Implement date range query
-                const result = await MenstrualCycleService.getMoodDataByDateRange(
-                    user_id, 
-                    start_date as string, 
-                    end_date as string
-                );
-                return res.status(result.success ? 200 : 404).json(result);
-            } else {
-                // Return all mood data for the user
-                const result = await MenstrualCycleService.getAllMoodData(user_id);
-                return res.status(result.success ? 200 : 404).json(result);
-            }
+            const result = await MenstrualCycleService.detectPotentialPregnancy(user_id);
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Kiểm tra thai kỳ thành công',
+                data: result
+            });
         } catch (error) {
-            console.error('Error in GET /mood-data:', error);
+            console.error('Error in GET /pregnancy-detection:', error);
             return res.status(500).json({
                 success: false,
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
 
-// DELETE /api/menstrual-cycle/mood-data/:date - Delete mood data
-router.delete('/mood-data/:date',
-    authenticateToken,
+// DELETE /api/menstrual-cycle/cycle/:cycleId - Delete a specific cycle
+router.delete('/cycle/:cycleId', 
+    authenticateToken, 
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const date = req.params.date;
-
-            // Set mood data to null/empty
-            const emptyMoodData = {
-                mood: 'neutral',
-                energy: 'medium',
-                symptoms: [],
-                notes: ''
-            };
-
-            const result = await MenstrualCycleService.updatePeriodDayMood(user_id, date, emptyMoodData);
+            const cycleId = req.params.cycleId;
+            
+            const result = await MenstrualCycleService.deleteCycle(user_id, cycleId);
             
             if (result.success) {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Mood data deleted successfully'
-                });
+                return res.status(200).json(result);
             } else {
                 return res.status(400).json(result);
             }
         } catch (error) {
-            console.error('Error in DELETE /mood-data/:date:', error);
+            console.error('Error in DELETE /cycle/:cycleId:', error);
             return res.status(500).json({
                 success: false,
-                message: 'System error'
+                message: 'Lỗi hệ thống'
             });
         }
     }
 );
-
-// GET /api/menstrual-cycle/mood-data/monthly-summary/:year/:month - Get monthly mood summary
-router.get('/mood-data/monthly-summary/:year/:month',
-    authenticateToken,
-    async (req: Request, res: Response) => {
-        try {
-            const user_id = (req.user as any).userId;
-            const year = parseInt(req.params.year);
-            const month = parseInt(req.params.month);
-
-            // Validate year and month
-            if (isNaN(year) || year < 1900 || year > 2100) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Năm không hợp lệ'
-                });
-            }
-
-            if (isNaN(month) || month < 1 || month > 12) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Tháng không hợp lệ'
-                });
-            }
-
-            // For now, return a placeholder response
-            return res.status(501).json({
-                success: false,
-                message: 'Monthly mood summary not implemented yet'
-            });
-        } catch (error) {
-            console.error('Error in GET /mood-data/monthly-summary/:year/:month:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'System error'
-            });
-        }
-    }
-);
-
-// Removed notification endpoint as it no longer exists in the service
-
-// Removed old endpoints that no longer exist in the service
 
 export default router;
