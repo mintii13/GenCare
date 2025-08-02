@@ -42,7 +42,8 @@ import { MoreVertical } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { stiService } from '@/services/stiService';
 import { FaVial } from 'react-icons/fa';
-import { StiOrderQuery, StiOrder } from '@/types/sti';
+import { StiOrderQuery } from '@/types/sti';
+import { StiOrder } from '../Staff/components/OrdersManagement';
 import { API } from '@/config/apiEndpoints';
 import { apiClient } from '@/services';
 
@@ -84,16 +85,25 @@ const TestBookingHistory: React.FC = () => {
 
   const fetchOrders = useCallback(async () => {
     try {
-      try {
-        const response = await stiService.getMyOrdersPaginated(query);
-        if (response && response.success && response.data) {
-          setOrders(response.data.items || []);
-          setPagination(response.data.pagination);
+      setLoading(true);
+      const endpoint = API.STI.GET_MY_ORDERS;
+      const response = await apiClient.get<any>(endpoint);
+      
+      if (response.data.success) {
+        setOrders(response.data.data?.items || response.data.items || []);
+      } else {
+        if (response.data.message?.includes('Cannot find any orders')) {
+          setOrders([]);
         } else {
-          setError(response?.message || 'Không thể tải dữ liệu đơn hàng');
+          setError('Không thể tải danh sách lịch xét nghiệm');
         }
-      } catch (err) {
-        setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
+      }
+    } catch (error: any) {
+      console.error('Error fetching STI orders:', error);
+      if (error.response?.status === 404) {
+        setOrders([]);
+      } else {
+        setError('Có lỗi xảy ra khi tải danh sách lịch xét nghiệm');
       }
     } finally {
       setLoading(false);
@@ -121,12 +131,12 @@ const TestBookingHistory: React.FC = () => {
       <Card key={order._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
           <div className="md:col-span-2">
-            <p className="font-semibold text-gray-800">{order.sti_package_item ? 'Gói xét nghiệm' : 'Xét nghiệm đơn lẻ'}</p>
-            <p className="text-sm text-gray-500">Mã đơn: {order.order_code}</p>
+            <p className="font-semibold text-gray-800">{order.sti_package_lookup?.[0]?.sti_package_name || 'Gói xét nghiệm'}</p>
+            <p className="text-sm text-gray-500">Mã đơn: {order._id.slice(-8)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Ngày đặt</p>
-            <p className="font-medium">{order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : 'N/A'}</p>
+            <p className="font-medium">{format(new Date(order.order_date), 'dd/MM/yyyy')}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Trạng thái</p>
