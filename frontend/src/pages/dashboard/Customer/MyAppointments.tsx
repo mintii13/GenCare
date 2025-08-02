@@ -504,6 +504,16 @@ const MyAppointments: React.FC = () => {
                 Đổi lịch
               </Button>
             )}
+            {appointment.status === 'completed' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => { setSelectedAppointment(appointment); setShowFeedbackModal(true); }}
+                className="border-green-200 text-green-700 hover:bg-green-50"
+              >
+                {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -643,7 +653,7 @@ const MyAppointments: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-             {selectedAppointment && (
+             {selectedAppointment && !showFeedbackModal && (
          <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
              <div className="p-6">
