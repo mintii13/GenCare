@@ -692,6 +692,12 @@ export class StiService {
                     }
                     else if (currentStatus === 'Booked' && nextStatus === 'Canceled') {
                         order.order_status = 'Canceled';
+                        const oldSchedule = await StiTestScheduleRepository.findById(order.sti_schedule_id);
+                        if (oldSchedule) {
+                            oldSchedule.number_current_orders = Math.max(0, oldSchedule.number_current_orders - 1);
+                            oldSchedule.is_locked = false;
+                            await oldSchedule.save();
+                        }
                     }
                     else {
                         return {

@@ -22,13 +22,13 @@ export type StiResultItem = {
       white_blood_cells?: number;
       hemo_level?: number;
       hiv?: boolean | null;
-      HBsAg?: boolean | null;
+      // HBsAg?: boolean | null;
       anti_HBs?: boolean | null;
       anti_HBc?: boolean | null;
       anti_HCV?: boolean | null;
       HCV_RNA?: boolean | null;
       TPHA_syphilis?: boolean | null;
-      VDRL_syphilis?: boolean | null;
+      // VDRL_syphilis?: boolean | null;
       RPR_syphilis?: boolean | null;
       treponema_pallidum_IgM?: boolean | null;
       treponema_pallidum_IgG?: boolean | null;

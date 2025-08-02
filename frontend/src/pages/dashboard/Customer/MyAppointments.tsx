@@ -12,6 +12,7 @@ import { useConfirmModal } from '@/hooks/useConfirmModal';
 import {
   Appointment,
   AppointmentQuery,
+  OrderQuery,
   PaginationInfo,
 } from '../../../types/appointment';
 import {
@@ -41,7 +42,10 @@ import { MoreVertical } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { stiService } from '@/services/stiService';
 import { FaVial } from 'react-icons/fa';
-import { StiOrder, StiOrderQuery } from '@/types/sti';
+import { StiOrderQuery } from '@/types/sti';
+import { StiOrder } from '../Staff/components/OrdersManagement';
+import { API } from '@/config/apiEndpoints';
+import { apiClient } from '@/services';
 
 interface FeedbackFormData {
   rating: number;
@@ -62,18 +66,45 @@ const TestBookingHistory: React.FC = () => {
   });
   const [query, setQuery] = useState<StiOrderQuery>({ page: 1, limit: 10 });
 
+  // const fetchOrders = useCallback(async () => {
+  //   setLoading(true);
+  //   try {
+  //     const response = await stiService.getMyOrdersPaginated(query);
+  //     if (response.success) {
+  //       setOrders(response.data.items || []);
+  //       setPagination(response.data.pagination);
+  //     } else {
+  //       setError(response.message);
+  //     }
+  //   } catch (err) {
+  //     setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [query]);
+
   const fetchOrders = useCallback(async () => {
-    setLoading(true);
     try {
-      const response = await stiService.getMyOrdersPaginated(query);
-      if (response.success) {
-        setOrders(response.data.items || []);
-        setPagination(response.data.pagination);
+      setLoading(true);
+      const endpoint = API.STI.GET_MY_ORDERS;
+      const response = await apiClient.get<any>(endpoint);
+      
+      if (response.data.success) {
+        setOrders(response.data.data?.items || response.data.items || []);
       } else {
-        setError(response.message);
+        if (response.data.message?.includes('Cannot find any orders')) {
+          setOrders([]);
+        } else {
+          setError('Không thể tải danh sách lịch xét nghiệm');
+        }
       }
-    } catch (err) {
-      setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
+    } catch (error: any) {
+      console.error('Error fetching STI orders:', error);
+      if (error.response?.status === 404) {
+        setOrders([]);
+      } else {
+        setError('Có lỗi xảy ra khi tải danh sách lịch xét nghiệm');
+      }
     } finally {
       setLoading(false);
     }
@@ -81,7 +112,7 @@ const TestBookingHistory: React.FC = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
+  }, []);
 
   const handlePageChange = (newPage: number) => {
     setQuery(prev => ({ ...prev, page: newPage }));
@@ -100,12 +131,12 @@ const TestBookingHistory: React.FC = () => {
       <Card key={order._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
           <div className="md:col-span-2">
-            <p className="font-semibold text-gray-800">{order.package_id?.name || 'Gói xét nghiệm'}</p>
-            <p className="text-sm text-gray-500">Mã đơn: {order.order_code}</p>
+            <p className="font-semibold text-gray-800">{order.sti_package_lookup?.[0]?.sti_package_name || 'Gói xét nghiệm'}</p>
+            <p className="text-sm text-gray-500">Mã đơn: {order._id.slice(-8)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Ngày đặt</p>
-            <p className="font-medium">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
+            <p className="font-medium">{format(new Date(order.order_date), 'dd/MM/yyyy')}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Trạng thái</p>
@@ -135,6 +166,23 @@ const TestBookingHistory: React.FC = () => {
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Lịch sử xét nghiệm</CardTitle>
       </CardHeader>
+      {/* <div className="mt-4 flex flex-col md:flex-row gap-2">
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="Booked">Đã đặt lịch</SelectItem>
+                    <SelectItem value="Accepted">Đã chấp nhận</SelectItem>
+                    <SelectItem value="Processing">Đang xử lý</SelectItem>
+                    <SelectItem value="SpecimenCollected">Đã lấy mẫu</SelectItem>
+                    <SelectItem value="Testing">Đang xét nghiệm</SelectItem>
+                    <SelectItem value="Completed">Đã hoàn thành</SelectItem>
+                    <SelectItem value="Canceled">Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div> */}
       <CardContent>
         {error && <div className="text-red-600 bg-red-50 p-4 rounded-md text-center">{error}</div>}
         {!loading && !error && orders.length > 0 ? (
@@ -216,6 +264,14 @@ const MyAppointments: React.FC = () => {
     sort_order: 'desc',
     status: undefined,
   });
+
+  const [orderQuery, setOrderQuery] = useState<OrderQuery>({
+    page: 1,
+    limit: 5,
+    sort_by: 'order_stat',
+    sort_order: 'desc',
+    status: undefined,
+  });
   
   const statusLabels: { [key: string]: string } = {
     pending: 'Chờ xác nhận',
@@ -284,7 +340,13 @@ const MyAppointments: React.FC = () => {
     const timer = setTimeout(() => {
       setQuery(prev => ({ ...prev, page: 1, search: searchTerm.trim() || undefined }));
     }, 500);
-    return () => clearTimeout(timer);
+    const orderTimer = setTimeout(() => {
+      setOrderQuery(prev => ({ ...prev, page: 1, search: searchTerm.trim() || undefined }));
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(orderTimer);
+    }
   }, [searchTerm]);
 
   useEffect(() => {
