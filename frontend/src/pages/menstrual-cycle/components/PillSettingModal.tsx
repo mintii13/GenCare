@@ -11,11 +11,13 @@ interface PillSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (data: UpdatePillTrackingRequest) => Promise<any>;
+  onCreate?: (data: any) => Promise<any>;
+  onTestReminder?: () => Promise<any>;
   currentSchedule?: PillSchedule;
   isLoading: boolean;
 }
 
-const PillSettingsModal: React.FC<PillSettingsModalProps> = ({ isOpen, onClose, onUpdate, currentSchedule, isLoading }) => {
+const PillSettingsModal: React.FC<PillSettingsModalProps> = ({ isOpen, onClose, onUpdate, onCreate, onTestReminder, currentSchedule, isLoading }) => {
   const [pillType, setPillType] = useState(currentSchedule?.pill_type || '21+7');
   const [reminderTime, setReminderTime] = useState(currentSchedule?.reminder_time || '08:00');
   const [reminderEnabled, setReminderEnabled] = useState<boolean>(currentSchedule?.reminder_enabled ?? true);
@@ -25,7 +27,12 @@ const PillSettingsModal: React.FC<PillSettingsModalProps> = ({ isOpen, onClose, 
     if (currentSchedule) {
       setPillType(currentSchedule.pill_type);
       setReminderTime(currentSchedule.reminder_time);
-      setReminderEnabled(currentSchedule.reminder_enabled || true  );
+      setReminderEnabled(currentSchedule.reminder_enabled || true);
+    } else {
+      // Default values when no schedule exists
+      setPillType('21+7');
+      setReminderTime('08:00');
+      setReminderEnabled(true);
     }
   }, [currentSchedule, isOpen]);
 
@@ -46,11 +53,25 @@ const PillSettingsModal: React.FC<PillSettingsModalProps> = ({ isOpen, onClose, 
     }
 
     try {
-      await onUpdate(updatedData);
-      toast.success('Cập nhật cài đặt thành công!');
+      if (!currentSchedule && onCreate) {
+        // Create new schedule if none exists
+        const createData = {
+          userId: '', // Will be filled by the service
+          pill_type: pillType,
+          pill_start_date: new Date().toISOString(),
+          reminder_time: reminderTime,
+          reminder_enabled: reminderEnabled,
+        };
+        await onCreate(createData);
+        toast.success('Tạo lịch uống thuốc thành công!');
+      } else {
+        // Update existing schedule
+        await onUpdate(updatedData);
+        toast.success('Cập nhật cài đặt thành công!');
+      }
       onClose();
     } catch (error: any) {
-      const message = error?.response?.data?.message || 'Cập nhật thất bại.';
+      const message = error?.response?.data?.message || 'Thao tác thất bại.';
       toast.error(message);
     }
   };
@@ -92,6 +113,24 @@ const PillSettingsModal: React.FC<PillSettingsModalProps> = ({ isOpen, onClose, 
             />
           </div>
           <div className="mt-6 flex justify-end gap-4">
+            {onTestReminder && currentSchedule && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={async () => {
+                  try {
+                    await onTestReminder();
+                    toast.success('Đã gửi mail test!');
+                  } catch (error: any) {
+                    toast.error(error?.response?.data?.message || 'Lỗi khi gửi mail test');
+                  }
+                }}
+                disabled={isLoading}
+                className="text-green-600 border-green-300 hover:bg-green-50"
+              >
+                Test Mail
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Hủy
             </Button>

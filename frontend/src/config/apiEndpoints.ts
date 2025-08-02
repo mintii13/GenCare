@@ -147,30 +147,14 @@ DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comment
   // Menstrual Cycle endpoints
   MenstrualCycle: {
     BASE: '/menstrual-cycle',//92
-    TRACK: '/menstrual-cycle/track',//93
-    GET_HISTORY: '/menstrual-cycle/history',//94
-    PROCESS: `/menstrual-cycle/processMenstrualCycle`,//95
-    // UPDATE: `/menstrual-cycle/update`, // REMOVED: This endpoint doesn't exist on backend
-    GET_CYCLES: `/menstrual-cycle/getCycles`,//96
-    GET_CYCLES_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,//97
-    GET_CYCLES_BY_MONTH: (year: number, month: number) => `/menstrual-cycle/getCyclesByMonth/${year}/${month}`,//98
-    TODAY_STATUS: '/menstrual-cycle/today-status',//99
-    CYCLE_STATS: '/menstrual-cycle/getCycleStatistics',//100
-    GET_CYCLE_STATISTICS: '/menstrual-cycle/getCycleStatistics',//101
-    PERIOD_STATS: '/menstrual-cycle/getPeriodStatistics',//102
-    GET_PERIOD_STATISTICS: '/menstrual-cycle/getPeriodStatistics',//103
-  GET_MOOD_STATISTICS: '/menstrual-cycle/getMoodStatistics',//104
-    UPDATE_NOTIFICATION: '/menstrual-cycle/updateNotificationStatus',//104
-    CLEANUP: '/menstrual-cycle/cleanupDuplicates',//105
-    RESET: '/menstrual-cycle/resetAllData',//106
-    MOOD_DATA: '/menstrual-cycle/mood-data',//107
-    PERIOD_DAY_MOOD: (date: string) => `/menstrual-cycle/period-day/${date}/mood`,//108
-    CREATE_PERIOD_DAY_MOOD: (date: string) => `/menstrual-cycle/period-day/${date}/mood`,//109
-    MOOD_DATA_DELETE: (date: string) => `/menstrual-cycle/mood-data/${date}`,//109
-    MOOD_DATA_MONTHLY_SUMMARY: (year: number, month: number) => `/menstrual-cycle/mood-data/monthly-summary/${year}/${month}`,//110
-    STATISTICS: '/menstrual-cycle/statistics',//111
-    COMPARISON: '/menstrual-cycle/comparison',//112
-    PROCESS_MENSTRUAL_CYCLE: '/menstrual-cycle/processMenstrualCycle'//113
+    PROCESS: '/menstrual-cycle/process',//93
+    GET_CYCLES: '/menstrual-cycle/cycles',//94
+    TODAY_STATUS: '/menstrual-cycle/today',//95
+    GET_CYCLE_STATISTICS: '/menstrual-cycle/statistics',//96
+    GET_PERIOD_STATISTICS: '/menstrual-cycle/period-statistics',//97
+    PERIOD_DAY_DELETE: (date: string) => `/menstrual-cycle/period-day/${date}`,//98
+    PREGNANCY_DETECTION: '/menstrual-cycle/pregnancy-detection',//99
+    DELETE_CYCLE: (cycleId: string) => `/menstrual-cycle/cycle/${cycleId}`,//100
   },
 
   // Home page endpoints
@@ -185,9 +169,11 @@ DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comment
     GET_SCHEDULE: (userId: string) => `/pill-tracking/${userId}`,//108
     UPDATE_SCHEDULE: '/pill-tracking',//109
     TAKE_PILL: (scheduleId: string) => `/pill-tracking/mark-as-taken/${scheduleId}`,//110
-    // WEEKLY: '/pill-tracking/weekly',//111
-    // MONTHLY: '/pill-tracking/monthly',//112
-    // STATISTICS: '/pill-tracking/statistics'//113
+    CLEAR_SCHEDULES: '/pill-tracking/clear',//111
+    TEST_REMINDER: '/pill-tracking/test-reminder',//112
+    // WEEKLY: '/pill-tracking/weekly',//112
+    // MONTHLY: '/pill-tracking/monthly',//113
+    // STATISTICS: '/pill-tracking/statistics'//114
   },
 
   // ----------------------- STI (TESTS, PACKAGES, ORDERS) --------------------

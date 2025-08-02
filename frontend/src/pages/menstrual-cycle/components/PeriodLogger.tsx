@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/Input';
 import { Label } from '../../../components/ui/label';
 import { FaTimes, FaCalendarAlt, FaPlus, FaMinus, FaLightbulb } from 'react-icons/fa';
 import { menstrualCycleService } from '../../../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
-import { ProcessCycleRequest } from '../../../services/menstrualCycleService';
 
 interface PeriodLoggerProps {
   onClose: () => void;
@@ -17,9 +15,7 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
   const [periodDates, setPeriodDates] = useState<string[]>([
     new Date().toISOString().split('T')[0] // Today's date by default
   ]);
-  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-
   const addDate = () => {
     setPeriodDates([...periodDates, '']);
   };
@@ -59,15 +55,8 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
     try {
       setLoading(true);
       
-      // Chuẩn bị dữ liệu gửi lên server
-      const trimmedNotes = notes.trim();
-      const requestData: ProcessCycleRequest = {
-        period_days: validDates.map(date => new Date(date).toISOString()),
-        // Chỉ thêm notes nếu có nội dung
-        ...(trimmedNotes && { notes: trimmedNotes })
-      };
-
-      const response = await menstrualCycleService.processCycle(requestData);
+      // Chuẩn bị dữ liệu gửi lên server - chỉ gửi mảng ngày
+      const response = await menstrualCycleService.processCycle(validDates);
 
       if (response.success) {
         toast.success('Đã ghi nhận thành công');
@@ -113,9 +102,11 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
     setPeriodDates(dates);
   };
 
+
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto relative">
         <Card className="border-0 shadow-none">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
@@ -168,15 +159,17 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
                 {/* Date inputs */}
                 <div className="space-y-3">
                   {periodDates.map((date, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        type="date"
-                        value={date}
-                        onChange={(e) => updateDate(index, e.target.value)}
-                        max={new Date().toISOString().split('T')[0]}
-                        className="flex-1"
-                        required={index === 0}
-                      />
+                    <div key={index} className="flex items-center gap-2 relative">
+                      <div className="flex-1">
+                        <input
+                          type="date"
+                          value={date}
+                          onChange={(e) => updateDate(index, e.target.value)}
+                          max={new Date().toISOString().split('T')[0]}
+                          className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                          required={index === 0}
+                        />
+                      </div>
                       {periodDates.length > 1 && (
                         <Button
                           type="button"
@@ -204,22 +197,7 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
                 </div>
               </div>
 
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Ghi chú (tùy chọn)</Label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ghi chú về triệu chứng, cảm giác, hoặc bất kỳ điều gì bạn muốn nhớ..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
-                  maxLength={500}
-                />
-                <p className="text-xs text-gray-500 text-right">
-                  {notes.length}/500 ký tự
-                </p>
-              </div>
+
 
               {/* Info Box */}
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -230,7 +208,7 @@ const PeriodLogger: React.FC<PeriodLoggerProps> = ({ onClose, onSuccess }) => {
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• Ghi nhận đầy đủ tất cả ngày có kinh để dự đoán chính xác</li>
                   <li>• Hệ thống sẽ tự động tính toán và dự đoán chu kì tiếp theo</li>
-                  <li>• Bạn có thể ghi chú thêm về triệu chứng hoặc cảm giác</li>
+                  <li>• Bạn có thể xóa ngày đã lưu nhầm trong lịch</li>
                 </ul>
               </div>
 

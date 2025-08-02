@@ -87,7 +87,7 @@ class ApiClient {
         });
 
         // Handle specific error cases
-        if (status === 401) {
+        if (status === 401 || status === 403) {
           const requestUrl = error.config?.url || '';
           
           // Don't auto-logout for getUserProfile requests (let AuthContext handle it)
@@ -112,7 +112,11 @@ class ApiClient {
           // Show toast notification for authentication error (only once)
           if (!this.authErrorShown) {
             this.authErrorShown = true;
-            toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', {
+            const errorMessage = status === 403 
+              ? 'Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.'
+              : 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+            
+            toast.error(errorMessage, {
               duration: 4000,
               position: 'top-right'
             });

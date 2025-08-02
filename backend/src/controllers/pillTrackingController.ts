@@ -1,8 +1,12 @@
 import { Router, Request, Response} from 'express';
 import { GetScheduleRequest, SetupPillTrackingRequest, UpdateScheduleRequest } from '../dto/requests/PillTrackingRequest';
 import { PillTrackingService } from '../services/pillTrackingService';
+import { PillTrackingRepository } from '../repositories/pillTrackingRepository';
+import { UserRepository } from '../repositories/userRepository';
+import { MailUtils } from '../utils/mailUtils';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
 import { DateTime } from 'luxon';
+import mongoose from 'mongoose';
 const router = Router();
 
 router.post('/setup', authenticateToken, async (req: Request, res: Response): Promise<void> => {
@@ -170,4 +174,84 @@ router.patch('/', authenticateToken, authorizeRoles('customer'), async (req: Req
             });
         }
 })
+
+// DELETE /api/pill-tracking/clear - Xóa tất cả pill tracking cũ
+router.delete('/clear', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req.user as any).userId;
+        console.log('[PillTrackingController] Clearing pill tracking for user:', userId);
+        
+        const deletedCount = await PillTrackingRepository.deleteUserPillSchedule(new mongoose.Types.ObjectId(userId));
+        
+        res.status(200).json({
+            success: true,
+            message: `Đã xóa ${deletedCount} lịch uống thuốc cũ`,
+            data: {
+                deletedCount
+            }
+        });
+    } catch (error) {
+        console.error('[PillTrackingController] Error clearing pill tracking:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xóa lịch uống thuốc cũ'
+        });
+    }
+});
+
+// POST /api/pill-tracking/test-reminder - Test gửi mail nhắc nhở
+router.post('/test-reminder', authenticateToken, authorizeRoles('customer'), async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req.user as any).userId;
+        console.log('[PillTrackingController] Testing reminder for user:', userId);
+        
+        // Lấy thông tin user
+        const user = await UserRepository.findById(userId);
+        if (!user) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy thông tin người dùng'
+            });
+            return;
+        }
+        
+        // Lấy pill schedule hiện tại
+        const schedules = await PillTrackingRepository.getPillSchedulesByCycle(userId, '');
+        if (!schedules || schedules.length === 0) {
+            res.status(404).json({
+                success: false,
+                message: 'Không có lịch uống thuốc nào'
+            });
+            return;
+        }
+        
+        const currentSchedule = schedules[0];
+        
+        // Gửi mail test
+        await MailUtils.sendReminderEmail(
+            user.email, 
+            currentSchedule.pill_number, 
+            currentSchedule.pill_type, 
+            currentSchedule.reminder_time
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: `Đã gửi mail nhắc nhở test đến ${user.email}`,
+            data: {
+                email: user.email,
+                pillNumber: currentSchedule.pill_number,
+                pillType: currentSchedule.pill_type,
+                reminderTime: currentSchedule.reminder_time
+            }
+        });
+    } catch (error) {
+        console.error('[PillTrackingController] Error testing reminder:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi gửi mail test'
+        });
+    }
+});
+
 export default router

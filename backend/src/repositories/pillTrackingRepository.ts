@@ -124,10 +124,44 @@ export class PillTrackingRepository {
 
     public static async deleteUserPillSchedule(userId: mongoose.Types.ObjectId): Promise<number> {
         try {
+            console.log('[PillTrackingRepository] Deleting pill schedules for user:', userId.toString());
+            
+            // First, count how many records exist
+            const countBefore = await PillTracking.countDocuments({ user_id: userId });
+            console.log('[PillTrackingRepository] Found', countBefore, 'pill schedules to delete');
+            
             const result = await PillTracking.deleteMany({ user_id: userId });
+            console.log('[PillTrackingRepository] Deleted', result.deletedCount, 'pill schedules');
+            
+            // Verify deletion
+            const countAfter = await PillTracking.countDocuments({ user_id: userId });
+            console.log('[PillTrackingRepository] Remaining pill schedules after deletion:', countAfter);
+            
             return result.deletedCount;
         } catch (error) {
-            console.error('Error deleting user pill schedule:', error);
+            console.error('[PillTrackingRepository] Error deleting user pill schedule:', error);
+            throw error;
+        }
+    }
+
+    public static async deletePillScheduleByCycle(cycleId: string): Promise<number> {
+        try {
+            console.log('[PillTrackingRepository] Deleting pill schedules for cycle:', cycleId);
+            
+            // First, count how many records exist
+            const countBefore = await PillTracking.countDocuments({ 
+                menstrual_cycle_id: new mongoose.Types.ObjectId(cycleId) 
+            });
+            console.log('[PillTrackingRepository] Found', countBefore, 'pill schedules to delete for cycle');
+            
+            const result = await PillTracking.deleteMany({ 
+                menstrual_cycle_id: new mongoose.Types.ObjectId(cycleId) 
+            });
+            console.log('[PillTrackingRepository] Deleted', result.deletedCount, 'pill schedules for cycle');
+            
+            return result.deletedCount;
+        } catch (error) {
+            console.error('[PillTrackingRepository] Error deleting pill schedule by cycle:', error);
             throw error;
         }
     }
@@ -148,12 +182,16 @@ export class PillTrackingRepository {
     public static async findReminderPill(): Promise<IPillTracking[]> {
         const now = TimeUtils.getCurrentDateTimeInZone();
         const todayEnd = now.endOf('day').toJSDate();
-        // const currentTime = now.toFormat('HH:mm');
+        console.log('[PillTrackingRepository] findReminderPill - Current time:', now.toFormat('HH:mm'), 'Today end:', todayEnd);
+        
         const result = await PillTracking.find({
             is_taken: false,
             reminder_enabled: true,
             pill_start_date: { $lte: todayEnd },
         }).sort({ pill_start_date: -1 }).exec();
+        
+        console.log('[PillTrackingRepository] findReminderPill - Found', result.length, 'schedules');
+        
         const latestByUser = new Map<string, IPillTracking>();
         for (const schedule of result) {
             const userId = schedule.user_id.toString();
@@ -162,17 +200,22 @@ export class PillTrackingRepository {
             }
         }
 
-        return [...latestByUser.values()];
+        const finalResult = [...latestByUser.values()];
+        console.log('[PillTrackingRepository] findReminderPill - Returning', finalResult.length, 'unique users');
+        
+        return finalResult;
     }
 
     public static async hasTrackingForCycle(cycleId: string): Promise<boolean>{
         try {
+            console.log('[PillTrackingRepository] Checking for existing pill tracking with cycleId:', cycleId);
             const existing = await PillTracking.findOne({
                 menstrual_cycle_id: new mongoose.Types.ObjectId(cycleId)
             }).lean();
+            console.log('[PillTrackingRepository] Found existing pill tracking:', !!existing);
             return !!existing;
         } catch (error) {
-            console.error(error);
+            console.error('[PillTrackingRepository] Error checking existing pill tracking:', error);
             throw error;
         }
     }

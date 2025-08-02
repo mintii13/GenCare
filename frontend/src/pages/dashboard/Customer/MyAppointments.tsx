@@ -65,12 +65,16 @@ const TestBookingHistory: React.FC = () => {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await stiService.getMyOrdersPaginated(query);
-      if (response.success) {
-        setOrders(response.data.items || []);
-        setPagination(response.data.pagination);
-      } else {
-        setError(response.message);
+      try {
+        const response = await stiService.getMyOrdersPaginated(query);
+        if (response && response.success && response.data) {
+          setOrders(response.data.items || []);
+          setPagination(response.data.pagination);
+        } else {
+          setError(response?.message || 'Không thể tải dữ liệu đơn hàng');
+        }
+      } catch (err) {
+        setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
       }
     } catch (err) {
       setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
@@ -100,12 +104,12 @@ const TestBookingHistory: React.FC = () => {
       <Card key={order._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
           <div className="md:col-span-2">
-            <p className="font-semibold text-gray-800">{order.package_id?.name || 'Gói xét nghiệm'}</p>
+            <p className="font-semibold text-gray-800">{order.sti_package_item ? 'Gói xét nghiệm' : 'Xét nghiệm đơn lẻ'}</p>
             <p className="text-sm text-gray-500">Mã đơn: {order.order_code}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Ngày đặt</p>
-            <p className="font-medium">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
+            <p className="font-medium">{order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : 'N/A'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Trạng thái</p>
@@ -348,6 +352,18 @@ const MyAppointments: React.FC = () => {
   
   const handleUpdateAppointment = async () => {
     if (!editingAppointment || !selectedNewSlot) return;
+    
+    // Validation: Kiểm tra xem slot mới có khác slot cũ không
+    const isSameSlot = 
+      editingAppointment.appointment_date === selectedNewSlot.date &&
+      editingAppointment.start_time === selectedNewSlot.startTime &&
+      editingAppointment.end_time === selectedNewSlot.endTime;
+    
+    if (isSameSlot) {
+      toast.error('Vui lòng chọn thời gian khác với lịch hiện tại');
+      return;
+    }
+    
     try {
       const data = await appointmentService.rescheduleAppointment(
         editingAppointment._id,
@@ -365,8 +381,13 @@ const MyAppointments: React.FC = () => {
       } else {
         toast.error(data.message || 'Lỗi khi đổi lịch');
       }
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi đổi lịch');
+    } catch (error: any) {
+      // Xử lý lỗi chi tiết hơn
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Có lỗi xảy ra khi đổi lịch');
+      }
     }
   };
 
@@ -425,7 +446,13 @@ const MyAppointments: React.FC = () => {
               Chi tiết
             </Button>
             {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
-              <Button variant="outline" size="sm" onClick={() => handleEditAppointment(appointment)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleEditAppointment(appointment)}
+                className="border-primary-200 text-primary-700 hover:bg-primary-50"
+              >
+                <FaCalendarAlt className="w-3 h-3 mr-1" />
                 Đổi lịch
               </Button>
             )}
@@ -568,78 +595,155 @@ const MyAppointments: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {selectedAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold">Chi tiết lịch hẹn</h3>
-                <button 
-                  onClick={() => setSelectedAppointment(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FaTimes className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Chuyên gia</p>
-                    <p className="font-medium">{consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 'Chưa có thông tin'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Chuyên khoa</p>
-                    <p className="font-medium">{consultantDetails[selectedAppointment.consultant_id._id]?.specialization || 'Chưa có thông tin'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Ngày hẹn</p>
-                    <p className="font-medium">{format(new Date(selectedAppointment.appointment_date), 'EEEE, dd/MM/yyyy', { locale: vi })}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Thời gian</p>
-                    <p className="font-medium">{selectedAppointment.start_time} - {selectedAppointment.end_time}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Trạng thái</p>
-                    <Badge variant={statusColors[selectedAppointment.status] as any}>
-                      {statusLabels[selectedAppointment.status]}
-                    </Badge>
-                  </div>
-                  {(selectedAppointment as any).notes && (
-                    <div>
-                      <p className="text-sm text-gray-600">Ghi chú</p>
-                      <p className="font-medium whitespace-pre-wrap">{(selectedAppointment as any).notes}</p>
-                    </div>
-                  )}
-                  {(selectedAppointment as any).meet_link && (
-                    <div>
-                      <p className="text-sm text-gray-600">Link cuộc họp</p>
-                      <a 
-                        href={(selectedAppointment as any).meet_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
-                      >
-                        Tham gia cuộc họp
-                      </a>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-gray-600">Đặt lúc</p>
-                    <p className="font-medium">{format(new Date(selectedAppointment.created_date), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+             {selectedAppointment && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+             <div className="p-6">
+               <div className="flex items-center justify-between mb-6">
+                 <h3 className="text-xl font-semibold text-gray-800">Chi tiết lịch hẹn</h3>
+                 <button 
+                   onClick={() => setSelectedAppointment(null)}
+                   className="text-gray-400 hover:text-gray-600 transition-colors"
+                 >
+                   <FaTimes className="w-5 h-5" />
+                 </button>
+               </div>
+               
+               {/* Thông tin chính */}
+               <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <p className="text-sm text-gray-600 font-medium">Chuyên gia</p>
+                     <p className="font-semibold text-gray-800 mt-1">
+                       {consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 'Chưa có thông tin'}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-gray-600 font-medium">Chuyên khoa</p>
+                     <p className="font-semibold text-gray-800 mt-1">
+                       {consultantDetails[selectedAppointment.consultant_id._id]?.specialization || 'Chưa có thông tin'}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-gray-600 font-medium">Ngày hẹn</p>
+                     <p className="font-semibold text-gray-800 mt-1">
+                       {format(new Date(selectedAppointment.appointment_date), 'EEEE, dd/MM/yyyy', { locale: vi })}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-gray-600 font-medium">Thời gian</p>
+                     <p className="font-semibold text-gray-800 mt-1">
+                       {selectedAppointment.start_time} - {selectedAppointment.end_time}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-gray-600 font-medium">Trạng thái</p>
+                     <div className="mt-1">
+                       <Badge variant={statusColors[selectedAppointment.status] as any} className="text-sm">
+                         {statusLabels[selectedAppointment.status]}
+                       </Badge>
+                     </div>
+                   </div>
+                   <div>
+                     <p className="text-sm text-gray-600 font-medium">Đặt lúc</p>
+                     <p className="font-semibold text-gray-800 mt-1">
+                       {format(new Date(selectedAppointment.created_date), 'dd/MM/yyyy HH:mm', { locale: vi })}
+                     </p>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Ghi chú khách hàng */}
+               {selectedAppointment.customer_notes && (
+                 <div className="mb-6">
+                   <h4 className="text-sm text-gray-600 font-medium mb-2">Ghi chú của bạn</h4>
+                   <div 
+                     className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-h-48 overflow-y-auto"
+                     style={{
+                       whiteSpace: 'pre-wrap',
+                       wordWrap: 'break-word',
+                       lineHeight: 1.5,
+                       fontSize: 14
+                     }}
+                   >
+                     {selectedAppointment.customer_notes}
+                   </div>
+                 </div>
+               )}
+
+               {/* Ghi chú của chuyên gia */}
+               {selectedAppointment.consultant_notes && (
+                 <div className="mb-6">
+                   <h4 className="text-sm text-gray-600 font-medium mb-2">Ghi chú của chuyên gia</h4>
+                   <div 
+                     className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-48 overflow-y-auto"
+                     style={{
+                       whiteSpace: 'pre-wrap',
+                       wordWrap: 'break-word',
+                       lineHeight: 1.5,
+                       fontSize: 14
+                     }}
+                   >
+                     {selectedAppointment.consultant_notes}
+                   </div>
+                 </div>
+               )}
+
+               {/* Link cuộc họp */}
+               {selectedAppointment.meeting_info?.meet_url && (
+                 <div className="mb-6">
+                   <h4 className="text-sm text-gray-600 font-medium mb-2">Link cuộc họp</h4>
+                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                     <a 
+                       href={selectedAppointment.meeting_info.meet_url} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="text-purple-600 hover:text-purple-800 underline font-medium flex items-center gap-2"
+                     >
+                       <FaCalendarAlt className="w-4 h-4" />
+                       Tham gia cuộc họp
+                     </a>
+                     <p className="text-xs text-gray-500 mt-1">
+                       Meeting ID: {selectedAppointment.meeting_info.meeting_id}
+                     </p>
+                   </div>
+                 </div>
+               )}
+
+               {/* Thông tin bổ sung */}
+               <div className="bg-gray-50 rounded-lg p-4">
+                 <h4 className="text-sm text-gray-600 font-medium mb-3">Thông tin bổ sung</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                   <div>
+                     <span className="text-gray-600">Mã lịch hẹn:</span>
+                     <span className="ml-2 font-medium text-gray-800">{selectedAppointment._id}</span>
+                   </div>
+                   <div>
+                     <span className="text-gray-600">Loại tư vấn:</span>
+                     <span className="ml-2 font-medium text-gray-800">
+                       {selectedAppointment.video_call_status === 'in_progress' ? 'Video call' : 'Tư vấn trực tiếp'}
+                     </span>
+                   </div>
+                   {selectedAppointment.updated_date && (
+                     <div>
+                       <span className="text-gray-600">Cập nhật lúc:</span>
+                       <span className="ml-2 font-medium text-gray-800">
+                         {format(new Date(selectedAppointment.updated_date), 'dd/MM/yyyy HH:mm', { locale: vi })}
+                       </span>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
 
       {editingAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-               <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium">Đổi lịch hẹn</h3>
                 <button 
                   onClick={() => setEditingAppointment(null)}
@@ -648,14 +752,70 @@ const MyAppointments: React.FC = () => {
                   <FaTimes className="w-5 h-5" />
                 </button>
               </div>
-              <WeeklySlotPicker
-                consultantId={editingAppointment.consultant_id._id}
-                onSlotSelect={handleSlotSelect}
-                selectedSlot={selectedNewSlot}
-              />
+              
+              {/* Thông tin lịch hiện tại */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-800 mb-2">Lịch hiện tại:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Ngày:</span>
+                    <span className="ml-2 font-medium">{format(new Date(editingAppointment.appointment_date), 'dd/MM/yyyy')}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Thời gian:</span>
+                    <span className="ml-2 font-medium">{editingAppointment.start_time} - {editingAppointment.end_time}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Chuyên gia:</span>
+                    <span className="ml-2 font-medium">
+                      {consultantDetails[editingAppointment.consultant_id._id]?.full_name || 'Chuyên gia'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Chọn slot mới */}
+              <div className="mb-6">
+                <h4 className="font-medium text-gray-800 mb-4">Chọn thời gian mới:</h4>
+                <WeeklySlotPicker
+                  consultantId={editingAppointment.consultant_id._id}
+                  onSlotSelect={handleSlotSelect}
+                  selectedSlot={selectedNewSlot}
+                />
+              </div>
+              
+              {/* Hiển thị slot đã chọn */}
+              {selectedNewSlot && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-800 mb-2">Thời gian mới đã chọn:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-600">Ngày:</span>
+                      <span className="ml-2 font-medium text-blue-800">{format(new Date(selectedNewSlot.date), 'dd/MM/yyyy')}</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Thời gian:</span>
+                      <span className="ml-2 font-medium text-blue-800">{selectedNewSlot.startTime} - {selectedNewSlot.endTime}</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Chuyên gia:</span>
+                      <span className="ml-2 font-medium text-blue-800">
+                        {consultantDetails[editingAppointment.consultant_id._id]?.full_name || 'Chuyên gia'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex justify-end gap-3 mt-6">
                 <Button variant="outline" onClick={() => setEditingAppointment(null)}>Hủy</Button>
-                <Button onClick={handleUpdateAppointment} disabled={!selectedNewSlot}>Xác nhận đổi lịch</Button>
+                <Button 
+                  onClick={handleUpdateAppointment} 
+                  disabled={!selectedNewSlot}
+                  className="bg-primary-600 hover:bg-primary-700"
+                >
+                  Xác nhận đổi lịch
+                </Button>
               </div>
             </div>
           </div>

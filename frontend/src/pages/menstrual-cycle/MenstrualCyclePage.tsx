@@ -14,6 +14,7 @@ import PeriodLogger from './components/PeriodLogger';
 import PillSetupForm from './components/PillSetupFrom';
 import PillCalendar from './components/PillCalender';
 import PillSettingsModal from './components/PillSettingModal';
+
 import useMenstrualCycle from '../../hooks/useMenstrualCycle';
 import FirstTimeGuideModal from '../../components/menstrual-cycle/FirstTimeGuideModal';
 import ErrorBoundary from '../../components/common/ErrorBoundary';
@@ -27,7 +28,8 @@ import {
   FaChartLine, 
   FaPills,
   FaCog,
-  FaLightbulb
+  FaLightbulb,
+
 } from 'react-icons/fa';
 
 const MenstrualCyclePage: React.FC = () => {
@@ -38,15 +40,23 @@ const MenstrualCyclePage: React.FC = () => {
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
 
   // Custom hooks
-  const { todayStatus, cycles, loading: cycleLoading, error: cycleError, refresh: refreshCycle } = useMenstrualCycle(user?.id);
   const { 
-    schedules, 
-    loading: pillLoading, 
+    todayStatus, 
+    cycles, 
+    loading: cycleLoading, 
+    error: cycleError, 
+    refresh: refreshCycle,
+    deleteCycle
+  } = useMenstrualCycle(user?.id);
+    const {
+    schedules,
+    loading: pillLoading,
     error: pillError, 
     setupPillSchedule, 
     markPillAsTaken,
-    updatePillSchedule
-  } = usePillTracking(user?.id);
+    updatePillSchedule,
+    testReminder
+  } = usePillTracking();
 
   const getStatusColor = useCallback((pregnancyChance: string) => {
     switch (pregnancyChance) {
@@ -82,6 +92,11 @@ const MenstrualCyclePage: React.FC = () => {
   const isFirstTimeUser = useMemo(() => {
     return !isLoading && cycles.length === 0;
   }, [isLoading, cycles?.length]);
+
+  // Kiểm tra xem có lịch uống thuốc không
+  const hasPillSchedule = useMemo(() => {
+    return schedules && schedules.length > 0;
+  }, [schedules]);
 
   // Hiển thị modal hướng dẫn cho người dùng mới
   useEffect(() => {
@@ -142,7 +157,7 @@ const MenstrualCyclePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse shadow-lg">
             <FaHeart className="text-2xl text-white" />
           </div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto mb-4"></div>
@@ -152,7 +167,7 @@ const MenstrualCyclePage: React.FC = () => {
     );
   }
 
-  const hasPillSchedule = schedules && schedules?.length > 0;
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
@@ -175,19 +190,26 @@ const MenstrualCyclePage: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-white/20 text-white border-white/30 text-xs">
+                  <Badge className="bg-white/20 text-white border-white/30 text-xs backdrop-blur">
                     {getStatusText(todayStatus)}
                   </Badge>
-                  <Badge className="bg-white/20 text-white border-white/30 text-xs">
+                  <Badge className="bg-white/20 text-white border-white/30 text-xs backdrop-blur">
                     Thai: {
                       todayStatus.pregnancy_chance === 'high' ? 'Cao' :
                       todayStatus.pregnancy_chance === 'medium' ? 'TB' : 'Thấp'
                     }
                   </Badge>
                   
+                  {/* PMS Badge */}
+                  {todayStatus.is_pms_day && (
+                    <Badge className="bg-purple-400/20 text-purple-200 border-purple-300/30 text-xs backdrop-blur">
+                      PMS
+                    </Badge>
+                  )}
+                  
                   {/* Gợi ý - Mobile: collapsed, Desktop: expanded */}
                   {todayStatus.recommendations?.length > 0 && (
-                    <div className="hidden sm:flex items-center gap-2 bg-white/10 backdrop-blur rounded-lg px-3 py-1">
+                    <div className="hidden sm:flex items-center gap-2 bg-white/15 backdrop-blur rounded-lg px-3 py-1 border border-white/20">
                       <FaLightbulb className="text-sm text-white/90" />
                       <span className="text-white/90 text-xs">
                         {todayStatus.recommendations[0]}
@@ -208,7 +230,7 @@ const MenstrualCyclePage: React.FC = () => {
 
                 {/* Mobile: Gợi ý collapsed */}
                 {todayStatus.recommendations?.length > 0 && (
-                  <div className="sm:hidden mt-2 bg-white/10 backdrop-blur rounded-lg p-2">
+                  <div className="sm:hidden mt-2 bg-white/15 backdrop-blur rounded-lg p-2 border border-white/20">
                     <div className="flex items-center gap-2">
                       <FaLightbulb className="text-xs text-white/90" />
                       <span className="text-white/90 text-xs font-medium">Gợi ý hôm nay:</span>
@@ -238,13 +260,13 @@ const MenstrualCyclePage: React.FC = () => {
                 {/* Quick Stats */}
                 {cycleStats && (
                   <div className="hidden sm:flex gap-2">
-                    <div className="text-center bg-white/10 backdrop-blur rounded-lg p-2 min-w-[60px]">
+                    <div className="text-center bg-white/15 backdrop-blur rounded-lg p-2 min-w-[60px] border border-white/20">
                       <div className="text-white text-sm font-bold">
                         {cycleStats.cycleLength}
                       </div>
                       <div className="text-white/80 text-xs">Chu kì</div>
                     </div>
-                    <div className="text-center bg-white/10 backdrop-blur rounded-lg p-2 min-w-[60px]">
+                    <div className="text-center bg-white/15 backdrop-blur rounded-lg p-2 min-w-[60px] border border-white/20">
                       <div className="text-white text-sm font-bold">
                         {cycleStats.latestPeriodDays}
                       </div>
@@ -286,18 +308,18 @@ const MenstrualCyclePage: React.FC = () => {
         {/* Enhanced Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <TabsList className="grid w-full grid-cols-4 sm:w-auto bg-white shadow-md">
-              <TabsTrigger value="main" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+            <TabsList className="grid w-full grid-cols-4 sm:w-auto bg-white/90 backdrop-blur shadow-lg border border-white/20">
+              <TabsTrigger value="main" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md">
                 <FaCalendarAlt className="text-sm" />
                 <span className="hidden sm:inline">Lịch & Theo Dõi</span>
                 <span className="sm:hidden">Lịch</span>
               </TabsTrigger>
-              <TabsTrigger value="statistics" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+              <TabsTrigger value="statistics" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md">
                 <FaChartLine className="text-sm" />
                 <span className="hidden sm:inline">Thống Kê</span>
                 <span className="sm:hidden">TK</span>
               </TabsTrigger>
-              <TabsTrigger value="pills" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white">
+              <TabsTrigger value="pills" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md">
                 <FaPills className="text-sm" />
                 <span className="hidden sm:inline">Uống Thuốc</span>
                 <span className="sm:hidden">Uống</span>
@@ -309,7 +331,7 @@ const MenstrualCyclePage: React.FC = () => {
                 <Button
                   onClick={() => setShowFirstTimeGuide(true)}
                   variant="outline"
-                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50 backdrop-blur"
                 >
                   <FaLightbulb className="mr-2" />
                   Hướng dẫn
@@ -317,7 +339,7 @@ const MenstrualCyclePage: React.FC = () => {
               )}
               <Button
                 onClick={() => setShowPeriodLogger(true)}
-                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 shadow-md"
               >
                 <FaPlus className="mr-2" />
                 Ghi nhận chu kì
@@ -328,7 +350,7 @@ const MenstrualCyclePage: React.FC = () => {
           {/* Combined Cycle View */}
           <TabsContent value="main" className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
                 <FaCalendarAlt className="text-sm text-white" />
               </div>
               <div>
@@ -344,13 +366,15 @@ const MenstrualCyclePage: React.FC = () => {
                 isFirstTimeUser={isFirstTimeUser}
                 onShowGuide={() => setShowFirstTimeGuide(true)}
                 pillSchedules={schedules}
+                onTakePill={markPillAsTaken}
+                onShowPillSettings={() => setShowPillSettings(true)}
               />
             </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="statistics" className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
                 <FaChartLine className="text-sm text-white" />
               </div>
               <div>
@@ -361,11 +385,13 @@ const MenstrualCyclePage: React.FC = () => {
             <CycleCharts onRefresh={refreshCycle} />
           </TabsContent>
 
+
+
           {/* Pill Tracking Tab */}
           <TabsContent value="pills" className="space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-md">
                         <FaPills className="text-sm text-white" />
                     </div>
                     <div>
@@ -373,12 +399,10 @@ const MenstrualCyclePage: React.FC = () => {
                         <p className="text-sm text-gray-600">Quản lý và theo dõi việc uống thuốc tránh thai hàng ngày.</p>
                     </div>
                 </div>
-                {hasPillSchedule && (
-                    <Button variant="outline" size="sm" onClick={() => setShowPillSettings(true)}>
-                        <FaCog className="mr-2" />
-                        Cài đặt
-                    </Button>
-                )}
+                <Button variant="outline" size="sm" onClick={() => setShowPillSettings(true)}>
+                    <FaCog className="mr-2" />
+                    Cài đặt
+                </Button>
             </div>
             
             {pillLoading && <p>Đang tải lịch uống thuốc...</p>}
@@ -394,7 +418,7 @@ const MenstrualCyclePage: React.FC = () => {
                 <PillSetupForm 
                   onSubmit={setupPillSchedule}
                   isLoading={pillLoading}
-                  latestPeriodStart={cycles && cycles.length ? cycles[0]?.period_days?.[0]?.date : undefined}
+                  latestPeriodStart={cycles && cycles.length ? cycles[0]?.period_days?.[0] : undefined}
                 />
               )
             )}
@@ -407,6 +431,8 @@ const MenstrualCyclePage: React.FC = () => {
           isOpen={showPillSettings} 
           onClose={() => setShowPillSettings(false)} 
           onUpdate={updatePillSchedule}
+          onCreate={setupPillSchedule}
+          onTestReminder={testReminder}
           currentSchedule={schedules && schedules.length ? schedules[0] : undefined}
           isLoading={pillLoading}
         />

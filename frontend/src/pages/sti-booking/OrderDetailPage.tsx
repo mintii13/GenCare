@@ -12,7 +12,6 @@ const OrderDetailPage: React.FC = () => {
   return (
     <div style={{ padding: 32 }}>
       <Title>Chi tiết lịch xét nghiệm STI</Title>
-      <div>Mã booking: {id}</div>
       <div>Thông tin chi tiết (dummy)...</div>
       <div style={{ marginTop: 24 }}>
         <Button danger onClick={() => setShowCancel(true)} style={{ marginRight: 8 }}>Hủy lịch</Button>
