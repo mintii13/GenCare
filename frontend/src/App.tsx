@@ -202,8 +202,6 @@ AutoConfirmService.stop();
               </RoleGuard>
 
             } />
-
-
             <Route path="/test-packages/*" element={<TestPackagesPage />} />
             <Route path="/test-packages/sti" element={<STITestPage />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />

@@ -144,7 +144,6 @@ const ConsultantList: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-gray-800 text-sm truncate">{row.full_name}</div>
-            <div className="text-xs text-gray-600 truncate">{row.qualifications}</div>
           </div>
         </div>
       ),
@@ -353,7 +352,7 @@ const ConsultantList: React.FC = () => {
                       )}
                     </div>
                     <h4 className="text-2xl font-bold text-gray-800 mb-1">{selectedConsultant.full_name}</h4>
-                    <p className="text-primary-600 font-medium text-lg">{selectedConsultant.specialization}</p>
+                    
                   </div>
 
                   {/* Basic Info */}
