@@ -1,369 +1,470 @@
 // service/menstrualCycle.service.ts
 import mongoose from 'mongoose';
-import { IMenstrualCycle, IMoodData, IDailyMoodData, IPeriodDay } from '../models/MenstrualCycle';
+import { IMenstrualCycle, MenstrualCycle } from '../models/MenstrualCycle';
 import { MenstrualCycleRepository } from '../repositories/menstrualCycleRepository';
 import { 
     CycleData, 
     TodayStatus, 
     CycleStatistics, 
-    PeriodStatistics, 
-    PeriodMoodStatistics,
-    MoodDataResponse, 
-    MoodDataListResponse, 
-    MonthlyMoodSummaryResponse 
+    PeriodStatistics
 } from '../dto/responses/menstrualCycleResponse';
-import { ProcessCycleWithMoodRequest, PeriodDayMoodRequest } from '../dto/requests/menstrualCycleRequest';
 
 // Define types for backward compatibility
 type RegularityStatus = 'regular' | 'irregular' | 'insufficient_data';
 type TrendStatus = 'stable' | 'lengthening' | 'shortening';
 
+// Constants for validation
+const CYCLE_CONSTRAINTS = {
+    MIN_CYCLE_LENGTH: 21,
+    MAX_CYCLE_LENGTH: 45,
+    MIN_PERIOD_LENGTH: 2,
+    MAX_PERIOD_LENGTH: 10,
+    MAX_DAYS_BETWEEN_PERIODS: 3, // Để group consecutive days
+    MAX_FUTURE_DAYS: 0 // Không cho phép ngày trong tương lai
+};
+
 export class MenstrualCycleService {
-    // New method for processing cycle with period day mood data
-    public static async processCycleWithMoodData(user_id: string, request: ProcessCycleWithMoodRequest) {
+    // Process cycle with simple period days
+    public static async processCycle(user_id: string, period_days: string[]) {
         try {
-            console.log('[MenstrualCycleService] processCycleWithMoodData called with:', {
+            console.log('[MenstrualCycleService] processCycle called with:', {
                 user_id,
-                requestType: typeof request,
-                periodDaysCount: request.period_days?.length,
-                periodDays: request.period_days
+                periodDaysCount: period_days?.length,
+                periodDays: period_days
             });
 
-            if (!request.period_days || request.period_days.length === 0) {
+            if (!period_days || period_days.length === 0) {
                 throw new Error('No period days provided');
             }
 
-            // Debug: Log each period day
-            request.period_days.forEach((pd, index) => {
-                console.log(`[MenstrualCycleService] Period day ${index}:`, {
-                    date: pd.date,
-                    dateType: typeof pd.date,
-                    moodData: pd.mood_data,
-                    moodDataType: typeof pd.mood_data
-                });
-            });
-
-            // Convert string dates to Date objects and add default mood data
-            const sortedPeriodDays: IPeriodDay[] = request.period_days.map(pd => {
-                console.log('[MenstrualCycleService] Processing period day:', pd);
-                
-                // Handle case where pd.date might be an object
-                let dateString: string;
-                if (typeof pd.date === 'string') {
-                    dateString = pd.date;
-                } else if (typeof pd.date === 'object' && pd.date !== null && 'date' in pd.date) {
-                    // If date is an object with a 'date' property, extract it
-                    dateString = (pd.date as any).date;
-                    console.log('[MenstrualCycleService] Extracted date from object:', dateString);
-                } else {
-                    console.error('[MenstrualCycleService] Invalid date format:', pd.date, 'Type:', typeof pd.date);
-                    throw new Error(`Invalid date format: ${JSON.stringify(pd.date)}`);
-                }
-                
+            // Convert string dates to Date objects and validate
+            const sortedPeriodDays: Date[] = period_days.map(dateString => {
                 const date = new Date(dateString);
                 
-                // Validate date
+                // Validate date format
                 if (isNaN(date.getTime())) {
-                    console.error('[MenstrualCycleService] Invalid date:', dateString, 'Type:', typeof dateString);
-                    throw new Error(`Invalid date: ${dateString}`);
+                    console.error('[MenstrualCycleService] Invalid date:', dateString);
+                    throw new Error(`Ngày không hợp lệ: ${dateString}`);
                 }
                 
-                return {
-                    date: date,
-                    mood_data: pd.mood_data || {
-                        mood: 'neutral',
-                        energy: 'medium',
-                        symptoms: [],
-                        notes: ''
-                    }
-                };
+                // Validate future dates with proper timezone handling
+                const today = new Date();
+                const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                const dateLocal = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                
+                console.log('[MenstrualCycleService] Date validation:', {
+                    inputDate: dateString,
+                    parsedDate: date.toISOString(),
+                    dateLocal: dateLocal.toISOString(),
+                    today: today.toISOString(),
+                    todayLocal: todayLocal.toISOString(),
+                    isFuture: dateLocal > todayLocal
+                });
+                
+                if (dateLocal > todayLocal) {
+                    console.error('[MenstrualCycleService] Future date not allowed:', dateString);
+                    throw new Error(`Không thể thêm ngày trong tương lai: ${dateString}`);
+                }
+                
+                return date;
             });
 
             // Sort by date to ensure chronological order
-            sortedPeriodDays.sort((a, b) => a.date.getTime() - b.date.getTime());
+            sortedPeriodDays.sort((a, b) => a.getTime() - b.getTime());
 
             console.log('[MenstrualCycleService] Converted and sorted period days:', {
                 count: sortedPeriodDays.length,
-                dates: sortedPeriodDays.map(pd => {
-                    try {
-                        return pd.date.toISOString().split('T')[0];
-                    } catch (error) {
-                        console.error('[MenstrualCycleService] Error formatting date:', pd.date, error);
-                        return 'Invalid Date';
-                    }
-                })
+                dates: sortedPeriodDays.map(date => date.toISOString().split('T')[0])
             });
+
+            // Get existing cycles
+            const existingCycles = await MenstrualCycleRepository.findByUser(user_id);
+            console.log('[MenstrualCycleService] Existing cycles:', existingCycles.length);
 
             // Group consecutive days into cycles
             const groupedCycles = this.groupConsecutivePeriodDays(sortedPeriodDays);
             console.log('[MenstrualCycleService] Grouped cycles:', {
                 totalGroups: groupedCycles.length,
-                groups: groupedCycles.map((group, index) => ({
-                    groupIndex: index,
-                    daysCount: group.length,
-                    dates: group.map(pd => pd.date.toISOString().split('T')[0])
+                groups: groupedCycles.map(group => ({
+                    count: group.length,
+                    startDate: group[0].toISOString().split('T')[0],
+                    endDate: group[group.length - 1].toISOString().split('T')[0]
                 }))
             });
 
-            if (groupedCycles.length === 0) {
-                console.log('[MenstrualCycleService] No valid cycles found after grouping');
-                return { success: false, message: 'Không tìm thấy chu kỳ hợp lệ' };
+            // Validate each cycle group
+            for (const cycleDays of groupedCycles) {
+                // Validate period length
+                if (cycleDays.length < CYCLE_CONSTRAINTS.MIN_PERIOD_LENGTH) {
+                    console.warn('[MenstrualCycleService] Short period detected:', cycleDays.length, 'days');
+                    // Có thể là spotting, nhưng vẫn cho phép
+                }
+                
+                if (cycleDays.length > CYCLE_CONSTRAINTS.MAX_PERIOD_LENGTH) {
+                    console.warn('[MenstrualCycleService] Long period detected:', cycleDays.length, 'days');
+                    // Cảnh báo nhưng vẫn cho phép
+                }
+            }
+
+            // Validate gaps between cycle groups
+            for (let i = 0; i < groupedCycles.length - 1; i++) {
+                const currentGroup = groupedCycles[i];
+                const nextGroup = groupedCycles[i + 1];
+                
+                const currentEnd = currentGroup[currentGroup.length - 1];
+                const nextStart = nextGroup[0];
+                
+                const daysBetween = Math.floor((nextStart.getTime() - currentEnd.getTime()) / (1000 * 60 * 60 * 24));
+                
+                console.log('[MenstrualCycleService] Gap between cycles:', {
+                    cycle1End: currentEnd.toISOString().split('T')[0],
+                    cycle2Start: nextStart.toISOString().split('T')[0],
+                    daysBetween
+                });
+                
+                // If gap is too large, they should be separate cycles
+                if (daysBetween > CYCLE_CONSTRAINTS.MAX_CYCLE_LENGTH) {
+                    console.warn('[MenstrualCycleService] Large gap detected between cycles:', daysBetween, 'days');
+                }
             }
 
             // Process each cycle group
-            const savedCycles: CycleData[] = [];
-            for (const cycleGroup of groupedCycles) {
-                console.log('[MenstrualCycleService] Processing cycle group:', {
-                    daysCount: cycleGroup.length,
-                    dates: cycleGroup.map(pd => pd.date.toISOString().split('T')[0])
-                });
-
-                const cycleStartDate = cycleGroup[0].date;
-                const cycleLength = await this.calculatePersonalizedCycleLength(user_id, cycleStartDate);
+            const processedCycles = [];
+            const cyclesToDelete = [];
+            
+            for (const cycleDays of groupedCycles) {
+                const cycleStartDate = cycleDays[0];
                 
-                console.log('[MenstrualCycleService] Cycle details:', {
-                    startDate: cycleStartDate.toISOString().split('T')[0],
-                    cycleLength: cycleLength
+                // Find all overlapping cycles using smart merge logic
+                const overlappingCycles = existingCycles.filter(existingCycle => {
+                    return this.shouldMergeCycles(existingCycle, cycleDays, cycleStartDate);
                 });
 
-                // Calculate predictions
-                const ovulationDate = this.predictOvulationDate(cycleStartDate, cycleLength);
-                const fertileStart = this.predictFertileStart(cycleStartDate, cycleLength);
-                const fertileEnd = this.predictFertileEnd(cycleStartDate, cycleLength);
-                const predictedCycleEnd = new Date(cycleStartDate);
-                predictedCycleEnd.setDate(predictedCycleEnd.getDate() + cycleLength);
-
-                console.log('[MenstrualCycleService] Predictions:', {
-                    ovulationDate: ovulationDate.toISOString().split('T')[0],
-                    fertileStart: fertileStart.toISOString().split('T')[0],
-                    fertileEnd: fertileEnd.toISOString().split('T')[0],
-                    predictedCycleEnd: predictedCycleEnd.toISOString().split('T')[0]
-                });
-
-                // Create cycle data
+                if (overlappingCycles.length > 0) {
+                    // Merge all overlapping cycles with new period days
+                    console.log('[MenstrualCycleService] Merging', overlappingCycles.length, 'overlapping cycles');
+                    
+                    // Collect all period days from overlapping cycles
+                    let allPeriodDays = [...cycleDays];
+                    overlappingCycles.forEach(cycle => {
+                        allPeriodDays = [...allPeriodDays, ...cycle.period_days];
+                        cyclesToDelete.push(cycle._id);
+                    });
+                    
+                    // Remove duplicates and sort
+                    const uniquePeriodDays = allPeriodDays.filter((date, index, self) => 
+                        index === self.findIndex(d => d.getTime() === date.getTime())
+                    );
+                    uniquePeriodDays.sort((a, b) => a.getTime() - b.getTime());
+                    
+                    // Recalculate cycle properties
+                    const newCycleStartDate = uniquePeriodDays[0];
+                    const cycleLength = await this.calculatePersonalizedCycleLength(user_id, newCycleStartDate);
+                    
                 const cycleData = {
                     user_id: new mongoose.Types.ObjectId(user_id),
-                    cycle_start_date: cycleStartDate,
-                    period_days: cycleGroup,
+                        cycle_start_date: newCycleStartDate,
+                        period_days: uniquePeriodDays,
                     cycle_length: cycleLength,
-                    predicted_cycle_end: predictedCycleEnd,
-                    predicted_ovulation_date: ovulationDate,
-                    predicted_fertile_start: fertileStart,
-                    predicted_fertile_end: fertileEnd
-                };
+                        predicted_cycle_end: this.predictCycleEnd(newCycleStartDate, cycleLength),
+                        predicted_ovulation_date: this.predictOvulationDate(newCycleStartDate, cycleLength),
+                        predicted_fertile_start: this.predictFertileStart(newCycleStartDate, cycleLength),
+                        predicted_fertile_end: this.predictFertileEnd(newCycleStartDate, cycleLength)
+                    };
 
-                console.log('[MenstrualCycleService] Saving cycle data:', cycleData);
+                    const newCycle = await MenstrualCycleRepository.create(cycleData);
+                    processedCycles.push(newCycle._id);
+                } else {
+                    // Create new cycle
+                    console.log('[MenstrualCycleService] Creating new cycle');
+                    const cycleLength = await this.calculatePersonalizedCycleLength(user_id, cycleStartDate);
+                    
+                    const cycleData = {
+                        user_id: new mongoose.Types.ObjectId(user_id),
+                        cycle_start_date: cycleStartDate,
+                        period_days: cycleDays,
+                        cycle_length: cycleLength,
+                        predicted_cycle_end: this.predictCycleEnd(cycleStartDate, cycleLength),
+                        predicted_ovulation_date: this.predictOvulationDate(cycleStartDate, cycleLength),
+                        predicted_fertile_start: this.predictFertileStart(cycleStartDate, cycleLength),
+                        predicted_fertile_end: this.predictFertileEnd(cycleStartDate, cycleLength)
+                    };
 
-                // Save to database
-                const savedCycle = await MenstrualCycleRepository.create(cycleData);
-                console.log('[MenstrualCycleService] Cycle saved successfully:', {
-                    cycleId: savedCycle._id,
-                    startDate: savedCycle.cycle_start_date
-                });
-
-                // Convert to CycleData format for response
-                const cycleDataResponse: CycleData = {
-                    _id: savedCycle._id.toString(),
-                    user_id: savedCycle.user_id.toString(),
-                    cycle_start_date: savedCycle.cycle_start_date.toISOString(),
-                    period_days: savedCycle.period_days,
-                    cycle_length: savedCycle.cycle_length,
-                    predicted_cycle_end: savedCycle.predicted_cycle_end.toISOString(),
-                    predicted_ovulation_date: savedCycle.predicted_ovulation_date.toISOString(),
-                    predicted_fertile_start: savedCycle.predicted_fertile_start.toISOString(),
-                    predicted_fertile_end: savedCycle.predicted_fertile_end.toISOString(),
-                    createdAt: savedCycle.createdAt.toISOString(),
-                    updatedAt: savedCycle.updatedAt.toISOString()
-                };
-
-                savedCycles.push(cycleDataResponse);
+                    const newCycle = await MenstrualCycleRepository.create(cycleData);
+                    processedCycles.push(newCycle._id);
+                }
             }
-
-            console.log('[MenstrualCycleService] All cycles saved successfully:', {
-                totalSaved: savedCycles.length,
-                cycleIds: savedCycles.map(c => c._id)
-            });
+            
+            // Delete old overlapping cycles
+            if (cyclesToDelete.length > 0) {
+                console.log('[MenstrualCycleService] Deleting', cyclesToDelete.length, 'old overlapping cycles');
+                for (const cycleId of cyclesToDelete) {
+                    await MenstrualCycle.findByIdAndDelete(cycleId);
+                }
+            }
 
             return {
                 success: true,
-                message: `Đã lưu ${savedCycles.length} chu kỳ thành công`,
-                data: savedCycles
+                message: `Đã xử lý thành công ${processedCycles.length} chu kỳ`,
+                data: {
+                    processed_cycles: processedCycles.length,
+                    cycle_ids: processedCycles
+                }
             };
 
         } catch (error) {
-            console.error('[MenstrualCycleService] Error processing cycle with mood data:', error);
-            return {
-                success: false,
-                message: 'Lỗi hệ thống khi xử lý chu kỳ'
-            };
+            console.error('[MenstrualCycleService] Error processing cycle:', error);
+            throw error;
         }
     }
 
-    // Helper method to group period days into cycles
-    private static groupConsecutivePeriodDays(periodDays: IPeriodDay[]): IPeriodDay[][] {
-        console.log('[MenstrualCycleService] groupConsecutivePeriodDays input:', {
-            totalDays: periodDays.length,
-            dates: periodDays.map(pd => {
-                try {
-                    return pd.date.toISOString().split('T')[0];
-                } catch (error) {
-                    console.error('[MenstrualCycleService] Error formatting date in input:', pd.date, error);
-                    return 'Invalid Date';
-                }
-            })
+    // Calculate PMS window
+    private static calculatePMSWindow(
+        cycleStartDate: Date, 
+        cycleLength: number
+    ): { start: Date, end: Date } {
+        const pmsStart = new Date(cycleStartDate);
+        pmsStart.setDate(pmsStart.getDate() + cycleLength - 7);
+        
+        const pmsEnd = new Date(cycleStartDate);
+        pmsEnd.setDate(pmsEnd.getDate() + cycleLength - 1);
+        
+        return { start: pmsStart, end: pmsEnd };
+    }
+
+    // Detect potential pregnancy
+    public static async detectPotentialPregnancy(user_id: string): Promise<{
+        isPotential: boolean;
+        daysLate: number;
+        lastPeriodDate?: string;
+        expectedPeriodDate?: string;
+    }> {
+        try {
+            const cycles = await MenstrualCycleRepository.findByUser(user_id);
+            if (cycles.length === 0) {
+                return { isPotential: false, daysLate: 0 };
+            }
+
+            // Get the most recent cycle
+            const lastCycle = cycles.sort((a, b) => 
+                new Date(b.cycle_start_date).getTime() - new Date(a.cycle_start_date).getTime()
+            )[0];
+
+            const lastPeriodDate = lastCycle.period_days[lastCycle.period_days.length - 1];
+            const expectedPeriodDate = new Date(lastPeriodDate);
+            expectedPeriodDate.setDate(expectedPeriodDate.getDate() + (lastCycle.cycle_length || 28));
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            expectedPeriodDate.setHours(0, 0, 0, 0);
+
+            const daysLate = Math.floor((today.getTime() - expectedPeriodDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            // Consider potential pregnancy if more than 7 days late
+            const isPotential = daysLate > 7;
+
+            console.log('[MenstrualCycleService] Pregnancy detection:', {
+                lastPeriodDate: lastPeriodDate.toISOString().split('T')[0],
+                expectedPeriodDate: expectedPeriodDate.toISOString().split('T')[0],
+                daysLate,
+                isPotential
+            });
+
+            return {
+                isPotential,
+                daysLate: Math.max(0, daysLate),
+                lastPeriodDate: lastPeriodDate.toISOString(),
+                expectedPeriodDate: expectedPeriodDate.toISOString()
+            };
+            } catch (error) {
+            console.error('[MenstrualCycleService] Error detecting pregnancy:', error);
+            return { isPotential: false, daysLate: 0 };
+        }
+    }
+
+    // Smart merge logic for cycles
+    private static shouldMergeCycles(
+        existingCycle: IMenstrualCycle, 
+        newPeriodDays: Date[], 
+        newCycleStartDate: Date
+    ): boolean {
+        const existingStart = new Date(existingCycle.cycle_start_date);
+        const existingEnd = existingCycle.predicted_cycle_end || 
+            new Date(existingStart.getTime() + (existingCycle.cycle_length || 28) * 24 * 60 * 60 * 1000);
+        
+        // Check if any of the new period days fall within existing cycle range
+        const hasOverlappingDays = newPeriodDays.some(newDate => {
+            return newDate >= existingStart && newDate <= existingEnd;
         });
         
-        // Handle special case: only one day
-        if (periodDays.length === 1) {
-            console.log('[MenstrualCycleService] Single day input, creating single-day period');
-            return [periodDays];
-        }
+        // Check if the new cycle start date is within existing cycle range
+        const isWithinExistingCycle = newCycleStartDate >= existingStart && newCycleStartDate <= existingEnd;
         
-        const groups: IPeriodDay[][] = [];
-        let current: IPeriodDay[] = [periodDays[0]];
+        // Check if any existing period days are close to new period days (within 3 days for spotting)
+        const hasClosePeriodDays = existingCycle.period_days.some(existingPeriodDate => {
+            return newPeriodDays.some(newDate => {
+                const periodDaysDiff = Math.abs((newDate.getTime() - existingPeriodDate.getTime()) / (1000 * 60 * 60 * 24));
+                return periodDaysDiff <= 3; // Reduced from 7 to 3 days
+            });
+        });
+        
+        // Check if cycles are too close together (less than minimum cycle length)
+        const lastExistingPeriodDay = existingCycle.period_days[existingCycle.period_days.length - 1];
+        const daysBetween = Math.abs((newCycleStartDate.getTime() - lastExistingPeriodDay.getTime()) / (1000 * 60 * 60 * 24));
+        const isTooClose = daysBetween < CYCLE_CONSTRAINTS.MIN_CYCLE_LENGTH;
+        
+        console.log('[MenstrualCycleService] Checking overlap for cycle:', existingCycle._id, {
+            existingStart: existingStart.toISOString().split('T')[0],
+            existingEnd: existingEnd.toISOString().split('T')[0],
+            newCycleStart: newCycleStartDate.toISOString().split('T')[0],
+            hasOverlappingDays,
+            isWithinExistingCycle,
+            hasClosePeriodDays,
+            isTooClose,
+            daysBetween: Math.round(daysBetween)
+        });
+        
+        // Only merge if there's actual overlap or very close proximity
+        return hasOverlappingDays || isWithinExistingCycle || hasClosePeriodDays || isTooClose;
+    }
+
+    // Group consecutive period days into cycles
+    private static groupConsecutivePeriodDays(periodDays: Date[]): Date[][] {
+        if (periodDays.length === 0) return [];
+
+        const groups: Date[][] = [];
+        let currentGroup: Date[] = [periodDays[0]];
 
         for (let i = 1; i < periodDays.length; i++) {
-            const currentDate = new Date(periodDays[i].date);
-            const prevDate = new Date(periodDays[i - 1].date);
+            const currentDate = periodDays[i];
+            const previousDate = periodDays[i - 1];
             
-            const diffMs = currentDate.getTime() - prevDate.getTime();
-            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            // Calculate days difference
+            const daysDiff = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
             
-            try {
-                console.log(`[MenstrualCycleService] Day ${i}: ${currentDate.toISOString().split('T')[0]} - ${prevDate.toISOString().split('T')[0]} = ${diffDays} days`);
-            } catch (error) {
-                console.error('[MenstrualCycleService] Error formatting date in loop:', error);
-            }
-            
-            if (diffDays === 1) {
-                // Ngày liên tiếp - cùng kỳ kinh
-                current.push(periodDays[i]);
-                console.log(`[MenstrualCycleService] Consecutive day, current group size: ${current.length}`);
-            } else if (diffDays >= 21) {
-                // Khoảng cách >= 21 ngày - kỳ kinh mới
-                // Validate kỳ kinh hiện tại
-                if (current.length >= 1 && current.length <= 7) {
-                    groups.push(current);
-                    console.log(`[MenstrualCycleService] Valid period found: ${current.length} days`);
-                } else {
-                    console.warn(`[MenstrualCycleService] Bỏ qua kỳ kinh có ${current.length} ngày (không hợp lý)`);
-                }
-                current = [periodDays[i]];
+            // If consecutive or within MAX_DAYS_BETWEEN_PERIODS, add to current group
+            if (daysDiff <= CYCLE_CONSTRAINTS.MAX_DAYS_BETWEEN_PERIODS) {
+                currentGroup.push(currentDate);
             } else {
-                // Khoảng cách 2-20 ngày - có thể là lỗi hoặc kỳ kinh không đều
-                console.warn(`[MenstrualCycleService] Khoảng cách ${diffDays} ngày giữa các kỳ kinh không hợp lý`);
-                // Ghép vào kỳ hiện tại nếu khoảng cách nhỏ
-                if (diffDays <= 3) {
-                    current.push(periodDays[i]);
-                    console.log(`[MenstrualCycleService] Small gap, added to current group. Size: ${current.length}`);
-                } else {
-                    // Tạo kỳ mới nếu khoảng cách lớn
-                    if (current.length >= 1 && current.length <= 7) {
-                        groups.push(current);
-                        console.log(`[MenstrualCycleService] Valid period found after gap: ${current.length} days`);
-                    }
-                    current = [periodDays[i]];
-                }
+                // Start new group
+                groups.push([...currentGroup]);
+                currentGroup = [currentDate];
             }
         }
         
-        // Validate kỳ kinh cuối
-        if (current.length >= 1 && current.length <= 7) {
-            groups.push(current);
-            console.log(`[MenstrualCycleService] Final valid period: ${current.length} days`);
-        } else if (current.length > 0) {
-            console.warn(`[MenstrualCycleService] Bỏ qua kỳ kinh cuối có ${current.length} ngày (không hợp lý)`);
-        }
+        // Add the last group
+        groups.push(currentGroup);
         
-        console.log(`[MenstrualCycleService] Total valid periods found: ${groups.length}`);
         return groups;
     }
 
-    // Helper methods for predictions
-    private static calculateCycleLength(periodDays: IPeriodDay[]): number {
-        // Calculate the actual cycle length based on the period days
-        if (periodDays.length === 0) return 28; // Default cycle length
-        
-        // Sort period days by date
-        const sortedDays = periodDays.sort((a, b) => a.date.getTime() - b.date.getTime());
-        const firstDay = sortedDays[0].date;
-        const lastDay = sortedDays[sortedDays.length - 1].date;
-        
-        // Calculate period length (not cycle length)
-        const periodLength = Math.floor((lastDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        
-        console.log(`[MenstrualCycleService] Period length: ${periodLength} days`);
-        
-        // Return default cycle length - actual cycle length will be calculated from historical data
-        return 28;
-    }
-
-    // New method to calculate personalized cycle length from user's historical data
+    // Calculate personalized cycle length based on user's history with weighted average
     private static async calculatePersonalizedCycleLength(user_id: string, currentPeriodStart: Date): Promise<number> {
         try {
-            const cycles = await MenstrualCycleRepository.findByUser(user_id);
+            // Get user's previous cycles
+            const previousCycles = await MenstrualCycleRepository.findByUser(user_id);
             
-            if (!cycles || cycles.length === 0) {
-                return 28; // Default for first cycle
+            if (previousCycles.length === 0) {
+                return 28; // Default cycle length
             }
-            
-            // Sort cycles by start date
-            const sortedCycles = cycles.sort((a, b) => 
-                new Date(a.cycle_start_date).getTime() - new Date(b.cycle_start_date).getTime()
+
+            // Sort cycles by start date (most recent first)
+            const sortedCycles = previousCycles.sort((a, b) => 
+                new Date(b.cycle_start_date).getTime() - new Date(a.cycle_start_date).getTime()
             );
+
+            // Calculate actual cycle lengths from the gaps between cycles
+            const actualCycleLengths: number[] = [];
             
-            // Calculate cycle lengths between consecutive cycles
-            const cycleLengths: number[] = [];
-            
-            for (let i = 1; i < sortedCycles.length; i++) {
-                const currentStart = new Date(sortedCycles[i].cycle_start_date);
-                const previousStart = new Date(sortedCycles[i-1].cycle_start_date);
+            for (let i = 0; i < sortedCycles.length - 1; i++) {
+                const currentCycle = sortedCycles[i];
+                const nextCycle = sortedCycles[i + 1];
                 
-                const daysBetween = Math.floor((currentStart.getTime() - previousStart.getTime()) / (1000 * 60 * 60 * 24));
+                const currentStart = new Date(currentCycle.cycle_start_date);
+                const nextStart = new Date(nextCycle.cycle_start_date);
                 
-                // Only count if it's a reasonable cycle length (21-35 days)
-                if (daysBetween >= 21 && daysBetween <= 35) {
-                    cycleLengths.push(daysBetween);
+                const daysDiff = Math.floor((currentStart.getTime() - nextStart.getTime()) / (1000 * 60 * 60 * 24));
+                
+                // Only include reasonable cycle lengths (21-45 days)
+                if (daysDiff >= CYCLE_CONSTRAINTS.MIN_CYCLE_LENGTH && daysDiff <= CYCLE_CONSTRAINTS.MAX_CYCLE_LENGTH) {
+                    actualCycleLengths.push(daysDiff);
                 }
             }
-            
-            // Calculate with current cycle
-            if (sortedCycles.length > 0) {
-                const lastCycleStart = new Date(sortedCycles[sortedCycles.length - 1].cycle_start_date);
-                const daysBetween = Math.floor((currentPeriodStart.getTime() - lastCycleStart.getTime()) / (1000 * 60 * 60 * 24));
+
+            console.log('[MenstrualCycleService] Actual cycle lengths calculated:', {
+                totalCycles: sortedCycles.length,
+                actualCycleLengths,
+                cycleDates: sortedCycles.map(c => c.cycle_start_date.toISOString().split('T')[0])
+            });
+
+            // If we have actual cycle lengths, use weighted average
+            if (actualCycleLengths.length > 0) {
+                const maxCyclesToConsider = Math.min(6, actualCycleLengths.length);
+                const weights = [0.3, 0.25, 0.2, 0.15, 0.1, 0.05]; // Weights for up to 6 cycles
                 
-                if (daysBetween >= 21 && daysBetween <= 35) {
-                    cycleLengths.push(daysBetween);
+                let weightedSum = 0;
+                let totalWeight = 0;
+                
+                for (let i = 0; i < maxCyclesToConsider; i++) {
+                    weightedSum += actualCycleLengths[i] * weights[i];
+                    totalWeight += weights[i];
                 }
+                
+                const weightedAverage = weightedSum / totalWeight;
+                
+                // Validate the calculated length
+                const validatedLength = Math.max(
+                    CYCLE_CONSTRAINTS.MIN_CYCLE_LENGTH,
+                    Math.min(CYCLE_CONSTRAINTS.MAX_CYCLE_LENGTH, Math.round(weightedAverage))
+                );
+                
+                console.log('[MenstrualCycleService] Calculated cycle length from actual data:', {
+                    cyclesConsidered: maxCyclesToConsider,
+                    actualCycleLengths: actualCycleLengths.slice(0, maxCyclesToConsider),
+                    weightedAverage: Math.round(weightedAverage * 100) / 100,
+                    validatedLength
+                });
+                
+                return validatedLength;
             }
+
+            // Fallback: use existing cycle_length values if no actual gaps available
+            const maxCyclesToConsider = Math.min(6, sortedCycles.length);
+            const weights = [0.3, 0.25, 0.2, 0.15, 0.1, 0.05];
             
-            if (cycleLengths.length === 0) {
-                return 28; // Default if no valid cycles found
-            }
-            
-            // Calculate weighted average (recent cycles have higher weight)
             let weightedSum = 0;
             let totalWeight = 0;
             
-            for (let i = 0; i < cycleLengths.length; i++) {
-                const weight = Math.pow(1.2, i); // Recent cycles have higher weight
-                weightedSum += cycleLengths[i] * weight;
-                totalWeight += weight;
+            for (let i = 0; i < maxCyclesToConsider; i++) {
+                const cycle = sortedCycles[i];
+                if (cycle.cycle_length) {
+                    weightedSum += cycle.cycle_length * weights[i];
+                    totalWeight += weights[i];
+                }
             }
             
-            const personalizedCycleLength = Math.round(weightedSum / totalWeight);
+            const weightedAverage = weightedSum / totalWeight;
             
-            console.log(`[MenstrualCycleService] Personalized cycle length: ${personalizedCycleLength} days (from ${cycleLengths.length} cycles)`);
+            const validatedLength = Math.max(
+                CYCLE_CONSTRAINTS.MIN_CYCLE_LENGTH,
+                Math.min(CYCLE_CONSTRAINTS.MAX_CYCLE_LENGTH, Math.round(weightedAverage))
+            );
             
-            // Ensure within reasonable range
-            return Math.max(21, Math.min(35, personalizedCycleLength));
+            console.log('[MenstrualCycleService] Fallback: using existing cycle_length values:', {
+                cyclesConsidered: maxCyclesToConsider,
+                weightedAverage: Math.round(weightedAverage * 100) / 100,
+                validatedLength,
+                cycleLengths: sortedCycles.slice(0, maxCyclesToConsider).map(c => c.cycle_length)
+            });
             
+            return validatedLength;
         } catch (error) {
-            console.error('[MenstrualCycleService] Error calculating personalized cycle length:', error);
-            return 28; // Default on error
+            console.error('[MenstrualCycleService] Error calculating cycle length:', error);
+            return 28; // Default fallback
         }
     }
 
+    // Prediction methods
     private static predictCycleEnd(startDate: Date, cycleLength: number = 28): Date {
         const endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + cycleLength);
@@ -372,1004 +473,532 @@ export class MenstrualCycleService {
 
     private static predictOvulationDate(startDate: Date, cycleLength: number = 28): Date {
         const ovulationDate = new Date(startDate);
-        // Business Rule: Ovulation typically occurs 14 days before the next period
-        // So ovulation = cycle_start + (cycle_length - 14)
-        const ovulationDay = cycleLength - 14;
-        ovulationDate.setDate(ovulationDate.getDate() + ovulationDay);
-        
-        console.log('[Ovulation Prediction]', {
-            cycleStart: startDate.toISOString().split('T')[0],
-            cycleLength,
-            ovulationDay,
-            ovulationDate: ovulationDate.toISOString().split('T')[0]
-        });
-        
+        ovulationDate.setDate(ovulationDate.getDate() + cycleLength - 14);
         return ovulationDate;
     }
 
     private static predictFertileStart(startDate: Date, cycleLength: number = 28): Date {
-        const fertileStart = new Date(startDate);
-        // Business Rule: Fertile window = [ovulation - 5 days; ovulation + 1 day]
-        // Total fertile window = 7 days
+        // Cửa sổ thụ thai bắt đầu từ ngày rụng trứng - 5
         const ovulationDay = cycleLength - 14;
-        const fertileWindowStart = ovulationDay - 5; // 5 days before ovulation
-        fertileStart.setDate(fertileStart.getDate() + fertileWindowStart);
-        
-        console.log('[Fertile Window Start]', {
-            cycleStart: startDate.toISOString().split('T')[0],
-            ovulationDay,
-            fertileWindowStart,
-            fertileStart: fertileStart.toISOString().split('T')[0]
-        });
-        
+        const fertileStart = new Date(startDate);
+        fertileStart.setDate(fertileStart.getDate() + ovulationDay - 5);
         return fertileStart;
     }
 
     private static predictFertileEnd(startDate: Date, cycleLength: number = 28): Date {
-        const fertileEnd = new Date(startDate);
-        // Business Rule: Fertile window = [ovulation - 5 days; ovulation + 1 day]
-        // Total fertile window = 7 days
+        // Cửa sổ thụ thai kết thúc vào ngày rụng trứng + 1
         const ovulationDay = cycleLength - 14;
-        const fertileWindowEnd = ovulationDay + 1; // 1 day after ovulation
-        fertileEnd.setDate(fertileEnd.getDate() + fertileWindowEnd);
-        
-        console.log('[Fertile Window End]', {
-            cycleStart: startDate.toISOString().split('T')[0],
-            ovulationDay,
-            fertileWindowEnd,
-            fertileEnd: fertileEnd.toISOString().split('T')[0]
-        });
-        
+        const fertileEnd = new Date(startDate);
+        fertileEnd.setDate(fertileEnd.getDate() + ovulationDay + 1);
         return fertileEnd;
     }
 
-    // Create period day with mood data
-    public static async createPeriodDayWithMood(user_id: string, date: string, mood_data: IDailyMoodData): Promise<MoodDataResponse> {
+    // Get all cycles for a user
+    public static async getCycles(user_id: string) {
         try {
-            const result = await MenstrualCycleRepository.createPeriodDayWithMood(user_id, date, mood_data);
+            const cycles = await MenstrualCycleRepository.findByUser(user_id);
             
-            if (result) {
+            const cycleData: CycleData[] = cycles.map(cycle => ({
+                _id: cycle._id.toString(),
+                user_id: cycle.user_id.toString(),
+                cycle_start_date: cycle.cycle_start_date.toISOString(),
+                period_days: cycle.period_days.map(date => date.toISOString()),
+                cycle_length: cycle.cycle_length,
+                predicted_cycle_end: cycle.predicted_cycle_end?.toISOString(),
+                predicted_ovulation_date: cycle.predicted_ovulation_date?.toISOString(),
+                predicted_fertile_start: cycle.predicted_fertile_start?.toISOString(),
+                predicted_fertile_end: cycle.predicted_fertile_end?.toISOString(),
+                createdAt: cycle.createdAt.toISOString(),
+                updatedAt: cycle.updatedAt.toISOString()
+            }));
+
                 return {
                     success: true,
-                    message: 'Period day created with mood data successfully',
+                message: 'Lấy danh sách chu kỳ thành công',
                     data: {
-                        date,
-                        mood_data
-                    }
-                };
-            } else {
-                return {
-                    success: false,
-                    message: 'Failed to create period day with mood data'
-                };
-            }
-        } catch (error) {
-            console.error('Error creating period day with mood:', error);
-            return {
-                success: false,
-                message: 'Failed to create period day with mood data'
-            };
-        }
-    }
-
-    // Update period day mood data
-    public static async updatePeriodDayMood(user_id: string, date: string, mood_data: IDailyMoodData): Promise<MoodDataResponse> {
-        try {
-            const result = await MenstrualCycleRepository.updatePeriodDayMood(user_id, date, mood_data);
-            
-            if (result) {
-                return {
-                    success: true,
-                    message: 'Mood data updated successfully',
-                    data: {
-                        date,
-                        mood_data
-                    }
-                };
-            } else {
-                return {
-                    success: false,
-                    message: 'Period day not found or mood data not updated'
-                };
-            }
-        } catch (error) {
-            console.error('Error updating period day mood:', error);
-            return {
-                success: false,
-                message: 'Failed to update mood data'
-            };
-        }
-    }
-
-    // Get period day mood data
-    public static async getPeriodDayMood(user_id: string, date: string): Promise<MoodDataResponse> {
-        try {
-            const moodData = await MenstrualCycleRepository.getPeriodDayMood(user_id, date);
-            
-            if (moodData) {
-                return {
-                    success: true,
-                    message: 'Mood data retrieved successfully',
-                    data: {
-                        date,
-                        mood_data: moodData
-                    }
-                };
-            } else {
-                return {
-                    success: false,
-                    message: 'No mood data found for this date'
-                };
-            }
-        } catch (error) {
-            console.error('Error getting period day mood:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve mood data'
-            };
-        }
-    }
-
-    // Get cycle mood statistics
-    public static async getCycleMoodStatistics(user_id: string, cycle_id?: string): Promise<any> {
-        try {
-            const cycles = cycle_id 
-                ? await MenstrualCycleRepository.findById(cycle_id)
-                : await MenstrualCycleRepository.findByUser(user_id);
-
-            if (!cycles || (Array.isArray(cycles) && cycles.length === 0)) {
-                return {
-                    success: false,
-                    message: 'No cycles found'
-                };
-            }
-
-            const cycle = Array.isArray(cycles) ? cycles[0] : cycles;
-            const periodDays = cycle.period_days || [];
-            
-            const daysWithMood = periodDays.filter(day => day.mood_data);
-            const moodCounts: { [key: string]: number } = {};
-            const energyCounts: { high: number; medium: number; low: number } = { high: 0, medium: 0, low: 0 };
-            const allSymptoms: string[] = [];
-            const allNotes: string[] = [];
-
-            daysWithMood.forEach(day => {
-                if (day.mood_data) {
-                    // Count moods
-                    moodCounts[day.mood_data.mood] = (moodCounts[day.mood_data.mood] || 0) + 1;
-                    
-                    // Count energy levels
-                    energyCounts[day.mood_data.energy]++;
-                    
-                    // Collect symptoms
-                    if (day.mood_data.symptoms) {
-                        allSymptoms.push(...day.mood_data.symptoms);
-                    }
-                    
-                    // Collect notes
-                    if (day.mood_data.notes) {
-                        allNotes.push(day.mood_data.notes);
-                    }
+                    cycles: cycleData,
+                    total: cycleData.length
                 }
+            };
+        } catch (error) {
+            console.error('[MenstrualCycleService] Error getting cycles:', error);
+            throw error;
+        }
+    }
+
+    // Get today's status
+    public static async getTodayStatus(user_id: string) {
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const cycles = await MenstrualCycleRepository.findByUser(user_id);
+            if (cycles.length === 0) {
+                return {
+                    success: true,
+                    message: 'Không tìm thấy chu kỳ nào',
+                    data: {
+                        date: today.toISOString(),
+                        is_period_day: false,
+                        is_fertile_day: false,
+                        is_ovulation_day: false,
+                        pregnancy_chance: 'low' as const,
+                        recommendations: ['Bắt đầu theo dõi chu kỳ kinh nguyệt để nhận thông tin cá nhân hóa'],
+                        day_in_cycle: undefined,
+                        cycle_phase: 'unknown'
+                    }
+                };
+            }
+
+            // Find current cycle
+            const currentCycle = cycles.find(cycle => {
+                const cycleStart = new Date(cycle.cycle_start_date);
+                const cycleEnd = cycle.predicted_cycle_end || new Date(cycleStart.getTime() + (cycle.cycle_length || 28) * 24 * 60 * 60 * 1000);
+                return today >= cycleStart && today <= cycleEnd;
             });
 
-            // Calculate most common values
-            const mostCommonMood = Object.keys(moodCounts).reduce((a, b) => 
-                moodCounts[a] > moodCounts[b] ? a : b, 'neutral');
+            if (!currentCycle) {
+                return {
+                    success: true,
+                    message: 'Không trong chu kỳ hiện tại',
+                    data: {
+                        date: today.toISOString(),
+                        is_period_day: false,
+                        is_fertile_day: false,
+                        is_ovulation_day: false,
+                        pregnancy_chance: 'low' as const,
+                        recommendations: ['Bắt đầu theo dõi chu kỳ kinh nguyệt để nhận thông tin cá nhân hóa'],
+                        day_in_cycle: undefined,
+                        cycle_phase: 'unknown'
+                    }
+                };
+            }
+
+            // Check if today is a period day
+            const isPeriodDay = currentCycle.period_days.some(date => {
+                const periodDate = new Date(date);
+                periodDate.setHours(0, 0, 0, 0);
+                return periodDate.getTime() === today.getTime();
+            });
+
+            // Calculate day in cycle
+            const cycleStart = new Date(currentCycle.cycle_start_date);
+            let dayInCycle = Math.floor((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             
-            const mostCommonSymptoms = this.getMostCommonItems(allSymptoms, 5);
-            const commonNotes = this.getMostCommonItems(allNotes, 3);
+            // If today is a period day, calculate the actual day within the period
+            if (isPeriodDay) {
+                const periodDayIndex = currentCycle.period_days.findIndex(date => {
+                    const periodDate = new Date(date);
+                    periodDate.setHours(0, 0, 0, 0);
+                    return periodDate.getTime() === today.getTime();
+                });
+                if (periodDayIndex !== -1) {
+                    dayInCycle = periodDayIndex + 1; // 1-based index for display
+                }
+            }
 
-            // Calculate average mood (simplified)
-            const averageMood = mostCommonMood;
+            // Determine cycle phase
+            let cyclePhase = 'unknown';
+            let isFertileDay = false;
+            let isOvulationDay = false;
+            let pregnancyChance: 'low' | 'medium' | 'high' = 'low';
 
-            // Determine mood trend (simplified - can be enhanced)
-            const moodTrend = this.calculateMoodTrend(periodDays);
+            if (isPeriodDay) {
+                // If today is a period day, show menstrual phase
+                cyclePhase = 'menstrual';
+            } else {
+                // Calculate cycle day from cycle start for phase determination
+                const cycleDayFromStart = Math.floor((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                
+                // Tính toán dựa trên chu kỳ thực tế thay vì hardcode
+                const cycleLength = currentCycle.cycle_length || 28;
+                const ovulationDay = cycleLength - 14;
+                const fertileStart = ovulationDay - 5;
+                const fertileEnd = ovulationDay + 1;
+                
+                if (cycleDayFromStart <= 5) {
+                    cyclePhase = 'menstrual';
+                } else if (cycleDayFromStart >= fertileStart && cycleDayFromStart <= fertileEnd) {
+                    cyclePhase = 'fertile';
+                    isFertileDay = true;
+                    pregnancyChance = 'high';
+                    if (cycleDayFromStart === ovulationDay) {
+                        isOvulationDay = true;
+                    }
+                } else if (cycleDayFromStart >= fertileEnd + 1 && cycleDayFromStart <= cycleLength - 7) {
+                    cyclePhase = 'luteal';
+                } else {
+                    cyclePhase = 'follicular';
+                }
+            }
 
-            const statistics: PeriodMoodStatistics = {
-                total_period_days: periodDays.length,
-                days_with_mood_data: daysWithMood.length,
-                average_mood: averageMood,
-                most_common_mood: mostCommonMood,
-                most_common_symptoms: mostCommonSymptoms,
-                mood_trend: moodTrend,
-                energy_distribution: energyCounts,
-                common_notes: commonNotes
-            };
+            const recommendations = this.getRecommendations(cyclePhase, isPeriodDay, isFertileDay, isOvulationDay);
+
+            // Calculate PMS window
+            const pmsWindow = this.calculatePMSWindow(cycleStart, currentCycle.cycle_length);
+            const isPMSDay = today >= pmsWindow.start && today <= pmsWindow.end;
 
             return { 
                 success: true, 
-                message: 'Cycle mood statistics retrieved successfully',
-                data: statistics
-            };
-
-        } catch (error) {
-            console.error('Error getting cycle mood statistics:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve cycle mood statistics'
-            };
-        }
-    }
-
-    // Get cycle comparison
-    public static async getCycleComparison(user_id: string) {
-        try {
-            const cycles = await MenstrualCycleRepository.findByUser(user_id);
-            
-            if (!cycles || cycles.length < 2) {
-                return {
-                    success: false,
-                    message: 'Cần ít nhất 2 chu kỳ để so sánh'
-                };
-            }
-
-            // Sort cycles by start date
-            const sortedCycles = cycles.sort((a, b) => 
-                new Date(a.cycle_start_date).getTime() - new Date(b.cycle_start_date).getTime()
-            );
-
-            const comparisons = [];
-            
-            // Compare consecutive cycles
-            for (let i = 1; i < sortedCycles.length; i++) {
-                const currentCycle = sortedCycles[i];
-                const previousCycle = sortedCycles[i-1];
-                
-                const currentStart = new Date(currentCycle.cycle_start_date);
-                const previousStart = new Date(previousCycle.cycle_start_date);
-                
-                const daysBetween = Math.floor((currentStart.getTime() - previousStart.getTime()) / (1000 * 60 * 60 * 24));
-                
-                comparisons.push({
-                    cycle_number: i + 1,
-                    start_date: currentCycle.cycle_start_date,
-                    cycle_length: daysBetween,
-                    period_length: currentCycle.period_days.length,
-                    mood_comparison: this.compareMoodData(currentCycle.period_days, previousCycle.period_days)
-                });
-            }
-
-            return {
-                success: true,
-                message: 'Cycle comparison retrieved successfully',
+                message: 'Lấy trạng thái hôm nay thành công',
                 data: {
-                    total_cycles: cycles.length,
-                    comparisons: comparisons
+                    date: today.toISOString(),
+                    is_period_day: isPeriodDay,
+                    is_fertile_day: isFertileDay,
+                    is_ovulation_day: isOvulationDay,
+                    is_pms_day: isPMSDay,
+                    pregnancy_chance: pregnancyChance,
+                    recommendations,
+                    day_in_cycle: dayInCycle,
+                    cycle_phase: cyclePhase,
+                    predicted_cycle_end: currentCycle.predicted_cycle_end?.toISOString(),
+                    predicted_ovulation_date: currentCycle.predicted_ovulation_date?.toISOString(),
+                    predicted_fertile_start: currentCycle.predicted_fertile_start?.toISOString(),
+                    predicted_fertile_end: currentCycle.predicted_fertile_end?.toISOString(),
+                    pms_window_start: pmsWindow.start.toISOString(),
+                    pms_window_end: pmsWindow.end.toISOString(),
+                    cycle_length: currentCycle.cycle_length,
+                    period_length: currentCycle.period_days.length
                 }
             };
         } catch (error) {
-            console.error('Error getting cycle comparison:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve cycle comparison'
-            };
+            console.error('[MenstrualCycleService] Error getting today status:', error);
+            throw error;
         }
     }
 
+    // Get cycle statistics
     public static async getCycleStatistics(user_id: string) {
         try {
-            console.log('[getCycleStatistics] Starting with user_id:', user_id);
             const cycles = await MenstrualCycleRepository.findByUser(user_id);
-            console.log('[getCycleStatistics] Found cycles:', cycles?.length || 0);
             
-            if (!cycles || cycles.length === 0) {
-                console.log('[getCycleStatistics] No cycles found');
+            if (cycles.length === 0) {
                 return {
-                    success: false,
-                    message: 'Chưa có dữ liệu chu kỳ'
+                    success: true,
+                    message: 'Không tìm thấy chu kỳ để thống kê',
+                    data: {
+                        average_cycle_length: 0,
+                        shortest_cycle: 0,
+                        longest_cycle: 0,
+                        cycle_regularity: 'insufficient_data' as RegularityStatus,
+                        trend: 'stable' as TrendStatus,
+                        tracking_period_months: 0,
+                        total_cycles_tracked: 0,
+                        last_6_cycles: []
+                    }
                 };
             }
 
-            // Sort cycles by start date
+            // Sort cycles by start date (oldest first)
             const sortedCycles = cycles.sort((a, b) => 
                 new Date(a.cycle_start_date).getTime() - new Date(b.cycle_start_date).getTime()
             );
 
-            // Calculate cycle lengths from actual cycle_length in database
-            const cycleLengths = sortedCycles.map(cycle => cycle.cycle_length || 28);
+            // Calculate actual cycle lengths from gaps between cycles
+            const actualCycleLengths: number[] = [];
             
-            // Calculate average from actual cycle lengths
-            let averageCycleLength = 28;
-            if (cycleLengths.length > 0) {
-                averageCycleLength = Math.round(cycleLengths.reduce((sum, length) => sum + length, 0) / cycleLengths.length);
-            }
-
-            const shortestCycle = cycleLengths.length > 0 ? Math.min(...cycleLengths) : 28;
-            const longestCycle = cycleLengths.length > 0 ? Math.max(...cycleLengths) : 28;
-
-            // Determine regularity
-            let cycleRegularity = 'insufficient_data';
-            if (cycleLengths.length >= 3) {
-                const variance = cycleLengths.reduce((sum, length) => sum + Math.pow(length - averageCycleLength, 2), 0) / cycleLengths.length;
-                const standardDeviation = Math.sqrt(variance);
-                cycleRegularity = standardDeviation <= 3 ? 'regular' : 'irregular';
-            } else if (sortedCycles.length === 1) {
-                // For single cycle, show as regular if cycle length is within normal range
-                cycleRegularity = (averageCycleLength >= 21 && averageCycleLength <= 35) ? 'regular' : 'irregular';
-            }
-
-            // Determine trend
-            let trend = 'stable';
-            if (cycleLengths.length >= 3) {
-                const recentCycles = cycleLengths.slice(-3);
-                const firstHalf = recentCycles.slice(0, Math.ceil(recentCycles.length / 2));
-                const secondHalf = recentCycles.slice(Math.ceil(recentCycles.length / 2));
+            for (let i = 0; i < sortedCycles.length - 1; i++) {
+                const currentCycle = sortedCycles[i];
+                const nextCycle = sortedCycles[i + 1];
                 
-                const firstAvg = firstHalf.reduce((sum, length) => sum + length, 0) / firstHalf.length;
-                const secondAvg = secondHalf.reduce((sum, length) => sum + length, 0) / secondHalf.length;
+                const currentStart = new Date(currentCycle.cycle_start_date);
+                const nextStart = new Date(nextCycle.cycle_start_date);
                 
-                if (secondAvg > firstAvg + 2) {
-                    trend = 'lengthening';
-                } else if (secondAvg < firstAvg - 2) {
-                    trend = 'shortening';
+                const daysDiff = Math.floor((currentStart.getTime() - nextStart.getTime()) / (1000 * 60 * 60 * 24));
+                
+                // Only include reasonable cycle lengths (21-45 days)
+                if (daysDiff >= CYCLE_CONSTRAINTS.MIN_CYCLE_LENGTH && daysDiff <= CYCLE_CONSTRAINTS.MAX_CYCLE_LENGTH) {
+                    actualCycleLengths.push(daysDiff);
                 }
             }
 
+            console.log('[MenstrualCycleService] Statistics - Actual cycle lengths:', {
+                totalCycles: sortedCycles.length,
+                actualCycleLengths,
+                cycleDates: sortedCycles.map(c => c.cycle_start_date.toISOString().split('T')[0])
+            });
+
+            // Use actual cycle lengths if available, otherwise fallback to stored cycle_length
+            const cycleLengths = actualCycleLengths.length > 0 ? actualCycleLengths : 
+                sortedCycles.map(cycle => cycle.cycle_length || 28);
+
+            const averageLength = cycleLengths.reduce((sum, length) => sum + length, 0) / cycleLengths.length;
+            const shortestCycle = Math.min(...cycleLengths);
+            const longestCycle = Math.max(...cycleLengths);
+
+            // Calculate regularity
+            const variance = cycleLengths.reduce((sum, length) => sum + Math.pow(length - averageLength, 2), 0) / cycleLengths.length;
+                const standardDeviation = Math.sqrt(variance);
+            const regularity: RegularityStatus = standardDeviation <= 3 ? 'regular' : 'irregular';
+
+            // Calculate trend based on actual cycle lengths
+            const recentCycleLengths = actualCycleLengths.length > 0 ? 
+                actualCycleLengths.slice(-6) : 
+                sortedCycles.slice(-6).map(c => c.cycle_length || 28);
+            
+            const trend: TrendStatus = recentCycleLengths.length < 2 ? 'stable' : 
+                recentCycleLengths[recentCycleLengths.length - 1] > recentCycleLengths[0] ? 'lengthening' :
+                recentCycleLengths[recentCycleLengths.length - 1] < recentCycleLengths[0] ? 'shortening' : 'stable';
+
             // Calculate tracking period
-            const firstCycleDate = new Date(sortedCycles[0].cycle_start_date);
-            const lastCycleDate = new Date(sortedCycles[sortedCycles.length - 1].cycle_start_date);
-            const trackingPeriodMonths = Math.ceil(
-                (lastCycleDate.getTime() - firstCycleDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-            );
+            const firstCycle = sortedCycles[0];
+            const lastCycle = sortedCycles[sortedCycles.length - 1];
+            const trackingPeriodMonths = Math.ceil((lastCycle.createdAt.getTime() - firstCycle.createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30));
 
-            // Get last 6 cycles with actual cycle_length from database
-            const last6Cycles = sortedCycles.slice(-6).map((cycle) => {
-                const cycleLength = cycle.cycle_length || 28;
-                
-                return {
-                    start_date: cycle.cycle_start_date,
-                    length: cycleLength >= 21 && cycleLength <= 35 ? cycleLength : 28
-                };
-            });
-
-            console.log('[getCycleStatistics] Calculated stats:', {
-                total_cycles: sortedCycles.length,
-                cycle_lengths: cycleLengths,
-                average_cycle_length: averageCycleLength,
-                shortest_cycle: shortestCycle,
-                longest_cycle: longestCycle,
-                cycle_regularity: cycleRegularity,
-                trend: trend,
-                tracking_period_months: trackingPeriodMonths,
-                total_cycles_tracked: sortedCycles.length,
-                last_6_cycles_count: last6Cycles.length
-            });
+            const last6Cycles = sortedCycles.slice(-6).map(cycle => ({
+                start_date: cycle.cycle_start_date.toISOString(),
+                length: cycle.cycle_length || 28
+            }));
             
             return {
                 success: true,
-                message: 'Cycle statistics retrieved successfully',
+                message: 'Lấy thống kê chu kỳ thành công',
                 data: {
-                    average_cycle_length: averageCycleLength,
+                    average_cycle_length: Math.round(averageLength),
                     shortest_cycle: shortestCycle,
                     longest_cycle: longestCycle,
-                    cycle_regularity: cycleRegularity,
-                    trend: trend,
+                    cycle_regularity: regularity,
+                    trend,
                     tracking_period_months: trackingPeriodMonths,
-                    total_cycles_tracked: sortedCycles.length,
+                    total_cycles_tracked: cycles.length,
                     last_6_cycles: last6Cycles
                 }
             };
         } catch (error) {
-            console.error('[getCycleStatistics] Error:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve cycle statistics'
-            };
+            console.error('[MenstrualCycleService] Error getting cycle statistics:', error);
+            throw error;
         }
     }
 
+    // Get period statistics
     public static async getPeriodStatistics(user_id: string) {
         try {
             const cycles = await MenstrualCycleRepository.findByUser(user_id);
             
-            if (!cycles || cycles.length === 0) {
+            if (cycles.length === 0) {
                 return {
-                    success: false,
-                    message: 'Chưa có dữ liệu chu kỳ'
+                    success: true,
+                    message: 'Không tìm thấy ngày hành kinh để thống kê',
+                    data: {
+                        average_period_length: 0,
+                        shortest_period: 0,
+                        longest_period: 0,
+                        period_regularity: 'insufficient_data' as RegularityStatus,
+                        total_periods_tracked: 0,
+                        last_3_periods: []
+                    }
                 };
             }
 
-            // Calculate period lengths
-            const periodLengths = cycles.map(cycle => cycle.period_days.length).filter(length => length > 0);
-            
-            if (periodLengths.length === 0) {
-                return {
-                    success: false,
-                    message: 'Chưa có dữ liệu kinh nguyệt'
-                };
-            }
-
-            const averagePeriodLength = Math.round(periodLengths.reduce((sum, length) => sum + length, 0) / periodLengths.length);
+            const periodLengths = cycles.map(cycle => cycle.period_days.length);
+            const averageLength = periodLengths.reduce((sum, length) => sum + length, 0) / periodLengths.length;
             const shortestPeriod = Math.min(...periodLengths);
             const longestPeriod = Math.max(...periodLengths);
 
-            // Determine regularity
-            let periodRegularity = 'insufficient_data';
-            if (periodLengths.length >= 3) {
-                const variance = periodLengths.reduce((sum, length) => sum + Math.pow(length - averagePeriodLength, 2), 0) / periodLengths.length;
+            // Calculate regularity
+            const variance = periodLengths.reduce((sum, length) => sum + Math.pow(length - averageLength, 2), 0) / periodLengths.length;
                 const standardDeviation = Math.sqrt(variance);
-                periodRegularity = standardDeviation <= 1 ? 'regular' : 'irregular';
-            }
+            const regularity: RegularityStatus = standardDeviation <= 1 ? 'regular' : 'irregular';
 
-            // Get last 3 periods
             const last3Periods = cycles.slice(-3).map(cycle => ({
-                start_date: cycle.cycle_start_date,
+                start_date: cycle.cycle_start_date.toISOString(),
                 length: cycle.period_days.length
             }));
 
             return {
                 success: true,
-                message: 'Period statistics retrieved successfully',
+                message: 'Lấy thống kê ngày hành kinh thành công',
                 data: {
-                    average_period_length: averagePeriodLength,
+                    average_period_length: Math.round(averageLength),
                     shortest_period: shortestPeriod,
                     longest_period: longestPeriod,
-                    period_regularity: periodRegularity,
+                    period_regularity: regularity,
                     total_periods_tracked: cycles.length,
                     last_3_periods: last3Periods
                 }
             };
         } catch (error) {
-            console.error('Error getting period statistics:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve period statistics'
-            };
+            console.error('[MenstrualCycleService] Error getting period statistics:', error);
+            throw error;
         }
     }
 
-    public static async getMoodStatistics(user_id: string) {
+    // Delete a specific period day and recalculate cycle
+    public static async deletePeriodDay(user_id: string, dateToDelete: string) {
         try {
-            console.log('[Backend] Getting mood statistics for user:', user_id);
+            console.log('[MenstrualCycleService] deletePeriodDay called with:', { user_id, dateToDelete });
             
             const cycles = await MenstrualCycleRepository.findByUser(user_id);
-            if (!cycles || cycles.length === 0) {
+            if (cycles.length === 0) {
                 return {
                     success: false,
-                    message: 'No cycles found for user'
+                    message: 'Không tìm thấy chu kỳ nào'
                 };
             }
 
-            // Calculate mood statistics
-            const moodCounts = {
-                happy: 0,
-                neutral: 0,
-                tired: 0,
-                stressed: 0,
-                other: 0
-            };
-
-            const energyCounts = {
-                high: 0,
-                medium: 0,
-                low: 0
-            };
-
-            let totalMoodEntries = 0;
-
-            cycles.forEach(cycle => {
-                if (cycle.period_days && cycle.period_days.length > 0) {
-                    cycle.period_days.forEach((periodDay: any) => {
-                        if (periodDay.mood_data && periodDay.mood_data.mood) {
-                            totalMoodEntries++;
-                            
-                            // Count moods
-                            switch (periodDay.mood_data.mood) {
-                                case 'happy':
-                                    moodCounts.happy++;
-                                    break;
-                                case 'neutral':
-                                    moodCounts.neutral++;
-                                    break;
-                                case 'tired':
-                                    moodCounts.tired++;
-                                    break;
-                                case 'stressed':
-                                    moodCounts.stressed++;
-                                    break;
-                                default:
-                                    moodCounts.other++;
+            // Find the cycle containing the period day to delete
+            let targetCycle: any = null;
+            let dayIndex: number = -1;
+            
+            for (const cycle of cycles) {
+                const index = cycle.period_days.findIndex(date => {
+                    const cycleDate = new Date(date);
+                    const deleteDate = new Date(dateToDelete);
+                    return cycleDate.toISOString().split('T')[0] === deleteDate.toISOString().split('T')[0];
+                });
+                
+                if (index !== -1) {
+                    targetCycle = cycle;
+                    dayIndex = index;
                                     break;
                             }
-
-                            // Count energy levels
-                            if (periodDay.mood_data.energy) {
-                                switch (periodDay.mood_data.energy) {
-                                    case 'high':
-                                        energyCounts.high++;
-                                        break;
-                                    case 'medium':
-                                        energyCounts.medium++;
-                                        break;
-                                    case 'low':
-                                        energyCounts.low++;
-                                        break;
-                                }
-                            }
-                        }
-                    });
-                }
-            });
-
-            return {
-                success: true,
-                data: {
-                    total_mood_entries: totalMoodEntries,
-                    mood_distribution: {
-                        happy: moodCounts.happy,
-                        neutral: moodCounts.neutral,
-                        tired: moodCounts.tired,
-                        stressed: moodCounts.stressed,
-                        other: moodCounts.other
-                    },
-                    energy_distribution: {
-                        high: energyCounts.high,
-                        medium: energyCounts.medium,
-                        low: energyCounts.low
-                    },
-                    most_common_mood: Object.keys(moodCounts).reduce((a, b) => 
-                        moodCounts[a as keyof typeof moodCounts] > moodCounts[b as keyof typeof moodCounts] ? a : b
-                    ),
-                    most_common_energy: Object.keys(energyCounts).reduce((a, b) => 
-                        energyCounts[a as keyof typeof energyCounts] > energyCounts[b as keyof typeof energyCounts] ? a : b
-                    )
-                }
-            };
-        } catch (error) {
-            console.error('[Backend] Error getting mood statistics:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve mood statistics'
-            };
-        }
-    }
-
-    // Helper methods
-    private static getMostCommonItems(items: string[], limit: number): string[] {
-        const counts: { [key: string]: number } = {};
-        items.forEach(item => {
-            counts[item] = (counts[item] || 0) + 1;
-        });
-        
-        return Object.entries(counts)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, limit)
-            .map(([item]) => item);
-    }
-
-    private static calculateMoodTrend(periodDays: IPeriodDay[]): 'improving' | 'declining' | 'stable' {
-        const daysWithMood = periodDays.filter(day => day.mood_data).sort((a, b) => 
-            a.date.getTime() - b.date.getTime()
-        );
-
-        if (daysWithMood.length < 2) {
-            return 'stable';
-        }
-
-        // Simple trend calculation based on mood progression
-        const moodScores: { [key: string]: number } = {
-            'happy': 5, 'excited': 4, 'calm': 3, 'neutral': 2, 'tired': 1, 'sad': 0, 'stressed': 0
-        };
-
-        const scores = daysWithMood.map(day => moodScores[day.mood_data!.mood] || 2);
-        const firstHalf = scores.slice(0, Math.ceil(scores.length / 2));
-        const secondHalf = scores.slice(Math.ceil(scores.length / 2));
-
-        const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
-        const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
-
-        if (secondAvg > firstAvg + 0.5) return 'improving';
-        if (secondAvg < firstAvg - 0.5) return 'declining';
-        return 'stable';
-    }
-
-    private static calculateComparisonTrends(currentStats: PeriodMoodStatistics, previousStats: any[]): any {
-        if (previousStats.length === 0) {
-            return {
-                overall_trend: 'stable',
-                symptom_changes: [],
-                energy_trend: 'stable'
-            };
-        }
-
-        // Calculate average of previous cycles
-        const avgPreviousMood = previousStats.reduce((sum, stat) => {
-            const moodScores: { [key: string]: number } = {
-                'happy': 5, 'excited': 4, 'calm': 3, 'neutral': 2, 'tired': 1, 'sad': 0, 'stressed': 0
-            };
-            return sum + (moodScores[stat.average_mood] || 2);
-        }, 0) / previousStats.length;
-
-        const currentMoodScore = {
-            'happy': 5, 'excited': 4, 'calm': 3, 'neutral': 2, 'tired': 1, 'sad': 0, 'stressed': 0
-        }[currentStats.average_mood] || 2;
-
-        const overallTrend = currentMoodScore > avgPreviousMood + 0.5 ? 'improving' 
-            : currentMoodScore < avgPreviousMood - 0.5 ? 'declining' : 'stable';
-
-        return {
-            overall_trend: overallTrend,
-            symptom_changes: [], // Can be enhanced with detailed symptom comparison
-            energy_trend: 'stable' // Can be enhanced with energy level comparison
-        };
-    }
-
-    // Keep existing methods for backward compatibility - simplified version
-    public static async processPeriodDays(user_id: string, period_days: Date[], mood_data: IMoodData = {}) {
-        // Convert old format to new format
-        const periodDayRequests: PeriodDayMoodRequest[] = period_days.map(date => ({
-            date: date.toISOString().split('T')[0],
-            mood_data: {
-                mood: 'neutral',
-                energy: 'medium',
-                symptoms: [],
-                notes: ''
             }
-        }));
 
-        const request: ProcessCycleWithMoodRequest = {
-            period_days: periodDayRequests
-        };
-
-        return this.processCycleWithMoodData(user_id, request);
-    }
-
-    // Add other existing methods as needed for backward compatibility
-    public static async getCycles(user_id: string) {
-        try {
-            console.log('[Backend] getCycles called with user_id:', user_id);
-            
-            // Clean up duplicates first
-            await MenstrualCycleRepository.cleanupDuplicateCycles(user_id);
-            
-            const cycles = await MenstrualCycleRepository.findByUser(user_id);
-            console.log('[Backend] getCycles result:', {
-                cyclesFound: cycles?.length || 0,
-                cycles: cycles?.map(c => ({
-                    _id: c._id,
-                    cycle_start_date: c.cycle_start_date,
-                    period_days_count: c.period_days?.length || 0,
-                    cycle_length: c.cycle_length
-                }))
-            });
-            return {
-                success: true,
-                message: 'Cycles retrieved successfully',
-                data: cycles
-            };
-        } catch (error) {
-            console.error('Error getting cycles:', error);
+            if (!targetCycle || dayIndex === -1) {
             return {
                 success: false,
-                message: 'Failed to retrieve cycles'
-            };
-        }
-    }
+                    message: 'Không tìm thấy ngày hành kinh cần xóa'
+                };
+            }
 
-    public static async getTodayStatus(user_id: string) {
-        try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const cycles = await MenstrualCycleRepository.findByUser(user_id);
+            console.log('[MenstrualCycleService] Found cycle to update:', {
+                cycleId: targetCycle._id,
+                originalPeriodDays: targetCycle.period_days.length,
+                dayToDelete: dateToDelete
+            });
+
+            // Remove the specific day
+            const updatedPeriodDays = targetCycle.period_days.filter((date: Date, index: number) => index !== dayIndex);
             
-            if (!cycles || cycles.length === 0) {
+            // If no period days left, delete the entire cycle
+            if (updatedPeriodDays.length === 0) {
+                await MenstrualCycle.findByIdAndDelete(targetCycle._id);
+                console.log('[MenstrualCycleService] Deleted entire cycle as no period days left');
+                
+            return {
+                    success: true,
+                    message: 'Đã xóa ngày hành kinh và chu kỳ',
+                    data: {
+                        deleted_date: dateToDelete,
+                        cycle_deleted: true
+                    }
+                };
+            }
+
+            // Recalculate cycle properties
+            const cycleStartDate = updatedPeriodDays[0];
+            const cycleLength = await this.calculatePersonalizedCycleLength(user_id, cycleStartDate);
+            
+            const updatedCycleData = {
+                period_days: updatedPeriodDays,
+                cycle_length: cycleLength,
+                predicted_cycle_end: this.predictCycleEnd(cycleStartDate, cycleLength),
+                predicted_ovulation_date: this.predictOvulationDate(cycleStartDate, cycleLength),
+                predicted_fertile_start: this.predictFertileStart(cycleStartDate, cycleLength),
+                predicted_fertile_end: this.predictFertileEnd(cycleStartDate, cycleLength)
+            };
+
+            // Update the cycle
+            await MenstrualCycleRepository.updateCycle(targetCycle._id, updatedCycleData);
+            
+            console.log('[MenstrualCycleService] Successfully updated cycle:', {
+                cycleId: targetCycle._id,
+                newPeriodDaysCount: updatedPeriodDays.length,
+                newCycleLength: cycleLength
+            });
+
                 return {
                     success: true,
-                    message: 'No cycles found',
+                message: 'Đã xóa ngày hành kinh thành công',
                     data: {
-                        date: today.toISOString().split('T')[0],
-                        is_period_day: false,
-                        is_fertile_day: false,
-                        is_ovulation_day: false,
-                        pregnancy_chance: 'low',
-                        recommendations: ['Start tracking your cycle'],
-                        period_mood_data: undefined,
-                        day_in_cycle: 0,
-                        cycle_phase: 'Unknown'
-                    }
-                };
-            }
-            
-            // Get the latest cycle
-            const latestCycle = cycles[0];
-            const cycleStartDate = new Date(latestCycle.cycle_start_date);
-            cycleStartDate.setHours(0, 0, 0, 0);
-            
-            // Calculate personalized cycle length based on user's historical data
-            let cycleLength = await this.calculatePersonalizedCycleLength(user_id, cycleStartDate);
-            
-            // If we have enough cycles, use the average from statistics for more accurate predictions
-            if (cycles.length >= 2) {
-                const cycleStats = await this.getCycleStatistics(user_id);
-                if (cycleStats.success && cycleStats.data) {
-                    cycleLength = cycleStats.data.average_cycle_length;
-                    console.log('[Backend] Using average cycle length from statistics:', cycleLength);
+                    deleted_date: dateToDelete,
+                    cycle_id: targetCycle._id,
+                    remaining_period_days: updatedPeriodDays.length,
+                    updated_cycle_length: cycleLength
                 }
-            }
-            
-            // Calculate day in cycle
-            const daysSinceStart = Math.floor((today.getTime() - cycleStartDate.getTime()) / (1000 * 60 * 60 * 24));
-            
-            console.log('[Backend] getTodayStatus debug:', {
-                today: today.toISOString().split('T')[0],
-                cycleStartDate: cycleStartDate.toISOString().split('T')[0],
-                daysSinceStart,
-                originalCycleLength: latestCycle.cycle_length,
-                calculatedCycleLength: cycleLength,
-                predictedCycleEnd: latestCycle.predicted_cycle_end
-            });
-            
-            let dayInCycle = 0;
-            let cyclePhase = 'Unknown';
-            
-            if (daysSinceStart >= 0) {
-                // Calculate actual day in cycle (not using modulo)
-                dayInCycle = daysSinceStart + 1;
-                
-                // If we've exceeded the cycle length, we're in the next cycle
-                if (dayInCycle > cycleLength) {
-                    // Check if we have a predicted next cycle start
-                    if (latestCycle.predicted_cycle_end) {
-                        const predictedNextStart = new Date(latestCycle.predicted_cycle_end);
-                        const daysSinceNextStart = Math.floor((today.getTime() - predictedNextStart.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysSinceNextStart >= 0) {
-                            dayInCycle = daysSinceNextStart + 1;
-                        } else {
-                            // We're between cycles, show the last day of current cycle
-                            dayInCycle = cycleLength;
-                        }
-                    } else {
-                        // No prediction, show the last day of current cycle
-                        dayInCycle = cycleLength;
-                    }
-                }
-            } else {
-                // If today is before cycle start, calculate based on predicted cycle
-                if (latestCycle.predicted_cycle_end) {
-                    const predictedEnd = new Date(latestCycle.predicted_cycle_end);
-                    const totalCycleDays = Math.floor((predictedEnd.getTime() - cycleStartDate.getTime()) / (1000 * 60 * 60 * 24));
-                    dayInCycle = totalCycleDays + daysSinceStart + 1;
-                }
-            }
-            
-            // Ensure dayInCycle is within valid range
-            dayInCycle = Math.max(1, Math.min(dayInCycle, cycleLength));
-            
-            console.log('[Backend] Calculated dayInCycle:', dayInCycle);
-            
-            // Determine cycle phase based on personalized cycle length
-            const ovulationDay = cycleLength - 14; // Ovulation occurs 14 days before next period
-            const menstrualPhaseEnd = 5; // First 5 days are typically menstrual
-            const follicularPhaseEnd = ovulationDay - 1; // Follicular phase until ovulation
-            const fertileStart = ovulationDay - 5; // Fertile window starts 5 days before ovulation
-            const fertileEnd = ovulationDay + 1; // Fertile window ends 1 day after ovulation
-            
-            console.log('[Backend] Cycle phase calculation:', {
-                dayInCycle,
-                cycleLength,
-                ovulationDay,
-                fertileStart,
-                fertileEnd,
-                menstrualPhaseEnd,
-                follicularPhaseEnd
-            });
-            
-            if (dayInCycle <= menstrualPhaseEnd) {
-                cyclePhase = 'Menstrual';
-            } else if (dayInCycle <= follicularPhaseEnd) {
-                cyclePhase = 'Follicular';
-            } else if (dayInCycle === ovulationDay) {
-                cyclePhase = 'Ovulation';
-            } else {
-                cyclePhase = 'Luteal';
-            }
-            
-            // Find if today is a period day
-            const isPeriodDay = cycles.some(cycle => 
-                cycle.period_days.some(day => {
-                    const dayDate = new Date(day.date);
-                    dayDate.setHours(0, 0, 0, 0);
-                    return dayDate.getTime() === today.getTime();
-                })
-            );
-
-            const periodMoodData = isPeriodDay ? 
-                cycles.find(cycle => 
-                    cycle.period_days.some(day => {
-                        const dayDate = new Date(day.date);
-                        dayDate.setHours(0, 0, 0, 0);
-                        return dayDate.getTime() === today.getTime();
-                    })
-                )?.period_days.find(day => {
-                    const dayDate = new Date(day.date);
-                    dayDate.setHours(0, 0, 0, 0);
-                    return dayDate.getTime() === today.getTime();
-                })?.mood_data : undefined;
-
-            // Check if today is fertile or ovulation day based on dayInCycle
-            const isOvulationDay = dayInCycle === ovulationDay;
-            const isFertileDay = dayInCycle >= fertileStart && dayInCycle <= fertileEnd;
-            
-            // Also check predicted dates as backup
-            const isOvulationDayPredicted = latestCycle.predicted_ovulation_date && 
-                new Date(latestCycle.predicted_ovulation_date).toDateString() === today.toDateString();
-            
-            const isFertileDayPredicted = latestCycle.predicted_fertile_start && latestCycle.predicted_fertile_end &&
-                today >= new Date(latestCycle.predicted_fertile_start) && 
-                today <= new Date(latestCycle.predicted_fertile_end);
-            
-            // Use dayInCycle calculation as primary, predicted dates as backup
-            const finalIsOvulationDay = isOvulationDay || isOvulationDayPredicted;
-            const finalIsFertileDay = isFertileDay || isFertileDayPredicted;
-            
-            console.log('[Backend] Fertility status:', {
-                dayInCycle,
-                ovulationDay,
-                fertileStart,
-                fertileEnd,
-                isOvulationDay,
-                isFertileDay,
-                isOvulationDayPredicted,
-                isFertileDayPredicted,
-                finalIsOvulationDay,
-                finalIsFertileDay
-            });
-
-            // Business Rule: Pregnancy Chance Estimation
-            let pregnancyChance: 'low' | 'medium' | 'high' = 'low';
-            if (finalIsOvulationDay) {
-                pregnancyChance = 'high';
-            } else if (finalIsFertileDay) {
-                pregnancyChance = 'medium';
-            }
-
-            // Calculate next cycle predictions
-            const nextCycleStart = latestCycle.predicted_cycle_end ? new Date(latestCycle.predicted_cycle_end) : null;
-            const nextOvulationDate = nextCycleStart ? this.predictOvulationDate(nextCycleStart, cycleLength) : null;
-            const nextFertileStart = nextCycleStart ? this.predictFertileStart(nextCycleStart, cycleLength) : null;
-            const nextFertileEnd = nextCycleStart ? this.predictFertileEnd(nextCycleStart, cycleLength) : null;
-
-            const todayStatus: TodayStatus = {
-                date: today.toISOString().split('T')[0],
-                is_period_day: isPeriodDay,
-                is_fertile_day: finalIsFertileDay,
-                is_ovulation_day: finalIsOvulationDay,
-                pregnancy_chance: pregnancyChance,
-                recommendations: this.getRecommendations(cyclePhase, isPeriodDay, finalIsFertileDay, finalIsOvulationDay),
-                period_mood_data: periodMoodData,
-                day_in_cycle: dayInCycle,
-                cycle_phase: cyclePhase,
-                // Add prediction data
-                predicted_cycle_end: latestCycle.predicted_cycle_end?.toISOString().split('T')[0],
-                predicted_ovulation_date: latestCycle.predicted_ovulation_date?.toISOString().split('T')[0],
-                predicted_fertile_start: latestCycle.predicted_fertile_start?.toISOString().split('T')[0],
-                predicted_fertile_end: latestCycle.predicted_fertile_end?.toISOString().split('T')[0],
-                // Next cycle predictions
-                next_cycle_start: nextCycleStart?.toISOString().split('T')[0],
-                next_ovulation_date: nextOvulationDate?.toISOString().split('T')[0],
-                next_fertile_start: nextFertileStart?.toISOString().split('T')[0],
-                next_fertile_end: nextFertileEnd?.toISOString().split('T')[0],
-                cycle_length: cycleLength,
-                period_length: latestCycle.period_days.length
             };
 
-            return {
-                success: true,
-                message: 'Today status retrieved successfully',
-                data: todayStatus
-            };
         } catch (error) {
-            console.error('Error getting today status:', error);
-            return {
-                success: false,
-                message: 'Failed to retrieve today status'
-            };
+            console.error('[MenstrualCycleService] Error deleting period day:', error);
+            throw error;
         }
     }
 
+    // Delete a specific cycle
+    public static async deleteCycle(user_id: string, cycleId: string) {
+        try {
+            console.log('[MenstrualCycleService] deleteCycle called with:', { user_id, cycleId });
+            
+            // Find the cycle and verify ownership
+            const cycle = await MenstrualCycle.findById(cycleId);
+            if (!cycle) {
+                throw new Error('Không tìm thấy chu kỳ');
+            }
+            
+            if (cycle.user_id.toString() !== user_id) {
+                throw new Error('Không có quyền xóa chu kỳ này');
+            }
+            
+            // Delete the cycle
+            await MenstrualCycle.findByIdAndDelete(cycleId);
+
+            return {
+                success: true,
+                message: 'Đã xóa chu kỳ thành công'
+            };
+            
+        } catch (error) {
+            console.error('[MenstrualCycleService] Error deleting cycle:', error);
+            throw error;
+        }
+    }
+
+    // Get recommendations based on cycle phase
     private static getRecommendations(cyclePhase: string, isPeriodDay: boolean, isFertileDay: boolean, isOvulationDay: boolean): string[] {
-        const recommendations = [];
+        const recommendations: string[] = [];
         
         if (isPeriodDay) {
-            recommendations.push('Stay hydrated', 'Get enough rest', 'Use comfortable sanitary products');
-        }
-        
-        if (isOvulationDay) {
-            recommendations.push('Monitor basal body temperature', 'Track cervical mucus changes');
-        }
-        
-        if (isFertileDay) {
-            recommendations.push('Consider fertility tracking', 'Maintain healthy lifestyle');
-        }
-        
+            recommendations.push(
+                'Nghỉ ngơi và chăm sóc bản thân trong thời kỳ kinh nguyệt',
+                'Uống đủ nước và duy trì chế độ ăn uống lành mạnh',
+                'Cân nhắc sử dụng ứng dụng theo dõi chu kỳ để có thông tin chi tiết hơn'
+            );
+        } else if (isFertileDay) {
+            recommendations.push(
+                'Đây là thời kỳ thụ thai - hãy lên kế hoạch phù hợp',
+                'Duy trì lối sống lành mạnh để hỗ trợ khả năng sinh sản',
+                'Cân nhắc theo dõi nhiệt độ cơ thể cơ bản để có thông tin chi tiết hơn'
+            );
+        } else if (isOvulationDay) {
+            recommendations.push(
+                'Hôm nay có thể là ngày rụng trứng của bạn',
+                'Đây là đỉnh điểm của thời kỳ thụ thai',
+                'Cân nhắc theo dõi chất nhầy cổ tử cung để nhận biết khả năng sinh sản'
+            );
+        } else {
         switch (cyclePhase) {
-            case 'Menstrual':
-                recommendations.push('Take iron supplements if needed', 'Practice gentle exercise');
+                case 'follicular':
+                    recommendations.push(
+                        'Mức năng lượng thường cao trong giai đoạn này',
+                        'Thời điểm tốt cho các dự án mới và hoạt động xã hội',
+                        'Tập trung vào việc xây dựng sức mạnh và sức bền'
+                    );
                 break;
-            case 'Follicular':
-                recommendations.push('Focus on strength training', 'Eat protein-rich foods');
+                case 'luteal':
+                    recommendations.push(
+                        'Chú ý đến những thay đổi tâm trạng trong giai đoạn này',
+                        'Tập trung vào việc chăm sóc bản thân và quản lý căng thẳng',
+                        'Cân nhắc tập thể dục nhẹ nhàng và kỹ thuật thư giãn'
+                    );
                 break;
-            case 'Ovulation':
-                recommendations.push('Monitor fertility signs', 'Consider conception timing');
-                break;
-            case 'Luteal':
-                recommendations.push('Manage PMS symptoms', 'Practice stress reduction');
-                break;
+                default:
+                    recommendations.push(
+                        'Tiếp tục theo dõi chu kỳ để có thông tin cá nhân hóa',
+                        'Duy trì lối sống lành mạnh trong suốt chu kỳ'
+                    );
+            }
         }
-        
-        return recommendations.length > 0 ? recommendations : ['Stay hydrated', 'Get enough rest'];
-    }
 
-    private static compareMoodData(currentPeriodDays: IPeriodDay[], previousPeriodDays: IPeriodDay[]) {
-        const currentMoods = currentPeriodDays.map(day => day.mood_data?.mood || 'neutral');
-        const previousMoods = previousPeriodDays.map(day => day.mood_data?.mood || 'neutral');
-        
-        const currentAvgMood = this.calculateAverageMood(currentMoods);
-        const previousAvgMood = this.calculateAverageMood(previousMoods);
-        
-        return {
-            current_average_mood: currentAvgMood,
-            previous_average_mood: previousAvgMood,
-            mood_change: currentAvgMood === previousAvgMood ? 'stable' : 
-                        currentAvgMood === 'happy' ? 'improved' : 'declined'
-        };
-    }
-
-    private static calculateAverageMood(moods: string[]): string {
-        if (moods.length === 0) return 'neutral';
-        
-        const moodScores = {
-            'happy': 3,
-            'good': 2,
-            'neutral': 1,
-            'bad': 0,
-            'terrible': -1
-        };
-        
-        const totalScore = moods.reduce((sum, mood) => sum + (moodScores[mood as keyof typeof moodScores] || 1), 0);
-        const averageScore = totalScore / moods.length;
-        
-        if (averageScore >= 2.5) return 'happy';
-        if (averageScore >= 1.5) return 'good';
-        if (averageScore >= 0.5) return 'neutral';
-        if (averageScore >= -0.5) return 'bad';
-        return 'terrible';
-    }
-
-    public static async getMoodDataByDateRange(user_id: string, start_date: string, end_date: string) {
-        try {
-            const moodData = await MenstrualCycleRepository.getMoodDataByDateRange(user_id, start_date, end_date);
-            
-            return {
-                success: true,
-                data: moodData,
-                message: 'Mood data retrieved successfully'
-            };
-        } catch (error) {
-            console.error('Error getting mood data by date range:', error);
-            return {
-                success: false,
-                message: 'System error'
-            };
-        }
-    }
-
-    public static async getAllMoodData(user_id: string) {
-        try {
-            const moodData = await MenstrualCycleRepository.getAllMoodData(user_id);
-            
-            return {
-                success: true,
-                data: moodData,
-                message: 'All mood data retrieved successfully'
-            };
-        } catch (error) {
-            console.error('Error getting all mood data:', error);
-            return {
-                success: false,
-                message: 'System error'
-            };
-        }
+        return recommendations;
     }
 }

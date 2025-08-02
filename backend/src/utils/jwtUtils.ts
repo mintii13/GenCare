@@ -7,7 +7,7 @@ export interface JWTPayload {
 
 export class JWTUtils {
     private static readonly JWT_SECRET = process.env.JWT_SECRET ?? 'my-secret-key-change-in-production';
-    private static readonly JWT_EXPIRES_IN = '1d'; // 1 ngày
+    private static readonly JWT_EXPIRES_IN = '7d'; // 7 ngày
 
     /**
      * Tạo access token

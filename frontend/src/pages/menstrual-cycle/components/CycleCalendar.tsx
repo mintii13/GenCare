@@ -196,16 +196,23 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
     try {
       const dateString = getLocalDateString(dateToRemove);
       
+      // Gọi API để xóa ngày hành kinh
+      await menstrualCycleService.deletePeriodDay(dateString);
+      
       // Remove from selected period days
       const updatedSelection = selectedPeriodDays.filter(periodDay => 
         !isSameDay(new Date(periodDay.date), dateToRemove)
       );
       
       setSelectedPeriodDays(updatedSelection);
-      customMenstrualToast('Đã xóa ngày khỏi danh sách chọn!', 'success');
+      
+      // Refresh data để cập nhật calendar
+      await onRefresh();
+      
+      customMenstrualToast('Đã xóa ngày hành kinh thành công!', 'success');
     } catch (error: any) {
-      console.error('Lỗi khi xóa ngày:', error);
-      handleDetailedError(error, 'Lỗi khi xóa ngày');
+      console.error('Lỗi khi xóa ngày hành kinh:', error);
+      handleDetailedError(error, 'Lỗi khi xóa ngày hành kinh');
     }
   };
 
@@ -522,6 +529,41 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
           
           {/* Right Column - Controls and Info */}
           <div className="space-y-4 order-2 lg:order-2">
+            {/* Current cycle period days */}
+            {currentCycle && currentCycle.period_days && currentCycle.period_days.length > 0 && (
+              <div className="space-y-3 p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg border border-pink-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-gray-700">
+                    Ngày kinh hiện tại ({currentCycle.period_days.length})
+                  </h4>
+                </div>
+                
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {currentCycle.period_days.map((periodDay, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-white rounded-lg border border-pink-200 shadow-sm"
+                    >
+                      <span className="text-sm font-medium text-gray-700">
+                        {new Date(periodDay.date).toLocaleDateString('vi-VN')}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemovePeriodDay(new Date(periodDay.date))}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Xóa ngày kinh"
+                        >
+                          <FaTimes className="text-xs" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Selected days summary */}
             {selectedPeriodDays.length > 0 && (
               <div className="space-y-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">

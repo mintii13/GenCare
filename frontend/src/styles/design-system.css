@@ -510,6 +510,45 @@
 .text-error { color: var(--color-error); }
 
 .bg-primary { background-color: var(--color-primary-600); }
+.bg-primary-50 { background-color: var(--color-primary-50); }
+.bg-primary-100 { background-color: var(--color-primary-100); }
+.bg-primary-200 { background-color: var(--color-primary-200); }
+.bg-primary-600 { background-color: var(--color-primary-600); }
+.bg-primary-700 { background-color: var(--color-primary-700); }
+.bg-primary-800 { background-color: var(--color-primary-800); }
+
+.text-primary-600 { color: var(--color-primary-600); }
+.text-primary-700 { color: var(--color-primary-700); }
+.text-primary-800 { color: var(--color-primary-800); }
+
+.bg-accent-100 { background-color: var(--color-accent-100); }
+.bg-accent-600 { background-color: var(--color-accent-600); }
+.bg-accent-700 { background-color: var(--color-accent-700); }
+.bg-accent-800 { background-color: var(--color-accent-800); }
+
+.text-accent-800 { color: var(--color-accent-800); }
+
 .bg-gray-50 { background-color: var(--color-gray-50); }
 .bg-gray-100 { background-color: var(--color-gray-100); }
-.bg-white { background-color: white; } 
+.bg-white { background-color: white; }
+
+/* Gradient Utilities */
+.from-primary-50 { background-image: linear-gradient(to right, var(--color-primary-50), transparent); }
+.to-accent-50 { background-image: linear-gradient(to right, transparent, var(--color-accent-50)); }
+
+/* Table Alignment Fixes */
+.table-fixed {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.table-cell-align {
+  vertical-align: middle !important;
+  text-align: left !important;
+}
+
+.table-header-align {
+  vertical-align: middle !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+} 

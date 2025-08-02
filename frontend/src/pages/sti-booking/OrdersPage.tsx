@@ -602,10 +602,6 @@ const OrdersPage: React.FC = () => {
             <Card size="small" style={{ marginBottom: '16px' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
-                  <Text strong>Mã đơn: </Text>
-                  <Text code>{selectedOrder._id}</Text>
-                </div>
-                <div>
                   <Text strong>Loại: </Text>
                   { ((selectedOrder.order_status == 'Booked') 
                     ? (<Tag color="gray">Chưa có xét nghiệm</Tag>)

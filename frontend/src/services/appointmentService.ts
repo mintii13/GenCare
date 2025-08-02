@@ -115,7 +115,13 @@ export const appointmentService = {
 
   async rescheduleAppointment(appointmentId: string, newSlot: any): Promise<ApiResponse<any>> {
     try {
-      const response = await apiClient.put(`${API.Appointment.BASE}/${appointmentId}/reschedule`, newSlot);
+      // Sử dụng endpoint PUT /api/appointments/:id với explicitAction: 'rescheduled'
+      const updateData = {
+        ...newSlot,
+        explicitAction: 'rescheduled'
+      };
+      
+      const response = await apiClient.safePut(`${API.Appointment.BASE}/${appointmentId}`, updateData);
       
       return {
         success: true,
@@ -123,7 +129,7 @@ export const appointmentService = {
         message: 'Đổi lịch hẹn thành công'
       };
     } catch (error: any) {
-      console.error(' [ERROR] rescheduleAppointment failed:', error);
+      console.error('[ERROR] rescheduleAppointment failed:', error);
       console.error('[ERROR] Error response:', (error as { response?: { data?: unknown } }).response?.data);
       throw error;
     }

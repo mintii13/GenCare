@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { FaChartLine, FaChartBar, FaSmile } from 'react-icons/fa';
+import { FaChartLine, FaChartBar } from 'react-icons/fa';
 import { menstrualCycleService, CycleStatistics, PeriodStatistics } from '../../../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
 
@@ -13,7 +13,6 @@ interface CycleChartsProps {
 const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
   const [cycleStats, setCycleStats] = useState<CycleStatistics | null>(null);
   const [periodStats, setPeriodStats] = useState<PeriodStatistics | null>(null);
-  const [moodStats, setMoodStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,20 +54,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
         setPeriodStats(null);
       }
 
-      // Load mood statistics
-      try {
-        const moodResponse = await menstrualCycleService.getMoodStatistics();
-        console.log('[CycleCharts] Mood response:', moodResponse);
-        if (moodResponse.success && moodResponse.data) {
-          setMoodStats(moodResponse.data);
-        } else {
-          console.warn('[CycleCharts] Mood stats failed:', moodResponse.message);
-          setMoodStats(null);
-        }
-      } catch (moodError) {
-        console.error('[CycleCharts] Mood stats error:', moodError);
-        setMoodStats(null);
-      }
+
 
     } catch (error) { 
       console.error('[CycleCharts] General error:', error);
@@ -282,85 +268,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
     },
   };
 
-  // Chart 3: Mood Statistics
-  const moodChartOptions: any = {
-    chart: {
-      height: 250,
-      type: 'bar',
-      fontFamily: 'Inter, sans-serif',
-      dropShadow: {
-        enabled: false,
-      },
-      toolbar: {
-        show: false,
-      },
-    },
-    tooltip: {
-      enabled: true,
-      x: {
-        show: false,
-      },
-    },
-    dataLabels: {
-      enabled: false,
-    },
-    stroke: {
-      width: 0
-    },
-    grid: {
-      show: true,
-      strokeDashArray: 4,
-      padding: {
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: 10
-      },
-    },
-    series: [
-      {
-        name: "Tần suất",
-        data: moodStats?.mood_distribution ? [
-          moodStats.mood_distribution.happy || 0,
-          moodStats.mood_distribution.neutral || 0,
-          moodStats.mood_distribution.tired || 0,
-          moodStats.mood_distribution.stressed || 0,
-          moodStats.mood_distribution.other || 0
-        ] : [0, 0, 0, 0, 0],
-        color: "#10b981",
-      },
-    ],
-    legend: {
-      show: false
-    },
-    xaxis: {
-      categories: ['Vui vẻ', 'Bình thường', 'Mệt mỏi', 'Căng thẳng', 'Khác'],
-      labels: {
-        show: true,
-        style: {
-          fontFamily: "Inter, sans-serif",
-          fontSize: '11px',
-          colors: '#6b7280'
-        }
-      },
-      axisBorder: {
-        show: false,
-      },
-      axisTicks: {
-        show: false,
-      },
-    },
-    yaxis: {
-      show: true,
-      labels: {
-        style: {
-          fontFamily: "Inter, sans-serif",
-          fontSize: '11px',
-          colors: '#6b7280'
-        }
-      },
-    },
-  };
+
 
   if (loading) {
     return (
@@ -434,28 +342,7 @@ const CycleCharts: React.FC<CycleChartsProps> = ({ onRefresh }) => {
         </CardContent>
       </Card>
 
-      {/* Chart 3: Mood Statistics */}
-      {/* <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-base font-semibold">
-            <FaSmile className="h-5 w-5 text-green-600" />
-            Thống Kê Cảm Xúc
-          </CardTitle>
-          <CardDescription className="text-sm mt-2">
-            Biểu đồ phân tích cảm xúc trong chu kỳ
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Suspense fallback={<div className="text-center py-6">Đang tải biểu đồ...</div>}>
-            <ReactApexChart
-              options={moodChartOptions}
-              series={moodChartOptions.series}
-              type="bar"
-              height={250}
-            />
-          </Suspense>
-        </CardContent>
-      </Card> */}
+
     </div>
   );
 };

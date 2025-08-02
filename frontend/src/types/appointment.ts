@@ -20,6 +20,8 @@ export interface Appointment {
   customer_notes?: string;
   consultant_notes?: string;
   created_date: string;
+  updated_date?: string;
+  video_call_status?: 'not_started' | 'in_progress' | 'ended';
   meeting_info?: {
     meet_url: string;
     meeting_id: string;

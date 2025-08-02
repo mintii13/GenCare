@@ -89,17 +89,28 @@ export class PillTrackingService{
             
             // Kiểm tra đã có pill tracking cho menstrual cycle này chưa
             const existingPillTracking = await PillTrackingRepository.hasTrackingForCycle(menstrualCycle[0]._id.toString())
+            console.log('[PillTrackingService] Checking existing pill tracking for cycle:', menstrualCycle[0]._id.toString(), 'Result:', existingPillTracking);
+            
             if (existingPillTracking) {
-                return {
-                    success: false,
-                    message: 'Pill tracking already exists for current menstrual cycle.'
-                };
+                // Nếu đã có lịch, xóa lịch cũ và tạo lịch mới
+                console.log('[PillTrackingService] Existing pill tracking found, deleting old schedule for cycle:', menstrualCycle[0]._id.toString());
+                const deletedCount = await PillTrackingRepository.deletePillScheduleByCycle(menstrualCycle[0]._id.toString());
+                console.log('[PillTrackingService] Deleted', deletedCount, 'old pill schedules for cycle');
+                
+                // Double check - đợi một chút để đảm bảo deletion hoàn tất
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
 
+            // Double check - xóa tất cả pill tracking cũ của user này để đảm bảo không có duplicate
+            console.log('[PillTrackingService] Double checking - deleting all pill schedules for user:', userId);
+            const allDeletedCount = await PillTrackingRepository.deleteUserPillSchedule(new mongoose.Types.ObjectId(userId));
+            console.log('[PillTrackingService] Deleted all', allDeletedCount, 'pill schedules for user');
+            
             const pillSchedules = this.calculatePillSchedule(
                 pillTracking, 
                 menstrualCycle[0]._id.toString()
             );
+            console.log('[PillTrackingService] Creating', pillSchedules.length, 'new pill schedules');
             const result = await PillTrackingRepository.createPillSchedule(pillSchedules);
             
             if (!result) {
@@ -108,10 +119,19 @@ export class PillTrackingService{
                     message: 'Failed to create pill tracking'
                 };
             }
+
+            const message = existingPillTracking 
+                ? 'Đã cập nhật lịch uống thuốc thành công' 
+                : 'Đã tạo lịch uống thuốc thành công';
+
             return {
                 success: true,
-                message: 'Pill tracking schedule created successfully',
-                data: result,
+                message: message,
+                data: {
+                    schedules: result,
+                    totalPills: result.length,
+                    replaced: existingPillTracking
+                },
             };
         } catch (error) {
             console.error(error);
@@ -678,26 +698,44 @@ export class PillTrackingReminderService {
         console.log("Giờ hiện tại:", now.toFormat('HH:mm'));
 
         const schedules = await PillTrackingRepository.findReminderPill();
-        // console.log("Schedule", schedules);
+        console.log(`[CronJob] Found ${schedules.length} pill schedules to check`);
         let validReminder = 0;
 
         for (const schedule of schedules) {
-            if (!schedule.reminder_enabled) continue;
+            console.log(`[CronJob] Checking schedule: user=${schedule.user_id}, pill=${schedule.pill_number}, time=${schedule.reminder_time}, enabled=${schedule.reminder_enabled}`);
+            
+            if (!schedule.reminder_enabled) {
+                console.log(`[CronJob] Reminder disabled for user ${schedule.user_id}`);
+                continue;
+            }
         
             const [hour, minute] = schedule.reminder_time.split(':').map(Number);
-            if (now.hour !== hour || now.minute !== minute) continue;
+            console.log(`[CronJob] Schedule time: ${hour}:${minute}, Current time: ${now.hour}:${now.minute}`);
+            
+            if (now.hour !== hour || now.minute !== minute) {
+                console.log(`[CronJob] Time doesn't match for user ${schedule.user_id}`);
+                continue;
+            }
         
             const startDate = TimeUtils.normalizeDateOnZone(schedule.pill_start_date);
-        
             const today = now.startOf('day');
             const diffInDays = today.diff(startDate, 'days').days;
         
             const maxDay = schedule.pill_type === '21+7' ? 27 : 20;
-            if (diffInDays < 0 || diffInDays > maxDay) continue;
+            console.log(`[CronJob] Day diff: ${diffInDays}, maxDay: ${maxDay}`);
+            
+            if (diffInDays < 0 || diffInDays > maxDay) {
+                console.log(`[CronJob] Day out of range for user ${schedule.user_id}`);
+                continue;
+            }
         
             const user = await UserRepository.findById(schedule.user_id.toString());
-            if (!user) continue;
+            if (!user) {
+                console.log(`[CronJob] User not found: ${schedule.user_id}`);
+                continue;
+            }
         
+            console.log(`[CronJob] Sending reminder email to ${user.email} for pill ${schedule.pill_number}`);
             validReminder++;
             await MailUtils.sendReminderEmail(user.email, schedule.pill_number, schedule.pill_type, schedule.reminder_time);
         }

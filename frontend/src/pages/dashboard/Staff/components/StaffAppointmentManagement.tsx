@@ -520,7 +520,6 @@ const StaffAppointmentManagement: React.FC = () => {
                             ? selectedAppointment.consultant_id.user_id.full_name : 'N/A'}</p>
                         </div>
                       </div>
-
                       <div className="border-t border-gray-200 pt-4">
                         <h6 className="font-semibold text-gray-800 mb-2">Quản lý lịch hẹn:</h6>
                         <div className="text-gray-700 space-y-1">

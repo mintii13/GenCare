@@ -110,18 +110,22 @@ class ApiClient {
           localStorage.removeItem('user');
           
           // Show toast notification for authentication error (only once)
-          if (!this.authErrorShown) {
-            this.authErrorShown = true;
-            toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', {
-              duration: 4000,
-              position: 'top-right'
-            });
+          // if (!this.authErrorShown) {
+          //   this.authErrorShown = true;
+          //   const errorMessage = status === 403 
+          //     ? 'Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.'
+          //     : 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
             
-            // Reset flag after a delay
-            setTimeout(() => {
-              this.authErrorShown = false;
-            }, 5000);
-          }
+          //   toast.error(errorMessage, {
+          //     duration: 4000,
+          //     position: 'top-right'
+          //   });
+            
+          //   // Reset flag after a delay
+          //   setTimeout(() => {
+          //     this.authErrorShown = false;
+          //   }, 5000);
+          // }
           
           // Only redirect if not already on home page - use setTimeout for better UX
           if (!window.location.pathname.includes('/') || window.location.pathname !== '/') {
