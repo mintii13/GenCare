@@ -555,7 +555,7 @@ const StiOrdersManagement: React.FC = () => {
           <div>
             <Row gutter={[16, 16]}>
               <Col span={12}>
-                <strong>Mã đơn:</strong> {selectedOrder._id}
+                <strong>Mã đơn:</strong> {selectedOrder._id.slice(-8)}
               </Col>
               <Col span={12}>
                 <strong>Khách hàng:</strong> {selectedOrder.customer_id?.full_name}
@@ -592,7 +592,7 @@ const StiOrdersManagement: React.FC = () => {
       >
         {selectedOrder && (
           <div>
-            <p><strong>Đơn hàng:</strong> {selectedOrder._id}</p>
+            <p><strong>Đơn hàng:</strong> {selectedOrder._id.slice(-8)}</p>
             <p><strong>Khách hàng:</strong> {selectedOrder.customer_id?.full_name}</p>
             <p><strong>Trạng thái hiện tại:</strong> 
               <Tag color={getStatusColor(selectedOrder.status || 'Booked')} style={{ marginLeft: 8 }}>
