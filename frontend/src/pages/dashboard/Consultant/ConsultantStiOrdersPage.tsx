@@ -303,7 +303,7 @@ const ConsultantStiOrdersPage: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <h1 style={{ marginBottom: 16, fontSize: '30px'}}>Đơn hàng STI</h1>
-      <Space style={{ marginBottom: 16 }}>
+      {/* <Space style={{ marginBottom: 16 }}>
         <Input.Search
           placeholder="Tìm kiếm mã đơn, tên khách..."
           value={search}
@@ -312,10 +312,10 @@ const ConsultantStiOrdersPage: React.FC = () => {
           enterButton={<SearchOutlined />}
         />
         <Button icon={<PlusOutlined />} onClick={fetchOrders}>Làm mới</Button>
-      </Space>
+      </Space> */}
       <Table
         columns={columns}
-        dataSource={orders}
+        dataSource={orders.filter(order => order.order_status === 'Booked' || order.order_status === 'Accepted')}
         rowKey="_id"
         loading={loading}
         pagination={{ pageSize: 10 }}
@@ -375,8 +375,11 @@ const ConsultantStiOrdersPage: React.FC = () => {
         onCancel={handleCloseModal}
         footer={null}
       >
-        <p><strong>Ngày đặt hàng:</strong> {selectedOrder?.order_date ? new Date((selectedOrder as StiOrder).order_date).toISOString().slice(0, 10).split('-').reverse().join('/') : 'Không có'}</p>
-        <p><strong>Ghi chú:</strong> {(selectedOrder as StiOrder)?.notes || 'Không có'}</p>
+        <p style={{ marginBottom: 8 }}><strong>Mã đơn:</strong> {selectedOrder?._id.slice(-8)}</p>
+        <p style={{ marginBottom: 8 }}><strong>Khách hàng:</strong> {(selectedOrder as any)?.customer?.full_name}</p>
+        <p style={{ marginBottom: 8 }}><strong>Giới tính:</strong> {(selectedOrder as any)?.customer?.gender.toUpperCase()}</p>
+        <p style={{ marginBottom: 8 }}><strong>Ngày đặt hàng:</strong> {selectedOrder?.order_date ? new Date((selectedOrder as StiOrder).order_date).toISOString().slice(0, 10).split('-').reverse().join('/') : 'Không có'}</p>
+        <p style={{ marginBottom: 8 }}><strong>Ghi chú:</strong> {(selectedOrder as StiOrder)?.notes || 'Không có'}</p>
       </Modal>
     </div>
   );
