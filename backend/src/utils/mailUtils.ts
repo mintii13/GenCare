@@ -428,6 +428,7 @@ export class MailUtils{
             }
         });
 
+<<<<<<< HEAD
         section += `
                         </tbody>
                     </table>
