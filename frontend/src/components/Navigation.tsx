@@ -112,9 +112,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         Đánh giá sàng lọc STI
                       </Link>
 
-                      <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                        Lịch sử đặt lịch STI
-                      </Link>
+                      
                     </>
                   )}
                 </div>
@@ -132,7 +130,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
               </Link>
             )}
             {isAuthenticated && user?.role === 'staff' && (
-              <Link to="/staff/overview" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
+              <Link to="/staff/sti-management" className="text-gray-600 hover:text-blue-600 text-sm font-medium flex items-center h-full">
                 Dashboard
               </Link>
             )}
@@ -177,6 +175,12 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/my-appointments" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           📅 Lịch hẹn của tôi
                         </Link>
+                        <Link to="/sti-booking/orders" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          📋 Lịch sử đặt lịch STI
+                        </Link>
+                        <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
+                          📋 Lịch sử đánh giá STI
+                        </Link>
                         <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           ❤️ Chu kỳ kinh nguyệt
                         </Link>
@@ -189,9 +193,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                         <Link to="/my-feedback" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                           ⭐ Đánh giá của tôi
                         </Link>
-                        <Link to="/sti-assessment/history" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
-                          📋 Lịch sử đánh giá STI
-                        </Link>
+                       
                         
                       </>
                     ) : (

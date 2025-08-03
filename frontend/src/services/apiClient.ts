@@ -95,7 +95,7 @@ class ApiClient {
         });
 
         // Handle specific error cases
-        if (status === 401 || status === 403) {
+        if (status === 401) {
           const requestUrl = error.config?.url || '';
           
           // Don't auto-logout for getUserProfile requests (let AuthContext handle it)

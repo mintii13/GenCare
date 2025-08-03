@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { consultantService } from '../../../services/consultantService';
+import AuthRequiredButton from '../../../components/auth/AuthRequiredButton';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Consultant {
   consultant_id: string;
@@ -30,6 +32,7 @@ interface ApiResponse {
 }
 
 const ConsultantList: React.FC = () => {
+  const { isAuthenticated } = useAuth();
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -200,13 +203,14 @@ const ConsultantList: React.FC = () => {
             Xem chi tiết
           </button>
           {row.is_available && (
-            <Link
-              to={`/consultation/book-appointment?consultant=${row.consultant_id}`}
-              onClick={(e) => e.stopPropagation()}
+            <AuthRequiredButton
+              redirectTo={`/consultation/book-appointment?consultant=${row.consultant_id}`}
+              message="Vui lòng đăng nhập để đặt lịch tư vấn!"
+              successMessage="Đăng nhập thành công! Chuyển đến trang đặt lịch..."
               className="px-3 py-1 bg-accent-600 text-white rounded text-sm hover:bg-accent-700 transition-colors"
             >
               Đặt lịch
-            </Link>
+            </AuthRequiredButton>
           )}
         </div>
       ),
@@ -273,6 +277,18 @@ const ConsultantList: React.FC = () => {
         <div className="p-6 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-blue-600 mb-2">Danh Sách Chuyên Gia</h1>
           <p className="text-gray-600">Tìm hiểu về các chuyên gia tư vấn sức khỏe</p>
+          {!isAuthenticated && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <p className="text-blue-800 text-sm">
+                  <strong>Lưu ý:</strong> Bạn có thể xem thông tin chuyên gia. Để đặt lịch tư vấn, vui lòng đăng nhập vào hệ thống.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
 
@@ -394,12 +410,14 @@ const ConsultantList: React.FC = () => {
                       Đóng
                     </button>
                     {selectedConsultant.is_available && (
-                      <Link
-                        to={`/consultation/book-appointment?consultant=${selectedConsultant.consultant_id}`}
+                      <AuthRequiredButton
+                        redirectTo={`/consultation/book-appointment?consultant=${selectedConsultant.consultant_id}`}
+                        message="Vui lòng đăng nhập để đặt lịch tư vấn!"
+                        successMessage="Đăng nhập thành công! Chuyển đến trang đặt lịch..."
                         className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-center font-medium transition-colors"
                       >
                         Đặt lịch tư vấn
-                      </Link>
+                      </AuthRequiredButton>
                     )}
                   </div>
                 </div>

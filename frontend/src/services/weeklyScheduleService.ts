@@ -154,8 +154,25 @@ export const weeklyScheduleService = {
 
   // Get weekly slots for booking
   async getWeeklySlots(consultantId: string, weekStartDate: string) {
-    const response = await apiClient.get(API.WeeklySchedule.WEEKLY_SLOTS(consultantId), { params: { week_start_date: weekStartDate } });
-    return response.data;
+    console.log('📤 [DEBUG] WeeklyScheduleService.getWeeklySlots called with:', {
+      consultantId,
+      weekStartDate
+    });
+    console.log('🎯 [DEBUG] API endpoint:', API.WeeklySchedule.WEEKLY_SLOTS(consultantId));
+    
+    try {
+      const response = await apiClient.get(API.WeeklySchedule.WEEKLY_SLOTS(consultantId), { params: { week_start_date: weekStartDate } });
+      console.log('📥 [DEBUG] WeeklyScheduleService.getWeeklySlots response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(' [DEBUG] WeeklyScheduleService.getWeeklySlots error:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      throw error;
+    }
   },
 
   // Copy schedule to another week

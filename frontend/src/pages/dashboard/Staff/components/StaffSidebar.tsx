@@ -44,12 +44,7 @@ const StaffSidebar: React.FC<StaffSidebarProps> = ({ isOpen }) => {
         { name: 'Danh sách chuyên gia', path: '/staff/consultants', icon: FaUsers },
       ]
     },
-    {
-      title: 'Cài đặt',
-      items: [
-        { name: 'Cài đặt hệ thống', path: '/staff/settings', icon: FaCog },
-      ]
-    }
+  
   ];
 
   return (

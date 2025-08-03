@@ -164,7 +164,7 @@ AutoConfirmService.stop();
             <Route path="appointments" element={<AdminAppointmentManagement />} />
             <Route path="sti-management" element={<AdminSTIManagement />} />
             <Route path="audit-log" element={<AdminAuditLog />} />
-            <Route path="settings" element={<div className="p-4">Cài đặt hệ thống</div>} />
+
           </Route>
 
           {/* Staff Dashboard routes */}
@@ -235,11 +235,7 @@ AutoConfirmService.stop();
                 <MyAppointments />
               </RoleGuard>
             } />
-            <Route path="/consultants" element={
-              <RoleGuard allowedRoles={['customer']}>
-                <ConsultantList />
-              </RoleGuard>
-            } />
+            <Route path="/consultants" element={<ConsultantList />} />
             <Route path="/my-feedback" element={
               <RoleGuard allowedRoles={['customer']}>
                 <CustomerFeedbackPage />

@@ -243,10 +243,10 @@ const BlogListPage: React.FC = () => {
                     }}
                     className="appearance-none pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white min-w-40"
                   >
-                    <option value="publish_date_desc">Mới nhất</option>
-                    <option value="publish_date_asc">Cũ nhất</option>
-                    <option value="title_asc">Tiêu đề A-Z</option>
-                    <option value="title_desc">Tiêu đề Z-A</option>
+                    <option value="publish_date_asc">Mới nhất</option>
+                    <option value="publish_date_desc">Cũ nhất</option>
+                    {/* <option value="title_asc">Tiêu đề A-Z</option>
+                    <option value="title_desc">Tiêu đề Z-A</option> */}
                   </select>
                   <SortAsc className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                 </div>

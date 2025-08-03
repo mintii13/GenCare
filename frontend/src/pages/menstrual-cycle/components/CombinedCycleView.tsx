@@ -47,6 +47,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Pill tracking logic
   const getPillScheduleForDate = (date: Date) => {
@@ -374,13 +375,19 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
         
         // Force refresh để cập nhật vòng tròn chu kỳ
         console.log('[CombinedCycleView] Refreshing data after saving period days');
-        onRefresh();
+        console.log('[CombinedCycleView] Response data:', response.data);
         
-        // Thêm delay nhỏ để đảm bảo backend đã xử lý xong
-        setTimeout(() => {
+        // Gọi refresh ngay lập tức
+        console.log('[CombinedCycleView] Calling onRefresh immediately');
+        setIsRefreshing(true);
+        await onRefresh();
+        
+        // Thêm delay và refresh lại để đảm bảo dữ liệu được cập nhật
+        setTimeout(async () => {
           console.log('[CombinedCycleView] Additional refresh to ensure data consistency');
-          onRefresh();
-        }, 500);
+          await onRefresh();
+          setIsRefreshing(false);
+        }, 2000);
       } else {
         toast.error(response.message || 'Có lỗi xảy ra khi lưu ngày');
       }
@@ -617,6 +624,11 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
             cycleLength={todayStatus.cycle_length || 28}
             cyclePhase={phase as 'menstrual' | 'follicular' | 'ovulation' | 'luteal'}
             isPeriodDay={todayStatus.is_period_day || false}
+            periodLength={todayStatus.period_length}
+            ovulationDay={todayStatus.predicted_ovulation_date ? 
+              Math.floor((new Date(todayStatus.predicted_ovulation_date).getTime() - new Date(todayStatus.date).getTime()) / (1000 * 60 * 60 * 24)) + 1 : 
+              undefined
+            }
             key={`cycle-${dayInCycle}-${phase}-${todayStatus.cycle_length}`}
           />
         )}
@@ -624,7 +636,15 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
 
       {/* Middle Column - Calendar */}
       <div className="lg:col-span-1 order-2 lg:order-2">
-        <Card className="h-full">
+        <Card className="h-full relative">
+          {isRefreshing && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="flex items-center gap-3 text-purple-600">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                <span className="font-medium">Đang cập nhật dữ liệu...</span>
+              </div>
+            </div>
+          )}
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FaCalendarAlt className="text-purple-500" />
@@ -645,7 +665,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                 </div>
                 <Button
                   onClick={handleSavePeriodDays}
-                  disabled={isSaving}
+                  disabled={isSaving || isRefreshing}
                   className="bg-pink-600 hover:bg-pink-700 text-white"
                   size="sm"
                 >
@@ -653,6 +673,11 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       Đang lưu...
+                    </div>
+                  ) : isRefreshing ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Đang cập nhật...
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">

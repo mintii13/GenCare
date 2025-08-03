@@ -32,184 +32,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { stiService } from '@/services/stiService';
-import { FaVial } from 'react-icons/fa';
-import { StiOrderQuery, StiOrder } from '@/types/sti';
-import { API } from '@/config/apiEndpoints';
-import { apiClient } from '@/services';
+
 
 interface FeedbackFormData {
   rating: number;
   comment: string;
 }
 
-const TestBookingHistory: React.FC = () => {
-  const [orders, setOrders] = useState<StiOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    current_page: 1,
-    total_pages: 1,
-    total_items: 0,
-    items_per_page: 10,
-    has_next: false,
-    has_prev: false,
-  });
-  const [query, setQuery] = useState<StiOrderQuery>({ page: 1, limit: 10 });
 
-  // const fetchOrders = useCallback(async () => {
-  //   setLoading(true);
-  //   try {
-  //     const response = await stiService.getMyOrdersPaginated(query);
-  //     if (response.success) {
-  //       setOrders(response.data.items || []);
-  //       setPagination(response.data.pagination);
-  //     } else {
-  //       setError(response.message);
-  //     }
-  //   } catch (err) {
-  //     setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, [query]);
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      try {
-        const response = await stiService.getMyOrdersPaginated(query);
-        if (response && response.success && response.data) {
-          setOrders(response.data.items || []);
-          setPagination(response.data.pagination);
-        } else {
-          setError(response?.message || 'Không thể tải dữ liệu đơn hàng');
-        }
-      } catch (err) {
-        setError((err as Error).message || 'Có lỗi xảy ra khi tải dữ liệu');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [query]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const handlePageChange = (newPage: number) => {
-    setQuery(prev => ({ ...prev, page: newPage }));
-  };
-
-  const statusLabels: { [key: string]: string } = {
-    pending: 'Chờ xử lý',
-    confirmed: 'Đã xác nhận',
-    processing: 'Đang xử lý',
-    completed: 'Đã hoàn thành',
-    cancelled: 'Đã hủy',
-  };
-
-  const renderOrderCard = (order: StiOrder) => {
-    return (
-      <Card key={order._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-          <div className="md:col-span-2">
-            <p className="font-semibold text-gray-800">{order.sti_package_item ? 'Gói xét nghiệm' : 'Xét nghiệm đơn lẻ'}</p>
-            <p className="text-sm text-gray-500">Mã đơn: {order.order_code}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Ngày đặt</p>
-            <p className="font-medium">{order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy') : 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Trạng thái</p>
-            <Badge>{statusLabels[order.order_status] || order.order_status}</Badge>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Tổng tiền</p>
-            <p className="font-semibold text-lg">
-              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_amount)}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  if (loading && orders.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <FaSpinner className="animate-spin text-4xl text-blue-600" />
-      </div>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold">Lịch sử xét nghiệm</CardTitle>
-      </CardHeader>
-      {/* <div className="mt-4 flex flex-col md:flex-row gap-2">
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder="Trạng thái" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                    <SelectItem value="Booked">Đã đặt lịch</SelectItem>
-                    <SelectItem value="Accepted">Đã chấp nhận</SelectItem>
-                    <SelectItem value="Processing">Đang xử lý</SelectItem>
-                    <SelectItem value="SpecimenCollected">Đã lấy mẫu</SelectItem>
-                    <SelectItem value="Testing">Đang xét nghiệm</SelectItem>
-                    <SelectItem value="Completed">Đã hoàn thành</SelectItem>
-                    <SelectItem value="Canceled">Đã hủy</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div> */}
-      <CardContent>
-        {error && <div className="text-red-600 bg-red-50 p-4 rounded-md text-center">{error}</div>}
-        {!loading && !error && orders.length > 0 ? (
-          orders.map(renderOrderCard)
-        ) : (
-          !loading && (
-            <div className="text-center py-12">
-              <FaVial className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-800">Chưa có lịch sử xét nghiệm</h3>
-              <p className="text-gray-500 mt-1">Bạn chưa đặt lịch xét nghiệm nào.</p>
-            </div>
-          )
-        )}
-        {pagination.total_pages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-600">
-              Hiển thị {orders.length} trên {pagination.total_items} kết quả
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.current_page - 1)}
-                disabled={!pagination.has_prev}
-              >
-                <FaArrowLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium">
-                Trang {pagination.current_page}/{pagination.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.current_page + 1)}
-                disabled={!pagination.has_next}
-              >
-                <FaArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
 
 const MyAppointments: React.FC = () => {
   const { modalState, showConfirm, hideConfirm } = useConfirmModal();
@@ -389,6 +219,7 @@ const MyAppointments: React.FC = () => {
   };
 
   const handleSlotSelect = (date: string, startTime: string, endTime: string) => {
+    console.log('🔍 [DEBUG] Slot selected in MyAppointments:', { date, startTime, endTime });
     setSelectedNewSlot({ date, startTime, endTime });
   };
   
@@ -482,7 +313,7 @@ const MyAppointments: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setSelectedAppointment(appointment)}>
               Chi tiết
             </Button>
-            {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
+            {appointment.status === 'pending' && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -519,25 +350,12 @@ const MyAppointments: React.FC = () => {
 
   return (
     <div className="container mx-auto py-2 px-4 md:px-6">
-      <Tabs defaultValue="consultations" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="consultations">
-            <FaCalendarAlt className="mr-2 h-4 w-4" />
-            Lịch hẹn tư vấn
-          </TabsTrigger>
-          <TabsTrigger value="testing">
-            <FaVial className="mr-2 h-4 w-4" />
-            Lịch sử xét nghiệm
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="consultations" className="mt-4">
+      <div className="mt-4">
           <Card>
             <CardHeader>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <CardTitle className="text-2xl font-bold">Lịch hẹn của tôi</CardTitle>
-                <Button onClick={() => navigate('/consultation/book')}>
-                  <FaCalendarAlt className="mr-2 h-4 w-4" /> Đặt lịch mới
-                </Button>
+             
               </div>
               <div className="mt-4 flex flex-col md:flex-row gap-2">
                 <Select onValueChange={handleStatusFilter} defaultValue="all">
@@ -560,8 +378,8 @@ const MyAppointments: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="appointment_date_desc">Ngày hẹn mới nhất</SelectItem>
                     <SelectItem value="appointment_date_asc">Ngày hẹn cũ nhất</SelectItem>
-                    <SelectItem value="createdAt_desc">Tạo mới nhất</SelectItem>
-                    <SelectItem value="createdAt_asc">Tạo cũ nhất</SelectItem>
+                    {/* <SelectItem value="createdAt_desc">Tạo mới nhất</SelectItem>
+                    <SelectItem value="createdAt_asc">Tạo cũ nhất</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
@@ -617,11 +435,7 @@ const MyAppointments: React.FC = () => {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-        <TabsContent value="testing" className="mt-4">
-          <TestBookingHistory />
-        </TabsContent>
-      </Tabs>
+        </div>
 
              {selectedAppointment && !showFeedbackModal && (
          <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">

@@ -15,8 +15,8 @@ import { navigateAfterLogin } from '../../utils/navigationUtils';
 // Validation schemas
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const loginSchema = z.object({
-  email: z.string().trim().regex(emailRegex, { message: 'Email không hợp lệ' }),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  email: z.string().trim().min(1, 'Email là bắt buộc').regex(emailRegex, { message: 'Email không hợp lệ' }),
+  password: z.string().min(1, 'Mật khẩu là bắt buộc').min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
 });
 
 // Schema cho Step 1: Email và Password
@@ -89,7 +89,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
   // Form instances
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: ''
+    },
+    mode: 'onBlur',
+    reValidateMode: 'onBlur'
   });
+
+  // Debug form errors
+  useEffect(() => {
+    if (loginForm.formState.errors.email || loginForm.formState.errors.password) {
+      console.log('[LoginModal] Form errors:', loginForm.formState.errors);
+    }
+  }, [loginForm.formState.errors]);
 
   const step1Form = useForm<Step1FormData>({
     resolver: zodResolver(step1Schema),
@@ -170,9 +183,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
 
   // Handle login
   const handleLogin = async (data: LoginFormData) => {
+    console.log('[LoginModal] handleLogin called with data:', data);
+    console.log('[LoginModal] Form is valid:', loginForm.formState.isValid);
+    console.log('[LoginModal] Form errors:', loginForm.formState.errors);
     setLoading(true);
     try {
       const response = await authService.login(data.email, data.password);
+      console.log('[LoginModal] Login response:', response);
       login(response.data.user, response.data.accessToken);
       
       // Thông báo thành công dựa trên role
@@ -181,10 +198,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
         onClose();
       } else {
         toast.success('Đăng nhập thành công! Đang chuyển hướng...');
+        onClose();
         navigateAfterLogin(response.data.user, navigate);
       }
       
     } catch (error: any) {
+      console.error('[LoginModal] Login error:', error);
       toast.error(error.response?.data?.message || 'Đăng nhập thất bại');
     } finally {
       setLoading(false);
@@ -279,8 +298,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
             // Thông báo thành công dựa trên role
             if (user.role === 'customer') {
               toast.success(`Chào mừng ${user.full_name || user.email} đến với GenCare! `);
+              onClose();
             } else {
               toast.success('Xác thực thành công! Đang chuyển hướng...');
+              onClose();
             }
             
             navigateAfterLogin(user, navigate);

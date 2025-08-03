@@ -105,12 +105,20 @@ const MenstrualCyclePage: React.FC = () => {
     return schedules && schedules.length > 0;
   }, [schedules]);
 
-  // Hiển thị modal hướng dẫn cho người dùng mới
+  // Hiển thị modal hướng dẫn chỉ khi người dùng chưa có chu kỳ nào
   useEffect(() => {
     if (isFirstTimeUser && user) {
       setShowFirstTimeGuide(true);
+    } else if (cycles.length > 0) {
+      // Nếu đã có chu kỳ thì ẩn modal
+      setShowFirstTimeGuide(false);
     }
-  }, [isFirstTimeUser, user]);
+  }, [isFirstTimeUser, user, cycles.length]);
+
+  // Hàm xử lý đóng modal hướng dẫn
+  const handleCloseGuide = useCallback(() => {
+    setShowFirstTimeGuide(false);
+  }, []);
 
   // Debug logs
   console.log('[MenstrualCyclePage] Render state:', {
@@ -381,7 +389,10 @@ const MenstrualCyclePage: React.FC = () => {
               <CombinedCycleView 
                 todayStatus={todayStatus} 
                 cycles={cycles} 
-                onRefresh={refreshPills}
+                onRefresh={async () => {
+                  await refreshCycle();
+                  await refreshPills();
+                }}
                 isFirstTimeUser={isFirstTimeUser}
                 onShowGuide={() => setShowFirstTimeGuide(true)}
                 pillSchedules={schedules}
@@ -472,7 +483,7 @@ const MenstrualCyclePage: React.FC = () => {
         {/* First Time Guide Modal */}
         <FirstTimeGuideModal
           isOpen={showFirstTimeGuide}
-          onClose={() => setShowFirstTimeGuide(false)}
+          onClose={handleCloseGuide}
         />
       </div>
     </div>

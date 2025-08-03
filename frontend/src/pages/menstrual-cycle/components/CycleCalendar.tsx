@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/Input';
-import { CycleData, menstrualCycleService, PeriodDay, ProcessCycleWithMoodRequest } from '../../../services/menstrualCycleService';
+import { CycleData, menstrualCycleService } from '../../../services/menstrualCycleService';
 import { PillSchedule } from '../../../services/pillTrackingService';
 import { toast } from 'react-hot-toast';
-import MoodModal from './MoodModal';
 import { 
   FaHeart, 
   FaCircle, 
@@ -34,8 +33,22 @@ interface CycleCalendarProps {
   pillSchedules?: PillSchedule[];
 }
 
-// Import the correct type from service
-import { DailyMoodData } from '../../../services/menstrualCycleService';
+// Define missing types locally
+interface DailyMoodData {
+  mood: 'happy' | 'excited' | 'calm' | 'neutral' | 'tired' | 'sad' | 'angry';
+  energy: 'high' | 'medium' | 'low';
+  symptoms: string[];
+  notes?: string;
+}
+
+interface PeriodDay {
+  date: string;
+  mood_data: DailyMoodData;
+}
+
+interface ProcessCycleWithMoodRequest {
+  period_days: PeriodDay[];
+}
 
 // Custom toast cho chu kỳ kinh nguyệt
 function customMenstrualToast(message: string, type: 'success' | 'error' = 'success') {
@@ -92,7 +105,7 @@ const CycleCalendar: React.FC<CycleCalendarProps> = ({ cycles, onRefresh, pillSc
   const isPeriodDay = (date: Date) => {
     if (!currentCycle) return false;
     return currentCycle.period_days.some(periodDay => 
-      isSameDay(new Date(periodDay.date), date)
+      isSameDay(new Date(periodDay), date)
     );
   };
 

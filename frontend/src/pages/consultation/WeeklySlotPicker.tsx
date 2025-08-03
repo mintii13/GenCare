@@ -112,19 +112,43 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         timeSlot.startTime < appt.end_time
       );
 
+      // Normalize date format để so sánh chính xác
+      const normalizedSelectedDate = selectedSlot?.date ? dayjs(selectedSlot.date).format('YYYY-MM-DD') : null;
+      const normalizedCurrentDate = dateString;
+      
       const isSelected = selectedSlot &&
-        selectedSlot.date === dateString &&
+        normalizedSelectedDate === normalizedCurrentDate &&
         selectedSlot.startTime === timeSlot.startTime;
+
+      // Debug cho selectedSlot
+      if (timeSlot.startTime === '08:00' && dayName === 'monday') {
+        console.log('🔍 [DEBUG] Selected slot check:', {
+          selectedSlot,
+          dateString,
+          slotStartTime: timeSlot.startTime,
+          isSelected,
+          dayName,
+          dateComparison: {
+            selectedDate: selectedSlot?.date,
+            currentDate: dateString,
+            datesMatch: selectedSlot?.date === dateString,
+            timesMatch: selectedSlot?.startTime === timeSlot.startTime
+          }
+        });
+      }
 
       let status: 'available' | 'booked' | 'past' | 'restricted' | 'selected' | 'unavailable' = 'unavailable';
       let disabled = true;
 
       if (isBooked) {
         status = 'booked';
+        disabled = true; // Slot đã đặt thì disabled
       } else if (isPast) {
         status = 'past';
+        disabled = true; // Slot đã qua thì disabled
       } else if (!availableSlot) {
         status = 'unavailable';
+        disabled = true; // Slot không khả dụng thì disabled
       } else if (diffHours < 2 && diffHours > 0) {
         status = 'restricted';
         disabled = false; // Cho phép click slot quá gần
@@ -320,10 +344,10 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                             type={slot.status === 'selected' ? 'primary' : 'default'}
                             size="small"
                             block
-                            disabled={slot.status === 'booked' || slot.status === 'past' || slot.status === 'unavailable'}
+                            disabled={slot.disabled}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (slot.status !== 'booked' && slot.status !== 'past' && slot.status !== 'unavailable') {
+                              if (!slot.disabled) {
                                 handleSlotSelect(
                                   dayDate.format('YYYY-MM-DD'),
                                   slot.startTime,
@@ -333,7 +357,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
                             }}
                             className={`text-xs h-6 ${
                               slot.status === 'available' ? 'border-green-500 text-green-600 hover:border-green-600 hover:bg-green-50' :
-                              slot.status === 'booked' ? 'border-red-500 text-red-600 bg-red-50' :
+                              slot.status === 'booked' ? 'border-red-500 text-white bg-red-500 cursor-not-allowed' :
                               slot.status === 'past' ? 'border-gray-400 text-gray-500 bg-gray-50' :
                               slot.status === 'restricted' ? 'border-yellow-500 text-yellow-600 bg-yellow-50' :
                               slot.status === 'selected' ? '' :

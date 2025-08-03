@@ -167,7 +167,7 @@ const AdminDashboard: React.FC = () => {
     { title: "Thêm người dùng mới", icon: FaPlus, link: "/admin/users/new", color: "bg-blue-500" },
     { title: "Tạo bài viết", icon: FaBlog, link: "/admin/blogs/new", color: "bg-purple-500" },
     { title: "Xem báo cáo", icon: FaEye, link: "/admin/reports", color: "bg-green-500" },
-    { title: "Cài đặt hệ thống", icon: FaCog, link: "/admin/settings", color: "bg-gray-500" }
+
   ];
 
   const statsCards = [

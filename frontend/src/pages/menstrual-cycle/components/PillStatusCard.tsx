@@ -207,7 +207,7 @@ const PillStatusCard: React.FC<PillStatusCardProps> = ({
 
   if (!pillStats.currentSchedule) {
     return (
-      <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
+      <Card className="bg-white">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FaPills className="text-purple-600" />

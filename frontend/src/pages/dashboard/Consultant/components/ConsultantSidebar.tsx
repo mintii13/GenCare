@@ -5,7 +5,8 @@ import {
   FaCalendarAlt, 
   FaEdit, 
   FaChartBar, 
-  FaFlask
+  FaFlask,
+  FaHome
 } from 'react-icons/fa';
 
 interface ConsultantSidebarProps {
@@ -18,6 +19,7 @@ const ConsultantSidebar: React.FC<ConsultantSidebarProps> = ({ isOpen }) => {
 
   const menuItems = [
     // Main features
+    { name: 'Trang chủ', path: '/', icon: FaHome },
     { name: 'Lịch làm việc hàng tuần', path: '/consultant/weekly-schedule', icon: FaCalendarAlt },
     // { name: 'Quản lý lịch hẹn', path: '/consultant/appointments', icon: FaCalendarAlt },
     { name: 'Lịch tư vấn của tôi', path: '/consultant/schedule', icon: FaCalendarAlt },

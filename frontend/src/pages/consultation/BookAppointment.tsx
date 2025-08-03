@@ -491,7 +491,11 @@ const BookAppointment: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-gray-800">Chọn Thời Gian</h2>
               <button
-                onClick={() => setSelectedConsultant('')}
+                onClick={() => {
+                  setSelectedConsultant('');
+                  setStep(1);
+                  setSelectedSlot(null);
+                }}
                 className="text-blue-600 hover:text-blue-700 text-xs"
               >
                 <FaArrowLeft className="inline mr-1" />

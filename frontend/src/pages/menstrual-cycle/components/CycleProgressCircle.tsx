@@ -1,22 +1,26 @@
 import React from 'react';
 import { Card } from '../../../components/ui/card';
+import menstralCycleImage from '../../../assets/images/menstral-cycle.png';
 
 interface CycleProgressCircleProps {
   currentDay: number;
   cycleLength: number;
   cyclePhase: 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
   isPeriodDay: boolean;
+  periodLength?: number; // Thêm độ dài kỳ kinh thực tế
+  ovulationDay?: number; // Thêm ngày rụng trứng thực tế
 }
 
 const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
   currentDay,
   cycleLength,
   cyclePhase,
-  isPeriodDay
+  isPeriodDay,
+  periodLength = 5, // Mặc định 5 ngày nếu không có dữ liệu
+  ovulationDay = Math.floor(cycleLength / 2) // Mặc định giữa chu kỳ nếu không có dữ liệu
 }) => {
 
-  
-  // Định nghĩa các giai đoạn chu kỳ
+  // Vòng tròn tiến trình đơn giản với 4 giai đoạn cố định
   const phases = [
     { name: 'Hành kinh', start: 1, end: 5, color: '#ef4444' },
     { name: 'Giai đoạn nang', start: 6, end: 13, color: '#f97316' },
@@ -34,7 +38,7 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
   };
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-yellow-50 to-green-50">
+    <Card className="p-6 bg-yellow-50">
       <div className="text-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">Chu kỳ kinh nguyệt</h3>
         <div className="text-2xl font-bold text-purple-600 mb-2">
@@ -53,83 +57,36 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
         </p>
       </div>
 
-      <div className="relative w-64 h-64 mx-auto">
-        {/* Vòng tròn nền */}
-        <svg width="256" height="256" viewBox="0 0 256 256">
-          {/* Các giai đoạn */}
-          {phases.map((phase, index) => {
-            const { startAngle, sweepAngle } = getPhaseAngle(phase.start, phase.end);
-            const radius = 100;
-            const centerX = 128;
-            const centerY = 128;
-            
-                         const startRad = (startAngle * Math.PI) / 180;
-             const endRad = ((startAngle + sweepAngle) * Math.PI) / 180;
-            
-            const x1 = centerX + radius * Math.cos(startRad);
-            const y1 = centerY + radius * Math.sin(startRad);
-            const x2 = centerX + radius * Math.cos(endRad);
-            const y2 = centerY + radius * Math.sin(endRad);
-            
-            const largeArcFlag = sweepAngle > 180 ? 1 : 0;
-            
-            const pathData = [
-              `M ${centerX} ${centerY}`,
-              `L ${x1} ${y1}`,
-              `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-              'Z'
-            ].join(' ');
-            
-            return (
-              <path
-                key={index}
-                d={pathData}
-                fill={phase.color}
-                opacity={0.8}
-                stroke="#fff"
-                strokeWidth="2"
-              />
-            );
-          })}
+      <div className="relative w-96 h-96 mx-auto">
+        {/* Hình ảnh chu kỳ kinh nguyệt */}
+        <div className="relative w-full h-full">
+          <img 
+            src={menstralCycleImage} 
+            alt="Chu kỳ kinh nguyệt" 
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              console.error('Error loading image:', e);
+              e.currentTarget.style.display = 'none';
+            }}
+            onLoad={() => console.log('Image loaded successfully')}
+          />
           
-
-          
-          {/* Số ngày xung quanh vòng tròn */}
-          {Array.from({ length: cycleLength }, (_, i) => {
-            const day = i + 1;
-            // Số ngày cũng tính theo tiến trình % tương tự
-            // Ngày 1 ở vị trí 6 giờ (270 độ)
-            const angle = 270 + (day / cycleLength) * 360;
-            const rad = (angle * Math.PI) / 180;
-            const radius = 115;
-            const x = 128 + radius * Math.cos(rad);
-            const y = 128 + radius * Math.sin(rad);
-            
-            return (
-              <text
-                key={day}
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className={`text-xs font-medium ${
-                  day === currentDay ? 'text-red-600 font-bold' : 'text-gray-600'
-                }`}
-              >
-                {day}
-              </text>
-            );
-          })}
-        </svg>
-        
-        {/* Thông tin ở giữa */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center bg-white rounded-full w-20 h-20 flex items-center justify-center shadow-lg">
-            <div>
-              <div className="text-2xl font-bold text-gray-800">{currentDay}</div>
-              <div className="text-xs text-gray-500">ngày</div>
+          {/* Thông tin ở giữa */}
+          {/* <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center bg-white rounded-full w-28 h-28 flex items-center justify-center shadow-lg border-2 border-purple-200">
+              <div>
+                <div className="text-2xl font-bold text-gray-800">{currentDay}</div>
+                <div className="text-xs text-gray-500">ngày</div>
+              </div>
             </div>
-          </div>
+          </div> */}
+        </div>
+      </div>
+      
+      {/* Ghi chú về hình ảnh */}
+      <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+        <div className="text-sm text-yellow-800 text-center">
+          <strong>Lưu ý:</strong> Hình ảnh chỉ mang tính chất tham khảo, không thay thế cho tư vấn y tế chuyên nghiệp.
         </div>
       </div>
 
@@ -147,7 +104,7 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
       </div>
 
                 {/* Thông tin bổ sung */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <div className="text-sm text-blue-800">
               <div className="font-medium mb-1">Thông tin hôm nay:</div>
               <div>• Giai đoạn: {cyclePhase === 'menstrual' ? 'Hành kinh' : 
