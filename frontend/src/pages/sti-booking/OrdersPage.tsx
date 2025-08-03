@@ -631,7 +631,7 @@ const OrdersPage: React.FC = () => {
                     {getStatusText(selectedOrder.order_status || 'Booked')}
                   </Tag>
                 </div>
-                {selectedOrder.notes && (
+                {selectedOrder.notes ? (
                   <div>
                     <Text strong>Ghi chú: </Text>
                     <div 
@@ -650,6 +650,27 @@ const OrdersPage: React.FC = () => {
                       }}
                     >
                       {selectedOrder.notes}
+                    </div>
+                  </div>
+                ): (
+                  <div>
+                    <Text strong>Ghi chú: </Text>
+                    <div 
+                      style={{ 
+                        marginTop: 8,
+                        padding: 12,
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: 6,
+                        border: '1px solid #e9ecef',
+                        maxHeight: 200,
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        lineHeight: 1.5,
+                        fontSize: 14
+                      }}
+                    >
+                      Không có
                     </div>
                   </div>
                 )}
