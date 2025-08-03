@@ -39,7 +39,7 @@ const PillSetupForm: React.FC<PillSetupFormProps> = ({ onSubmit, isLoading, late
     }
 
     const requestData: SetupPillTrackingRequest = {
-      userId: user.id,
+      userId: user._id,
       pill_type: pillType,
       pill_start_date: new Date().toISOString(), // Automatically set to current date
       reminder_time: reminderTime,

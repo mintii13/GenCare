@@ -239,7 +239,7 @@ const CycleDashboard: React.FC<CycleDashboardProps> = ({ cycles, todayStatus, is
               <div className="bg-white/10 backdrop-blur rounded-xl p-6 max-w-md mx-auto">
                 <p className="text-sm mb-4 flex items-start gap-2">
                   <FaLightbulb className="text-yellow-500 mt-0.5 flex-shrink-0" />
-                  <span><strong>Bắt đầu ngay:</strong> Hãy sử dụng tab "Lịch Chu Kì" để thêm ngày kinh nguyệt đầu tiên</span>
+                  <span><strong>Bắt đầu ngay:</strong> Hãy sử dụng tab &quot;Lịch Chu Kì&quot; để thêm ngày kinh nguyệt đầu tiên</span>
                 </p>
                 
                 {isFirstTimeUser && onShowGuide && (

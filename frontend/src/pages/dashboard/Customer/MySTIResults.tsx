@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 
 interface STIResult {
+    _id: string;
     order_id: string;
     order_date: string;
     order_status: string;

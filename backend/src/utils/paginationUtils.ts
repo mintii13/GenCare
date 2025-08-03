@@ -410,10 +410,10 @@ export class PaginationUtils {
 
         // Order status filter với validation
         if (query.order_status && typeof query.order_status === 'string') {
-            const validStatuses = ['pending', 'confirmed', 'processing', 'completed', 'cancelled'];
+            const validStatuses = ['Booked', 'Accepted', 'Processing', 'Testing', 'Completed', 'Canceled'];
             if (validStatuses.includes(query.order_status)) {
-            filter.order_status = query.order_status;
-        }
+                filter.order_status = query.order_status;
+            }
         }
 
         // Payment status filter với validation

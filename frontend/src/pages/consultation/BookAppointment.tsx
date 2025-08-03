@@ -589,9 +589,9 @@ const BookAppointment: React.FC = () => {
 
       {/* Modals */}
       <LoginModal
-        visible={showLoginModal}
+       isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={handleLoginSuccess}
+
       />
       <ConfirmationDialog />
     </BookingLayout>

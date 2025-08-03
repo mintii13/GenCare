@@ -342,12 +342,28 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
-    handleFilterChange('order_status', value === 'all' ? undefined : value);
+    if (value === 'all') {
+      setFilters(prev => {
+        const newFilters = { ...prev, page: 1 };
+        delete newFilters.order_status;
+        return newFilters;
+      });
+    } else {
+      handleFilterChange('order_status', value);
+    }
   };
 
   const handlePaymentStatusFilterChange = (value: string) => {
     setPaymentStatusFilter(value);
-    handleFilterChange('is_paid', value === 'all' ? undefined : value === 'true');
+    if (value === 'all') {
+      setFilters(prev => {
+        const newFilters = { ...prev, page: 1 };
+        delete newFilters.is_paid;
+        return newFilters;
+      });
+    } else {
+      handleFilterChange('is_paid', value === 'true' ? true : false);
+    }
   };
 
   // Order management handlers

@@ -6,8 +6,8 @@ import { Badge } from '../../components/ui/badge';
 import { TodayStatus } from '../../services/menstrualCycleService';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePillTracking } from '../../hooks/usePillTracking';
-import CycleDashboard from './components/CycleDashboard';
-import CycleCalendar from './components/CycleCalendar';
+
+
 import CombinedCycleView from './components/CombinedCycleView';
 import CycleCharts from './components/CycleCharts';
 import PeriodLogger from './components/PeriodLogger';
