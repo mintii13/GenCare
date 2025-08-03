@@ -590,6 +590,20 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
         onOk={handleUpdateResult}
         okText="Lưu"
         cancelText="Hủy"
+        footer={[
+        <Button key="view" onClick={() => {
+          setViewResult(editingResult); // đảm bảo viewResult có dữ liệu
+          setViewResultModalVisible(true);
+        }}  style={{ backgroundColor: 'green', color: 'white', borderColor: 'green' }}>
+          Xem kết quả
+        </Button>,
+        <Button key="cancel" onClick={() => setEditResultModalVisible(false)}>
+          Hủy
+        </Button>,
+        <Button key="submit" type="primary" onClick={handleUpdateResult}>
+          Lưu
+        </Button>,
+      ]}
       >
         <Form layout="vertical" form={editResultForm}>
           <Form.Item
