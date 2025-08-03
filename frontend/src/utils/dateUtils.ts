@@ -168,10 +168,11 @@ export const validateSlotTime = (date: string, startTime: string): { isValid: bo
   }
   
   // Check if slot is within restricted time (less than 2 hours)
-  if (diffHours < 2) {
+  // Allow booking but show warning for slots less than 2 hours
+  if (diffHours < 2 && diffHours > 0) {
     return { 
-      isValid: false, 
-      error: `Lịch hẹn phải được đặt trước ít nhất 2 giờ (hiện tại: ${diffHours.toFixed(1)} giờ)`,
+      isValid: true, 
+      error: `Lịch hẹn chỉ còn ${diffHours.toFixed(1)} giờ nữa. Bạn có chắc muốn đặt?`,
       severity: 'warning'
     };
   }

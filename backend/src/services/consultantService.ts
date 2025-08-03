@@ -55,20 +55,30 @@ export class ConsultantService {
             }
 
             // Chuyển đổi cấu trúc dữ liệu để dễ sử dụng hơn ở frontend
-            const formattedConsultants = consultants.map(consultant => {
-                const user = consultant.user_id as any; // Type assertion
-                console.log(`[DEBUG] ConsultantService: Processing consultant ${consultant._id}, user: ${user?.full_name || 'NO_USER'}`);
-                return {
-                    consultant_id: consultant._id,
-                    user_id: user._id,
-                    full_name: user.full_name,
-                    email: user.email,
-                    avatar: user.avatar,
-                    specialization: consultant.specialization,
-                    qualifications: consultant.qualifications,
-                    experience_years: consultant.experience_years
-                };
-            });
+            const formattedConsultants = consultants
+                .filter(consultant => consultant.user_id) // Lọc bỏ consultant không có user_id
+                .map(consultant => {
+                    const user = consultant.user_id as any; // Type assertion
+                    console.log(`[DEBUG] ConsultantService: Processing consultant ${consultant._id}, user: ${user?.full_name || 'NO_USER'}`);
+                    
+                                         // Kiểm tra user có tồn tại và có đầy đủ thông tin không
+                     if (!user || !user._id) {
+                        console.log(`[DEBUG] ConsultantService: Skipping consultant ${consultant._id} - invalid user data`);
+                        return null;
+                    }
+                    
+                    return {
+                        consultant_id: consultant._id,
+                        user_id: user._id,
+                        full_name: user.full_name || 'Unknown',
+                        email: user.email || '',
+                        avatar: user.avatar || '',
+                        specialization: consultant.specialization,
+                        qualifications: consultant.qualifications,
+                        experience_years: consultant.experience_years
+                    };
+                })
+                .filter(consultant => consultant !== null); // Lọc bỏ các consultant null
 
             console.log(`[DEBUG] ConsultantService: Successfully formatted ${formattedConsultants.length} consultants`);
 
@@ -122,13 +132,23 @@ export class ConsultantService {
 
             // Chuyển đổi cấu trúc dữ liệu
             const user = consultant.user_id as any;
+            
+            // Kiểm tra user có tồn tại không
+            if (!user || !user._id) {
+                console.log(`[DEBUG] ConsultantService: Consultant ${consultantId} has invalid user data`);
+                return {
+                    success: false,
+                    message: "Consultant user data is invalid."
+                };
+            }
+            
             const formattedConsultant = {
                 consultant_id: consultant._id,
                 user_id: user._id,
-                full_name: user.full_name,
-                email: user.email,
-                phone: user.phone,
-                avatar: user.avatar,
+                full_name: user.full_name || 'Unknown',
+                email: user.email || '',
+                phone: user.phone || '',
+                avatar: user.avatar || '',
                 specialization: consultant.specialization,
                 qualifications: consultant.qualifications,
                 experience_years: consultant.experience_years,

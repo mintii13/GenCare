@@ -81,21 +81,30 @@ export class ConsultantRepository {
                 .populate('user_id', 'full_name email')
                 .lean();
 
-            return consultants.map(c => {
-                const user = c.user_id as unknown as { _id: string; full_name: string; email: string };
+            return consultants
+                .filter(c => c.user_id) // Lọc bỏ consultant không có user_id
+                .map(c => {
+                    const user = c.user_id as unknown as { _id: string; full_name: string; email: string };
+                    
+                    // Kiểm tra user có tồn tại không
+                    if (!user || !user._id) {
+                        console.log(`[DEBUG] ConsultantRepository: Skipping consultant ${c._id} - invalid user data`);
+                        return null;
+                    }
 
-                return {
-                    consultant_id: c._id.toString(),
-                    user_id: user._id,
-                    full_name: user.full_name,
-                    email: user.email,
-                    specialization: c.specialization,
-                    qualifications: c.qualifications,
-                    experience_years: c.experience_years,
-                    consultation_rating: c.consultation_rating,
-                    total_consultations: c.total_consultations,
-                };
-            });
+                    return {
+                        consultant_id: c._id.toString(),
+                        user_id: user._id,
+                        full_name: user.full_name || 'Unknown',
+                        email: user.email || '',
+                        specialization: c.specialization,
+                        qualifications: c.qualifications,
+                        experience_years: c.experience_years,
+                        consultation_rating: c.consultation_rating,
+                        total_consultations: c.total_consultations,
+                    };
+                })
+                .filter(consultant => consultant !== null); // Lọc bỏ các consultant null
         } catch (error) {
             console.error('Error finding consultants by specialization:', error);
             throw error;

@@ -46,10 +46,18 @@ class ApiClient {
       (config) => {
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         
+        // Debug: Log token info
+        console.log('🔍 [DEBUG] ApiClient - AUTH_TOKEN_KEY:', AUTH_TOKEN_KEY);
+        console.log('🔍 [DEBUG] ApiClient - Token from localStorage:', token ? token.substring(0, 20) + '...' : 'null');
+        console.log('🔍 [DEBUG] ApiClient - Request URL:', config.url);
+        
         if (token) {
           // ensure header object exists and add Authorization
           (config.headers = (config.headers || {}) as AxiosRequestHeaders);
           (config.headers as AxiosRequestHeaders)['Authorization'] = `Bearer ${token}`;
+          console.log('🔍 [DEBUG] ApiClient - Authorization header added');
+        } else {
+          console.log('🔍 [DEBUG] ApiClient - No token found, skipping Authorization header');
         }
 
         log.api(config.method?.toUpperCase() || 'REQUEST', config.url || '', {

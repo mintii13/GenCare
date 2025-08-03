@@ -55,6 +55,19 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
       return;
     }
 
+    // Show warning for restricted slots but still allow booking
+    if (validation.severity === 'warning') {
+      toast(validation.error!, {
+        icon: '⚠️',
+        duration: 4000,
+        style: {
+          background: '#fff3cd',
+          color: '#856404',
+          border: '1px solid #ffeaa7'
+        }
+      });
+    }
+
     log.info('WeeklySlotPicker', 'Slot selected', { date, startTime, endTime });
     onSlotSelect(date, startTime, endTime);
   };
@@ -74,6 +87,18 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
       const now = dayjs();
       const diffHours = slotDateTime.diff(now, 'hour', true);
       const isPast = slotDateTime.isBefore(now);
+      
+      // Debug cho slot 7-8h
+      if (timeSlot.startTime === '07:00') {
+        console.log('🔍 [DEBUG] Slot 7-8h:', {
+          dateString,
+          slotDateTime: slotDateTime.format('YYYY-MM-DD HH:mm:ss'),
+          now: now.format('YYYY-MM-DD HH:mm:ss'),
+          diffHours,
+          isPast,
+          dayName
+        });
+      }
 
       // Kiểm tra slot có available không
       const availableSlot = dayData.available_slots?.find((slot: any) =>
@@ -100,7 +125,7 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         status = 'past';
       } else if (!availableSlot) {
         status = 'unavailable';
-      } else if (diffHours < 2) {
+      } else if (diffHours < 2 && diffHours > 0) {
         status = 'restricted';
         disabled = false; // Cho phép click slot quá gần
       } else if (isSelected) {
@@ -109,6 +134,18 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
       } else {
         status = 'available';
         disabled = false;
+      }
+      
+      // Debug cho slot 7-8h
+      if (timeSlot.startTime === '07:00') {
+        console.log('🔍 [DEBUG] Slot 7-8h status:', {
+          isBooked,
+          isPast,
+          availableSlot: !!availableSlot,
+          diffHours,
+          status,
+          disabled
+        });
       }
 
       return {
@@ -139,7 +176,8 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
         const slotDateTime = dayjs().hour(timeSlot.hour).minute(0).second(0);
         const diffHours = slotDateTime.diff(now, 'hour', true);
 
-        if (diffHours >= 2) {
+        // Include slots that are at least 30 minutes away (not severely restricted)
+        if (diffHours > 0.5) {
           const availableSlot = dayData.available_slots?.find((slot: any) =>
             slot.start_time === timeSlot.startTime && slot.is_available
           );
