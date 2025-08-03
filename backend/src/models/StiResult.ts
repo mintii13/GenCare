@@ -58,6 +58,8 @@ export interface IStiResult extends Document{
     diagnosis?: string;
     is_confirmed: boolean;
     medical_notes?: string;                          //notes for consultant
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 const stiResultSchema = new Schema<IStiResult>({

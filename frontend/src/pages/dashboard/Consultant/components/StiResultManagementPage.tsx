@@ -482,11 +482,12 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
                 size="small"
               />
             </Tooltip>
-            <Tooltip title="Sửa kết quả">
+            <Tooltip title="Chẩn đoán">
               <Button
                 icon={<EditOutlined />}
                 onClick={() => handleEditResult(record)}
                 size="small"
+                disabled={record.sti_result?.is_confirmed === true}
                 />
             </Tooltip>
             <Tooltip title="Xác nhận kết quả">
