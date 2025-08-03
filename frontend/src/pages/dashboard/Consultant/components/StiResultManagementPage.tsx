@@ -213,9 +213,7 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
               customer_phone: item.customer?.phone || item.customer_id?.phone,
             }))
         : [];
-        console.error(1, "==========================")
         setOrders(mapped);
-        console.error(2, "==========================")
         setTotal(resData.data?.pagination?.total_items || resData.pagination?.total_items || 0);
         setCurrentPage(resData.data?.pagination?.current_page || resData.pagination?.current_page || 1);  
       } else {
@@ -482,11 +480,12 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
                 size="small"
               />
             </Tooltip>
-            <Tooltip title="Sửa kết quả">
+            <Tooltip title="Chẩn đoán">
               <Button
                 icon={<EditOutlined />}
                 onClick={() => handleEditResult(record)}
                 size="small"
+                disabled={record.sti_result?.is_confirmed === true}
                 />
             </Tooltip>
             <Tooltip title="Xác nhận kết quả">
@@ -539,7 +538,7 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
 ];
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
+      {/* <Space style={{ marginBottom: 16 }}>
         <Input.Search
           placeholder="Tìm kiếm mã đơn, tên khách..."
           value={search}
@@ -548,7 +547,7 @@ const StiResultsManagement: React.FC<StiResultsManagementProps> = ({ refreshTrig
           enterButton={<SearchOutlined />}
         />
         <Button icon={<PlusOutlined />} onClick={fetchOrders}>Làm mới</Button>
-      </Space>
+      </Space> */}
 
       {/* Orders Table */}
       <Card>

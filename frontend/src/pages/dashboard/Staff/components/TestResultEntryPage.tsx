@@ -516,7 +516,7 @@ const renderSwabResultForm = (testId: string) => {
 
   // Lấy test code từ order items hoặc package items
   let testCode = '';
-  let testCategory = '';
+  let testCategory = (currentTest as IStiTest).category;
   
   // Tìm trong sti_test_items
   const testItem = order?.sti_test_items?.find(item => {
@@ -583,7 +583,6 @@ const renderSwabResultForm = (testId: string) => {
           </Col>
           </>
         )}
-        
         {/* Chỉ hiển thị field Parasites nếu test thuộc category parasitic */}
         {testCategory === 'parasitic' && (
           <>
@@ -591,7 +590,7 @@ const renderSwabResultForm = (testId: string) => {
           </Col>
           <Col span={8}>
             <Form.Item
-              label="Ký sinh trùng (Parasites)"
+              label="Parasites"
               name={[testId, 'parasites']}
               tooltip="Danh sách ký sinh trùng phát hiện được"
             >
