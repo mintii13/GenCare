@@ -142,7 +142,12 @@ export class MenstrualCycleService {
 
                 if (overlappingCycles.length > 0) {
                     // Merge all overlapping cycles with new period days
-                    console.log('[MenstrualCycleService] Merging', overlappingCycles.length, 'overlapping cycles');
+                    console.log('[MenstrualCycleService] DECISION: Merging', overlappingCycles.length, 'overlapping cycles');
+                    console.log('[MenstrualCycleService] Overlapping cycles:', overlappingCycles.map(c => ({
+                        id: c._id,
+                        startDate: c.cycle_start_date.toISOString().split('T')[0],
+                        endDate: c.predicted_cycle_end?.toISOString().split('T')[0] || 'unknown'
+                    })));
                     
                     // Collect all period days from overlapping cycles
                     let allPeriodDays = [...cycleDays];
@@ -176,22 +181,41 @@ export class MenstrualCycleService {
                     processedCycles.push(newCycle._id);
                 } else {
                     // Create new cycle
-                    console.log('[MenstrualCycleService] Creating new cycle');
-                    const cycleLength = await this.calculatePersonalizedCycleLength(user_id, cycleStartDate);
-                    
-                    const cycleData = {
-                        user_id: new mongoose.Types.ObjectId(user_id),
-                        cycle_start_date: cycleStartDate,
-                        period_days: cycleDays,
-                        cycle_length: cycleLength,
-                        predicted_cycle_end: this.predictCycleEnd(cycleStartDate, cycleLength),
-                        predicted_ovulation_date: this.predictOvulationDate(cycleStartDate, cycleLength),
-                        predicted_fertile_start: this.predictFertileStart(cycleStartDate, cycleLength),
-                        predicted_fertile_end: this.predictFertileEnd(cycleStartDate, cycleLength)
-                    };
+                    console.log('[MenstrualCycleService] DECISION: Creating new cycle - no overlapping cycles found or sufficient gap detected');
+                    console.log('[MenstrualCycleService] New cycle details:', {
+                        cycleStartDate: cycleStartDate.toISOString().split('T')[0],
+                        periodDaysCount: cycleDays.length,
+                        periodDays: cycleDays.map(d => d.toISOString().split('T')[0])
+                    });
+            const cycleLength = await this.calculatePersonalizedCycleLength(user_id, cycleStartDate);
+            
+            const predictedCycleEnd = this.predictCycleEnd(cycleStartDate, cycleLength);
+            const predictedOvulationDate = this.predictOvulationDate(cycleStartDate, cycleLength);
+            const predictedFertileStart = this.predictFertileStart(cycleStartDate, cycleLength);
+            const predictedFertileEnd = this.predictFertileEnd(cycleStartDate, cycleLength);
+            
+            console.log('[MenstrualCycleService] Cycle predictions:', {
+                cycleStartDate: cycleStartDate.toISOString().split('T')[0],
+                cycleLength,
+                predictedCycleEnd: predictedCycleEnd.toISOString().split('T')[0],
+                predictedOvulationDate: predictedOvulationDate.toISOString().split('T')[0],
+                predictedFertileStart: predictedFertileStart.toISOString().split('T')[0],
+                predictedFertileEnd: predictedFertileEnd.toISOString().split('T')[0]
+            });
+            
+            const cycleData = {
+                user_id: new mongoose.Types.ObjectId(user_id),
+                cycle_start_date: cycleStartDate,
+                period_days: cycleDays,
+                cycle_length: cycleLength,
+                predicted_cycle_end: predictedCycleEnd,
+                predicted_ovulation_date: predictedOvulationDate,
+                predicted_fertile_start: predictedFertileStart,
+                predicted_fertile_end: predictedFertileEnd
+            };
 
-                    const newCycle = await MenstrualCycleRepository.create(cycleData);
-                    processedCycles.push(newCycle._id);
+            const newCycle = await MenstrualCycleRepository.create(cycleData);
+            processedCycles.push(newCycle._id);
                 }
             }
             
@@ -203,12 +227,19 @@ export class MenstrualCycleService {
                 }
             }
 
+            console.log('[MenstrualCycleService] Process completed successfully:', {
+                processedCycles: processedCycles.length,
+                cycleIds: processedCycles,
+                message: 'Chu kỳ đã được cập nhật, vòng tròn sẽ được refresh'
+            });
+
             return {
                 success: true,
                 message: `Đã xử lý thành công ${processedCycles.length} chu kỳ`,
                 data: {
                     processed_cycles: processedCycles.length,
-                    cycle_ids: processedCycles
+                    cycle_ids: processedCycles,
+                    refresh_required: true
                 }
             };
 
@@ -325,7 +356,27 @@ export class MenstrualCycleService {
         });
         
         // Only merge if there's actual overlap or very close proximity
-        return hasOverlappingDays || isWithinExistingCycle || hasClosePeriodDays || isTooClose;
+        // Prioritize creating new cycles when there's sufficient gap
+        if (daysBetween >= CYCLE_CONSTRAINTS.MIN_CYCLE_LENGTH) {
+            console.log('[MenstrualCycleService] Sufficient gap detected, should create new cycle');
+            return false; // Don't merge, create new cycle
+        }
+        
+        // Only merge if there's actual overlap or very close proximity
+        const shouldMerge = hasOverlappingDays || isWithinExistingCycle || hasClosePeriodDays || isTooClose;
+        
+        console.log('[MenstrualCycleService] Final merge decision:', {
+            cycleId: existingCycle._id,
+            shouldMerge,
+            reasons: {
+                hasOverlappingDays,
+                isWithinExistingCycle,
+                hasClosePeriodDays,
+                isTooClose
+            }
+        });
+        
+        return shouldMerge;
     }
 
     // Group consecutive period days into cycles
@@ -532,8 +583,10 @@ export class MenstrualCycleService {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
+            console.log('[MenstrualCycleService] Calling repository with user_id:', user_id);
             const cycles = await MenstrualCycleRepository.findByUser(user_id);
-            if (cycles.length === 0) {
+            console.log('[MenstrualCycleService] Repository returned cycles:', cycles?.length || 0);
+            if (!cycles || cycles.length === 0) {
                 return {
                     success: true,
                     message: 'Không tìm thấy chu kỳ nào',
@@ -550,14 +603,39 @@ export class MenstrualCycleService {
                 };
             }
 
+            console.log('[MenstrualCycleService] Total cycles found:', cycles?.length || 0);
+            
             // Find current cycle
-            const currentCycle = cycles.find(cycle => {
-                const cycleStart = new Date(cycle.cycle_start_date);
-                const cycleEnd = cycle.predicted_cycle_end || new Date(cycleStart.getTime() + (cycle.cycle_length || 28) * 24 * 60 * 60 * 1000);
-                return today >= cycleStart && today <= cycleEnd;
+            const currentCycle = cycles?.find(cycle => {
+                try {
+                    const cycleStart = new Date(cycle.cycle_start_date);
+                    const cycleEnd = cycle.predicted_cycle_end || new Date(cycleStart.getTime() + (cycle.cycle_length || 28) * 24 * 60 * 60 * 1000);
+                    const isInCycle = today >= cycleStart && today <= cycleEnd;
+                    
+                    console.log('[MenstrualCycleService] Checking cycle:', {
+                        cycleId: cycle._id,
+                        cycleStart: cycleStart.toISOString().split('T')[0],
+                        cycleEnd: cycleEnd.toISOString().split('T')[0],
+                        today: today.toISOString().split('T')[0],
+                        isInCycle
+                    });
+                    
+                    return isInCycle;
+                } catch (error) {
+                    console.error('[MenstrualCycleService] Error checking cycle:', error);
+                    return false;
+                }
             });
 
             if (!currentCycle) {
+                console.log('[MenstrualCycleService] No current cycle found for today');
+                console.log('[MenstrualCycleService] Available cycles:', cycles?.map(c => ({
+                    id: c._id,
+                    startDate: c.cycle_start_date.toISOString().split('T')[0],
+                    endDate: c.predicted_cycle_end?.toISOString().split('T')[0] || 'unknown',
+                    periodDays: c.period_days.map(d => new Date(d).toISOString().split('T')[0])
+                })));
+                
                 return {
                     success: true,
                     message: 'Không trong chu kỳ hiện tại',
@@ -585,17 +663,44 @@ export class MenstrualCycleService {
             const cycleStart = new Date(currentCycle.cycle_start_date);
             let dayInCycle = Math.floor((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             
-            // If today is a period day, calculate the actual day within the period
+            // If today is a period day, calculate which day of the period it is
             if (isPeriodDay) {
-                const periodDayIndex = currentCycle.period_days.findIndex(date => {
-                    const periodDate = new Date(date);
-                    periodDate.setHours(0, 0, 0, 0);
-                    return periodDate.getTime() === today.getTime();
+                console.log('[MenstrualCycleService] Today is a period day, calculating period day number');
+                console.log('[MenstrualCycleService] All period days:', currentCycle.period_days.map(d => new Date(d).toISOString().split('T')[0]));
+                console.log('[MenstrualCycleService] Today:', today.toISOString().split('T')[0]);
+                
+                // Sort period days to ensure correct order
+                const sortedPeriodDays = currentCycle.period_days
+                    .map(date => new Date(date))
+                    .sort((a, b) => a.getTime() - b.getTime());
+                
+                console.log('[MenstrualCycleService] Sorted period days:', sortedPeriodDays.map(d => d.toISOString().split('T')[0]));
+                
+                const periodDayIndex = sortedPeriodDays.findIndex(date => {
+                    date.setHours(0, 0, 0, 0);
+                    const todayCopy = new Date(today);
+                    todayCopy.setHours(0, 0, 0, 0);
+                    return date.getTime() === todayCopy.getTime();
                 });
+                
+                console.log('[MenstrualCycleService] Found period day at index:', periodDayIndex);
+                
                 if (periodDayIndex !== -1) {
                     dayInCycle = periodDayIndex + 1; // 1-based index for display
+                    console.log('[MenstrualCycleService] Set dayInCycle to:', dayInCycle);
+                } else {
+                    console.error('[MenstrualCycleService] ERROR: Could not find today in period days!');
                 }
             }
+            
+            console.log('[MenstrualCycleService] Day in cycle calculation:', {
+                today: today.toISOString().split('T')[0],
+                cycleStart: cycleStart.toISOString().split('T')[0],
+                isPeriodDay,
+                calculatedDayInCycle: dayInCycle,
+                totalPeriodDays: currentCycle.period_days.length,
+                periodDays: currentCycle.period_days.map(d => new Date(d).toISOString().split('T')[0])
+            });
 
             // Determine cycle phase
             let cyclePhase = 'unknown';
@@ -610,12 +715,26 @@ export class MenstrualCycleService {
                 // Calculate cycle day from cycle start for phase determination
                 const cycleDayFromStart = Math.floor((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                 
-                // Tính toán dựa trên chu kỳ thực tế thay vì hardcode
+                // Tính toán dựa trên chu kỳ thực tế
                 const cycleLength = currentCycle.cycle_length || 28;
-                const ovulationDay = cycleLength - 14;
-                const fertileStart = ovulationDay - 5;
-                const fertileEnd = ovulationDay + 1;
+                const ovulationDay = Math.floor(cycleLength * 0.5); // Thường là giữa chu kỳ
+                const fertileStart = Math.max(ovulationDay - 5, 1);
+                const fertileEnd = Math.min(ovulationDay + 1, cycleLength);
+                const lutealStart = fertileEnd + 1;
+                const lutealEnd = cycleLength - 7;
                 
+                console.log('[MenstrualCycleService] Phase calculation:', {
+                    cycleDayFromStart,
+                    cycleLength,
+                    ovulationDay,
+                    fertileStart,
+                    fertileEnd,
+                    lutealStart,
+                    lutealEnd,
+                    isPeriodDay
+                });
+                
+                // Logic phase chính xác hơn
                 if (cycleDayFromStart <= 5) {
                     cyclePhase = 'menstrual';
                 } else if (cycleDayFromStart >= fertileStart && cycleDayFromStart <= fertileEnd) {
@@ -624,8 +743,9 @@ export class MenstrualCycleService {
                     pregnancyChance = 'high';
                     if (cycleDayFromStart === ovulationDay) {
                         isOvulationDay = true;
+                        cyclePhase = 'ovulation';
                     }
-                } else if (cycleDayFromStart >= fertileEnd + 1 && cycleDayFromStart <= cycleLength - 7) {
+                } else if (cycleDayFromStart >= lutealStart && cycleDayFromStart <= lutealEnd) {
                     cyclePhase = 'luteal';
                 } else {
                     cyclePhase = 'follicular';
@@ -638,32 +758,49 @@ export class MenstrualCycleService {
             const pmsWindow = this.calculatePMSWindow(cycleStart, currentCycle.cycle_length);
             const isPMSDay = today >= pmsWindow.start && today <= pmsWindow.end;
 
-            return { 
+            const responseData = {
                 success: true, 
                 message: 'Lấy trạng thái hôm nay thành công',
-                data: {
-                    date: today.toISOString(),
-                    is_period_day: isPeriodDay,
-                    is_fertile_day: isFertileDay,
-                    is_ovulation_day: isOvulationDay,
-                    is_pms_day: isPMSDay,
-                    pregnancy_chance: pregnancyChance,
-                    recommendations,
-                    day_in_cycle: dayInCycle,
-                    cycle_phase: cyclePhase,
-                    predicted_cycle_end: currentCycle.predicted_cycle_end?.toISOString(),
-                    predicted_ovulation_date: currentCycle.predicted_ovulation_date?.toISOString(),
-                    predicted_fertile_start: currentCycle.predicted_fertile_start?.toISOString(),
-                    predicted_fertile_end: currentCycle.predicted_fertile_end?.toISOString(),
-                    pms_window_start: pmsWindow.start.toISOString(),
-                    pms_window_end: pmsWindow.end.toISOString(),
-                    cycle_length: currentCycle.cycle_length,
-                    period_length: currentCycle.period_days.length
-                }
+                                    data: {
+                        date: today.toISOString(),
+                        is_period_day: isPeriodDay,
+                        is_fertile_day: isFertileDay,
+                        is_ovulation_day: isOvulationDay,
+                        is_pms_day: isPMSDay,
+                        pregnancy_chance: pregnancyChance,
+                        recommendations,
+                        day_in_cycle: dayInCycle,
+                        cycle_phase: cyclePhase,
+                        // Thêm thông tin chi tiết về ngày hành kinh
+                        period_day_number: isPeriodDay ? dayInCycle : undefined,
+                        total_period_days: currentCycle.period_days.length,
+                        predicted_cycle_end: currentCycle.predicted_cycle_end?.toISOString(),
+                        predicted_ovulation_date: currentCycle.predicted_ovulation_date?.toISOString(),
+                        predicted_fertile_start: currentCycle.predicted_fertile_start?.toISOString(),
+                        predicted_fertile_end: currentCycle.predicted_fertile_end?.toISOString(),
+                        pms_window_start: pmsWindow.start.toISOString(),
+                        pms_window_end: pmsWindow.end.toISOString(),
+                        cycle_length: currentCycle.cycle_length,
+                        period_length: currentCycle.period_days.length
+                    }
             };
+            
+            console.log('[MenstrualCycleService] Final response data:', {
+                day_in_cycle: responseData.data.day_in_cycle,
+                period_day_number: responseData.data.period_day_number,
+                total_period_days: responseData.data.total_period_days,
+                is_period_day: responseData.data.is_period_day,
+                cycle_phase: responseData.data.cycle_phase
+            });
+            
+            return responseData;
         } catch (error) {
             console.error('[MenstrualCycleService] Error getting today status:', error);
-            throw error;
+            return {
+                success: false,
+                message: 'Lỗi khi lấy trạng thái hôm nay: ' + (error as Error).message,
+                data: null
+            };
         }
     }
 

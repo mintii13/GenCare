@@ -28,6 +28,9 @@ export interface TodayStatus {
   recommendations: string[];
   day_in_cycle?: number;
   cycle_phase?: string;
+  // Period day information
+  period_day_number?: number;
+  total_period_days?: number;
   // Current cycle predictions
   predicted_cycle_end?: string;
   predicted_ovulation_date?: string;
@@ -95,6 +98,14 @@ export const menstrualCycleService = {
     console.log('[getTodayStatus] URL:', API.MenstrualCycle.TODAY_STATUS);
     const response = await apiClient.safeGet<TodayStatus>(API.MenstrualCycle.TODAY_STATUS);
     console.log('[getTodayStatus] Response:', response);
+    return response;
+  },
+
+  // Debug endpoint
+  async debug(): Promise<ApiResponse<any>> {
+    console.log('[debug] URL:', API.MenstrualCycle.BASE + '/debug');
+    const response = await apiClient.safeGet<any>(API.MenstrualCycle.BASE + '/debug');
+    console.log('[debug] Response:', response);
     return response;
   },
 

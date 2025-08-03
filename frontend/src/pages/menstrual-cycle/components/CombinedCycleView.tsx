@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { TodayStatus, CycleData } from '../../../services/menstrualCycleService';
+import { PillSchedule } from '../../../services/pillTrackingService';
 import { FaHeart, FaCalendarAlt, FaChartBar, FaInfoCircle, FaEdit, FaTimes, FaSave, FaTint, FaCheck, FaEgg, FaBullseye, FaChevronLeft, FaChevronRight, FaTrash, FaPills, FaCog } from 'react-icons/fa';
 import { menstrualCycleService } from '../../../services/menstrualCycleService';
 import { toast } from 'react-hot-toast';
 import CycleProgressCircle from './CycleProgressCircle';
+import PillStatusCard from './PillStatusCard';
 
 interface CombinedCycleViewProps {
   todayStatus: TodayStatus | null;
@@ -14,9 +16,15 @@ interface CombinedCycleViewProps {
   onRefresh: () => void;
   isFirstTimeUser: boolean;
   onShowGuide: () => void;
-  pillSchedules?: any[];
+  pillSchedules?: PillSchedule[];
   onTakePill?: (scheduleId: string) => Promise<void>;
   onShowPillSettings?: () => void;
+  onUpdatePillTime?: (scheduleId: string, newTime: string) => Promise<void>;
+  onUpdatePillType?: (scheduleId: string, newType: '21-day' | '24+4' | '21+7') => Promise<void>;
+  onDisableReminder?: () => Promise<void>;
+  onEnableReminder?: () => Promise<void>;
+  onClearSchedules?: () => Promise<void>;
+  onDebug?: () => Promise<any>;
 }
 
 const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
@@ -27,7 +35,13 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
   onShowGuide,
   pillSchedules = [],
   onTakePill,
-  onShowPillSettings
+  onShowPillSettings,
+  onUpdatePillTime,
+  onUpdatePillType,
+  onDisableReminder,
+  onEnableReminder,
+  onClearSchedules,
+  onDebug
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isDeleting, setIsDeleting] = useState(false);
@@ -101,12 +115,34 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
       const cycleLength = todayStatus.cycle_length || 28;
       
       if (todayStatus.day_in_cycle && todayStatus.cycle_phase) {
-        const dayInCycle = todayStatus.day_in_cycle;
-        const progress = (dayInCycle / cycleLength) * 100;
+        let dayInCycle = todayStatus.day_in_cycle;
+        let progress = 0;
+        
+        // Nếu là ngày hành kinh, hiển thị ngày thứ mấy trong kỳ hành kinh
+        if (todayStatus.is_period_day && todayStatus.period_day_number) {
+          dayInCycle = todayStatus.period_day_number;
+          // Progress cho ngày hành kinh: dựa trên tổng số ngày hành kinh
+          const totalPeriodDays = todayStatus.total_period_days || 5;
+          progress = Math.min((dayInCycle / totalPeriodDays) * 100, 100);
+        } else {
+          // Progress cho ngày thường: dựa trên chu kỳ
+          progress = Math.min((dayInCycle / cycleLength) * 100, 100);
+        }
+        
+        console.log('[CombinedCycleView] Cycle progress calculation:', {
+          dayInCycle,
+          cycleLength,
+          progress,
+          phase: todayStatus.cycle_phase,
+          isPeriodDay: todayStatus.is_period_day,
+          periodDayNumber: todayStatus.period_day_number,
+          totalPeriodDays: todayStatus.total_period_days
+        });
+        
         return { progress, dayInCycle, phase: todayStatus.cycle_phase };
       }
       
-          return { progress: 0, dayInCycle: 0, phase: 'Unknown' };
+      return { progress: 0, dayInCycle: 0, phase: 'Unknown' };
     } catch (err) {
       console.error('Error in calculateCycleProgress:', err);
       return { progress: 0, dayInCycle: 0, phase: 'Unknown' };
@@ -262,13 +298,54 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
     if (selectedPeriodDays.includes(dateString)) {
       setSelectedPeriodDays(selectedPeriodDays.filter(d => d !== dateString));
     } else {
-      setSelectedPeriodDays([...selectedPeriodDays, dateString]);
+      // Validate continuity before adding new date
+      const newSelectedDays = [...selectedPeriodDays, dateString];
+      if (!isPeriodDaysContinuous(newSelectedDays)) {
+        toast.error('Các ngày hành kinh phải liên tục. Vui lòng chọn các ngày kế tiếp nhau.');
+        return;
+      }
+      setSelectedPeriodDays(newSelectedDays);
     }
+  };
+
+  // Function to check if period days are continuous
+  const isPeriodDaysContinuous = (days: string[]): boolean => {
+    if (days.length <= 1) return true;
+    
+    // Sort days chronologically
+    const sortedDays = days.sort();
+    
+    for (let i = 1; i < sortedDays.length; i++) {
+      const currentDate = new Date(sortedDays[i]);
+      const previousDate = new Date(sortedDays[i - 1]);
+      
+      // Calculate difference in days
+      const diffTime = currentDate.getTime() - previousDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // If difference is more than 1 day, they are not continuous
+      if (diffDays > 1) {
+        console.log('[CombinedCycleView] Non-continuous days detected:', {
+          previous: sortedDays[i - 1],
+          current: sortedDays[i],
+          diffDays
+        });
+        return false;
+      }
+    }
+    
+    return true;
   };
 
   const handleSavePeriodDays = async () => {
     if (selectedPeriodDays.length === 0) {
       toast.error('Vui lòng chọn ít nhất một ngày hành kinh');
+      return;
+    }
+
+    // Validate continuity
+    if (!isPeriodDaysContinuous(selectedPeriodDays)) {
+      toast.error('Các ngày hành kinh phải liên tục. Vui lòng chọn các ngày kế tiếp nhau.');
       return;
     }
 
@@ -287,14 +364,23 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
     }
 
     try {
-    setIsSaving(true);
-    
+      setIsSaving(true);
+      
       const response = await menstrualCycleService.processCycle(selectedPeriodDays);
       
       if (response.success) {
         toast.success('Đã lưu ngày hành kinh thành công');
         setSelectedPeriodDays([]);
+        
+        // Force refresh để cập nhật vòng tròn chu kỳ
+        console.log('[CombinedCycleView] Refreshing data after saving period days');
         onRefresh();
+        
+        // Thêm delay nhỏ để đảm bảo backend đã xử lý xong
+        setTimeout(() => {
+          console.log('[CombinedCycleView] Additional refresh to ensure data consistency');
+          onRefresh();
+        }, 500);
       } else {
         toast.error(response.message || 'Có lỗi xảy ra khi lưu ngày');
       }
@@ -506,20 +592,32 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
   };
 
   const { progress, dayInCycle, phase } = calculateCycleProgress();
+  
+  // Debug log để kiểm tra dữ liệu
+  console.log('[CombinedCycleView] Current cycle data:', {
+    todayStatus: todayStatus ? {
+      day_in_cycle: todayStatus.day_in_cycle,
+      cycle_phase: todayStatus.cycle_phase,
+      cycle_length: todayStatus.cycle_length,
+      is_period_day: todayStatus.is_period_day,
+      period_day_number: todayStatus.period_day_number,
+      total_period_days: todayStatus.total_period_days
+    } : null,
+    calculatedProgress: { progress, dayInCycle, phase },
+    cyclesCount: safeCycles.length
+  });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
       {/* Left Column - Cycle Progress Circle */}
       <div className="lg:col-span-1 order-1 lg:order-1">
-            {todayStatus && (
+        {todayStatus && (
           <CycleProgressCircle
             currentDay={dayInCycle}
             cycleLength={todayStatus.cycle_length || 28}
             cyclePhase={phase as 'menstrual' | 'follicular' | 'ovulation' | 'luteal'}
             isPeriodDay={todayStatus.is_period_day || false}
-            pillSchedules={pillSchedules}
-            onTakePill={onTakePill}
-            onShowPillSettings={onShowPillSettings}
+            key={`cycle-${dayInCycle}-${phase}-${todayStatus.cycle_length}`}
           />
         )}
       </div>
@@ -632,6 +730,23 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
       {/* Right Column - Notes and Guide */}
       <div className="lg:col-span-1 order-3 lg:order-3">
         <div className="space-y-4">
+          {/* Pill Status Card */}
+          <PillStatusCard
+            schedules={pillSchedules}
+            onTakePill={onTakePill || (() => Promise.resolve())}
+            onShowPillSettings={onShowPillSettings || (() => {})}
+            onUpdatePillTime={onUpdatePillTime}
+            onUpdatePillType={onUpdatePillType}
+            onDisableReminder={onDisableReminder}
+            onEnableReminder={onEnableReminder}
+            onClearSchedules={onClearSchedules}
+            onDebug={onDebug || (() => Promise.resolve())}
+            onRefresh={onRefresh ? (async () => {
+              console.log('[CombinedCycleView] onRefresh called from PillStatusCard');
+              onRefresh();
+            }) : undefined}
+          />
+          
           {/* Instructions */}
           <Card>
             <CardHeader>
@@ -643,6 +758,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
             <CardContent>
               <ul className="text-xs text-gray-700 space-y-1">
                 <li>• Click vào ngày trên lịch để chọn/bỏ chọn ngày hành kinh</li>
+                <li>• <strong>Các ngày hành kinh phải liên tục</strong> (kế tiếp nhau)</li>
                 <li>• Ngày đã chọn sẽ hiển thị màu hồng nhạt</li>
                 <li>• Bấm &quot;Lưu ngày&quot; để lưu các ngày đã chọn</li>
                 <li>• Bạn có thể xóa ngày đã lưu bằng nút xóa trên ngày</li>
@@ -661,7 +777,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
           </Card>
 
           {/* Prediction Info */}
-          {safeCycles?.length > 0 && (
+          {/* {safeCycles?.length > 0 && (
             <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -691,11 +807,27 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                           </span>
                         </div>
                       )}
-                      {todayStatus?.next_cycle_start && (
+                      {todayStatus?.predicted_fertile_start && todayStatus?.predicted_fertile_end && (
+                        <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                          <span className="text-gray-600">Thụ thai:</span>
+                          <span className="font-medium text-green-600">
+                            {new Date(todayStatus.predicted_fertile_start).toLocaleDateString('vi-VN')} - {new Date(todayStatus.predicted_fertile_end).toLocaleDateString('vi-VN')}
+                          </span>
+                        </div>
+                      )}
+                      {todayStatus?.predicted_ovulation_date && (
+                        <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                          <span className="text-gray-600">Rụng trứng:</span>
+                          <span className="font-medium text-orange-600">
+                            {new Date(todayStatus.predicted_ovulation_date).toLocaleDateString('vi-VN')}
+                          </span>
+                        </div>
+                      )}
+                      {todayStatus?.predicted_cycle_end && (
                         <div className="flex items-center justify-between p-2 bg-white rounded-lg">
                           <span className="text-gray-600">Chu kỳ tiếp:</span>
                           <span className="font-medium text-blue-800">
-                            {new Date(todayStatus.next_cycle_start).toLocaleDateString('vi-VN')}
+                            {new Date(todayStatus.predicted_cycle_end).toLocaleDateString('vi-VN')}
                           </span>
                         </div>
                       )}
@@ -720,8 +852,11 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                 })()}
               </CardContent>
             </Card>
-          )}
+          )} */}
          
+          {/* Debug Button - Temporary */}
+       
+
           {/* First Time User Guide */}
           {isFirstTimeUser && (
             <Card className="border-yellow-200 bg-yellow-50">

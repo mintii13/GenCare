@@ -51,11 +51,18 @@ const MenstrualCyclePage: React.FC = () => {
     const {
     schedules,
     loading: pillLoading,
-    error: pillError, 
-    setupPillSchedule, 
-    markPillAsTaken,
+    error: pillError,
+    refresh: refreshPills,
+    setupPillSchedule,
     updatePillSchedule,
-    testReminder
+    markPillAsTaken,
+    updatePillTime,
+    updatePillType,
+    disableReminder,
+    enableReminder,
+    clearSchedules,
+    testReminder,
+    debug
   } = usePillTracking();
 
   const getStatusColor = useCallback((pregnancyChance: string) => {
@@ -126,6 +133,18 @@ const MenstrualCyclePage: React.FC = () => {
     role: user?.role,
     isAuthenticated: !!user
   });
+
+  // Debug PillSettingsModal props
+  useEffect(() => {
+    if (showPillSettings) {
+      console.log('[MenstrualCyclePage] PillSettingsModal props:', {
+        isOpen: showPillSettings,
+        schedulesLength: schedules?.length || 0,
+        currentSchedule: schedules && schedules.length ? schedules[0] : undefined,
+        pillLoading
+      });
+    }
+  }, [showPillSettings, schedules, pillLoading]);
 
   // Error state - chỉ hiển thị khi có lỗi thật sự (network/server error)
   if (cycleError && !isLoading) {
@@ -362,12 +381,18 @@ const MenstrualCyclePage: React.FC = () => {
               <CombinedCycleView 
                 todayStatus={todayStatus} 
                 cycles={cycles} 
-                onRefresh={refreshCycle}
+                onRefresh={refreshPills}
                 isFirstTimeUser={isFirstTimeUser}
                 onShowGuide={() => setShowFirstTimeGuide(true)}
                 pillSchedules={schedules}
                 onTakePill={markPillAsTaken}
                 onShowPillSettings={() => setShowPillSettings(true)}
+                onUpdatePillTime={updatePillTime}
+                onUpdatePillType={updatePillType}
+                onDisableReminder={disableReminder}
+                onEnableReminder={enableReminder}
+                onClearSchedules={clearSchedules}
+                onDebug={debug}
               />
             </ErrorBoundary>
           </TabsContent>
@@ -401,7 +426,7 @@ const MenstrualCyclePage: React.FC = () => {
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setShowPillSettings(true)}>
                     <FaCog className="mr-2" />
-                    Cài đặt
+                    Quản lý lịch
                 </Button>
             </div>
             

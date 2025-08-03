@@ -177,11 +177,20 @@ export class PillTrackingService{
                 }
                 parseEndDate = date;
             }
-            const schedules = await PillTrackingRepository.getUserPillScheduleByDate(
-                userId,
-                parseStartDate,
-                parseEndDate
-            );
+
+            let schedules: any[];
+            
+            // Nếu không có startDate và endDate, ưu tiên tìm viên thuốc cho hôm nay
+            if (!parseStartDate && !parseEndDate) {
+                console.log('[PillTrackingService] No date range specified, finding today pill and future pills');
+                schedules = await PillTrackingRepository.findUserActivePillSchedule(userId);
+            } else {
+                schedules = await PillTrackingRepository.getUserPillScheduleByDate(
+                    userId,
+                    parseStartDate,
+                    parseEndDate
+                );
+            }
 
             if (!schedules || schedules.length === 0) {
                 return {

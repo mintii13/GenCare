@@ -6,19 +6,13 @@ interface CycleProgressCircleProps {
   cycleLength: number;
   cyclePhase: 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
   isPeriodDay: boolean;
-  pillSchedules?: any[];
-  onTakePill?: (scheduleId: string) => Promise<void>;
-  onShowPillSettings?: () => void;
 }
 
 const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
   currentDay,
   cycleLength,
   cyclePhase,
-  isPeriodDay,
-  pillSchedules = [],
-  onTakePill,
-  onShowPillSettings
+  isPeriodDay
 }) => {
 
   
@@ -29,22 +23,6 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
     { name: 'Rụng trứng', start: 14, end: 15, color: '#0ea5e9' },
     { name: 'Giai đoạn hoàng thể', start: 16, end: cycleLength, color: '#22c55e' }
   ];
-
-  // Pill tracking logic
-  const getTodayPillInfo = () => {
-    if (!pillSchedules || !pillSchedules.length) return null;
-    
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-    
-    return pillSchedules.find(schedule => {
-      const scheduleDate = new Date(schedule.pill_start_date);
-      const scheduleString = scheduleDate.toISOString().split('T')[0];
-      return scheduleString === todayString;
-    });
-  };
-
-  const todayPill = getTodayPillInfo();
 
   // Tính toán góc cho từng giai đoạn
   const getPhaseAngle = (start: number, end: number) => {
@@ -59,10 +37,19 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
     <Card className="p-6 bg-gradient-to-br from-yellow-50 to-green-50">
       <div className="text-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">Chu kỳ kinh nguyệt</h3>
+        <div className="text-2xl font-bold text-purple-600 mb-2">
+          {isPeriodDay ? `${currentDay} ngày` : `${currentDay} ngày`}
+        </div>
         <p className="text-sm text-gray-600">
-          Ngày {currentDay} / {cycleLength} - {cyclePhase === 'menstrual' ? 'Hành kinh' : 
-            cyclePhase === 'follicular' ? 'Giai đoạn nang' :
-            cyclePhase === 'ovulation' ? 'Rụng trứng' : 'Giai đoạn hoàng thể'}
+          {isPeriodDay ? (
+            `Ngày ${currentDay} trong kỳ hành kinh - Hành kinh`
+          ) : (
+            `Ngày ${currentDay} / ${cycleLength} - ${
+              cyclePhase === 'menstrual' ? 'Hành kinh' : 
+              cyclePhase === 'follicular' ? 'Giai đoạn nang' :
+              cyclePhase === 'ovulation' ? 'Rụng trứng' : 'Giai đoạn hoàng thể'
+            }`
+          )}
         </p>
       </div>
 
@@ -159,36 +146,17 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
         ))}
       </div>
 
-      {/* Thông tin bổ sung */}
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <div className="text-sm text-blue-800">
-          <div className="font-medium mb-1">Thông tin hôm nay:</div>
-          <div>• Giai đoạn: {cyclePhase === 'menstrual' ? 'Hành kinh' : 
-            cyclePhase === 'follicular' ? 'Giai đoạn nang' :
-            cyclePhase === 'ovulation' ? 'Rụng trứng' : 'Giai đoạn hoàng thể'}</div>
-          <div>• Ngày thứ {currentDay} trong chu kỳ</div>
-          {isPeriodDay && <div>• Đang trong thời kỳ hành kinh</div>}
-          
-          {/* Pill tracking status */}
-          {todayPill && (
-            <>
-              <div className="mt-2 pt-2 border-t border-blue-200">
-                <div className="font-medium mb-1">Thuốc tránh thai:</div>
-                <div>• Trạng thái: {todayPill.is_taken ? 'Đã uống' : 'Chưa uống'}</div>
-                <div>• Nhắc nhở: {todayPill.reminder_enabled ? todayPill.reminder_time : 'Tắt'}</div>
-                {onShowPillSettings && (
-                  <button
-                    onClick={onShowPillSettings}
-                    className="mt-1 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
-                  >
-                    Cài đặt nhắc nhở
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+                {/* Thông tin bổ sung */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="text-sm text-blue-800">
+              <div className="font-medium mb-1">Thông tin hôm nay:</div>
+              <div>• Giai đoạn: {cyclePhase === 'menstrual' ? 'Hành kinh' : 
+                cyclePhase === 'follicular' ? 'Giai đoạn nang' :
+                cyclePhase === 'ovulation' ? 'Rụng trứng' : 'Giai đoạn hoàng thể'}</div>
+              <div>• Ngày thứ {currentDay} trong chu kỳ</div>
+              {isPeriodDay && <div>• Đang trong thời kỳ hành kinh</div>}
+            </div>
+          </div>
     </Card>
   );
 };

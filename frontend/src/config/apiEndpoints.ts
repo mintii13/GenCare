@@ -171,9 +171,10 @@ DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comment
     TAKE_PILL: (scheduleId: string) => `/pill-tracking/mark-as-taken/${scheduleId}`,//110
     CLEAR_SCHEDULES: '/pill-tracking/clear',//111
     TEST_REMINDER: '/pill-tracking/test-reminder',//112
-    // WEEKLY: '/pill-tracking/weekly',//113
-    // MONTHLY: '/pill-tracking/monthly',//114
-    // STATISTICS: '/pill-tracking/statistics'//115
+    DEBUG: '/pill-tracking/debug',//113
+    // WEEKLY: '/pill-tracking/weekly',//114
+    // MONTHLY: '/pill-tracking/monthly',//115
+    // STATISTICS: '/pill-tracking/statistics'//116
   },
 
   // ----------------------- STI (TESTS, PACKAGES, ORDERS) --------------------

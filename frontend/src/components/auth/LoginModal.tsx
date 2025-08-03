@@ -9,6 +9,8 @@ import { API } from '../../config/apiEndpoints';
 import apiClient from '../../services/apiClient';
 import toast from 'react-hot-toast';
 import { Button, Input } from '../design-system';
+import { useNavigate } from 'react-router-dom';
+import { navigateAfterLogin } from '../../utils/navigationUtils';
 
 // Validation schemas
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -82,6 +84,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
   const modalRef = useRef<HTMLDivElement>(null);
   
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   // Form instances
   const loginForm = useForm<LoginFormData>({
@@ -175,11 +178,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
       // Thông báo thành công dựa trên role
       if (response.data.user.role === 'customer') {
         toast.success(`Chào mừng ${response.data.user.full_name || response.data.user.email}! `);
+        onClose();
       } else {
         toast.success('Đăng nhập thành công! Đang chuyển hướng...');
+        navigateAfterLogin(response.data.user, navigate);
       }
       
-        onClose();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Đăng nhập thất bại');
     } finally {
@@ -279,7 +283,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialMode = 
               toast.success('Xác thực thành công! Đang chuyển hướng...');
             }
             
-            onClose();
+            navigateAfterLogin(user, navigate);
           } else {
             toast.success('Xác thực thành công! Vui lòng đăng nhập.');
             setModalState('login');

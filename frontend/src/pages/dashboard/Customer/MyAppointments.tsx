@@ -30,15 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { MoreVertical } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { stiService } from '@/services/stiService';
 import { FaVial } from 'react-icons/fa';
@@ -310,6 +302,7 @@ const MyAppointments: React.FC = () => {
     if (uniqueIds.length === 0) return;
 
     try {
+      console.log('[MyAppointments] Fetching consultant details for IDs:', uniqueIds);
       const promises = uniqueIds.map(id => consultantService.getConsultantById(id));
       const results = await Promise.all(promises);
 
@@ -320,6 +313,7 @@ const MyAppointments: React.FC = () => {
         return acc;
       }, {} as { [key: string]: any });
       
+      console.log('[MyAppointments] New consultant details:', newDetails);
       setConsultantDetails(prev => ({ ...prev, ...newDetails }));
     } catch (error) {
       console.error('Error fetching consultant details:', error);
@@ -462,16 +456,11 @@ const MyAppointments: React.FC = () => {
     const consultantId = appointment.consultant_id?._id;
     const consultant = consultantId ? consultantDetails[consultantId] : null;
     const consultantName = consultant?.full_name || appointment.consultant_id?.user_id?.full_name || 'Chuyên gia';
-    const avatar = consultant?.avatar;
 
     return (
       <Card key={appointment._id} className="mb-4 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           <div className="md:col-span-3 flex items-center gap-4">
-            <Avatar className="w-12 h-12">
-              <AvatarImage src={avatar} alt={consultantName} />
-              <AvatarFallback><FaUserMd /></AvatarFallback>
-            </Avatar>
             <div>
               <p className="font-semibold text-gray-800">{consultantName}</p>
               <p className="text-sm text-gray-500">{consultant?.specialization || 'Tư vấn'}</p>
@@ -504,35 +493,16 @@ const MyAppointments: React.FC = () => {
                 Đổi lịch
               </Button>
             )}
-            {appointment.status === 'completed' && (
+            {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => { setSelectedAppointment(appointment); setShowFeedbackModal(true); }}
-                className="border-green-200 text-green-700 hover:bg-green-50"
+                onClick={() => handleCancelAppointment(appointment._id)}
+                className="border-red-200 text-red-700 hover:bg-red-50"
               >
-                {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
+                Hủy hẹn
               </Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
-                    <DropdownMenuItem onClick={() => handleCancelAppointment(appointment._id)} className="text-red-600">
-                      Hủy hẹn
-                    </DropdownMenuItem>
-                )}
-                {appointment.status === 'completed' && (
-                  <DropdownMenuItem onClick={() => { setSelectedAppointment(appointment); setShowFeedbackModal(true); }}>
-                    {appointment.feedback ? 'Sửa đánh giá' : 'Đánh giá'}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
@@ -657,6 +627,15 @@ const MyAppointments: React.FC = () => {
          <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
              <div className="p-6">
+               {/* Debug logs */}
+               {(() => {
+                 console.log('[MyAppointments] Modal opened with selectedAppointment:', selectedAppointment);
+                 console.log('[MyAppointments] Consultant ID:', selectedAppointment.consultant_id._id);
+                 console.log('[MyAppointments] Consultant details:', consultantDetails);
+                 console.log('[MyAppointments] Consultant details for this ID:', consultantDetails[selectedAppointment.consultant_id._id]);
+                 return null;
+               })()}
+               
                <div className="flex items-center justify-between mb-6">
                  <h3 className="text-xl font-semibold text-gray-800">Chi tiết lịch hẹn</h3>
                  <button 
@@ -673,13 +652,17 @@ const MyAppointments: React.FC = () => {
                    <div>
                      <p className="text-sm text-gray-600 font-medium">Chuyên gia</p>
                      <p className="font-semibold text-gray-800 mt-1">
-                       {consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 'Chưa có thông tin'}
+                       {selectedAppointment.consultant_id?.user_id?.full_name || 
+                        consultantDetails[selectedAppointment.consultant_id._id]?.full_name || 
+                        'Chưa có thông tin'}
                      </p>
                    </div>
                    <div>
                      <p className="text-sm text-gray-600 font-medium">Chuyên khoa</p>
                      <p className="font-semibold text-gray-800 mt-1">
-                       {consultantDetails[selectedAppointment.consultant_id._id]?.specialization || 'Chưa có thông tin'}
+                       {selectedAppointment.consultant_id?.specialization || 
+                        consultantDetails[selectedAppointment.consultant_id._id]?.specialization || 
+                        'Chưa có thông tin'}
                      </p>
                    </div>
                    <div>

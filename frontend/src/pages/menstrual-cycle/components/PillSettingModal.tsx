@@ -41,15 +41,54 @@ const PillSettingsModal: React.FC<PillSettingsModalProps> = ({ isOpen, onClose, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const updatedData: UpdatePillTrackingRequest = {};
-    if (pillType !== currentSchedule?.pill_type) updatedData.pill_type = pillType;
-    if (reminderTime !== currentSchedule?.reminder_time) updatedData.reminder_time = reminderTime;
-    if (reminderEnabled !== currentSchedule?.reminder_enabled) updatedData.reminder_enabled = reminderEnabled;
+    console.log('[PillSettingsModal] Current values:', {
+      pillType,
+      reminderTime,
+      reminderEnabled,
+      currentSchedule: currentSchedule ? {
+        pill_type: currentSchedule.pill_type,
+        reminder_time: currentSchedule.reminder_time,
+        reminder_enabled: currentSchedule.reminder_enabled
+      } : 'No current schedule'
+    });
 
-    if (Object.keys(updatedData).length === 0) {
-      toast.error('Không có gì để thay đổi.');
-      onClose();
+    const updatedData: UpdatePillTrackingRequest = {};
+    
+    // Chỉ so sánh nếu có currentSchedule
+    if (currentSchedule) {
+      if (pillType !== currentSchedule.pill_type) {
+        updatedData.pill_type = pillType;
+        console.log('[PillSettingsModal] Pill type changed:', currentSchedule.pill_type, '->', pillType);
+      }
+      if (reminderTime !== currentSchedule.reminder_time) {
+        updatedData.reminder_time = reminderTime;
+        console.log('[PillSettingsModal] Reminder time changed:', currentSchedule.reminder_time, '->', reminderTime);
+      }
+      if (reminderEnabled !== currentSchedule.reminder_enabled) {
+        updatedData.reminder_enabled = reminderEnabled;
+        console.log('[PillSettingsModal] Reminder enabled changed:', currentSchedule.reminder_enabled, '->', reminderEnabled);
+      }
+    } else {
+      // Nếu không có currentSchedule, tạo mới với tất cả giá trị hiện tại
+      updatedData.pill_type = pillType;
+      updatedData.reminder_time = reminderTime;
+      updatedData.reminder_enabled = reminderEnabled;
+      console.log('[PillSettingsModal] Creating new schedule with:', updatedData);
+    }
+
+    console.log('[PillSettingsModal] Updated data:', updatedData);
+
+    // Luôn cho phép lưu nếu có currentSchedule hoặc tạo mới
+    if (!currentSchedule && Object.keys(updatedData).length === 0) {
+      // Chỉ hiển thị lỗi khi tạo mới mà không có dữ liệu
+      toast.error('Vui lòng nhập thông tin cần thiết.');
       return;
+    }
+
+    // Nếu có currentSchedule, luôn cho phép lưu (có thể để refresh)
+    if (currentSchedule && Object.keys(updatedData).length === 0) {
+      console.log('[PillSettingsModal] No changes detected, but allowing save for refresh');
+      updatedData.reminder_enabled = reminderEnabled; // Force update để refresh
     }
 
     try {

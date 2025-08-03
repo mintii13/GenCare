@@ -4,29 +4,12 @@ import appointmentHistoryService, { IAppointmentHistory } from '../../services/a
 import { Loading } from '../ui';
 import STIHistorySection from './STIHistorySection';
 import { Tabs } from 'antd';
+import { Appointment } from '../../types/appointment';
 
 interface MeetingInfo {
   meet_url: string;
   meeting_id: string;
   meeting_password?: string;
-}
-
-interface Appointment {
-  _id: string;
-  customer_id: {
-    _id: string;
-    full_name: string;
-    email: string;
-    phone?: string;
-  } | null;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress';
-  customer_notes?: string;
-  consultant_notes?: string;
-  created_date: string;
-  meeting_info?: MeetingInfo | null;
 }
 
 interface AppointmentDetailModalProps {
@@ -144,6 +127,24 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   const [history, setHistory] = useState<IAppointmentHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
 
+  // Debug logs
+  console.log('[AppointmentDetailModal] Appointment data:', appointment);
+  console.log('[AppointmentDetailModal] Consultant data:', appointment?.consultant_id);
+  console.log('[AppointmentDetailModal] Consultant user data:', appointment?.consultant_id?.user_id);
+  console.log('[AppointmentDetailModal] Consultant specialization:', appointment?.consultant_id?.specialization);
+  
+  // Debug chi tiết hơn
+  console.log('[AppointmentDetailModal] Consultant type:', typeof appointment?.consultant_id);
+  console.log('[AppointmentDetailModal] Consultant keys:', appointment?.consultant_id ? Object.keys(appointment.consultant_id) : 'null');
+  console.log('[AppointmentDetailModal] Consultant user type:', typeof appointment?.consultant_id?.user_id);
+  console.log('[AppointmentDetailModal] Consultant user keys:', appointment?.consultant_id?.user_id ? Object.keys(appointment.consultant_id.user_id) : 'null');
+  
+  // Debug với type assertion
+  console.log('[AppointmentDetailModal] Consultant (any):', (appointment?.consultant_id as any));
+  console.log('[AppointmentDetailModal] Consultant user (any):', (appointment?.consultant_id as any)?.user_id);
+  console.log('[AppointmentDetailModal] Full name (any):', (appointment?.consultant_id as any)?.user_id?.full_name);
+  console.log('[AppointmentDetailModal] Specialization (any):', (appointment?.consultant_id as any)?.specialization);
+
   useEffect(() => {
     const fetchHistory = async () => {
       if (!appointment) return;
@@ -238,6 +239,29 @@ const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
               <div className="bg-blue-50 rounded-lg p-4 mb-4">
                 <h3 className="font-semibold text-gray-900 mb-3">Thông tin Lịch hẹn</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-600">Chuyên gia:</label>
+                    <p className="font-medium">
+                      {(appointment.consultant_id as any)?.user_id?.full_name || 'Chưa có thông tin'}
+                    </p>
+                    {/* Debug info */}
+                    <p className="text-xs text-gray-400 mt-1">
+                      Debug: {JSON.stringify({
+                        hasConsultant: !!appointment.consultant_id,
+                        consultantType: typeof appointment.consultant_id,
+                        hasUserId: !!(appointment.consultant_id as any)?.user_id,
+                        userIdType: typeof (appointment.consultant_id as any)?.user_id,
+                        fullName: (appointment.consultant_id as any)?.user_id?.full_name,
+                        consultantKeys: appointment.consultant_id ? Object.keys(appointment.consultant_id) : 'null'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Chuyên khoa:</label>
+                    <p className="font-medium">
+                      {(appointment.consultant_id as any)?.specialization || 'Chưa có thông tin'}
+                    </p>
+                  </div>
                   <div>
                     <label className="text-sm text-gray-600">Ngày hẹn:</label>
                     <p className="font-medium">{formatDate(appointment.appointment_date)}</p>

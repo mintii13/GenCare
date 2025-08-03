@@ -23,6 +23,7 @@ import { StiPackageTest } from '../models/StiPackageTest';
 import { StiResultQuery } from '../dto/requests/PaginationRequest';
 import { MailUtils } from '../utils/mailUtils';
 import { UserRepository } from '../repositories/userRepository';
+import { StiPackageTestRepository } from '../repositories/stiPackageTestRepository';
 
 const router = Router();
 /**
@@ -363,7 +364,25 @@ router.get('/getStiPackage/:id', authenticateToken, authorizeRoles('customer', '
     }
 });
 
+router.get('/packages/:packageId/tests', async (req, res) => {
+    try {
+        const { packageId } = req.params;
 
+        if (!packageId){
+            return res.status(400).json({ success: false, message: 'Package ID is not found' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(packageId)) {
+            return res.status(400).json({ success: false, message: 'Invalid package ID' });
+        }
+
+        const tests = await StiPackageTestRepository.getTestsByPackageId(packageId);
+        const formattedTests = tests.map(test => test.sti_test_id);
+        return res.status(200).json({ success: true, data: formattedTests });
+    } catch (err) {
+        console.error('Error fetching STI tests by package:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
 
 
 //update sti-package API

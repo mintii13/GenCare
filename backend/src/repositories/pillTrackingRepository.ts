@@ -86,15 +86,68 @@ export class PillTrackingRepository {
     public static async findUserActivePillSchedule(user_id: string): Promise<IPillTracking[]> {
         try {
             const userId = new mongoose.Types.ObjectId(user_id);
-            const today = new Date();
+            const today = TimeUtils.getCurrentTimeInZone();
             today.setHours(0, 0, 0, 0);
-            return await PillTracking.find({
+            
+            console.log('[PillTrackingRepository] Finding active pill schedule for user:', user_id);
+            console.log('[PillTrackingRepository] Today (with timezone):', today.toISOString());
+            
+            // Tìm viên thuốc cho hôm nay trước
+            const todayPill = await PillTracking.findOne({
                 user_id: userId,
-                pill_start_date: { $gte: today },
-                is_active: true
+                pill_start_date: today
+            }).lean();
+            
+            console.log('[PillTrackingRepository] Today pill found:', todayPill ? todayPill.pill_number : 'none');
+            
+            // Nếu không có viên thuốc cho hôm nay, tìm viên thuốc tiếp theo
+            if (!todayPill) {
+                const futurePills = await PillTracking.find({
+                    user_id: userId,
+                    pill_start_date: { $gt: today }
+                }).sort({ pill_start_date: 1 }).lean();
+                
+                console.log('[PillTrackingRepository] Future pills found:', futurePills.length);
+                return futurePills;
+            }
+            
+            // Nếu có viên thuốc cho hôm nay, trả về viên thuốc hôm nay và các viên tiếp theo
+            const allActivePills = await PillTracking.find({
+                user_id: userId,
+                pill_start_date: { $gte: today }
             }).sort({ pill_start_date: 1 }).lean();
+            
+            console.log('[PillTrackingRepository] All active pills (including today):', allActivePills.length);
+            return allActivePills;
         } catch (error) {
             console.error('Error finding user active pill schedule:', error);
+            throw error;
+        }
+    }
+
+    public static async findTodayPill(user_id: string): Promise<IPillTracking | null> {
+        try {
+            const userId = new mongoose.Types.ObjectId(user_id);
+            const today = TimeUtils.getCurrentTimeInZone();
+            today.setHours(0, 0, 0, 0);
+            
+            console.log('[PillTrackingRepository] Finding today pill for user:', user_id);
+            console.log('[PillTrackingRepository] Today (with timezone):', today.toISOString());
+            
+            const todayPill = await PillTracking.findOne({
+                user_id: userId,
+                pill_start_date: today
+            }).lean();
+            
+            console.log('[PillTrackingRepository] Today pill result:', todayPill ? {
+                pill_number: todayPill.pill_number,
+                pill_start_date: todayPill.pill_start_date,
+                is_taken: todayPill.is_taken
+            } : 'none');
+            
+            return todayPill;
+        } catch (error) {
+            console.error('Error finding today pill:', error);
             throw error;
         }
     }
@@ -249,14 +302,28 @@ export class PillTrackingRepository {
 
     public static async getPillSchedulesByCycle(userId: string, cycleId: string): Promise<IPillTracking[]> {
         try {
+            console.log('[PillTrackingRepository] getPillSchedulesByCycle called');
+            console.log('[PillTrackingRepository] User ID:', userId);
+            console.log('[PillTrackingRepository] Cycle ID:', cycleId);
+            
             const userId_obj = new mongoose.Types.ObjectId(userId);
             const cycleId_obj = new mongoose.Types.ObjectId(cycleId);
             
-            return await PillTracking.find({
+            const schedules = await PillTracking.find({
                 user_id: userId_obj,
-                menstrual_cycle_id: cycleId_obj,
-                is_active: true
+                menstrual_cycle_id: cycleId_obj
             }).sort({ pill_number: 1 }).lean();
+            
+            console.log('[PillTrackingRepository] Found schedules count:', schedules.length);
+            if (schedules.length > 0) {
+                console.log('[PillTrackingRepository] First schedule:', {
+                    _id: schedules[0]._id,
+                    pill_number: schedules[0].pill_number,
+                    pill_start_date: schedules[0].pill_start_date
+                });
+            }
+            
+            return schedules;
         } catch (error) {
             console.error('Error getting pill schedules by cycle:', error);
             throw error;
@@ -268,8 +335,7 @@ export class PillTrackingRepository {
             const userId_obj = new mongoose.Types.ObjectId(userId);
             const result = await PillTracking.updateMany(
                 { 
-                    user_id: userId_obj, 
-                    is_active: true 
+                    user_id: userId_obj
                 }, 
                 { 
                     $set: { pill_type: newPillType } 
@@ -288,8 +354,7 @@ export class PillTrackingRepository {
             const result = await PillTracking.updateMany(
                 { 
                     user_id: userId_obj, 
-                    pill_number: { $gt: dayNumber },
-                    is_active: true
+                    pill_number: { $gt: dayNumber }
                 }, 
                 { 
                     $set: { is_active: false } 
@@ -308,8 +373,7 @@ export class PillTrackingRepository {
             const result = await PillTracking.updateMany(
                 { 
                     user_id: userId_obj, 
-                    pill_number: { $gte: startDay, $lte: endDay },
-                    is_active: true
+                    pill_number: { $gte: startDay, $lte: endDay }
                 }, 
                 { 
                     $set: { pill_status: 'placebo' } 
@@ -332,8 +396,7 @@ export class PillTrackingRepository {
             const result = await PillTracking.updateOne(
                 { 
                     user_id: userId_obj, 
-                    pill_number: pillNumber,
-                    is_active: true
+                    pill_number: pillNumber
                 }, 
                 { 
                     $set: updates 
@@ -418,6 +481,31 @@ export class PillTrackingRepository {
             return await PillTracking.find({ user_id: userId, is_active: true });
         } catch (error) {
             console.error(error);
+            throw error;
+        }
+    }
+
+    public static async updatePillSchedulesByCycle(
+        userId: string,
+        cycleId: string,
+        updates: Partial<IPillTracking>
+    ): Promise<number> {
+        try {
+            console.log('[PillTrackingRepository] Updating pill schedules for cycle:', cycleId, 'user:', userId);
+            console.log('[PillTrackingRepository] Updates:', updates);
+            
+            const result = await PillTracking.updateMany(
+                { 
+                    user_id: new mongoose.Types.ObjectId(userId),
+                    menstrual_cycle_id: new mongoose.Types.ObjectId(cycleId)
+                },
+                { $set: updates }
+            );
+            
+            console.log('[PillTrackingRepository] Updated', result.modifiedCount, 'pill schedules');
+            return result.modifiedCount;
+        } catch (error) {
+            console.error('[PillTrackingRepository] Error updating pill schedules by cycle:', error);
             throw error;
         }
     }

@@ -18,6 +18,11 @@ interface UsePillTrackingReturn {
   markPillAsTaken: (scheduleId: string) => Promise<void>;
   clearSchedules: () => Promise<void>;
   testReminder: () => Promise<void>;
+  disableReminder: () => Promise<void>;
+  enableReminder: () => Promise<void>;
+  updatePillTime: (scheduleId: string, newTime: string) => Promise<void>;
+  updatePillType: (scheduleId: string, newType: '21-day' | '24+4' | '21+7') => Promise<void>;
+  debug: () => Promise<ApiResponse<any>>;
 }
 
 export const usePillTracking = (): UsePillTrackingReturn => {
@@ -63,7 +68,7 @@ export const usePillTracking = (): UsePillTrackingReturn => {
       console.log('[usePillTracking] API response:', response);
       
       if (response.success && response.data) {
-        setSchedules(response.data.schedules || []);
+        setSchedules(response.data || []);
       } else {
         setSchedules([]);
       }
@@ -135,6 +140,18 @@ export const usePillTracking = (): UsePillTrackingReturn => {
     }
   }, []);
 
+  const debug = useCallback(async () => {
+    try {
+      console.log('[usePillTracking] Debug pill tracking');
+      const result = await pillTrackingService.debug();
+      console.log('[usePillTracking] Debug result:', result);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi debug lịch uống thuốc.');
+      throw err;
+    }
+  }, []);
+
   const testReminder = useCallback(async () => {
     try {
       console.log('[usePillTracking] Testing reminder');
@@ -143,6 +160,85 @@ export const usePillTracking = (): UsePillTrackingReturn => {
       setError(err.message || 'Lỗi khi test mail nhắc nhở.');
     }
   }, []);
+
+  const disableReminder = useCallback(async () => {
+    try {
+      console.log('[usePillTracking] Disabling reminder');
+      await pillTrackingService.disableReminder();
+      await refresh();
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi tắt nhắc nhở uống thuốc.');
+    }
+  }, [refresh]);
+
+  const enableReminder = useCallback(async () => {
+    try {
+      console.log('[usePillTracking] Enabling reminder');
+      await pillTrackingService.enableReminder();
+      await refresh();
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi bật nhắc nhở uống thuốc.');
+    }
+  }, [refresh]);
+
+  const updatePillTime = useCallback(async (scheduleId: string, newTime: string) => {
+    try {
+      console.log('[usePillTracking] updatePillTime called');
+      console.log('[usePillTracking] Schedule ID:', scheduleId);
+      console.log('[usePillTracking] New time:', newTime);
+      console.log('[usePillTracking] Current schedules count:', schedules.length);
+      
+      // Tìm schedule để lấy menstrual_cycle_id
+      const schedule = schedules.find(s => s._id === scheduleId);
+      if (!schedule) {
+        console.error('[usePillTracking] Schedule not found with ID:', scheduleId);
+        throw new Error('Không tìm thấy lịch uống thuốc');
+      }
+      
+      console.log('[usePillTracking] Found schedule:', {
+        _id: schedule._id,
+        menstrual_cycle_id: schedule.menstrual_cycle_id,
+        pill_start_date: schedule.pill_start_date,
+        reminder_time: schedule.reminder_time
+      });
+      
+      console.log('[usePillTracking] Calling pillTrackingService.updateSpecificSchedule...');
+      await pillTrackingService.updateSpecificSchedule(schedule.menstrual_cycle_id, { reminder_time: newTime });
+      console.log('[usePillTracking] API call successful');
+      
+      console.log('[usePillTracking] Calling refresh...');
+      await refresh();
+      console.log('[usePillTracking] Refresh completed');
+    } catch (err: any) {
+      console.error('[usePillTracking] Error updating pill time:', err);
+      console.error('[usePillTracking] Error details:', {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data
+      });
+      setError(err.message || 'Lỗi khi cập nhật giờ uống thuốc.');
+      throw err;
+    }
+  }, [refresh, schedules]);
+
+  const updatePillType = useCallback(async (scheduleId: string, newType: '21-day' | '24+4' | '21+7') => {
+    try {
+      console.log('[usePillTracking] Updating pill type for schedule:', scheduleId, 'to:', newType);
+      
+      // Tìm schedule để lấy menstrual_cycle_id
+      const schedule = schedules.find(s => s._id === scheduleId);
+      if (!schedule) {
+        throw new Error('Không tìm thấy lịch uống thuốc');
+      }
+      
+      await pillTrackingService.updateSpecificSchedule(schedule.menstrual_cycle_id, { pill_type: newType });
+      await refresh();
+    } catch (err: any) {
+      console.error('[usePillTracking] Error updating pill type:', err);
+      setError(err.message || 'Lỗi khi cập nhật loại thuốc.');
+      throw err;
+    }
+  }, [refresh, schedules]);
 
   useEffect(() => {
     console.log('[usePillTracking] useEffect triggered, user.id:', user?.id);
@@ -156,15 +252,20 @@ export const usePillTracking = (): UsePillTrackingReturn => {
     }
   }, [user?.id]);
 
-  return { 
-    schedules, 
-    loading, 
-    error, 
-    refresh, 
-    setupPillSchedule, 
+    return {
+    schedules,
+    loading,
+    error,
+    refresh,
+    setupPillSchedule,
     updatePillSchedule,
     markPillAsTaken,
     clearSchedules,
-    testReminder
+    testReminder,
+    disableReminder,
+    enableReminder,
+    updatePillTime,
+    updatePillType,
+    debug
   };
 };

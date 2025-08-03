@@ -20,10 +20,35 @@ export class AppointmentRepository {
      */
     public static async findById(appointmentId: string): Promise<IAppointment | null> {
         try {
-            return await Appointment.findById(appointmentId)
+            console.log('[AppointmentRepository] Finding appointment by ID:', appointmentId);
+            
+            // Thử populate đơn giản trước
+            const appointment = await Appointment.findById(appointmentId)
                 .populate('customer_id', 'full_name email phone')
-                .populate('consultant_id', 'user_id specialization')
+                .populate('consultant_id')
                 .lean();
+            
+            console.log('[AppointmentRepository] Found appointment:', appointment);
+            console.log('[AppointmentRepository] Consultant data:', appointment?.consultant_id);
+            
+            // Nếu có consultant_id, thử populate user_id riêng
+            if (appointment?.consultant_id && typeof appointment.consultant_id === 'object') {
+                const consultantWithUser = await Appointment.findById(appointmentId)
+                    .populate('customer_id', 'full_name email phone')
+                    .populate({
+                        path: 'consultant_id',
+                        populate: {
+                            path: 'user_id',
+                            select: 'full_name email'
+                        }
+                    })
+                    .lean();
+                
+                console.log('[AppointmentRepository] Consultant with user data:', consultantWithUser?.consultant_id);
+                return consultantWithUser;
+            }
+            
+            return appointment;
         } catch (error) {
             console.error('Error finding appointment by ID:', error);
             throw error;
@@ -56,7 +81,7 @@ export class AppointmentRepository {
             return await Appointment.find(query)
                 .populate({
                     path: 'consultant_id',
-                    select: 'user_id specialization qualifications',
+                    select: 'user_id specialization',
                     populate: {
                         path: 'user_id',
                         select: 'full_name'

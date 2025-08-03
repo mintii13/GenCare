@@ -32,4 +32,18 @@ export class StiPackageTestRepository{
             throw error;
         }
     }
+
+    public static async getTestsByPackageId(packageId: string){
+        try {
+            const packageIdObj = new mongoose.Types.ObjectId(packageId);
+            return await StiPackageTest.find({
+                sti_package_id: packageIdObj,
+                is_active: true
+                })
+                .populate('sti_test_id').exec();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
 }

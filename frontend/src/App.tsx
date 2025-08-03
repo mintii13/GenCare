@@ -85,7 +85,7 @@ const ConsultantStiOrdersPage = lazy(() => import('./pages/dashboard/Consultant/
 
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isModalOpen, modalMode, closeModal } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [refreshTriggerResult, setRefreshTriggerResult] = useState(0);
 
@@ -312,6 +312,13 @@ AutoConfirmService.stop();
           } />
         </Routes>
       </Suspense>
+      
+      {/* LoginModal được đặt ở đây để có thể sử dụng useAuth hook */}
+      <LoginModal 
+        isOpen={isModalOpen} 
+        onClose={closeModal} 
+        initialMode={modalMode}
+      />
     </>
   );
 };

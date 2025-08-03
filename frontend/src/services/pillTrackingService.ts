@@ -16,13 +16,8 @@ export interface PillSchedule {
   pill_status: 'hormone' | 'placebo';
   reminder_enabled: boolean;
   reminder_time: string; // "HH:mm"
-  reminder_sent_timestamps?: Date[]; // Thêm trường để lưu thời điểm đã gửi mail
-  max_reminder_times?: number;
-  reminder_interval?: number;
   taken_time?: Date;
-  is_active?: boolean;
   createdAt?: Date;
-  // ... other fields from your IPillTracking model
 }
 
 export interface SetupPillTrackingRequest {
@@ -55,8 +50,8 @@ export const pillTrackingService = {
   /**
    * Retrieves the pill schedule for the current user.
    */
-  getSchedule: async (userId: string): Promise<ApiResponse<{ schedules: PillSchedule[] }>> => {
-    return apiClient.safeGet(API.PillTracking.GET_SCHEDULE(userId));
+  getSchedule: async (): Promise<ApiResponse<PillSchedule[]>> => {
+    return apiClient.safeGet('/pill-tracking');
   },
 
   /**
@@ -67,11 +62,25 @@ export const pillTrackingService = {
   },
 
   /**
+   * Updates a specific pill schedule by scheduleId.
+   */
+  updateSpecificSchedule: async (cycleId: string, data: UpdatePillTrackingRequest): Promise<ApiResponse<any>> => {
+    console.log('[pillTrackingService] updateSpecificSchedule called');
+    console.log('[pillTrackingService] Cycle ID:', cycleId);
+    console.log('[pillTrackingService] Update data:', data);
+    console.log('[pillTrackingService] Making PATCH request to:', `/pill-tracking/update-schedule/${cycleId}`);
+    
+    const response = await apiClient.safePatch(`/pill-tracking/update-schedule/${cycleId}`, data);
+    
+    console.log('[pillTrackingService] API response:', response);
+    return response;
+  },
+
+  /**
    * Marks a specific pill as taken.
    */
   takePill: async (scheduleId: string): Promise<ApiResponse<any>> => {
-    // This typically would be a PATCH or PUT request to update the 'is_taken' status.
-    return apiClient.safePut(API.PillTracking.TAKE_PILL(scheduleId), { is_taken: true });
+    return apiClient.safePost(`/pill-tracking/mark-taken/${scheduleId}`);
   },
 
   /**
@@ -81,11 +90,29 @@ export const pillTrackingService = {
     return apiClient.safeDelete(API.PillTracking.CLEAR_SCHEDULES);
   },
 
+  debug: async (): Promise<ApiResponse<any>> => {
+    return apiClient.safeGet(API.PillTracking.DEBUG);
+  },
+
   /**
    * Tests sending a reminder email.
    */
   testReminder: async (): Promise<ApiResponse<any>> => {
     return apiClient.safePost(API.PillTracking.TEST_REMINDER);
+  },
+
+  /**
+   * Disables pill reminder for the current user.
+   */
+  disableReminder: async (): Promise<ApiResponse<any>> => {
+    return apiClient.safePost('/pill-tracking/disable-reminder');
+  },
+
+  /**
+   * Enables pill reminder for the current user.
+   */
+  enableReminder: async (): Promise<ApiResponse<any>> => {
+    return apiClient.safePost('/pill-tracking/enable-reminder');
   },
 };
 

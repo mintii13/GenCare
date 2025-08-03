@@ -252,11 +252,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         closeModal
       }}>
       {children}
-      <LoginModal 
-        isOpen={isModalOpen} 
-        onClose={closeModal} 
-        initialMode={modalMode}
-      />
     </AuthContext.Provider>
   );
 };

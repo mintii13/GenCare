@@ -249,9 +249,6 @@ const WeeklySlotPicker: React.FC<Props> = ({ consultantId, onSlotSelect, selecte
               <h3 className="text-lg font-semibold">
                 Tuần {selectedDate.startOf('week').format('DD/MM/YYYY')} - {selectedDate.startOf('week').add(6, 'day').format('DD/MM/YYYY')}
               </h3>
-              <p className="text-sm text-blue-100">
-                {selectedDate.format('MMMM YYYY')}
-              </p>
             </div>
 
             <Button

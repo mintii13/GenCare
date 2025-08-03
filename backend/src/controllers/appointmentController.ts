@@ -588,6 +588,12 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
             });
         }
 
+        // Debug logs
+        console.log('[AppointmentController] Appointment data:', appointment);
+        console.log('[AppointmentController] Consultant data:', appointment.consultant_id);
+        console.log('[AppointmentController] Consultant user data:', (appointment.consultant_id as any)?.user_id);
+        console.log('[AppointmentController] Consultant specialization:', (appointment.consultant_id as any)?.specialization);
+
         // Check access permissions
         let hasAccess = false;
         if (userRole === 'staff' || userRole === 'admin') {

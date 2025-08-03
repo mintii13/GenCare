@@ -68,7 +68,25 @@ router.get('/today',
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
+            console.log('[MenstrualCycleController] Getting today status for user:', user_id);
+            
             const result = await MenstrualCycleService.getTodayStatus(user_id);
+            
+            if (!result) {
+                console.error('[MenstrualCycleController] Result is undefined or null');
+                return res.status(500).json({
+                    success: false,
+                    message: 'Internal error: No result from service',
+                    data: null
+                });
+            }
+            
+            console.log('[MenstrualCycleController] Today status result:', {
+                success: result.success,
+                day_in_cycle: (result.data as any)?.day_in_cycle,
+                period_day_number: (result.data as any)?.period_day_number,
+                is_period_day: (result.data as any)?.is_period_day
+            });
             
             if (result.success) {
                 return res.status(200).json(result);
@@ -79,7 +97,8 @@ router.get('/today',
             console.error('Error in GET /today:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Lỗi hệ thống'
+                message: 'Lỗi hệ thống',
+                data: null
             });
         }
     }
@@ -205,6 +224,30 @@ router.delete('/cycle/:cycleId',
             }
         } catch (error) {
             console.error('Error in DELETE /cycle/:cycleId:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi hệ thống'
+            });
+        }
+    }
+);
+
+// Debug endpoint to check cycle data
+router.get('/debug', 
+    authenticateToken, 
+    async (req: Request, res: Response) => {
+        try {
+            const user_id = (req.user as any).userId;
+            const cycles = await MenstrualCycleService.getCycles(user_id);
+            const todayStatus = await MenstrualCycleService.getTodayStatus(user_id);
+            
+            return res.status(200).json({
+                success: true,
+                cycles: cycles.data,
+                todayStatus: todayStatus.data
+            });
+        } catch (error) {
+            console.error('Error in GET /debug:', error);
             return res.status(500).json({
                 success: false,
                 message: 'Lỗi hệ thống'

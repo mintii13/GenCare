@@ -249,3 +249,28 @@ export const getWeekRange = (currentWeek: Date): { weekStart: string; weekEnd: s
   const weekEnd = format(addDays(currentWeek, 6), 'yyyy-MM-dd');
   return { weekStart, weekEnd };
 };
+
+/**
+ * Get today's date in local timezone (YYYY-MM-DD format)
+ */
+export const getTodayLocal = (): string => {
+  const today = new Date();
+  return today.toLocaleDateString('en-CA'); // Returns YYYY-MM-DD format
+};
+
+/**
+ * Get date string in local timezone (YYYY-MM-DD format)
+ */
+export const getDateLocal = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleDateString('en-CA'); // Returns YYYY-MM-DD format
+};
+
+/**
+ * Check if two dates are the same day in local timezone
+ */
+export const isSameDayLocal = (date1: Date | string, date2: Date | string): boolean => {
+  const date1Local = getDateLocal(date1);
+  const date2Local = getDateLocal(date2);
+  return date1Local === date2Local;
+};
