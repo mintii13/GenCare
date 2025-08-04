@@ -320,8 +320,8 @@ Chi tiết câu trả lời:
 - Tiền sử STI: ${formData.previous_sti_history?.length > 0 ? formData.previous_sti_history.join(', ') : 'Không có'}
 - Tình trạng HIV: ${formData.hiv_status === 'unknown' ? 'Không biết' : formData.hiv_status === 'negative' ? 'Âm tính' : 'Dương tính'}
 - Lần xét nghiệm STI cuối: ${formData.last_sti_test === 'never' ? 'Chưa bao giờ' : formData.last_sti_test === 'within_3months' ? 'Trong 3 tháng qua' : formData.last_sti_test === '3_to_6_months' ? '3-6 tháng trước' : formData.last_sti_test === '6_to_12_months' ? '6-12 tháng trước' : 'Hơn 1 năm trước'}
-- Có triệu chứng: ${formData.has_symptoms ? 'Có' : 'Không'}
-${formData.has_symptoms && formData.symptoms?.length > 0 ? `- Triệu chứng: ${formData.symptoms.join(', ')}` : ''}
+- Có triệu chứng: ${formData.symptoms && formData.symptoms.length > 0 ? 'Có' : 'Không'}
+${formData.symptoms && formData.symptoms.length > 0 ? `- Triệu chứng: ${formData.symptoms.join(', ')}` : ''}
 - Yếu tố nguy cơ: ${formData.risk_factors?.length > 0 ? formData.risk_factors.join(', ') : 'Không có'}`;
   };
 

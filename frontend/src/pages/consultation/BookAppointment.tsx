@@ -569,8 +569,10 @@ const BookAppointment: React.FC = () => {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Nhập ghi chú nếu cần..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                rows={3}
+                rows={18}
+                style={{ minHeight: '590px' }}
               />
+              
             </div>
 
             {/* Submit Button */}

@@ -95,7 +95,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
               </button>
               {isServicesOpen && (
                 <div
-                  className="absolute left-0 top-full w-56 bg-white rounded-md shadow-lg py-1 z-50"
+                  className="absolute left-0 top-full w-56 bg-white rounded-md shadow-lg py-1 z-[999999999]"
                 >
                   <Link to="/menstrual-cycle" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Theo dõi kinh nguyệt
@@ -158,7 +158,7 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar, isSidebarOpen 
                 </button>
                 {isUserMenuOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50"
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-[999999999]"
                   >
                     {user?.role === 'customer' ? (
                       // Customer dropdown menu
