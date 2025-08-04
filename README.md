@@ -11,12 +11,12 @@
 
 ## System Architecture <br/> 
 <img src="./img/Gencare_SystemArchitecture.jpg" width="600" height="1000"></img>
-## Docker Running Instructions
+## Redis Running Instructions on Docker
 ```
 cd backend
 bash src/script/run-redis.sh
 ```
-## Tagging Images After Build
+## After Build Redis
 <img src="./img/RedisCache.jpg" width="600" height="1000"></img>
 ## Environment Configuration (.env)
 ### Backend Environment Setup
