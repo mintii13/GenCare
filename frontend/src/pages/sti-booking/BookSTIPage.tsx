@@ -38,6 +38,8 @@ const BookSTIPage: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
   const [packageLoading, setPackageLoading] = useState(false);
   const [hasCompletedScreening, setHasCompletedScreening] = useState(false);
+  const [hasExistingOrder, setHasExistingOrder] = useState(false);
+  const [checkingExistingOrder, setCheckingExistingOrder] = useState(false);
 
   // Get query parameters
   const packageId = searchParams.get('packageId');
@@ -104,6 +106,28 @@ const BookSTIPage: React.FC = () => {
       console.log('📋 Pre-selected consultant from URL:', consultantId);
       // You can add logic here to handle consultant selection if needed
     }
+
+    // Check for existing STI order
+    const checkExistingOrder = async () => {
+      if (user && user.role === 'customer') {
+        setCheckingExistingOrder(true);
+        try {
+          const response = await STIOrderService.checkExistingOrder();
+          setHasExistingOrder(response.data.hasExistingOrder);
+          
+          if (response.data.hasExistingOrder) {
+            toast.error('Bạn đã có một đơn đặt lịch STI đang chờ xử lý. Vui lòng hoàn thành đơn hiện tại trước khi đặt lịch mới.');
+          }
+        } catch (error) {
+          console.error('Error checking existing order:', error);
+          // Don't show error toast here as it might be a network issue
+        } finally {
+          setCheckingExistingOrder(false);
+        }
+      }
+    };
+
+    checkExistingOrder();
   }, [user, searchParams]);
 
   useEffect(() => {
@@ -149,6 +173,12 @@ const BookSTIPage: React.FC = () => {
   const handleSubmit = async () => {
     if (!orderDate) {
       toast.error('Vui lòng chọn ngày tư vấn');
+      return;
+    }
+
+    // Check if user has existing order before allowing submission
+    if (hasExistingOrder) {
+      toast.error('Bạn đã có một đơn đặt lịch STI đang chờ xử lý. Vui lòng hoàn thành đơn hiện tại trước khi đặt lịch mới.');
       return;
     }
     
@@ -319,6 +349,43 @@ const BookSTIPage: React.FC = () => {
         >
           {selectedPackage ? `Đặt lịch xét nghiệm: ${selectedPackage.sti_package_name}` : 'Đặt lịch tư vấn xét nghiệm STI'}
         </Title>
+
+        {/* Hiển thị thông báo nếu user đã có existing order */}
+        {hasExistingOrder && (
+          <Alert
+            message="Không thể đặt lịch"
+            description="Bạn đã có một đơn đặt lịch STI đang chờ xử lý. Vui lòng hoàn thành đơn hiện tại trước khi đặt lịch mới."
+            type="warning"
+            showIcon
+            style={{
+              marginBottom: '24px',
+              borderRadius: '8px'
+            }}
+            action={
+              <Button 
+                size="small" 
+                type="primary"
+                onClick={() => navigate('/sti-booking/orders')}
+              >
+                Xem đơn hiện tại
+              </Button>
+            }
+          />
+        )}
+
+        {/* Hiển thị loading khi đang kiểm tra existing order */}
+        {checkingExistingOrder && (
+          <Alert
+            message="Đang kiểm tra..."
+            description="Đang kiểm tra trạng thái đơn đặt lịch của bạn."
+            type="info"
+            showIcon
+            style={{
+              marginBottom: '24px',
+              borderRadius: '8px'
+            }}
+          />
+        )}
       
         {selectedPackage && (
           <Card 
@@ -461,6 +528,7 @@ const BookSTIPage: React.FC = () => {
                 disabledDate={disabledDate}
                 value={orderDate}
                 onChange={handleDateChange}
+                disabled={hasExistingOrder || checkingExistingOrder}
               />
             </Form.Item>
             <Form.Item label="Ghi chú (tùy chọn)">
@@ -474,12 +542,18 @@ const BookSTIPage: React.FC = () => {
                 value={notes}
                 onChange={handleNotesChange}
                 showCount
+                disabled={hasExistingOrder || checkingExistingOrder}
               />
             </Form.Item>
             <Form.Item>
               <Space>
                 <Button onClick={() => navigate('/test-packages')}>Quay lại</Button>
-                <Button type="primary" loading={loading} onClick={handleSubmit} disabled={!orderDate}>
+                <Button 
+                  type="primary" 
+                  loading={loading} 
+                  onClick={handleSubmit} 
+                  disabled={!orderDate || hasExistingOrder || checkingExistingOrder}
+                >
                   {selectedPackage ? 'Đặt lịch xét nghiệm' : 'Đặt lịch tư vấn'}
                 </Button>
               </Space>

@@ -71,10 +71,57 @@ export interface STIOrderResponse {
   data?: STIOrder;
 }
 
+export interface CheckExistingOrderResponse {
+  success: boolean;
+  message: string;
+  data: {
+    hasExistingOrder: boolean;
+    canBook: boolean;
+  };
+}
+
 // ================ SERVICE CLASS ================
 
 export class STIOrderService {
   
+  /**
+   * Kiểm tra xem customer đã có STI order chưa
+   */
+  static async checkExistingOrder(): Promise<CheckExistingOrderResponse> {
+    try {
+      // Sử dụng getMyOrders với filter để chỉ lấy orders có status 'Booked'
+      const response = await apiClient.get<STIOrdersPaginatedResponse>(API.STI.GET_MY_ORDERS, {
+        params: {
+          order_status: 'Booked',
+          limit: 1, // Chỉ cần kiểm tra có order nào không
+          page: 1
+        }
+      });
+      
+      const hasExistingOrder = response.data.data.items.length > 0;
+      
+      return {
+        success: true,
+        message: hasExistingOrder ? 'Customer has existing STI order' : 'No existing STI order found',
+        data: {
+          hasExistingOrder,
+          canBook: !hasExistingOrder
+        }
+      };
+    } catch (error: any) {
+      console.error('Error checking existing STI order:', error);
+      // Nếu có lỗi, giả sử không có existing order để user có thể tiếp tục
+      return {
+        success: true,
+        message: 'No existing STI order found',
+        data: {
+          hasExistingOrder: false,
+          canBook: true
+        }
+      };
+    }
+  }
+
   /**
    * Tạo STI Order mới (Customer)
    */

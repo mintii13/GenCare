@@ -203,8 +203,9 @@ DELETE_COMMENT: (blogId: string, commentId: string) => `/blogs/${blogId}/comment
     // Orders - NEW PAGINATED ENDPOINTS
     GET_ALL_ORDERS_PAGINATED: '/sti/orders', // Staff/Admin với pagination//130
     GET_MY_ORDERS: '/sti/my-orders', // Customer orders với pagination//131
+
     // Orders - LEGACY ENDPOINTS  
-    CREATE_ORDER: '/sti/createStiOrder',//132
+    CREATE_ORDER: '/sti/createStiOrder',//133
     GET_ALL_ORDERS: '/sti/getAllStiOrders', // Legacy: get orders by current customer//133
     GET_ORDERS_BY_CUSTOMER: (customerId: string) => `/sti/getAllStiOrders/${customerId}`,//134
     GET_ORDER: (id: string) => `/sti/getStiOrder/${id}`, // Fixed: backend uses getStiOrder not getOrderById//135
