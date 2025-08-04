@@ -9,7 +9,6 @@ import { API } from '../../config/apiEndpoints';
 import { StiTest } from '../../types/sti';
 import dayjs from 'dayjs';
 import LicenseModal from '../../components/sti/LicenseModal';
-import STIAssessmentModal from '../../components/sti/STIAssessmentModal';
 import { toast } from 'react-hot-toast';
 import LoginModal from '../../components/auth/LoginModal';
 
@@ -36,7 +35,6 @@ const BookSTIPage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<STIPackage | null>(null);
   const [packageLoading, setPackageLoading] = useState(false);
   const [hasCompletedScreening, setHasCompletedScreening] = useState(false);
@@ -112,6 +110,11 @@ const BookSTIPage: React.FC = () => {
     setHasCompletedScreening(localStorage.getItem('sti_screening_completed') === 'true');
   }, []);
 
+  // Debug showLicenseModal changes
+  useEffect(() => {
+    console.log('🔍 showLicenseModal changed:', showLicenseModal);
+  }, [showLicenseModal]);
+
   // Auto-fill notes from STI screening results
   useEffect(() => {
     const screeningNotes = localStorage.getItem('sti_screening_consultation_notes');
@@ -149,15 +152,23 @@ const BookSTIPage: React.FC = () => {
       return;
     }
     
-    // Nếu đã có selectedPackage (từ STI Assessment hoặc URL params), bỏ qua assessment modal và license modal
-    if (selectedPackage) {
-      setShowLicenseModal(false);
-      setLoading(true);
-      await createOrder();
-    } else {
-      // Nếu chưa có package, hiện assessment modal
-      setShowAssessmentModal(true);
-    }
+    console.log('🔍 Debug handleSubmit:');
+    console.log('  - orderDate:', orderDate);
+    console.log('  - selectedPackage:', selectedPackage);
+    console.log('  - showLicenseModal before:', showLicenseModal);
+    
+    // Thử hiển thị license modal
+    setShowLicenseModal(true);
+    
+    console.log('  - showLicenseModal after set:', true);
+    
+    // Nếu modal không hiển thị, thử gọi trực tiếp createOrder
+    setTimeout(() => {
+      if (!showLicenseModal) {
+        console.log('  - Modal không hiển thị, gọi trực tiếp createOrder');
+        createOrder();
+      }
+    }, 500);
   };
 
   const createOrder = async () => {
@@ -224,8 +235,6 @@ const BookSTIPage: React.FC = () => {
   };
 
   const handleLicenseCancel = () => setShowLicenseModal(false);
-  const handleTakeAssessment = () => { setShowAssessmentModal(false); navigate('/sti-assessment'); };
-  const handleSkipAssessment = () => { setShowAssessmentModal(false); setShowLicenseModal(true); };
 
   const steps = [
     { title: 'Chọn ngày', icon: <CalendarOutlined /> },
@@ -500,14 +509,6 @@ const BookSTIPage: React.FC = () => {
             <li>Liên hệ hotline nếu cần thay đổi lịch hẹn</li>
           </ul>
         </Card>
-        
-        <STIAssessmentModal
-          visible={showAssessmentModal}
-          onClose={() => setShowAssessmentModal(false)}
-          onTakeAssessment={handleTakeAssessment}
-          onSkipAssessment={handleSkipAssessment}
-          loading={loading}
-        />
         
         <LicenseModal
           visible={showLicenseModal}
