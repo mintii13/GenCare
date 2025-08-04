@@ -283,6 +283,16 @@ const MyAppointments: React.FC = () => {
     }
   };
 
+  const handleFeedbackClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowFeedbackModal(true);
+  };
+
+  const handleViewFeedback = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowFeedbackModal(true);
+  };
+
   const renderAppointmentCard = (appointment: Appointment) => {
     const consultantId = appointment.consultant_id?._id;
     const consultant = consultantId ? consultantDetails[consultantId] : null;
@@ -332,6 +342,28 @@ const MyAppointments: React.FC = () => {
                 className="border-red-200 text-red-700 hover:bg-red-50"
               >
                 Hủy hẹn
+              </Button>
+            )}
+            {appointment.status === 'completed' && !appointment.feedback && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleFeedbackClick(appointment)}
+                className="border-green-200 text-green-700 hover:bg-green-50"
+              >
+                <FaUserMd className="w-3 h-3 mr-1" />
+                Đánh giá
+              </Button>
+            )}
+            {appointment.status === 'completed' && appointment.feedback && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleViewFeedback(appointment)}
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <FaUserMd className="w-3 h-3 mr-1" />
+                Xem đánh giá
               </Button>
             )}
           </div>

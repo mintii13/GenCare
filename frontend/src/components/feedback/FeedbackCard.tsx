@@ -66,16 +66,7 @@ const FeedbackCard: React.FC<FeedbackCardProps> = ({
         {/* Actions */}
         {(canEditFeedback || canDeleteFeedback) && (
           <div className="flex items-center space-x-2">
-            {canEditFeedback && onEdit && (
-              <button
-                onClick={onEdit}
-                disabled={isLoading}
-                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-                title="Chỉnh sửa đánh giá"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-            )}
+
             {canDeleteFeedback && onDelete && (
               <button
                 onClick={onDelete}

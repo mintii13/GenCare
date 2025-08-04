@@ -96,7 +96,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              {existingFeedback ? 'Sửa đánh giá cuộc tư vấn' : 'Đánh giá cuộc tư vấn'}
+              {existingFeedback ? 'Xem đánh giá' : 'Đánh giá cuộc tư vấn'}
             </h3>
             <button
               onClick={onClose}
@@ -127,6 +127,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   rating={formData.rating}
                   onRatingChange={handleRatingChange}
                   size="lg"
+                  readonly={!!existingFeedback}
                 />
                 <p className="text-sm text-gray-600 text-center">
                   {formData.rating === 1 && 'Rất không hài lòng'}
@@ -141,20 +142,27 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
             {/* Comment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nhận xét (tùy chọn)
+                Nhận xét 
               </label>
               <textarea
                 value={formData.comment}
                 onChange={handleCommentChange}
-                placeholder="Chia sẻ trải nghiệm của bạn về cuộc tư vấn..."
+                placeholder={existingFeedback ? "" : "Chia sẻ trải nghiệm của bạn về cuộc tư vấn..."}
                 rows={4}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className={`w-full rounded-lg border px-3 py-2 text-sm resize-none ${
+                  existingFeedback 
+                    ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-default' 
+                    : 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                }`}
                 maxLength={500}
                 disabled={isSubmitting}
+                readOnly={!!existingFeedback}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {formData.comment.length}/500 ký tự
-              </p>
+              {!existingFeedback && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.comment.length}/500 ký tự
+                </p>
+              )}
             </div>
 
             {/* Buttons */}
@@ -167,23 +175,25 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
               >
                 Hủy
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || formData.rating < 1}
-                className="flex-1 flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                    Đang gửi...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    {existingFeedback ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
-                  </>
-                )}
-              </button>
+              {!existingFeedback && (
+                <button
+                  type="submit"
+                  disabled={isSubmitting || formData.rating < 1}
+                  className="flex-1 flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Gửi đánh giá
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </form>
 

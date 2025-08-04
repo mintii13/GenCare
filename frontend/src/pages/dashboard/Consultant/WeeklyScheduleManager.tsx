@@ -578,39 +578,8 @@ const WeeklyScheduleManager: React.FC = () => {
 
   // Kiểm tra xem có thể hoàn thành lịch hẹn hay không (giống logic ở AppointmentManagement)
   const canCompleteAppointment = (appointment: Appointment) => {
-    if (appointment.status !== 'in_progress') return false;
-
-    try {
-      if (!appointment.appointment_date || !appointment.start_time) return false;
-
-      const now = new Date();
-      const appointmentDate = new Date(appointment.appointment_date);
-      const [hours, minutes] = appointment.start_time.split(':').map(Number);
-
-      const appointmentDateOnly = new Date(appointmentDate);
-      appointmentDateOnly.setHours(0, 0, 0, 0);
-
-      const todayOnly = new Date(now);
-      todayOnly.setHours(0, 0, 0, 0);
-
-      if (todayOnly.getTime() < appointmentDateOnly.getTime()) return false; // chưa tới ngày hẹn
-
-      const oneDayAfter = new Date(appointmentDateOnly);
-      oneDayAfter.setDate(oneDayAfter.getDate() + 1);
-      if (todayOnly.getTime() > oneDayAfter.getTime()) return false; // quá 1 ngày
-
-      if (isNaN(hours) || isNaN(minutes)) return false;
-
-      const appointmentDateTime = new Date(appointmentDate);
-      appointmentDateTime.setHours(hours, minutes, 0, 0);
-
-      if (now.getTime() < appointmentDateTime.getTime()) return false; // chưa đến giờ bắt đầu
-
-      const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
-      return minutesPassed >= 15;
-    } catch {
-      return false;
-    }
+    // Chỉ cần status là 'in_progress' là có thể hoàn thành
+    return appointment.status === 'in_progress';
   };
 
   const getCompletionBlockedReason = (appointment: Appointment) => {
@@ -627,17 +596,7 @@ const WeeklyScheduleManager: React.FC = () => {
       const todayOnly = new Date(now);
       todayOnly.setHours(0, 0, 0, 0);
 
-      if (todayOnly.getTime() < appointmentDateOnly.getTime()) return 'Chưa đến ngày hẹn';
-      const oneDayAfter = new Date(appointmentDateOnly);
-      oneDayAfter.setDate(oneDayAfter.getDate() + 1);
-      if (todayOnly.getTime() > oneDayAfter.getTime()) return 'Quá hạn (sau 1 ngày)';
-
-      const appointmentDateTime = new Date(appointmentDate);
-      appointmentDateTime.setHours(hours, minutes, 0, 0);
-      if (now.getTime() < appointmentDateTime.getTime()) return 'Chưa đến giờ bắt đầu';
-
-      const minutesPassed = (now.getTime() - appointmentDateTime.getTime()) / (1000 * 60);
-      if (minutesPassed < 15) return `Cần chờ thêm ${Math.ceil(15 - minutesPassed)} phút`;
+      // Bỏ ràng buộc thời gian - có thể hoàn thành bất kỳ lúc nào khi status là 'in_progress'
 
       return '';
     } catch {
