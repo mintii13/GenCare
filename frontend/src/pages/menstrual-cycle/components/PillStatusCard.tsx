@@ -300,7 +300,7 @@ const PillStatusCard: React.FC<PillStatusCardProps> = ({
          </div>
 
         {/* Thanh tiến độ */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Tiến độ</span>
             <span className="font-medium">{pillStats.progress}%</span>
@@ -311,7 +311,7 @@ const PillStatusCard: React.FC<PillStatusCardProps> = ({
               style={{ width: `${pillStats.progress}%` }}
             />
           </div>
-        </div>
+        </div> */}
 
                  {/* Thông tin lịch hiện tại */}
           <div className="p-3 bg-white rounded-lg shadow-sm space-y-2">
@@ -443,43 +443,32 @@ const PillStatusCard: React.FC<PillStatusCardProps> = ({
             </div>
         </div>
 
-                 {/* Thuốc hôm nay */}
-         {pillStats.todayPill && (
-           <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-             <div className="flex items-center justify-between">
-               <div>
-                 <div className="text-sm font-medium text-blue-800">Thuốc hôm nay</div>
-                 <div className="text-xs text-blue-600">
-                   {pillStats.todayPill.is_taken ? 'Đã uống' : 'Chưa uống'}
-                 </div>
-                 <div className="text-xs text-gray-500 mt-1">
-                   {pillStats.todayPill.pill_status === 'hormone' ? 'Thuốc nội tiết' : 'Viên giả dược'} 
-                   (Viên {pillStats.todayPill.pill_number})
-                 </div>
-                 <div className="text-xs text-gray-400 mt-1">
-                   💡 Bạn cũng có thể click vào ngày trên lịch để đánh dấu
-                 </div>
-               </div>
-               <Badge 
-                 variant={pillStats.todayPill.is_taken ? "default" : "secondary"}
-                 className={pillStats.todayPill.is_taken ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}
-               >
-                 {pillStats.todayPill.is_taken ? 'Đã uống' : 'Chưa uống'}
-               </Badge>
-             </div>
-            
-                         {!pillStats.todayPill.is_taken && (
-               <Button
-                 size="sm"
-                 onClick={() => onTakePill(pillStats.todayPill!._id)}
-                 className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
-               >
-                 <FaCheck className="w-3 h-3 mr-1" />
-                 Đánh dấu đã uống
-               </Button>
-             )}
+        {/* Xóa toàn bộ phần "Thuốc hôm nay" từ đây */}
+        {/* {pillStats.todayPill && (
+          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-blue-800">Thuốc hôm nay</div>
+                <div className="text-xs text-blue-600">
+                  {pillStats.todayPill.is_taken ? 'Đã uống' : 'Chưa uống'}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {pillStats.todayPill.pill_status === 'hormone' ? 'Thuốc nội tiết' : 'Viên giả dược'} 
+                  (Viên {pillStats.todayPill.pill_number})
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  💡 Bạn cũng có thể click vào ngày trên lịch để đánh dấu
+                </div>
+              </div>
+              <Badge 
+                variant={pillStats.todayPill.is_taken ? "default" : "secondary"}
+                className={pillStats.todayPill.is_taken ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}
+              >
+                {pillStats.todayPill.is_taken ? 'Đã uống' : 'Chưa uống'}
+              </Badge>
+            </div>
           </div>
-        )}
+        )} */}
       </CardContent>
     </Card>
   );

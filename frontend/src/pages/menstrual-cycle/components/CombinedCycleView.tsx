@@ -299,6 +299,12 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
       return;
     }
     
+    // BƯỚC 0: Kiểm tra số lượng ngày hành kinh (tối đa 10 ngày) TRƯỚC KHI CHO PHÉP CHỌN
+    if (selectedPeriodDays.length >= 7 && !selectedPeriodDays.includes(dateString)) {
+      toast.error(' Số ngày hành kinh không được vượt quá 7 ngày!');
+      return;
+    }
+    
     // Nếu đã chọn ngày này, bỏ chọn - VÀ KIỂM TRA TÍNH LIÊN TỤC
     if (selectedPeriodDays.includes(dateString)) {
       const remainingDays = selectedPeriodDays.filter(d => d !== dateString);
@@ -376,8 +382,6 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
     } else {
       canAdd = false;
     }
-    
-
     
     if (canAdd) {
       const newSelectedDays = [...selectedPeriodDays, dateString];
@@ -655,7 +659,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
             <FaChevronRight className="w-4 h-4" />
           </Button>
             
-            {/* Pill Settings Button */}
+            {/* Pill Settings Button
             {onShowPillSettings && (
               <Button
                 variant="outline"
@@ -666,7 +670,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
               >
                 <FaCog className="w-4 h-4" />
               </Button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -812,10 +816,10 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
               <li>• Hệ thống sẽ tự động tính toán và dự đoán chu kì</li>
               {pillSchedules && pillSchedules.length > 0 && (
                 <>
-                  <li>• Số viên thuốc hiển thị trên mỗi ngày</li>
+                  {/* <li>• Số viên thuốc hiển thị trên mỗi ngày</li>
                   <li>• Dấu tích xanh = đã uống, số viên = chưa uống</li>
                   <li>• Hồng = thuốc nội tiết, Xám = thuốc giả dược</li>
-                  <li>• Nhấp vào icon viên thuốc để đánh dấu đã uống</li>
+                  <li>• Nhấp vào icon viên thuốc để đánh dấu đã uống</li> */}
                   <li>• Nhấp vào icon ⚙️ để cài đặt giờ nhắc nhở</li>
                 </>
               )}
@@ -899,7 +903,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
               Lịch chu kỳ
             </CardTitle>
             <CardDescription>
-              Chọn các ngày kinh nguyệt
+              Chọn các ngày hành kinh
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
