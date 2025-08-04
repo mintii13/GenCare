@@ -17,6 +17,7 @@ cd backend
 bash src/script/run-redis.sh
 ```
 ## Tagging Images After Build
+<img src="./img/RedisCache.jpg" width="600" height="1000"></img>
 ## Environment Configuration (.env)
 ### Backend Environment Setup
 Create a `.env` file in the root of the backend directory with the following variables:
