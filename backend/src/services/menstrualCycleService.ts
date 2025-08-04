@@ -25,12 +25,13 @@ const CYCLE_CONSTRAINTS = {
 
 export class MenstrualCycleService {
     // Process cycle with simple period days
-    public static async processCycle(user_id: string, period_days: string[]) {
+    public static async processCycle(user_id: string, period_days: string[], force_new_cycle?: boolean) {
         try {
             console.log('[MenstrualCycleService] processCycle called with:', {
                 user_id,
                 periodDaysCount: period_days?.length,
-                periodDays: period_days
+                periodDays: period_days,
+                force_new_cycle
             });
 
             if (!period_days || period_days.length === 0) {
@@ -136,9 +137,13 @@ export class MenstrualCycleService {
                 const cycleStartDate = cycleDays[0];
                 
                 // Find all overlapping cycles using smart merge logic
-                const overlappingCycles = existingCycles.filter(existingCycle => {
+                const overlappingCycles = force_new_cycle ? [] : existingCycles.filter(existingCycle => {
                     return this.shouldMergeCycles(existingCycle, cycleDays, cycleStartDate);
                 });
+                
+                if (force_new_cycle) {
+                    console.log('[MenstrualCycleService] FORCE_NEW_CYCLE: Skipping merge logic, creating new cycle');
+                }
 
                 if (overlappingCycles.length > 0) {
                     // Merge all overlapping cycles with new period days

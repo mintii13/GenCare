@@ -334,8 +334,8 @@ const MenstrualCyclePage: React.FC = () => {
       <div className="container mx-auto px-4 py-3 space-y-3">
         {/* Enhanced Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <TabsList className="grid w-full grid-cols-4 sm:w-auto bg-white/90 backdrop-blur shadow-lg border border-white/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4">
+            <TabsList className="grid w-full grid-cols-2 sm:w-auto bg-white/90 backdrop-blur shadow-lg border border-white/20">
               <TabsTrigger value="main" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md">
                 <FaCalendarAlt className="text-sm" />
                 <span className="hidden sm:inline">Lịch & Theo Dõi</span>
@@ -346,11 +346,8 @@ const MenstrualCyclePage: React.FC = () => {
                 <span className="hidden sm:inline">Thống Kê</span>
                 <span className="sm:hidden">TK</span>
               </TabsTrigger>
-              <TabsTrigger value="pills" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md">
-                <FaPills className="text-sm" />
-                <span className="hidden sm:inline">Uống Thuốc</span>
-                <span className="sm:hidden">Uống</span>
-              </TabsTrigger>
+         
+          
             </TabsList>
             
             <div className="flex gap-2 sm:hidden">

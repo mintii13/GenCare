@@ -73,10 +73,13 @@ export interface PeriodStatistics {
 
 export const menstrualCycleService = {
   // Process cycle with period days
-  async processCycle(period_days: string[]): Promise<ApiResponse<any>> {
+  async processCycle(period_days: string[], forceNewCycle?: boolean): Promise<ApiResponse<any>> {
     console.log('[processCycle] URL:', API.MenstrualCycle.PROCESS);
-    console.log('[processCycle] Data:', { period_days });
-    return apiClient.safePost(API.MenstrualCycle.PROCESS, { period_days });
+    console.log('[processCycle] Data:', { period_days, force_new_cycle: forceNewCycle });
+    return apiClient.safePost(API.MenstrualCycle.PROCESS, { 
+      period_days, 
+      force_new_cycle: forceNewCycle 
+    });
   },
 
   // Get all cycles for user

@@ -13,7 +13,7 @@ router.post('/process',
     async (req: Request, res: Response) => {
         try {
             const user_id = (req.user as any).userId;
-            const { period_days } = req.body;
+            const { period_days, force_new_cycle } = req.body;
             
             if (!period_days || !Array.isArray(period_days)) {
                         return res.status(400).json({
@@ -22,7 +22,13 @@ router.post('/process',
         });
             }
             
-            const result = await MenstrualCycleService.processCycle(user_id, period_days);
+            console.log('[Controller] processCycle called with:', {
+                user_id,
+                periodDaysCount: period_days.length,
+                force_new_cycle
+            });
+            
+            const result = await MenstrualCycleService.processCycle(user_id, period_days, force_new_cycle);
             
             if (result.success) {
                 return res.status(201).json(result);

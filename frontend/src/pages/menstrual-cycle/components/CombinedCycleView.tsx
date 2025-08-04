@@ -49,6 +49,17 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Validation effect: Đảm bảo selectedPeriodDays luôn liên tục
+  React.useEffect(() => {
+    if (selectedPeriodDays.length > 1) {
+      if (!isPeriodDaysContinuous(selectedPeriodDays)) {
+        console.error('[CombinedCycleView] ❌ CRITICAL: Non-continuous days detected in state! Clearing selection.');
+        setSelectedPeriodDays([]);
+        toast.error('❌ Phát hiện ngày không liên tục! Đã reset lựa chọn.');
+      }
+    }
+  }, [selectedPeriodDays]);
+
   // Pill tracking logic
   const getPillScheduleForDate = (date: Date) => {
     if (!pillSchedules || !pillSchedules.length) return null;
@@ -283,58 +294,161 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
     const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const dateLocal = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
-    console.log('[CombinedCycleView] Date validation:', {
-      clickedDate: date.toISOString(),
-      dateLocal: dateLocal.toISOString(),
-      today: today.toISOString(),
-      todayLocal: todayLocal.toISOString(),
-      isFuture: dateLocal > todayLocal
-    });
-    
     if (dateLocal > todayLocal) {
       toast.error('Không thể chọn ngày trong tương lai');
       return;
     }
     
+    // Nếu đã chọn ngày này, bỏ chọn - VÀ KIỂM TRA TÍNH LIÊN TỤC
     if (selectedPeriodDays.includes(dateString)) {
-      setSelectedPeriodDays(selectedPeriodDays.filter(d => d !== dateString));
-    } else {
-      // Validate continuity before adding new date
-      const newSelectedDays = [...selectedPeriodDays, dateString];
-      if (!isPeriodDaysContinuous(newSelectedDays)) {
-        toast.error('Các ngày hành kinh phải liên tục. Vui lòng chọn các ngày kế tiếp nhau.');
-        return;
+      const remainingDays = selectedPeriodDays.filter(d => d !== dateString);
+      
+      // Nếu còn lại nhiều hơn 1 ngày, kiểm tra tính liên tục
+      if (remainingDays.length > 1) {
+        const isRemainContinuous = isPeriodDaysContinuous(remainingDays);
+        if (!isRemainContinuous) {
+          // Nếu việc bỏ chọn làm mất tính liên tục, reset toàn bộ
+          console.warn('[CombinedCycleView] Removing day would break continuity, resetting selection');
+          setSelectedPeriodDays([]);
+          toast.error('⚠️ Bỏ chọn ngày này sẽ làm gián đoạn chuỗi. Đã reset lựa chọn.');
+          return;
+        }
       }
+      
+      setSelectedPeriodDays(remainingDays);
+      return;
+    }
+    
+    // Nếu chưa có ngày nào được chọn, cho phép chọn ngày đầu tiên
+    if (selectedPeriodDays.length === 0) {
+      setSelectedPeriodDays([dateString]);
+      return;
+    }
+    
+    // Logic SIÊU NGHIÊM NGẶT: Kiểm tra tính liên tục TUYỆT ĐỐI
+    const sortedSelectedDays = [...selectedPeriodDays].sort();
+    const clickedDate = new Date(dateString);
+    
+    // Kiểm tra trước khi thêm: nếu thêm ngày này, toàn bộ danh sách có liên tục không?
+    const testDays = [...selectedPeriodDays, dateString].sort();
+    
+    let canAdd = false;
+    let reason = '';
+    
+    // Kiểm tra tính liên tục của danh sách sau khi thêm
+    let isStrictlyContinuous = true;
+    for (let i = 1; i < testDays.length; i++) {
+      const currentDate = new Date(testDays[i]);
+      const previousDate = new Date(testDays[i - 1]);
+      const diffDays = Math.round((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays !== 1) {
+        isStrictlyContinuous = false;
+        reason = `Khoảng cách ${diffDays} ngày giữa ${testDays[i-1]} và ${testDays[i]} - PHẢI là 1 ngày`;
+        break;
+      }
+    }
+    
+    if (isStrictlyContinuous) {
+      // Kiểm tra thêm: ngày mới có liền kề trực tiếp với chuỗi hiện tại không?
+      if (selectedPeriodDays.length === 0) {
+        canAdd = true;
+        reason = 'Ngày đầu tiên';
+      } else {
+        const firstDate = new Date(sortedSelectedDays[0]);
+        const lastDate = new Date(sortedSelectedDays[sortedSelectedDays.length - 1]);
+        
+        const diffFromFirst = Math.round((clickedDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+        const diffFromLast = Math.round((clickedDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // CHỈ cho phép nếu là ngày liền kề trực tiếp
+        if (diffFromFirst === -1) {
+          canAdd = true;
+          reason = 'Thêm vào đầu chuỗi (liền kề)';
+        } else if (diffFromLast === 1) {
+          canAdd = true;
+          reason = 'Thêm vào cuối chuỗi (liền kề)';
+        } else {
+          canAdd = false;
+          reason = `Không liền kề: cách đầu ${diffFromFirst} ngày, cách cuối ${diffFromLast} ngày`;
+        }
+      }
+    } else {
+      canAdd = false;
+    }
+    
+
+    
+    if (canAdd) {
+      const newSelectedDays = [...selectedPeriodDays, dateString];
       setSelectedPeriodDays(newSelectedDays);
+      
+      // Kiểm tra lần cuối để đảm bảo tính liên tục
+      if (!isPeriodDaysContinuous(newSelectedDays)) {
+        console.error('[CombinedCycleView] ❌ CRITICAL ERROR: Days added but not continuous!');
+        setSelectedPeriodDays([]); // Reset selection
+        toast.error('❌ Lỗi hệ thống: Đã reset lựa chọn. Vui lòng chọn lại.');
+      }
+    } else {
+      console.warn('[CombinedCycleView] ⚠️ Attempted to add non-continuous day:', {
+        clickedDate: dateString,
+        currentSelection: selectedPeriodDays,
+        reason
+      });
+      toast.error('❌ Các ngày hành kinh phải liên tục! Chỉ có thể chọn ngày liền kề trực tiếp với chuỗi hiện tại.');
     }
   };
 
-  // Function to check if period days are continuous
   const isPeriodDaysContinuous = (days: string[]): boolean => {
     if (days.length <= 1) return true;
     
-    // Sort days chronologically
-    const sortedDays = days.sort();
+    // Sort days chronologically  
+    const sortedDays = [...days].sort();
     
+    console.log('[CombinedCycleView] VALIDATION START - Checking continuity for:', sortedDays);
+    
+    // Kiểm tra từng cặp ngày liền kề một cách SIÊU NGHIÊM NGẶT
     for (let i = 1; i < sortedDays.length; i++) {
       const currentDate = new Date(sortedDays[i]);
       const previousDate = new Date(sortedDays[i - 1]);
       
-      // Calculate difference in days
+      // Calculate difference in days với độ chính xác cao
       const diffTime = currentDate.getTime() - previousDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
       
-      // If difference is more than 1 day, they are not continuous
-      if (diffDays > 1) {
-        console.log('[CombinedCycleView] Non-continuous days detected:', {
+      // Các ngày PHẢI cách nhau đúng 1 ngày - KHÔNG có ngoại lệ
+      if (diffDays !== 1) {
+        console.error('[CombinedCycleView] ❌ VALIDATION FAILED - Non-continuous days detected:', {
+          index: `${i-1} -> ${i}`,
           previous: sortedDays[i - 1],
           current: sortedDays[i],
-          diffDays
+          diffDays,
+          expectedDiff: 1,
+          allDays: sortedDays,
+          error: `Gap of ${diffDays} days between consecutive days`
         });
         return false;
       }
     }
     
+    // Kiểm tra thêm: không có ngày trùng lặp
+    const uniqueDays = [...new Set(sortedDays)];
+    if (uniqueDays.length !== sortedDays.length) {
+      console.error('[CombinedCycleView] ❌ VALIDATION FAILED - Duplicate days found:', {
+        originalLength: sortedDays.length,
+        uniqueLength: uniqueDays.length,
+        allDays: sortedDays,
+        uniqueDays: uniqueDays
+      });
+      return false;
+    }
+    
+    console.log('[CombinedCycleView] ✅ VALIDATION PASSED - All days are perfectly continuous:', {
+      totalDays: sortedDays.length,
+      firstDay: sortedDays[0],
+      lastDay: sortedDays[sortedDays.length - 1],
+      allDays: sortedDays
+    });
     return true;
   };
 
@@ -344,13 +458,9 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
       return;
     }
 
-    // Validate continuity
-    if (!isPeriodDaysContinuous(selectedPeriodDays)) {
-      toast.error('Các ngày hành kinh phải liên tục. Vui lòng chọn các ngày kế tiếp nhau.');
-      return;
-    }
+    console.log('[CombinedCycleView] Starting save validation for days:', selectedPeriodDays);
 
-    // Check for future dates with proper timezone handling
+    // BƯỚC 1: Kiểm tra ngày trong tương lai TRƯỚC
     const today = new Date();
     const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const hasFutureDate = selectedPeriodDays.some(dateString => {
@@ -360,14 +470,82 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
     });
     
     if (hasFutureDate) {
-      toast.error('Không thể chọn ngày trong tương lai');
+      toast.error('❌ Không thể chọn ngày trong tương lai!');
       return;
     }
+
+    // BƯỚC 2: Kiểm tra tính liên tục NGHIÊM NGẶT
+    if (!isPeriodDaysContinuous(selectedPeriodDays)) {
+      toast.error('❌ Các ngày hành kinh PHẢI liên tục! Không được có khoảng trống giữa các ngày.');
+      return;
+    }
+
+    // BƯỚC 3: Kiểm tra thêm - đảm bảo không có ngày trùng lặp
+    const uniqueDays = [...new Set(selectedPeriodDays)];
+    if (uniqueDays.length !== selectedPeriodDays.length) {
+      toast.error('❌ Có ngày bị trùng lặp trong danh sách!');
+      setSelectedPeriodDays(uniqueDays);
+      return;
+    }
+
+    // BƯỚC 4: Kiểm tra khoảng cách với chu kỳ hiện tại để quyết định tạo chu kỳ mới
+    const sortedNewDays = [...selectedPeriodDays].sort();
+    const firstNewDay = new Date(sortedNewDays[0]);
+    const lastNewDay = new Date(sortedNewDays[sortedNewDays.length - 1]);
+    
+    // Kiểm tra khoảng cách với chu kỳ gần nhất
+    let shouldCreateNewCycle = false;
+    let cycleGapReason = '';
+    
+    if (safeCycles && safeCycles.length > 0) {
+      const latestCycle = safeCycles[0];
+      
+      if (latestCycle.period_days && latestCycle.period_days.length > 0) {
+        // Tìm ngày cuối của chu kỳ gần nhất
+        const latestCycleDays = latestCycle.period_days.map(d => new Date(d)).sort((a, b) => b.getTime() - a.getTime());
+        const lastDayOfLatestCycle = latestCycleDays[0];
+        
+        // Tính khoảng cách từ ngày cuối chu kỳ cũ đến ngày đầu chu kỳ mới
+        const daysBetweenCycles = Math.round((firstNewDay.getTime() - lastDayOfLatestCycle.getTime()) / (1000 * 60 * 60 * 24));
+        
+        console.log('[CombinedCycleView] Cycle gap analysis:', {
+          lastDayOfLatestCycle: lastDayOfLatestCycle.toISOString().split('T')[0],
+          firstNewDay: firstNewDay.toISOString().split('T')[0],
+          daysBetweenCycles,
+          threshold: 7
+        });
+        
+        if (daysBetweenCycles >= 7) {
+          shouldCreateNewCycle = true;
+          cycleGapReason = `Khoảng cách ${daysBetweenCycles} ngày >= 7 ngày → Tạo chu kỳ mới`;
+        } else if (daysBetweenCycles < 0) {
+          // Ngày mới nằm trước chu kỳ hiện tại - có thể là sửa đổi chu kỳ cũ
+          cycleGapReason = `Ngày mới trước chu kỳ hiện tại ${Math.abs(daysBetweenCycles)} ngày → Có thể merge`;
+        } else {
+          cycleGapReason = `Khoảng cách ${daysBetweenCycles} ngày < 7 ngày → Merge vào chu kỳ hiện tại`;
+        }
+      } else {
+        shouldCreateNewCycle = true;
+        cycleGapReason = 'Chu kỳ gần nhất không có ngày hành kinh → Tạo chu kỳ mới';
+      }
+    } else {
+      shouldCreateNewCycle = true;
+      cycleGapReason = 'Không có chu kỳ nào → Tạo chu kỳ đầu tiên';
+    }
+
+    console.log('[CombinedCycleView] All validations passed, proceeding to save:', {
+      totalDays: selectedPeriodDays.length,
+      sortedDays: [...selectedPeriodDays].sort(),
+      uniqueDays: uniqueDays.length,
+      shouldCreateNewCycle,
+      cycleGapReason
+    });
 
     try {
       setIsSaving(true);
       
-      const response = await menstrualCycleService.processCycle(selectedPeriodDays);
+      // Gọi API với thông tin về việc tạo chu kỳ mới
+      const response = await menstrualCycleService.processCycle(selectedPeriodDays, shouldCreateNewCycle);
       
       if (response.success) {
         toast.success('Đã lưu ngày hành kinh thành công');
@@ -483,7 +661,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onShowPillSettings}
-                className="p-2 text-purple-600 border-purple-300 hover:bg-purple-50"
+                className="p-2 text-gray-600 border-gray-300 hover:bg-gray-50"
                 title="Cài đặt nhắc nhở thuốc"
               >
                 <FaCog className="w-4 h-4" />
@@ -525,11 +703,11 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                   ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
                   ${isToday ? 'ring-2 ring-blue-500' : ''}
                   ${isPeriod ? 'bg-gradient-to-br from-pink-400 to-rose-500 text-white' : ''}
-                  ${isOvulation && !isPeriod ? 'bg-gradient-to-br from-yellow-400 to-orange-400 text-white' : ''}
-                  ${isFertile && !isPeriod ? 'bg-gradient-to-br from-green-400 to-emerald-400 text-white' : ''}
-                  ${isPredicted && !isPeriod ? 'bg-gradient-to-br from-blue-400 to-indigo-400 text-white' : ''}
-                  ${isSelected && !isPeriod ? 'bg-pink-200 border-pink-500' : ''}
-                  ${hasPill && !isPillTaken && !isPeriod ? 'bg-purple-100 border-purple-300' : ''}
+                  ${isOvulation && !isPeriod && !isSelected ? 'bg-gradient-to-br from-yellow-400 to-orange-400 text-white' : ''}
+                  ${isFertile && !isPeriod && !isSelected ? 'bg-gradient-to-br from-green-400 to-emerald-400 text-white' : ''}
+                  ${isPredicted && !isPeriod && !isSelected ? 'bg-gradient-to-br from-blue-400 to-indigo-400 text-white' : ''}
+                  ${isSelected && !isPeriod ? 'bg-pink-200 border-2 border-pink-500 text-pink-800 font-semibold' : ''}
+                  ${hasPill && !isPillTaken && !isPeriod && !isSelected ? '' : ''}
                   ${isFuture ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'}
                   ${!isCurrentMonth ? 'bg-gray-50' : ''}
                 `}
@@ -546,11 +724,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                 </div>
                       ) : (
                         <div 
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
-                            isPillHormone 
-                              ? 'bg-pink-200 border-pink-400 text-pink-700' 
-                              : 'bg-gray-200 border-gray-400 text-gray-600'
-                          }`}
+                          className="text-xs font-bold text-gray-700"
                           title={`Viên thuốc ${pillSchedule.pill_number}${pillSchedule.reminder_enabled ? ' - Có nhắc nhở' : ' - Không nhắc nhở'}`}
                         >
                           {pillSchedule.pill_number}
@@ -585,7 +759,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                       e.stopPropagation();
                       handlePillClick(date);
                     }}
-                    className="absolute -bottom-1 -right-1 h-4 w-4 p-0 text-purple-500 hover:text-purple-700 hover:bg-purple-100"
+                    className="absolute -bottom-1 -right-1 h-4 w-4 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   >
                     <FaPills className="h-2 w-2" />
                   </Button>
@@ -618,78 +792,34 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
       {/* Left Column - Cycle Progress Circle */}
       <div className="lg:col-span-1 order-1 lg:order-1">
-        {todayStatus && (
-          <CycleProgressCircle
-            currentDay={dayInCycle}
-            cycleLength={todayStatus.cycle_length || 28}
-            cyclePhase={phase as 'menstrual' | 'follicular' | 'ovulation' | 'luteal'}
-            isPeriodDay={todayStatus.is_period_day || false}
-            periodLength={todayStatus.period_length}
-            ovulationDay={todayStatus.predicted_ovulation_date ? 
-              Math.floor((new Date(todayStatus.predicted_ovulation_date).getTime() - new Date(todayStatus.date).getTime()) / (1000 * 60 * 60 * 24)) + 1 : 
-              undefined
-            }
-            key={`cycle-${dayInCycle}-${phase}-${todayStatus.cycle_length}`}
-          />
-        )}
-      </div>
+    
 
-      {/* Middle Column - Calendar */}
-      <div className="lg:col-span-1 order-2 lg:order-2">
-        <Card className="h-full relative">
-          {isRefreshing && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-              <div className="flex items-center gap-3 text-purple-600">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                <span className="font-medium">Đang cập nhật dữ liệu...</span>
-              </div>
-            </div>
-          )}
+        {/* Hướng dẫn */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FaCalendarAlt className="text-purple-500" />
-              Lịch chu kỳ
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <FaInfoCircle className="text-blue-500" />
+              Hướng dẫn
             </CardTitle>
-            <CardDescription>
-              Chọn các ngày kinh nguyệt
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {renderCalendar()}
-            
-            {/* Save Button */}
-            {selectedPeriodDays.length > 0 && (
-              <div className="flex items-center justify-between p-3 bg-pink-50 rounded-lg border border-pink-200">
-                <div className="text-sm text-pink-800">
-                  Đã chọn {selectedPeriodDays.length} ngày hành kinh
-                </div>
-                <Button
-                  onClick={handleSavePeriodDays}
-                  disabled={isSaving || isRefreshing}
-                  className="bg-pink-600 hover:bg-pink-700 text-white"
-                  size="sm"
-                >
-                  {isSaving ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Đang lưu...
-                    </div>
-                  ) : isRefreshing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Đang cập nhật...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <FaSave className="h-4 w-4" />
-                      Lưu ngày
-                    </div>
-                  )}
-                </Button>
-              </div>
-            )}
-            
-            {/* Legend */}
+          <CardContent>
+            <ul className="text-xs text-gray-700 space-y-1">
+              <li>• Click vào ngày trên lịch để chọn/bỏ chọn ngày hành kinh</li>
+              <li>• <strong>Các ngày hành kinh phải liên tục</strong> (kế tiếp nhau)</li>
+              <li>• Ngày đã chọn sẽ hiển thị màu hồng nhạt</li>
+              <li>• Bấm &quot;Lưu ngày&quot; để lưu các ngày đã chọn</li>
+              <li>• Bạn có thể xóa ngày đã lưu bằng nút xóa trên ngày</li>
+              <li>• Hệ thống sẽ tự động tính toán và dự đoán chu kì</li>
+              {pillSchedules && pillSchedules.length > 0 && (
+                <>
+                  <li>• Số viên thuốc hiển thị trên mỗi ngày</li>
+                  <li>• Dấu tích xanh = đã uống, số viên = chưa uống</li>
+                  <li>• Hồng = thuốc nội tiết, Xám = thuốc giả dược</li>
+                  <li>• Nhấp vào icon viên thuốc để đánh dấu đã uống</li>
+                  <li>• Nhấp vào icon ⚙️ để cài đặt giờ nhắc nhở</li>
+                </>
+              )}
+            </ul>
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-gray-700">Chú thích:</h4>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -721,7 +851,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                 {pillSchedules && pillSchedules.length > 0 && (
                   <>
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded flex items-center justify-center text-xs font-bold text-purple-700">
+                      <div className="text-xs font-bold text-gray-700">
                         1
                       </div>
                       <span>Viên thuốc</span>
@@ -748,6 +878,82 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
                 )}
               </div>
                 </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Middle Column - Calendar */}
+      <div className="lg:col-span-1 order-2 lg:order-2">
+        <Card className="h-full relative">
+          {isRefreshing && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="flex items-center gap-3 text-gray-600">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+                <span className="font-medium">Đang cập nhật dữ liệu...</span>
+              </div>
+            </div>
+          )}
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FaCalendarAlt className="text-gray-500" />
+              Lịch chu kỳ
+            </CardTitle>
+            <CardDescription>
+              Chọn các ngày kinh nguyệt
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {renderCalendar()}
+            
+            {/* Save Button */}
+            {selectedPeriodDays.length > 0 && (
+              <div className="flex items-center justify-between p-3 bg-pink-50 rounded-lg border border-pink-200">
+                <div className="text-sm text-pink-800">
+                  Đã chọn {selectedPeriodDays.length} ngày hành kinh
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => {
+                      setSelectedPeriodDays([]);
+                      toast.success('Đã xóa lựa chọn');
+                    }}
+                    disabled={isSaving || isRefreshing}
+                    variant="outline"
+                    className="border-pink-300 text-pink-700 hover:bg-pink-100"
+                    size="sm"
+                  >
+                    <FaTimes className="h-4 w-4" />
+                    Reset
+                  </Button>
+                  <Button
+                    onClick={handleSavePeriodDays}
+                    disabled={isSaving || isRefreshing}
+                    className="bg-pink-600 hover:bg-pink-700 text-white"
+                    size="sm"
+                  >
+                    {isSaving ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Đang lưu...
+                      </div>
+                    ) : isRefreshing ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Đang cập nhật...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <FaSave className="h-4 w-4" />
+                        Lưu ngày
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {/* Legend */}
+            
               </CardContent>
             </Card>
       </div>
@@ -773,33 +979,7 @@ const CombinedCycleView: React.FC<CombinedCycleViewProps> = ({
           />
           
           {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <FaInfoCircle className="text-blue-500" />
-                Hướng dẫn
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-xs text-gray-700 space-y-1">
-                <li>• Click vào ngày trên lịch để chọn/bỏ chọn ngày hành kinh</li>
-                <li>• <strong>Các ngày hành kinh phải liên tục</strong> (kế tiếp nhau)</li>
-                <li>• Ngày đã chọn sẽ hiển thị màu hồng nhạt</li>
-                <li>• Bấm &quot;Lưu ngày&quot; để lưu các ngày đã chọn</li>
-                <li>• Bạn có thể xóa ngày đã lưu bằng nút xóa trên ngày</li>
-                <li>• Hệ thống sẽ tự động tính toán và dự đoán chu kì</li>
-                {pillSchedules && pillSchedules.length > 0 && (
-                  <>
-                    <li>• Số viên thuốc hiển thị trên mỗi ngày</li>
-                    <li>• Dấu tích xanh = đã uống, số viên = chưa uống</li>
-                    <li>• Hồng = thuốc nội tiết, Xám = thuốc giả dược</li>
-                    <li>• Nhấp vào icon viên thuốc để đánh dấu đã uống</li>
-                    <li>• Nhấp vào icon ⚙️ để cài đặt giờ nhắc nhở</li>
-                  </>
-                )}
-              </ul>
-            </CardContent>
-          </Card>
+        
 
           {/* Prediction Info */}
           {/* {safeCycles?.length > 0 && (

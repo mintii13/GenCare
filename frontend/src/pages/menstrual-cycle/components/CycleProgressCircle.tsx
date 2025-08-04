@@ -38,7 +38,7 @@ const CycleProgressCircle: React.FC<CycleProgressCircleProps> = ({
   };
 
   return (
-    <Card className="p-6 bg-yellow-50">
+    <Card className="p-6 bg-white">
       <div className="text-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">Chu kỳ kinh nguyệt</h3>
         <div className="text-2xl font-bold text-purple-600 mb-2">
