@@ -1250,7 +1250,7 @@ const renderSwabResultForm = (testId: string) => {
             padding: '12px' 
           }}>
             <Text strong>Đơn hàng: </Text>
-            <Text code>{order?.order_code}</Text>
+            <Text code>{order?._id.slice(-8)}</Text>
             <br />
             <Text strong>Khách hàng: </Text>
             <Text>{order?.customer_name || order?.customer_id?.full_name}</Text>
