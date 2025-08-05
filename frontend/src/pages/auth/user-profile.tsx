@@ -27,6 +27,22 @@ interface UserProfile {
   avatar?: string;
 }
 
+// Hàm chuyển đổi role sang tiếng Việt
+const getRoleInVietnamese = (role: string): string => {
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return 'Quản trị viên';
+    case 'customer':
+      return 'Khách hàng';
+    case 'consultant':
+      return 'Tư vấn viên';
+    case 'staff':
+      return 'Nhân viên';
+    default:
+      return role;
+  }
+};
+
 // Hàm chuyển đổi dữ liệu user thành UserProfile
 const convertToUserProfile = (user: any): UserProfile => {
   return {
@@ -240,12 +256,7 @@ const UserProfilePage: React.FC = () => {
           <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1890ff' }}>Hồ sơ cá nhân</h1>
           <p className="text-gray-600">Quản lý thông tin cá nhân của bạn</p>
         </div>
-        {/* Nút đổi mật khẩu */}
-        <div className="mb-6">
-          <Button variant="outline" onClick={() => setShowChangePassword(true)}>
-            Đổi mật khẩu
-          </Button>
-        </div>
+
 
 
         {/* Profile Card */}
@@ -286,7 +297,7 @@ const UserProfilePage: React.FC = () => {
               <div className="flex-1 text-center sm:text-left">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">{profile.full_name}</h2>
                 <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                  <p className="text-gray-600">{profile.role}</p>
+                  <p className="text-gray-600">{getRoleInVietnamese(profile.role)}</p>
                   <div className="flex items-center gap-1">
                     <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: profile.status ? '#52c41a' : '#ff4d4f' }}></div>
                     <span className={`text-xs font-medium`} style={{ color: profile.status ? '#52c41a' : '#ff4d4f' }}>

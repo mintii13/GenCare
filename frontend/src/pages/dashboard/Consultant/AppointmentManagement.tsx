@@ -75,7 +75,7 @@ const AppointmentManagement: React.FC = () => {
   const statusLabels = {
     pending: 'Chờ xác nhận',
     confirmed: 'Đã xác nhận',
-    in_progress: 'Đang tư vấn',
+    in_progress: 'Đang diễn ra',
     completed: 'Đã hoàn thành',
     cancelled: 'Đã hủy'
   };

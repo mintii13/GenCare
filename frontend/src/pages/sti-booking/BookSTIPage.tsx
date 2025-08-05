@@ -198,7 +198,7 @@ const BookSTIPage: React.FC = () => {
         console.log('  - Modal không hiển thị, gọi trực tiếp createOrder');
         createOrder();
       }
-    }, 500);
+    }, 1000000);
   };
 
   const createOrder = async () => {

@@ -95,7 +95,7 @@ router.get('/',
             // FALLBACK: Nếu không có pagination params thì dùng old logic để backward compatible
             const { status, start_date, end_date } = req.query;
 
-            if (user.role === 'customer') {
+            if (user.role === 'customer') { 
                 const result = await AppointmentService.getCustomerAppointments(
                     user.userId,
                     status as string,

@@ -110,7 +110,7 @@ export const estimateReadingTime = (htmlContent: string, wordsPerMinute: number 
   const cleanText = stripHtmlTags(htmlContent);
   const words = cleanText.split(/\s+/).filter(word => word.length > 0).length;
   const minutes = Math.ceil(words / wordsPerMinute);
-  return `${minutes} phút đọc`;
+  return '';
 };
 
 /**

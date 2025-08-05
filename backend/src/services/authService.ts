@@ -250,13 +250,13 @@ export class AuthService {
             if (!storedOtp || storedOtp !== otp)
                 return {
                     success: false,
-                    message: 'OTP is invalid or expired'
+                    message: 'OTP sai hoặc đã hết hạn'
                 };
             const tempUser = await redisClient.get(`user:${email}`);
             if (!tempUser) {
                 return {
                     success: false,
-                    message: 'Cannot find registered data'
+                    message: 'Không tìm thấy dữ liệu đăng ký'
                 };
             }
 

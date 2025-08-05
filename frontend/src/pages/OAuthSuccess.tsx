@@ -105,7 +105,7 @@ function OAuthSuccess() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <Loading text="Đang xử lý đăng nhập Google..." />
+        {/* <Loading text="Đang xử lý đăng nhập Google..." /> */}
         <p className="text-gray-600 mt-4">Vui lòng đợi trong giây lát...</p>
       </div>
     </div>

@@ -275,7 +275,7 @@ export class PaginationUtils {
 
         // Status filter với validation
         if (query.status && typeof query.status === 'string') {
-            const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled', 'rescheduled'];
+            const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled', 'rescheduled','in_progress'];
             if (validStatuses.includes(query.status)) {
             filter.status = query.status;
             }
@@ -283,7 +283,7 @@ export class PaginationUtils {
 
         // Video call status filter
         if (query.video_call_status && typeof query.video_call_status === 'string') {
-            const validVideoStatuses = ['pending', 'active', 'completed', 'failed'];
+            const validVideoStatuses = ['not_started', 'in_progress', 'ended'];
             if (validVideoStatuses.includes(query.video_call_status)) {
             filter.video_call_status = query.video_call_status;
             }
