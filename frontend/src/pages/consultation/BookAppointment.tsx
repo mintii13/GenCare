@@ -570,7 +570,7 @@ const BookAppointment: React.FC = () => {
                 placeholder="Nhập ghi chú nếu cần..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 rows={18}
-                style={{ minHeight: '590px' }}
+                style={{ minHeight: '360px' }}
               />
               
             </div>

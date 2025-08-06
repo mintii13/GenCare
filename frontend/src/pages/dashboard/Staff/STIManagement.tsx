@@ -45,16 +45,16 @@ const STIManagement: React.FC = () => {
       label: '📋 Quản lý đơn hàng',
       children: <OrdersManagement refreshTrigger={refreshTrigger} />,
     },
-    {
-      key: 'schedule',
-      label: '📅 Lịch lấy mẫu',
-      children: <ScheduleManagement refreshTrigger={refreshTrigger} />,
-    },
-    {
-      key: 'results',
-      label: '🧪 Kết quả xét nghiệm',
-      children: <ResultsManagement refreshTrigger={refreshTrigger} />,
-    },
+    // {
+    //   key: 'schedule',
+    //   label: '📅 Lịch lấy mẫu',
+    //   children: <ScheduleManagement refreshTrigger={refreshTrigger} />,
+    // },
+    // {
+    //   key: 'results',
+    //   label: '🧪 Kết quả xét nghiệm',
+    //   children: <ResultsManagement refreshTrigger={refreshTrigger} />,
+    // },
     {
       key: 'tests',
       label: '🔬 Quản lý xét nghiệm',

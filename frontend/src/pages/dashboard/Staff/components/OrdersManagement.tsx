@@ -1020,7 +1020,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                 </Form.Item>
 
                 {/* Debug info - có thể xóa sau khi fix xong */}
-                <div style={{ 
+                {/* <div style={{ 
                   fontSize: '12px', 
                   color: '#666', 
                   marginBottom: '12px',
@@ -1029,7 +1029,7 @@ const OrdersManagement: React.FC<OrdersManagementProps> = ({ refreshTrigger }) =
                   borderRadius: '4px'
                 }}>
                   Debug: Order ID = {editingOrder._id} | Status = {editingOrder.order_status} | Paid = {editingOrder.is_paid ? 'Yes' : 'No'}
-                </div>
+                </div> */}
 
                 {payment?.status !== 'Completed' && (
                   <div style={{ display: 'flex', gap: '12px' }}>

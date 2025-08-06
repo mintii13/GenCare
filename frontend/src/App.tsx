@@ -164,7 +164,6 @@ AutoConfirmService.stop();
             <Route path="appointments" element={<AdminAppointmentManagement />} />
             <Route path="sti-management" element={<AdminSTIManagement />} />
             <Route path="audit-log" element={<AdminAuditLog />} />
-
           </Route>
 
           {/* Staff Dashboard routes */}
