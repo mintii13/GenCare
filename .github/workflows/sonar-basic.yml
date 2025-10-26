@@ -1,0 +1,30 @@
+name: SonarCloud Basic
+
+on:
+  workflow_dispatch: # Manual trigger only
+  
+jobs:
+  sonar-basic:
+    name: Basic SonarCloud Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create basic project structure
+        run: |
+          echo "Creating minimal project for SonarCloud..."
+          cd backend
+          ls -la
+          echo "Files in src:"
+          find src -name "*.ts" | head -10
+
+      - name: SonarCloud Scan (Basic)
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: ./backend
