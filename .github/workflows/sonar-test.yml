@@ -1,0 +1,45 @@
+name: SonarCloud Analysis (Manual)
+
+on:
+  workflow_dispatch: # Manual trigger only for testing
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Backend Analysis  
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create dummy coverage for testing
+        run: |
+          mkdir -p coverage
+          echo "TN:" > coverage/lcov.info
+          echo "SF:src/app.ts" >> coverage/lcov.info  
+          echo "LF:1" >> coverage/lcov.info
+          echo "LH:1" >> coverage/lcov.info
+          echo "end_of_record" >> coverage/lcov.info
+
+      - name: SonarCloud Scan (No Token Test)
+        run: |
+          echo "Testing SonarCloud connection..."
+          echo "Organization: thotp22"
+          echo "Project Key: gencare-backend" 
+          echo "Project files:"
+          find src -name "*.ts" | head -10

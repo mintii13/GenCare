@@ -3,17 +3,17 @@ name: SonarCloud Analysis
 on:
   push:
     branches: [ main, last-version, develop ]
-    paths: 
-      - 'backend/**'
   pull_request:
     branches: [ main, last-version ]
-    paths:
-      - 'backend/**'
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   sonarcloud:
     name: SonarCloud Backend Analysis
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
     
     steps:
       - name: Checkout code
@@ -29,14 +29,17 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        working-directory: ./backend
         run: npm ci
 
       - name: Run tests and coverage
-        working-directory: ./backend
-        run: |
-          npm run test:coverage
+        run: npm run test:coverage
         continue-on-error: true
+
+      - name: List coverage files (debug)
+        run: |
+          echo "Checking coverage directory..."
+          ls -la coverage/ || echo "No coverage directory found"
+          pwd
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
