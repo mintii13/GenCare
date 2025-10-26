@@ -141,6 +141,13 @@ export class PaymentRepository {
     }
 
     /**
+     * Tìm payment theo MoMo request ID
+     */
+    static async findByMomoRequestId(requestId: string): Promise<IPayment | null> {
+        return await Payment.findOne({ momoRequestId: requestId });
+    }
+
+    /**
      * Lấy thống kê payment theo khoảng thời gian
      */
     static async getPaymentStats(startDate: Date, endDate: Date): Promise<any[]> {
@@ -217,5 +224,29 @@ export class PaymentRepository {
             },
             { new: true }
         );
+    }
+
+    /**
+     * Lấy tất cả payments với pagination (cho staff/admin)
+     */
+    static async getAllPayments(
+        status?: PaymentStatus,
+        page: number = 1,
+        limit: number = 10
+    ): Promise<{ payments: IPayment[], total: number }> {
+        const query: any = {};
+        if (status) query.status = status;
+
+        const skip = (page - 1) * limit;
+
+        const [payments, total] = await Promise.all([
+            Payment.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Payment.countDocuments(query)
+        ]);
+
+        return { payments, total };
     }
 }

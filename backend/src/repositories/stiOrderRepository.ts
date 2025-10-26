@@ -319,4 +319,13 @@ export class StiOrderRepository {
             throw error;
         }
     }
+
+    public static async updateById(id: string, updateData: Partial<IStiOrder>): Promise<IStiOrder | null> {
+        try {
+            return await StiOrder.findByIdAndUpdate(id, updateData, { new: true });
+        } catch (error) {
+            console.error('Error updating STI order:', error);
+            throw error;
+        }
+    }
 }

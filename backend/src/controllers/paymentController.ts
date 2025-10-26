@@ -2,10 +2,10 @@
 import { Router, Request, Response } from 'express';
 import { MoMoPaymentService, MoMoIPNRequest } from '../services/momoPaymentService';
 import { PaymentRepository } from '../repositories/paymentRepository';
-import { IPayment, Payment } from '../models/Payment';
-import { StiOrder } from '../models/StiOrder';
+import { StiOrderRepository } from '../repositories/stiOrderRepository';
+import { IPayment } from '../models/Payment';
 import { authenticateToken, authorizeRoles } from '../middlewares/jwtMiddleware';
-import mongoose from 'mongoose';
+import { MongoUtils } from '../utils/mongoUtils';
 
 const router = Router();
 const momoService = new MoMoPaymentService();
@@ -16,26 +16,30 @@ async function updatePaymentAndOrder(payment: any, ipnData: MoMoIPNRequest) {
         console.log("Ipn data:", ipnData)
         if (ipnData.resultCode.toString() === '0') {
           // Thanh toán thành công
-          payment.status = 'Completed';
-          payment.completedAt = new Date();
-          payment.momoTransId = ipnData.transId?.toString();
-          payment.momoMessage = ipnData.message;
-          payment.momoResultCode = Number(ipnData.resultCode);
-          await payment.save();
+          const updateData = {
+            status: 'Completed' as const,
+            completedAt: new Date(),
+            momoTransId: ipnData.transId?.toString(),
+            momoMessage: ipnData.message,
+            momoResultCode: Number(ipnData.resultCode)
+          };
+          await PaymentRepository.updateById(payment._id.toString(), updateData);
     
           // Cập nhật trạng thái order liên quan
-          await StiOrder.findByIdAndUpdate(payment.orderId, {
+          await StiOrderRepository.updateById(payment.orderId.toString(), {
             is_paid: true,
             order_status: 'Processing',
           });
     
         } else {
           // Thanh toán thất bại
-          payment.status = 'Failed';
-          payment.failedAt = new Date();
-          payment.errorMessage = ipnData.message;
-          payment.momoResultCode = ipnData.resultCode;
-          await payment.save();
+          const updateData = {
+            status: 'Failed' as const,
+            failedAt: new Date(),
+            errorMessage: ipnData.message,
+            momoResultCode: ipnData.resultCode
+          };
+          await PaymentRepository.updateById(payment._id.toString(), updateData);
     
           console.warn(` Payment ${payment._id} failed:`, ipnData.message);
         }
@@ -50,6 +54,107 @@ interface CreatePaymentRequest {
     // Bỏ amount - sẽ lấy từ order
 }
 
+// Helper functions to reduce complexity
+async function validatePaymentRequest(orderId: string, paymentMethod: string) {
+    if (!orderId || !paymentMethod) {
+        return { success: false, message: 'Thiếu thông tin bắt buộc: orderId, paymentMethod' };
+    }
+
+    if (!['MoMo', 'Cash'].includes(paymentMethod)) {
+        return { success: false, message: 'Phương thức thanh toán không hợp lệ' };
+    }
+
+    return { success: true };
+}
+
+async function validateOrder(orderId: string) {
+    const stiOrder = await StiOrderRepository.findOrderById(orderId);
+    if (!stiOrder) {
+        return { success: false, message: 'STI Order không tìm thấy' };
+    }
+
+    if (stiOrder.is_paid) {
+        return { success: false, message: 'Order này đã được thanh toán rồi' };
+    }
+
+    if (stiOrder.total_amount <= 0) {
+        return { success: false, message: 'Số tiền thanh toán phải lớn hơn 0' };
+    }
+
+    const existingPayment = await PaymentRepository.findByOrderId(orderId);
+    if (existingPayment && existingPayment.status === 'Completed') {
+        return { success: false, message: 'Order này đã được thanh toán rồi' };
+    }
+
+    return { success: true, stiOrder };
+}
+
+async function processCashPayment(payment: IPayment, orderId: string, staffUserId: string) {
+    await StiOrderRepository.updateById(orderId, {
+        is_paid: true,
+        order_status: 'Processing'
+    });
+
+    return {
+        success: true,
+        message: 'Tạo payment thành công',
+        data: {
+            paymentId: payment._id,
+            orderId: payment.orderId,
+            customerId: payment.customerId,
+            amount: payment.amount,
+            status: payment.status,
+            paymentMethod: payment.paymentMethod,
+            paymentType: payment.paymentType,
+            createdBy: staffUserId
+        }
+    };
+}
+
+async function processMoMoPayment(payment: IPayment, amount: number, staffUserId: string) {
+    const momoResponse = await momoService.createPayment({
+        orderId: payment._id.toString(),
+        amount
+    });
+
+    const updateData: Partial<IPayment> = {
+        paymentUrl: momoResponse.payUrl,
+        momoRequestId: momoResponse.requestId,
+        momoPartnerCode: momoResponse.partnerCode,
+        momoResponseTime: momoResponse.responseTime,
+        momoMessage: momoResponse.message,
+        momoResultCode: momoResponse.resultCode,
+        status: momoResponse.resultCode === 0 ? 'Processing' : 'Failed',
+        ...(momoResponse.resultCode !== 0 && {
+            failedAt: new Date(),
+            errorMessage: momoResponse.message
+        })
+    };
+
+    const updatedPayment = await PaymentRepository.updateById(payment._id.toString(), updateData);
+    if (!updatedPayment) {
+        throw new Error('Lỗi cập nhật payment');
+    }
+
+    return {
+        success: true,
+        message: 'Tạo payment thành công',
+        data: {
+            paymentId: updatedPayment._id,
+            orderId: updatedPayment.orderId,
+            customerId: updatedPayment.customerId,
+            amount: updatedPayment.amount,
+            status: updatedPayment.status,
+            paymentMethod: updatedPayment.paymentMethod,
+            paymentType: updatedPayment.paymentType,
+            paymentUrl: updatedPayment.paymentUrl,
+            qrCodeUrl: momoResponse.qrCodeUrl,
+            deeplink: momoResponse.deeplink,
+            createdBy: staffUserId
+        }
+    };
+}
+
 /**
  * Tạo payment request mới - Chỉ staff mới được tạo payment
  * POST /api/payment/create
@@ -59,72 +164,36 @@ router.post('/create/:orderId', authenticateToken, authorizeRoles('staff', 'admi
         const orderId = req.params.orderId;
         const { paymentMethod }: CreatePaymentRequest = req.body;
         const staffUserId = req.jwtUser?.userId;
+
         if (!staffUserId) {
-            return res.status(401).json({
-                success: false,
-                message: 'Unauthorized'
-            });
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
 
-        // Validation
-        if (!orderId || !paymentMethod) {
-            return res.status(400).json({
-                success: false,
-                message: 'Thiếu thông tin bắt buộc: orderId, paymentMethod'
-            });
+        // Validate request
+        const validation = await validatePaymentRequest(orderId, paymentMethod);
+        if (!validation.success) {
+            return res.status(400).json(validation);
         }
 
-        if (!['MoMo', 'Cash'].includes(paymentMethod)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Phương thức thanh toán không hợp lệ'
-            });
+        // Validate order
+        const orderValidation = await validateOrder(orderId);
+        if (!orderValidation.success) {
+            return res.status(400).json(orderValidation);
         }
 
-        // Convert orderId to ObjectId
-        const orderObjectId = new mongoose.Types.ObjectId(orderId);
-
-        // Lấy thông tin STI Order
-        const stiOrder = await StiOrder.findById(orderObjectId);
+        const { stiOrder } = orderValidation;
         if (!stiOrder) {
-            return res.status(404).json({
-                success: false,
-                message: 'STI Order không tìm thấy'
-            });
-        }
-
-        // Kiểm tra order đã thanh toán chưa
-        if (stiOrder.is_paid) {
-            return res.status(400).json({
-                success: false,
-                message: 'Order này đã được thanh toán rồi'
-            });
+            return res.status(500).json({ success: false, message: 'Lỗi lấy thông tin order' });
         }
 
         const amount = stiOrder.total_amount;
         const customerId = stiOrder.customer_id.toString();
 
-        if (amount <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Số tiền thanh toán phải lớn hơn 0'
-            });
-        }
-
-        // Kiểm tra xem đã có payment nào cho order này với status Completed chưa
-        const existingPayment = await PaymentRepository.findByOrderId(orderObjectId);
-        if (existingPayment && existingPayment.status === 'Completed') {
-            return res.status(400).json({
-                success: false,
-                message: 'Order này đã được thanh toán rồi'
-            });
-        }
-
-        // Tạo payment record
+        // Create payment record
         const paymentData: Partial<IPayment> = {
-            orderId: orderObjectId,
-            customerId: new mongoose.Types.ObjectId(customerId),
-            paymentType: 'STI_Test', // Fixed type
+            orderId: MongoUtils.toObjectId(orderId),
+            customerId: MongoUtils.toObjectId(customerId),
+            paymentType: 'STI_Test',
             paymentMethod,
             amount,
             currency: 'VND',
@@ -135,72 +204,14 @@ router.post('/create/:orderId', authenticateToken, authorizeRoles('staff', 'admi
 
         const payment = await PaymentRepository.create(paymentData);
 
-        // Nếu là Cash payment, cập nhật order luôn
+        // Process based on payment method
         if (paymentMethod === 'Cash') {
-            await StiOrder.findByIdAndUpdate(
-                orderObjectId,
-                {
-                    is_paid: true,
-                    order_status: 'Processing'
-                }
-            );
-
-            return res.json({
-                success: true,
-                message: 'Tạo payment thành công',
-                data: {
-                    paymentId: payment._id,
-                    orderId: payment.orderId,
-                    customerId: payment.customerId,
-                    amount: payment.amount,
-                    status: payment.status,
-                    paymentMethod: payment.paymentMethod,
-                    paymentType: payment.paymentType,
-                    createdBy: staffUserId
-                }
-            });
+            const result = await processCashPayment(payment, orderId, staffUserId);
+            return res.json(result);
+        } else {
+            const result = await processMoMoPayment(payment, amount, staffUserId);
+            return res.json(result);
         }
-
-        // Nếu là MoMo payment, tạo payment request
-        const momoResponse = await momoService.createPayment({
-            orderId: payment._id.toString(), // Sử dụng paymentId cho MoMo
-            amount
-        });
-
-        // Cập nhật payment với thông tin từ MoMo
-        const updateData: Partial<IPayment> = {
-            paymentUrl: momoResponse.payUrl,
-            momoRequestId: momoResponse.requestId,
-            momoPartnerCode: momoResponse.partnerCode,
-            momoResponseTime: momoResponse.responseTime,
-            momoMessage: momoResponse.message,
-            momoResultCode: momoResponse.resultCode,
-            status: momoResponse.resultCode === 0 ? 'Processing' : 'Failed',
-            ...(momoResponse.resultCode !== 0 && {
-                failedAt: new Date(),
-                errorMessage: momoResponse.message
-            })
-        };
-
-        const updatedPayment = await PaymentRepository.updateById(payment._id.toString(), updateData);
-
-        res.json({
-            success: true,
-            message: 'Tạo payment thành công',
-            data: {
-                paymentId: updatedPayment!._id,
-                orderId: updatedPayment!.orderId,
-                customerId: updatedPayment!.customerId,
-                amount: updatedPayment!.amount,
-                status: updatedPayment!.status,
-                paymentMethod: updatedPayment!.paymentMethod,
-                paymentType: updatedPayment!.paymentType,
-                paymentUrl: updatedPayment!.paymentUrl,
-                qrCodeUrl: momoResponse.qrCodeUrl,
-                deeplink: momoResponse.deeplink,
-                createdBy: staffUserId
-            }
-        });
 
     } catch (error: any) {
         console.error('Payment creation error:', error);
@@ -232,16 +243,14 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
         }
 
         // Tìm payment record - prioritize momoRequestId
-        let payment = await Payment.findOne({
-            momoRequestId: ipnData.requestId
-        });
+        let payment = await PaymentRepository.findByMomoRequestId(ipnData.requestId);
 
         if (!payment) {
             console.log('🔍 Payment not found by requestId, trying orderId as Payment._id');
             try {
                 // MoMo orderId chính là Payment._id
-                if (mongoose.Types.ObjectId.isValid(ipnData.orderId)) {
-                    payment = await Payment.findById(ipnData.orderId);
+                if (MongoUtils.isValidObjectId(ipnData.orderId)) {
+                    payment = await PaymentRepository.findById(ipnData.orderId);
                 }
             } catch (e) {
                 console.error('Error finding payment by _id:', e);
@@ -271,6 +280,7 @@ router.post('/momo/ipn', async (req: Request, res: Response) => {
         });
 
     } catch (error: any) {
+        console.error('MoMo IPN error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -396,8 +406,12 @@ router.get('/', authenticateToken, authorizeRoles('staff', 'admin', 'customer'),
                 Number(limit)
             );
         } else {
-            // TODO: Implement getAllPayments cho staff/admin
-            result = { payments: [], total: 0 };
+            // Staff/Admin xem tất cả payments
+            result = await PaymentRepository.getAllPayments(
+                status as any,
+                Number(page),
+                Number(limit)
+            );
         }
 
         res.json({
