@@ -2,6 +2,14 @@
   "name": "group3swp",
   "version": "1.0.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mintii13/GenCare.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mintii13/GenCare/issues"
+  },
+  "homepage": "https://github.com/mintii13/GenCare#readme",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
